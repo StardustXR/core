@@ -6,8 +6,6 @@ use message::stardust_xr::{MessageArgs, Message};
 #[path = "scenegraph.rs"]
 mod scenegraph;
 
-use bincode::serialize;
-
 use std::collections::HashMap;
 use std::io::{Result, Read, Write};
 use std::os::unix::net::UnixStream;
@@ -84,8 +82,6 @@ impl Messenger {
 		});
 		fbb.finish(message_constructed, None);
 
-//		let mut flbb = flexbuffers::Builder::default();
-//		flbb.build_singleton(fbb.finished_data().len() as u32);
 		print!("Message length's flexbuffer size is {}", fbb.finished_data().len());
 		let message_length = fbb.finished_data().len() as u32;
 		self.connection.lock().unwrap().write_all(&message_length.to_ne_bytes())?;
@@ -94,7 +90,7 @@ impl Messenger {
 		Ok(())
 	}
 
-	fn handle_message<S>(&mut self, message: &Message, scenegraph: S) -> Result<()> where S: scenegraph::Scenegraph {
+	fn handle_message(&mut self, message: &Message, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
 		let message_type = message.type_();
 		match message_type {
 			0 => println!("[Stardust XR][{:?}:{:?}] {:?}", message.object(), message.method(), message.error()),
@@ -127,11 +123,10 @@ impl Messenger {
 		Ok(())
 	}
 
-	pub fn dispatch<S>(&mut self, scenegraph: S) -> Result<()> where S: scenegraph::Scenegraph {
-		let mut message_length_buffer: [u8; 8] = [0; 8];
+	pub fn dispatch(&mut self, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
+		let mut message_length_buffer: [u8; 4] = [0; 4];
 		self.connection.lock().unwrap().read_exact(&mut message_length_buffer)?;
-		let root = flexbuffers::Reader::get_root(&message_length_buffer as &[u8]).unwrap();
-		let message_length: u32 = root.as_u32();
+		let message_length: u32 = u32::from_ne_bytes(message_length_buffer);
 
 		let mut message_buffer: Vec<u8> = Vec::with_capacity(message_length as usize);
 		self.connection.lock().unwrap().read_exact(message_buffer.as_mut_slice())?;
