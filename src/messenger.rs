@@ -14,7 +14,10 @@ use std::os::unix::net::UnixStream;
 use std::sync::Mutex;
 
 type Callback = fn(&flexbuffers::Reader<&[u8]>);
-
+/*
+if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
+so pending_callbacks is the queue
+ */
 pub struct Messenger {
 	connection: Mutex<UnixStream>,
 	pending_callbacks: Mutex<HashMap<u32, Callback>>,
