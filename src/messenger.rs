@@ -6,6 +6,8 @@ use message::stardust_xr::{MessageArgs, Message};
 #[path = "scenegraph.rs"]
 mod scenegraph;
 
+use bincode::serialize;
+
 use std::collections::HashMap;
 use std::io::{Result, Read, Write};
 use std::os::unix::net::UnixStream;
@@ -79,10 +81,11 @@ impl Messenger {
 		});
 		fbb.finish(message_constructed, None);
 
-		let mut flbb = flexbuffers::Builder::default();
-		flbb.build_singleton(fbb.finished_data().len() as u32);
+//		let mut flbb = flexbuffers::Builder::default();
+//		flbb.build_singleton(fbb.finished_data().len() as u32);
 		print!("Message length's flexbuffer size is {}", fbb.finished_data().len());
-		self.connection.lock().unwrap().write_all(flbb.view())?;
+		let message_length = fbb.finished_data().len() as u32;
+		self.connection.lock().unwrap().write_all(&message_length.to_ne_bytes())?;
 
 		self.connection.lock().unwrap().write_all(fbb.finished_data())?;
 		Ok(())
