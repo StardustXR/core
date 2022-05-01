@@ -11,6 +11,7 @@ use std::io::{Result, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::sync::Mutex;
 
+type RawCallback = fn(&[u8]);
 type Callback = fn(&flexbuffers::Reader<&[u8]>);
 /*
 if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
@@ -18,7 +19,7 @@ so pending_callbacks is the queue
  */
 pub struct Messenger {
 	connection: Mutex<UnixStream>,
-	pending_callbacks: Mutex<HashMap<u32, Callback>>,
+	pending_callbacks: Mutex<HashMap<u32, RawCallback>>,
 }
 
 impl Messenger {
@@ -37,34 +38,21 @@ impl Messenger {
 		return id;
 	}
 
+	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
 	pub fn error(&mut self, object: &str, method: &str, err: &str) -> Result<()> {
 		self.send_call(0, None, object, method, Some(err), None)?;
 		Ok(())
 	}
-	pub fn send_signal<T>(&mut self, object: &str, method: &str, args_constructor: T) -> Result<()> where T: Fn(&mut flexbuffers::Builder) {
-		let mut fbb = flexbuffers::Builder::default();
-		args_constructor(&mut fbb);
-		self.send_signal_raw(object, method, fbb.view())?;
-		Ok(())
-	}
-	pub fn send_signal_raw(&mut self, object: &str, method: &str, data: &[u8]) -> Result<()> {
+	pub fn send_signal(&mut self, object: &str, method: &str, data: &[u8]) -> Result<()> {
 		self.send_call(1, None, object, method, None, Some(data))?;
 		Ok(())
 	}
-
-	pub fn execute_remote_method<T>(&mut self, object: &str, method: &str, args_constructor: T, callback: Callback) -> Result<()> where T: Fn(&mut flexbuffers::Builder) {
-		let mut fbb = flexbuffers::Builder::default();
-		args_constructor(&mut fbb);
-		self.execute_remote_method_raw(object, method, fbb.view(), callback)?;
-		Ok(())
-	}
-	pub fn execute_remote_method_raw(&mut self, object: &str, method: &str, data: &[u8], callback: Callback) -> Result<()> {
+	pub fn execute_remote_method(&mut self, object: &str, method: &str, data: &[u8], callback: RawCallback) -> Result<()> {
 		let id = self.generate_message_id();
 		self.pending_callbacks.lock().unwrap().insert(id, callback);
 		self.send_call(1, None, object, method, None, Some(data))?;
 		Ok(())
 	}
-
 	fn send_call(&mut self, call_type: u8, id: Option<u32>, path: &str, method: &str, err: Option<&str>, data: Option<&[u8]>) -> Result<()> {
 		let mut fbb     = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 		let flex_path   = fbb.create_string(path);
@@ -107,14 +95,9 @@ impl Messenger {
 				if self.pending_callbacks.lock().unwrap().contains_key(&message.id()) {
 					let callback_opt = self.pending_callbacks.lock().unwrap().remove(&message.id());
 					match callback_opt {
-						None => {
-							println!("The method callback on node \"{}\" with method \"{}\" and id {} is not pending",
-							          message.object().unwrap(), message.method().unwrap(), message.id());
-						},
-						Some(callback) => {
-							let flex_root = flexbuffers::Reader::get_root(message.data().unwrap()).unwrap();
-							callback(&flex_root);
-						}
+						None => println!("The method callback on node \"{}\" with method \"{}\" and id {} is not pending",
+						                  message.object().unwrap(), message.method().unwrap(), message.id()),
+						Some(callback) => callback(message.data().unwrap())
 					}
 				}
 			},

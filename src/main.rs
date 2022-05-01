@@ -1,10 +1,11 @@
 mod client;
+mod flex;
 mod messenger;
 
 fn main() {
 	let socket = client::connect().expect("Socket not connected");
 	let mut messenger = messenger::Messenger::new(socket);
-	messenger.send_signal("/drawable", "createText", |fbb| {
+	messenger.send_signal("/drawable", "createText", flex::flexbuffer_from_arguments(|fbb| {
 		let mut vec = fbb.start_vector();
 			vec.push("rustytext");
 			vec.push("/");
@@ -36,6 +37,6 @@ fn main() {
 				color.push(1_f32);
 			color.end_vector();
 		vec.end_vector();
-	}).expect("Message failed to send");
+	}).as_slice()).expect("Message failed to send");
 	std::thread::sleep(std::time::Duration::from_secs(900));
 }
