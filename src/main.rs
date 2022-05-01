@@ -1,6 +1,8 @@
 mod client;
 mod flex;
 mod messenger;
+#[path = "fusion/datatypes/datatypes.rs"]
+mod datatypes;
 
 fn main() {
 	let socket = client::connect().expect("Socket not connected");
