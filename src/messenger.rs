@@ -37,7 +37,7 @@ impl Messenger {
 		while !self.pending_callbacks.lock().unwrap().contains_key(&id) {
 			id += 1;
 		}
-		return id;
+		id
 	}
 
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
