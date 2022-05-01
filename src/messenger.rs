@@ -1,18 +1,20 @@
-#[allow(dead_code, unused_imports)]
-#[path = "schemas/message.rs"]
-mod message;
-use message::stardust_xr::{Message, MessageArgs};
+use std::{
+	collections::HashMap,
+	io::{Read, Result, Write},
+	os::unix::net::UnixStream,
+	sync::Mutex,
+};
 
-#[path = "scenegraph.rs"]
-mod scenegraph;
-
-use std::collections::HashMap;
-use std::io::{Read, Result, Write};
-use std::os::unix::net::UnixStream;
-use std::sync::Mutex;
+use crate::{
+	scenegraph,
+	schemas::message::{
+		self,
+		stardust_xr::{Message, MessageArgs},
+	},
+};
 
 type RawCallback = fn(&[u8]);
-type Callback = fn(&flexbuffers::Reader<&[u8]>);
+pub type Callback = fn(&flexbuffers::Reader<&[u8]>);
 
 /// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
 /// so pending_callbacks is the queue
