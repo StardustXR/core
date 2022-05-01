@@ -33,25 +33,29 @@ pub struct Node<'a> {
 }
 
 pub trait NodeBase {
-	fn get_path(&mut self) -> &Path;
+	fn get_path(&self) -> &Path;
 	fn get_messenger(&mut self) -> &mut messenger::Messenger;
 
+	fn get_path_as_string(&self) -> Option<String> {
+		self.get_path().to_str().map(|s| s.to_owned())
+	}
+
 	fn destroy(&mut self) {
-		self.get_messenger()
-			.send_signal(self.get_path().to_str().unwrap(), "destroy", &[0; 0]);
+		let path = self.get_path_as_string().unwrap();
+		self.get_messenger().send_signal(&path, "destroy", &[0; 0]);
 	}
 	fn set_enabled(&mut self, enabled: bool) {
+		let path = self.get_path_as_string().unwrap();
 		self.get_messenger().send_signal(
-			self.get_path().to_str().unwrap(),
+			&path,
 			"setEnabled",
 			flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(enabled)).as_slice(),
 		);
 	}
 }
 
-
 impl<'a> NodeBase for Node<'a> {
-	fn get_path(&mut self) -> &Path {
+	fn get_path(&self) -> &Path {
 		self.path.as_path()
 	}
 	fn get_messenger(&mut self) -> &mut messenger::Messenger {
