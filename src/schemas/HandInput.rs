@@ -30,7 +30,7 @@ impl<'a> flatbuffers::Follow<'a> for Hand<'a> {
   type Inner = Hand<'a>;
   #[inline]
   fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: flatbuffers::Table { buf, loc } }
+	Self { _tab: flatbuffers::Table { buf, loc } }
   }
 }
 
@@ -42,70 +42,70 @@ impl<'a> Hand<'a> {
 
   #[inline]
   pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-    Hand { _tab: table }
+	Hand { _tab: table }
   }
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
-    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
-    args: &'args HandArgs<'args>
+	_fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+	args: &'args HandArgs<'args>
   ) -> flatbuffers::WIPOffset<Hand<'bldr>> {
-    let mut builder = HandBuilder::new(_fbb);
-    if let Some(x) = args.elbow { builder.add_elbow(x); }
-    if let Some(x) = args.wrist { builder.add_wrist(x); }
-    if let Some(x) = args.palm { builder.add_palm(x); }
-    if let Some(x) = args.finger_joints { builder.add_finger_joints(x); }
-    builder.finish()
+	let mut builder = HandBuilder::new(_fbb);
+	if let Some(x) = args.elbow { builder.add_elbow(x); }
+	if let Some(x) = args.wrist { builder.add_wrist(x); }
+	if let Some(x) = args.palm { builder.add_palm(x); }
+	if let Some(x) = args.finger_joints { builder.add_finger_joints(x); }
+	builder.finish()
   }
 
 
   #[inline]
   pub fn finger_joints(&self) -> &'a [joint] {
-    self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, joint>>>(Hand::VT_FINGER_JOINTS, None).map(|v| v.safe_slice()).unwrap()
+	self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, joint>>>(Hand::VT_FINGER_JOINTS, None).map(|v| v.safe_slice()).unwrap()
   }
   #[inline]
   pub fn palm(&self) -> &'a joint {
-    self._tab.get::<joint>(Hand::VT_PALM, None).unwrap()
+	self._tab.get::<joint>(Hand::VT_PALM, None).unwrap()
   }
   #[inline]
   pub fn wrist(&self) -> &'a joint {
-    self._tab.get::<joint>(Hand::VT_WRIST, None).unwrap()
+	self._tab.get::<joint>(Hand::VT_WRIST, None).unwrap()
   }
   #[inline]
   pub fn elbow(&self) -> Option<&'a joint> {
-    self._tab.get::<joint>(Hand::VT_ELBOW, None)
+	self._tab.get::<joint>(Hand::VT_ELBOW, None)
   }
 }
 
 impl flatbuffers::Verifiable for Hand<'_> {
   #[inline]
   fn run_verifier(
-    v: &mut flatbuffers::Verifier, pos: usize
+	v: &mut flatbuffers::Verifier, pos: usize
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
-    use self::flatbuffers::Verifiable;
-    v.visit_table(pos)?
-     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, joint>>>("finger_joints", Self::VT_FINGER_JOINTS, true)?
-     .visit_field::<joint>("palm", Self::VT_PALM, true)?
-     .visit_field::<joint>("wrist", Self::VT_WRIST, true)?
-     .visit_field::<joint>("elbow", Self::VT_ELBOW, false)?
-     .finish();
-    Ok(())
+	use self::flatbuffers::Verifiable;
+	v.visit_table(pos)?
+	 .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, joint>>>("finger_joints", Self::VT_FINGER_JOINTS, true)?
+	 .visit_field::<joint>("palm", Self::VT_PALM, true)?
+	 .visit_field::<joint>("wrist", Self::VT_WRIST, true)?
+	 .visit_field::<joint>("elbow", Self::VT_ELBOW, false)?
+	 .finish();
+	Ok(())
   }
 }
 pub struct HandArgs<'a> {
-    pub finger_joints: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, joint>>>,
-    pub palm: Option<&'a joint>,
-    pub wrist: Option<&'a joint>,
-    pub elbow: Option<&'a joint>,
+	pub finger_joints: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, joint>>>,
+	pub palm: Option<&'a joint>,
+	pub wrist: Option<&'a joint>,
+	pub elbow: Option<&'a joint>,
 }
 impl<'a> Default for HandArgs<'a> {
   #[inline]
   fn default() -> Self {
-    HandArgs {
-      finger_joints: None, // required field
-      palm: None, // required field
-      wrist: None, // required field
-      elbow: None,
-    }
+	HandArgs {
+	  finger_joints: None, // required field
+	  palm: None, // required field
+	  wrist: None, // required field
+	  elbow: None,
+	}
   }
 }
 
@@ -116,46 +116,46 @@ pub struct HandBuilder<'a: 'b, 'b> {
 impl<'a: 'b, 'b> HandBuilder<'a, 'b> {
   #[inline]
   pub fn add_finger_joints(&mut self, finger_joints: flatbuffers::WIPOffset<flatbuffers::Vector<'b , joint>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Hand::VT_FINGER_JOINTS, finger_joints);
+	self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Hand::VT_FINGER_JOINTS, finger_joints);
   }
   #[inline]
   pub fn add_palm(&mut self, palm: &joint) {
-    self.fbb_.push_slot_always::<&joint>(Hand::VT_PALM, palm);
+	self.fbb_.push_slot_always::<&joint>(Hand::VT_PALM, palm);
   }
   #[inline]
   pub fn add_wrist(&mut self, wrist: &joint) {
-    self.fbb_.push_slot_always::<&joint>(Hand::VT_WRIST, wrist);
+	self.fbb_.push_slot_always::<&joint>(Hand::VT_WRIST, wrist);
   }
   #[inline]
   pub fn add_elbow(&mut self, elbow: &joint) {
-    self.fbb_.push_slot_always::<&joint>(Hand::VT_ELBOW, elbow);
+	self.fbb_.push_slot_always::<&joint>(Hand::VT_ELBOW, elbow);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> HandBuilder<'a, 'b> {
-    let start = _fbb.start_table();
-    HandBuilder {
-      fbb_: _fbb,
-      start_: start,
-    }
+	let start = _fbb.start_table();
+	HandBuilder {
+	  fbb_: _fbb,
+	  start_: start,
+	}
   }
   #[inline]
   pub fn finish(self) -> flatbuffers::WIPOffset<Hand<'a>> {
-    let o = self.fbb_.end_table(self.start_);
-    self.fbb_.required(o, Hand::VT_FINGER_JOINTS,"finger_joints");
-    self.fbb_.required(o, Hand::VT_PALM,"palm");
-    self.fbb_.required(o, Hand::VT_WRIST,"wrist");
-    flatbuffers::WIPOffset::new(o.value())
+	let o = self.fbb_.end_table(self.start_);
+	self.fbb_.required(o, Hand::VT_FINGER_JOINTS,"finger_joints");
+	self.fbb_.required(o, Hand::VT_PALM,"palm");
+	self.fbb_.required(o, Hand::VT_WRIST,"wrist");
+	flatbuffers::WIPOffset::new(o.value())
   }
 }
 
 impl std::fmt::Debug for Hand<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let mut ds = f.debug_struct("Hand");
-      ds.field("finger_joints", &self.finger_joints());
-      ds.field("palm", &self.palm());
-      ds.field("wrist", &self.wrist());
-      ds.field("elbow", &self.elbow());
-      ds.finish()
+	let mut ds = f.debug_struct("Hand");
+	  ds.field("finger_joints", &self.finger_joints());
+	  ds.field("palm", &self.palm());
+	  ds.field("wrist", &self.wrist());
+	  ds.field("elbow", &self.elbow());
+	  ds.finish()
   }
 }
 }  // pub mod StardustXR

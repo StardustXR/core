@@ -1,7 +1,7 @@
 run_target('flatbuffers', command : 'compile.sh')
 
 install_headers(
-        [
+	[
 		'common.hpp',
 		'message.hpp',
 		'HandInput.hpp',
