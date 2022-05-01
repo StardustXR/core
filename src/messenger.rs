@@ -13,10 +13,9 @@ use std::sync::Mutex;
 
 type RawCallback = fn(&[u8]);
 type Callback = fn(&flexbuffers::Reader<&[u8]>);
-/*
-if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
-so pending_callbacks is the queue
- */
+
+/// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
+/// so pending_callbacks is the queue
 pub struct Messenger {
 	connection: Mutex<UnixStream>,
 	pending_callbacks: Mutex<HashMap<u32, RawCallback>>,
@@ -30,6 +29,9 @@ impl Messenger {
 		}
 	}
 
+	/// This makes sure that there are no repeat id's, but every id is filled.
+	/// for example if a id like 2, finished, but you still had 1, 3, 4, and 5 waiting
+	/// then you could reuse 2
 	fn generate_message_id(&mut self) -> u32 {
 		let mut id:u32 = 0;
 		while !self.pending_callbacks.lock().unwrap().contains_key(&id) {
