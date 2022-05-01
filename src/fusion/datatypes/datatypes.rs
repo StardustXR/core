@@ -1,29 +1,10 @@
 use flexbuffers::{Builder, VectorBuilder};
-struct Color {
-    h: f32,
-    s: f32,
-    v: f32,
-    a: f32
-}
-struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32
-}
-struct Vec2 {
-    x: f32,
-    y: f32
-}
-struct Quaternion {
-    i: f32,
-    j: f32,
-    k: f32,
-    l: f32
-}
+use mint::{Vector2, Vector3, Quaternion};
+use color::Hsva;
 trait FlexBuffConvertable {
     fn convert(self, parent_builder: Builder) -> Builder;
 }
-impl FlexBuffConvertable for Vec3 {
+impl FlexBuffConvertable for Vector3<f32> {
     fn convert(self, mut parent_builder: Builder) -> Builder {
         let mut vec3: VectorBuilder = parent_builder.start_vector();
         vec3.push(self.x);
@@ -33,7 +14,7 @@ impl FlexBuffConvertable for Vec3 {
         return parent_builder;
     }
 }
-impl FlexBuffConvertable for Vec2 {
+impl FlexBuffConvertable for Vector2<f32> {
     fn convert(self, mut parent_builder: Builder) -> Builder {
         let mut vec2: VectorBuilder = parent_builder.start_vector();
         vec2.push(self.x);
@@ -42,12 +23,12 @@ impl FlexBuffConvertable for Vec2 {
         return parent_builder;
     }
 }
-impl FlexBuffConvertable for Color {
+impl FlexBuffConvertable for Hsva {
     fn convert(self, mut parent_builder: Builder) -> Builder {
         let mut color: VectorBuilder = parent_builder.start_vector();
-        color.push(self.h);
-        color.push(self.s);
-        color.push(self.v);
+        color.push(self.c.h);
+        color.push(self.c.s);
+        color.push(self.c.v);
         color.push(self.a);
         color.end_vector();
         return parent_builder;
