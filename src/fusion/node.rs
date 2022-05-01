@@ -7,12 +7,9 @@
 // }
 
 use std::path::{Path, PathBuf};
-#[path = "../flex.rs"]
-mod flex;
-#[path = "../messenger.rs"]
-mod messenger;
-#[path = "values.rs"]
-mod values;
+
+use super::values;
+use crate::{flex, messenger};
 
 // macro_rules! node_trait {
 // 	($T:ident, $N:ident) => {
