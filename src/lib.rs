@@ -1,8 +1,8 @@
-mod client;
-mod flex;
-mod fusion;
-mod messenger;
-mod scenegraph;
+pub mod client;
+pub mod flex;
+pub mod fusion;
+pub mod messenger;
+pub mod scenegraph;
 
 #[cfg(test)]
 mod tests {
