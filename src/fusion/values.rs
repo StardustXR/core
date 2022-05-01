@@ -1,9 +1,9 @@
-type Vec2 = mint::Vector2<f32>;
-type Vec3 = mint::Vector3<f32>;
-type Quat = mint::Quaternion<f32>;
-type Color = color::Rgba;
+pub type Vec2 = mint::Vector2<f32>;
+pub type Vec3 = mint::Vector3<f32>;
+pub type Quat = mint::Quaternion<f32>;
+pub type Color = color::Rgba;
 
-trait FlexBuffConvertable {
+pub trait FlexBuffConvertable {
 	fn convert(self, parent_builder: &mut flexbuffers::Builder);
 }
 impl FlexBuffConvertable for Vec2 {

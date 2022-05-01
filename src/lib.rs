@@ -1,5 +1,6 @@
 mod client;
 mod flex;
+mod fusion;
 mod messenger;
 mod scenegraph;
 
