@@ -4,8 +4,7 @@ pub mod fusion;
 pub mod messenger;
 pub mod scenegraph;
 
-#[rustfmt::skip]
-mod schemas;
+pub use schemas;
 
 #[cfg(test)]
 mod tests {
