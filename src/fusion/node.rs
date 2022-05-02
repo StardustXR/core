@@ -22,7 +22,7 @@ impl<'a> Node<'a> {
 		object: &str,
 		method: &str,
 		data: &[u8],
-		callback: messenger::RawCallback
+		callback: messenger::RawCallback,
 	) -> Result<()> {
 		self.messenger
 			.execute_remote_method(self.path, method, data, callback)
