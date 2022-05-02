@@ -8,30 +8,25 @@
 
 use std::path::{Path, PathBuf};
 
-use super::values;
-use crate::{flex, messenger};
-
-// macro_rules! node_trait {
-// 	($T:ident, $N:ident) => {
-// 		impl $T for $N {
-// 			fn get_path(&self) -> &Path {
-// 				self.path.as_path()
-// 			}
-// 			fn get_messenger<'a>(&self) -> &'a messenger::Messenger {
-// 				self.messenger
-// 			}
-// 		}
-// 	};
-// }
-
 pub struct Node<'a> {
 	path: PathBuf,
 	messenger: &'a mut messenger::Messenger,
 }
 
-pub trait NodeBase {
-	fn get_path(&self) -> &Path;
-	fn get_messenger(&mut self) -> &mut messenger::Messenger;
+impl<'a> Node<'a> {
+	pub fn send_signal(&mut self, method: &str, data: &[u8]) -> Result<()> {
+		self.messenger.send_signal(self.path, method, data)
+	}
+	pub fn execute_remote_method(
+		&mut self,
+		object: &str,
+		method: &str,
+		data: &[u8],
+		callback: messenger::RawCallback
+	) -> Result<()> {
+		self.messenger
+			.execute_remote_method(self.path, method, data, callback)
+	}
 
 	fn get_path_as_string(&self) -> Option<String> {
 		self.get_path().to_str().map(|s| s.to_owned())
@@ -51,23 +46,24 @@ pub trait NodeBase {
 	}
 }
 
-impl<'a> NodeBase for Node<'a> {
-	fn get_path(&self) -> &Path {
-		self.path.as_path()
-	}
-	fn get_messenger(&mut self) -> &mut messenger::Messenger {
-		self.messenger
-	}
+pub struct Spatial<'a> {
+	node: &'a Node<'a>,
 }
-// node_trait!(NodeBase, Node);
 
-pub trait Spatial {
-	fn get_transform(&self, space: &dyn Spatial) -> (values::Vec3, values::Quat, values::Vec3);
+impl<'a> Spatial<'a> {
+	fn get_transform(
+		&self,
+		space: &Spatial,
+		callback: &impl Fn(values::Vec3, values::Quat, values::Vec3),
+	) {
+		// self.node.messenger
+	}
 	fn set_transform(
 		&self,
-		space: &dyn Spatial,
+		space: &Spatial,
 		position: Option<values::Vec3>,
 		rotation: Option<values::Quat>,
 		scale: Option<values::Vec3>,
-	);
+	) {
+	}
 }

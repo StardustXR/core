@@ -13,7 +13,12 @@ use crate::{
 	},
 };
 
-type RawCallback = fn(&[u8]);
+use std::collections::HashMap;
+use std::io::{Read, Result, Write};
+use std::os::unix::net::UnixStream;
+use std::sync::Mutex;
+
+pub type RawCallback = fn(&[u8]);
 pub type Callback = fn(&flexbuffers::Reader<&[u8]>);
 
 /// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
