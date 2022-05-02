@@ -13,11 +13,6 @@ use crate::{
 	},
 };
 
-use std::collections::HashMap;
-use std::io::{Read, Result, Write};
-use std::os::unix::net::UnixStream;
-use std::sync::Mutex;
-
 pub type RawCallback = fn(&[u8]);
 pub type Callback = fn(&flexbuffers::Reader<&[u8]>);
 

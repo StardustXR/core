@@ -11,5 +11,6 @@ flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
 mint = "0.5.9"
 schemas = {path = "schemas"}
+thiserror = "1.0.31"
 uds = "0.2.6"
 xdg = "2.4.1"
