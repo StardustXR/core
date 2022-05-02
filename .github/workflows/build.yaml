@@ -9,6 +9,8 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - name: install dependancies
+        run: apt install flatbuffers
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -29,6 +31,8 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
+      - name: install dependancies
+        run: apt install flatbuffers
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -49,6 +53,8 @@ jobs:
     name: Lints
     runs-on: ubuntu-latest
     steps:
+      - name: install dependancies
+        run: apt install flatbuffers
       - name: Checkout sources
         uses: actions/checkout@v2
         with:
