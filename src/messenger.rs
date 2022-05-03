@@ -34,7 +34,7 @@ impl<'a> Messenger<'a> {
 	/// This makes sure that there are no repeat id's, but every id is filled.
 	/// for example if a id like 2, finished, but you still had 1, 3, 4, and 5 waiting
 	/// then you could reuse 2
-	fn generate_message_id(&mut self) -> u32 {
+	fn generate_message_id(&self) -> u32 {
 		let mut id: u32 = 0;
 		while !self.pending_callbacks.lock().unwrap().contains_key(&id) {
 			id += 1;
@@ -43,16 +43,14 @@ impl<'a> Messenger<'a> {
 	}
 
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
-	pub fn error(&mut self, object: &str, method: &str, err: &str) -> Result<()> {
-		self.send_call(0, None, object, method, Some(err), None)?;
-		Ok(())
+	pub fn error(&self, object: &str, method: &str, err: &str) -> Result<()> {
+		self.send_call(0, None, object, method, Some(err), None)
 	}
-	pub fn send_remote_signal(&mut self, object: &str, method: &str, data: &[u8]) -> Result<()> {
-		self.send_call(1, None, object, method, None, Some(data))?;
-		Ok(())
+	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
+		self.send_call(1, None, object, method, None, Some(data))
 	}
 	pub fn execute_remote_method(
-		&mut self,
+		&self,
 		object: &str,
 		method: &str,
 		data: &[u8],
@@ -60,11 +58,10 @@ impl<'a> Messenger<'a> {
 	) -> Result<()> {
 		let id = self.generate_message_id();
 		self.pending_callbacks.lock().unwrap().insert(id, callback);
-		self.send_call(1, None, object, method, None, Some(data))?;
-		Ok(())
+		self.send_call(1, None, object, method, None, Some(data))
 	}
 	fn send_call(
-		&mut self,
+		&self,
 		call_type: u8,
 		id: Option<u32>,
 		path: &str,
@@ -108,41 +105,76 @@ impl<'a> Messenger<'a> {
 		Ok(())
 	}
 
+	fn handle_scenegraph_error(
+		&self,
+		path: &str,
+		method: &str,
+		error: scenegraph::ScenegraphError,
+	) {
+		match error {
+			scenegraph::ScenegraphError::NodeNotFound => {
+				self.error(path, method, "Node not found").ok();
+			}
+			scenegraph::ScenegraphError::MethodNotFound => {
+				self.error(path, method, "Method not found").ok();
+			}
+		}
+	}
+
 	fn handle_message(
-		&mut self,
+		&self,
 		message: &Message,
 		scenegraph: &impl scenegraph::Scenegraph,
 	) -> Result<()> {
 		let message_type = message.type_();
 		match message_type {
+			// Errors
 			0 => println!(
 				"[Stardust XR][{:?}:{:?}] {:?}",
 				message.object(),
 				message.method(),
 				message.error()
 			),
+			// Signals
 			1 => {
-				scenegraph.send_signal(
-					message.object().unwrap(),
-					message.method().unwrap(),
-					message.data().unwrap(),
-				);
+				scenegraph
+					.send_signal(
+						message.object().unwrap(),
+						message.method().unwrap(),
+						message.data().unwrap(),
+					)
+					.unwrap_or_else(|error| {
+						self.handle_scenegraph_error(
+							message.object().unwrap(),
+							message.method().unwrap(),
+							error,
+						)
+					});
 			}
+			// Method called
 			2 => {
-				let return_value = scenegraph.execute_method(
+				let method_result = scenegraph.execute_method(
 					message.object().unwrap(),
 					message.method().unwrap(),
 					message.data().unwrap(),
 				);
-				self.send_call(
-					3,
-					Some(message.id()),
-					message.object().unwrap(),
-					message.method().unwrap(),
-					None,
-					Some(&return_value),
-				)?;
+				match method_result {
+					Ok(return_value) => self.send_call(
+						3,
+						Some(message.id()),
+						message.object().unwrap(),
+						message.method().unwrap(),
+						None,
+						Some(&return_value),
+					)?,
+					Err(error) => self.handle_scenegraph_error(
+						message.object().unwrap(),
+						message.method().unwrap(),
+						error,
+					),
+				};
 			}
+			// Method return
 			3 => {
 				if self
 					.pending_callbacks
@@ -163,7 +195,7 @@ impl<'a> Messenger<'a> {
 		Ok(())
 	}
 
-	pub fn dispatch(&mut self, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
+	pub fn dispatch(&self, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
 		let mut message_length_buffer: [u8; 4] = [0; 4];
 		self.connection
 			.lock()
@@ -181,3 +213,4 @@ impl<'a> Messenger<'a> {
 		Ok(())
 	}
 }
+

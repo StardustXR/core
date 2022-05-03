@@ -1,20 +1,64 @@
 use super::values;
 use crate::flex;
 
-use super::node::Node;
+use super::client::Client;
+use super::node::{Node, NodeError};
 
 pub struct Spatial<'a> {
 	node: Node<'a>,
 }
 
 impl<'a> Spatial<'a> {
-	pub fn create() {}
+	pub fn create(
+		client: &Client<'a>,
+		spatial_parent: &Spatial<'a>,
+		position: values::Vec3,
+		rotation: values::Quat,
+		scale: values::Vec3,
+		translatable: bool,
+		rotatable: bool,
+		scalable: bool,
+		zoneable: bool,
+	) -> Result<Self, NodeError> {
+		let (node, id) = Node::generate_with_parent(client, "/spatial/spatial")?;
+
+		node.messenger
+			.upgrade()
+			.ok_or(NodeError::InvalidMessenger)?
+			.send_remote_signal(
+				"/spatial",
+				"createSpatial",
+				flex::flexbuffer_from_arguments(|fbb| {
+					let mut vec = fbb.start_vector();
+					vec.push(id.as_str());
+					vec.push(spatial_parent.node.get_path().to_owned().as_str());
+					flex_from_vec3!(vec, position);
+					flex_from_quat!(vec, rotation);
+					flex_from_vec3!(vec, scale);
+					vec.push(translatable);
+					vec.push(rotatable);
+					vec.push(scalable);
+					vec.push(zoneable);
+					vec.end_vector();
+				})
+				.as_slice(),
+			)
+			.map_err(|_| NodeError::ServerCreationFailed)?;
+
+		Ok(Spatial { node })
+	}
+
+	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Self, NodeError> {
+		Ok(Spatial {
+			node: Node::from_path(client, path)?,
+		})
+	}
 
 	pub fn get_transform(
-		&mut self,
+		&self,
 		space: &Spatial,
 		callback: impl Fn(values::Vec3, values::Quat, values::Vec3) + 'a,
-	) -> Result<(), std::io::Error> {
+	) -> Result<(), NodeError> {
 		self.node.execute_remote_method(
 			"getTransform",
 			flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(space.node.get_path()))
@@ -30,12 +74,12 @@ impl<'a> Spatial<'a> {
 		)
 	}
 	pub fn set_transform(
-		&mut self,
+		&self,
 		space: &Spatial,
 		position: Option<values::Vec3>,
 		rotation: Option<values::Quat>,
 		scale: Option<values::Vec3>,
-	) -> Result<(), std::io::Error> {
+	) -> Result<(), NodeError> {
 		self.node.send_remote_signal(
 			"setTransform",
 			flex::flexbuffer_from_arguments(|fbb| {

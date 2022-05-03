@@ -1,8 +1,10 @@
 #[macro_use]
-mod values;
+pub mod values;
 
-mod client;
-mod scenegraph;
+pub mod client;
+pub mod scenegraph;
 
-mod node;
-mod spatial;
+pub mod node;
+pub mod spatial;
+
+mod tests;
