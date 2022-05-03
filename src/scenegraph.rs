@@ -1,13 +1,8 @@
 pub trait Scenegraph {
-	fn send_signal(&self, path: &str, method: &str, data: &flexbuffers::Reader<&[u8]>) {
+	fn send_signal(&self, path: &str, method: &str, data: &[u8]) {
 		self.execute_method(path, method, data);
 	}
-	fn execute_method(
-		&self,
-		path: &str,
-		method: &str,
-		data: &flexbuffers::Reader<&[u8]>,
-	) -> Vec<u8>;
+	fn execute_method(&self, path: &str, method: &str, data: &[u8]) -> Vec<u8>;
 }
 
 // pub struct SampleScenegraph {

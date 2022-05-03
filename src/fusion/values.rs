@@ -1,79 +1,71 @@
-pub struct Vec2(pub mint::Vector2<f32>);
-pub struct Vec3(pub mint::Vector3<f32>);
-pub struct Quat(pub mint::Quaternion<f32>);
-pub struct Color(pub color::Rgba);
+pub type Vec2 = mint::Vector2<f32>;
+pub type Vec3 = mint::Vector3<f32>;
+pub type Quat = mint::Quaternion<f32>;
+pub type Color = color::Rgba;
 
 #[macro_export]
-macro_rules! flex_vec2 {
+macro_rules! flex_from_vec2 {
 	($B:expr, $V:expr) => {{
 		let mut vec = $B.start_vector();
-		vec.push($V.0.x);
-		vec.push($V.0.y);
+		vec.push($V.x);
+		vec.push($V.y);
 		vec.end_vector();
-	}}
+	}};
 }
 #[macro_export]
-macro_rules! flex_vec3 {
+macro_rules! flex_from_vec3 {
 	($B:expr, $V:expr) => {{
 		let mut vec = $B.start_vector();
-		vec.push($V.0.x);
-		vec.push($V.0.y);
-		vec.push($V.0.z);
+		vec.push($V.x);
+		vec.push($V.y);
+		vec.push($V.z);
 		vec.end_vector();
-	}}
+	}};
 }
 #[macro_export]
-macro_rules! flex_quat {
+macro_rules! flex_from_quat {
 	($B:expr, $V:expr) => {{
 		let mut vec = $B.start_vector();
-		vec.push($V.0.v.x);
-		vec.push($V.0.v.y);
-		vec.push($V.0.v.z);
-		vec.push($V.0.s);
+		vec.push($V.v.x);
+		vec.push($V.v.y);
+		vec.push($V.v.z);
+		vec.push($V.s);
 		vec.end_vector();
-	}}
+	}};
 }
 
-
-// pub trait FlexBuffConvertable {
-// 	fn convert(self, parent_builder: &mut flexbuffers::Builder);
-// }
-// impl FlexBuffConvertable for Vec2 {
-// 	fn convert(self, parent_builder: &mut flexbuffers::Builder) {
-// 		let mut vec2 = parent_builder.start_vector();
-// 		vec2.push(self.0.x);
-// 		vec2.push(self.0.y);
-// 		vec2.end_vector();
-// 	}
-// }
-// impl FlexBuffConvertable for Vec3 {
-// 	fn convert(self, parent_builder: &mut flexbuffers::Builder) {
-// 		let mut vec3 = parent_builder.start_vector();
-// 		vec3.push(self.0.x);
-// 		vec3.push(self.0.y);
-// 		vec3.push(self.0.z);
-// 		vec3.end_vector();
-// 	}
-// }
-// impl FlexBuffConvertable for Quat {
-// 	fn convert(self, parent_builder: &mut flexbuffers::Builder) {
-// 		let mut vec3 = parent_builder.start_vector();
-// 		vec3.push(self.0.v.x);
-// 		vec3.push(self.0.v.y);
-// 		vec3.push(self.0.v.z);
-// 		vec3.push(self.0.s);
-// 		vec3.end_vector();
-// 	}
-// }
-// impl FlexBuffConvertable for Color {
-// 	fn convert(self, parent_builder: &mut flexbuffers::Builder) {
-// 		let mut color = parent_builder.start_vector();
-// 		color.push(self.0.c.r);
-// 		color.push(self.0.c.g);
-// 		color.push(self.0.c.b);
-// 		color.push(self.0.a);
-// 		color.end_vector();
-// 	}
-// }
-
-
+#[macro_export]
+macro_rules! flex_to_vec2 {
+	($F:expr) => {{
+		let vec = $F.get_vector().unwrap();
+		mint::Vector2 {
+			x: vec.idx(0).as_f32(),
+			y: vec.idx(1).as_f32(),
+		};
+	}};
+}
+#[macro_export]
+macro_rules! flex_to_vec3 {
+	($F:expr) => {{
+		let vec = $F.get_vector().unwrap();
+		mint::Vector3 {
+			x: vec.idx(0).as_f32(),
+			y: vec.idx(1).as_f32(),
+			z: vec.idx(2).as_f32(),
+		}
+	}};
+}
+#[macro_export]
+macro_rules! flex_to_quat {
+	($F:expr) => {{
+		let vec = $F.get_vector().unwrap();
+		mint::Quaternion {
+			v: mint::Vector3::from([
+				vec.idx(0).as_f32(),
+				vec.idx(1).as_f32(),
+				vec.idx(2).as_f32(),
+			]),
+			s: vec.idx(3).as_f32(),
+		}
+	}};
+}

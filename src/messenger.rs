@@ -13,17 +13,17 @@ use crate::{
 	},
 };
 
-pub type RawCallback = fn(&[u8]);
-pub type Callback = fn(&flexbuffers::Reader<&[u8]>);
+pub type RawCallback<'a> = dyn Fn(&[u8]) + 'a;
+pub type Callback = dyn Fn(&flexbuffers::Reader<&[u8]>);
 
 /// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
 /// so pending_callbacks is the queue
-pub struct Messenger {
+pub struct Messenger<'a> {
 	connection: Mutex<UnixStream>,
-	pending_callbacks: Mutex<HashMap<u32, RawCallback>>,
+	pending_callbacks: Mutex<HashMap<u32, Box<RawCallback<'a>>>>,
 }
 
-impl Messenger {
+impl<'a> Messenger<'a> {
 	pub fn new(connection: UnixStream) -> Self {
 		Self {
 			connection: Mutex::new(connection),
@@ -47,7 +47,7 @@ impl Messenger {
 		self.send_call(0, None, object, method, Some(err), None)?;
 		Ok(())
 	}
-	pub fn send_signal(&mut self, object: &str, method: &str, data: &[u8]) -> Result<()> {
+	pub fn send_remote_signal(&mut self, object: &str, method: &str, data: &[u8]) -> Result<()> {
 		self.send_call(1, None, object, method, None, Some(data))?;
 		Ok(())
 	}
@@ -56,7 +56,7 @@ impl Messenger {
 		object: &str,
 		method: &str,
 		data: &[u8],
-		callback: RawCallback,
+		callback: Box<RawCallback<'a>>,
 	) -> Result<()> {
 		let id = self.generate_message_id();
 		self.pending_callbacks.lock().unwrap().insert(id, callback);
@@ -122,19 +122,17 @@ impl Messenger {
 				message.error()
 			),
 			1 => {
-				let data_root = flexbuffers::Reader::get_root(message.data().unwrap());
 				scenegraph.send_signal(
 					message.object().unwrap(),
 					message.method().unwrap(),
-					&data_root.unwrap(),
+					message.data().unwrap(),
 				);
 			}
 			2 => {
-				let data_root = flexbuffers::Reader::get_root(message.data().unwrap());
 				let return_value = scenegraph.execute_method(
 					message.object().unwrap(),
 					message.method().unwrap(),
-					&data_root.unwrap(),
+					message.data().unwrap(),
 				);
 				self.send_call(
 					3,
