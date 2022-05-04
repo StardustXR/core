@@ -5,7 +5,7 @@ use super::client::Client;
 use super::node::{Node, NodeError};
 
 pub struct Spatial<'a> {
-	node: Node<'a>,
+	pub node: Node<'a>,
 }
 
 impl<'a> Spatial<'a> {
@@ -28,10 +28,9 @@ impl<'a> Spatial<'a> {
 			.send_remote_signal(
 				"/spatial",
 				"createSpatial",
-				flex::flexbuffer_from_arguments(|fbb| {
-					let mut vec = fbb.start_vector();
+				flex::flexbuffer_from_vector_arguments(|vec| {
 					vec.push(id.as_str());
-					vec.push(spatial_parent.node.get_path().to_owned().as_str());
+					vec.push(spatial_parent.node.get_path());
 					flex_from_vec3!(vec, position);
 					flex_from_quat!(vec, rotation);
 					flex_from_vec3!(vec, scale);
@@ -39,7 +38,6 @@ impl<'a> Spatial<'a> {
 					vec.push(rotatable);
 					vec.push(scalable);
 					vec.push(zoneable);
-					vec.end_vector();
 				})
 				.as_slice(),
 			)
@@ -82,8 +80,7 @@ impl<'a> Spatial<'a> {
 	) -> Result<(), NodeError> {
 		self.node.send_remote_signal(
 			"setTransform",
-			flex::flexbuffer_from_arguments(|fbb| {
-				let mut vec = fbb.start_vector();
+			flex::flexbuffer_from_vector_arguments(|vec| {
 				vec.push(space.node.get_path());
 				if position.as_ref().is_some() {
 					flex_from_vec3!(vec, position.as_ref().unwrap());
@@ -94,7 +91,6 @@ impl<'a> Spatial<'a> {
 				if scale.as_ref().is_some() {
 					flex_from_vec3!(vec, scale.as_ref().unwrap());
 				}
-				vec.end_vector();
 			})
 			.as_slice(),
 		)

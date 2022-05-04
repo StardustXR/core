@@ -30,12 +30,15 @@ pub enum NodeError {
 	MethodNotFound,
 }
 
+type Signal<'a> = dyn Fn(&[u8]) + 'a;
+type Method<'a> = dyn Fn(&[u8]) -> Vec<u8> + 'a;
+
 pub struct Node<'a> {
 	path: String,
 	trailing_slash_pos: usize,
 	pub messenger: Weak<Messenger<'a>>,
-	local_signals: HashMap<String, Box<dyn Fn(&[u8]) + 'a>>,
-	local_methods: HashMap<String, Box<dyn Fn(&[u8]) -> Vec<u8> + 'a>>,
+	local_signals: HashMap<String, Box<Signal<'a>>>,
+	local_methods: HashMap<String, Box<Method<'a>>>,
 }
 
 impl<'a> Node<'a> {
@@ -101,12 +104,11 @@ impl<'a> Node<'a> {
 			.ok_or(NodeError::MethodNotFound)?(data))
 	}
 	pub fn send_remote_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
-		Ok(self
-			.messenger
+		self.messenger
 			.upgrade()
 			.ok_or(NodeError::InvalidMessenger)?
 			.send_remote_signal(self.path.as_str(), method, data)
-			.map_err(|_| NodeError::MessengerWrite)?)
+			.map_err(|_| NodeError::MessengerWrite)
 	}
 	pub fn execute_remote_method(
 		&self,
@@ -114,21 +116,22 @@ impl<'a> Node<'a> {
 		data: &[u8],
 		callback: Box<dyn Fn(&[u8]) + 'a>,
 	) -> Result<(), NodeError> {
-		Ok(self
-			.messenger
+		self.messenger
 			.upgrade()
 			.ok_or(NodeError::InvalidMessenger)?
 			.execute_remote_method(self.path.as_str(), method, data, callback)
-			.map_err(|_| NodeError::MessengerWrite)?)
-	}
-
-	fn destroy(&self) -> Result<(), NodeError> {
-		self.send_remote_signal("destroy", &[0; 0])
+			.map_err(|_| NodeError::MessengerWrite)
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
 		self.send_remote_signal(
 			"setEnabled",
 			flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(enabled)).as_slice(),
 		)
+	}
+}
+
+impl<'a> Drop for Node<'a> {
+	fn drop(&mut self) {
+		self.send_remote_signal("destroy", &[0; 0]).ok();
 	}
 }
