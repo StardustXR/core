@@ -15,3 +15,5 @@ Cargo.lock
 /target
 
 .idea/
+
+.vscode/

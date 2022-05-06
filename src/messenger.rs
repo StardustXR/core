@@ -36,7 +36,7 @@ impl<'a> Messenger<'a> {
 	/// then you could reuse 2
 	fn generate_message_id(&self) -> u32 {
 		let mut id: u32 = 0;
-		while !self.pending_callbacks.lock().unwrap().contains_key(&id) {
+		while self.pending_callbacks.lock().unwrap().contains_key(&id) {
 			id += 1;
 		}
 		id
@@ -88,7 +88,7 @@ impl<'a> Messenger<'a> {
 		);
 		fbb.finish(message_constructed, None);
 
-		print!(
+		println!(
 			"Message length's flexbuffer size is {}",
 			fbb.finished_data().len()
 		);
