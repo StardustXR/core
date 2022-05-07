@@ -13,6 +13,23 @@ impl<'a> Scenegraph<'a> {
 			nodes: HashMap::new(),
 		}
 	}
+
+	pub fn add_node(&mut self, node: Weak<Node<'a>>) {
+		let node_ref = node.upgrade();
+		if node_ref.is_none() {
+			return;
+		}
+		self.nodes
+			.insert(String::from(node_ref.unwrap().get_path()), node);
+	}
+
+	pub fn remove_node(&mut self, node: Weak<Node<'a>>) {
+		let node_ref = node.upgrade();
+		if node_ref.is_none() {
+			return;
+		}
+		self.nodes.remove(node_ref.unwrap().get_path());
+	}
 }
 
 impl<'a> scenegraph::Scenegraph for Scenegraph<'a> {
