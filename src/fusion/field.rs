@@ -7,6 +7,8 @@ use super::{
 	spatial::Spatial,
 };
 
+use std::rc::Rc;
+
 pub struct Field<'a> {
 	pub spatial: Spatial<'a>,
 }
@@ -105,7 +107,9 @@ impl<'a> BoxField<'a> {
 
 		Ok(BoxField {
 			field: Field {
-				spatial: Spatial { node },
+				spatial: Spatial {
+					node: Rc::new(node),
+				},
 			},
 		})
 	}
@@ -217,7 +221,9 @@ impl<'a> CylinderField<'a> {
 
 		Ok(CylinderField {
 			field: Field {
-				spatial: Spatial { node },
+				spatial: Spatial {
+					node: Rc::new(node),
+				},
 			},
 		})
 	}
@@ -278,7 +284,9 @@ impl<'a> SphereField<'a> {
 
 		Ok(SphereField {
 			field: Field {
-				spatial: Spatial { node },
+				spatial: Spatial {
+					node: Rc::new(node),
+				},
 			},
 		})
 	}

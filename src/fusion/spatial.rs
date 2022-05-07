@@ -3,9 +3,10 @@ use crate::flex;
 
 use super::client::Client;
 use super::node::{Node, NodeError};
+use std::rc::Rc;
 
 pub struct Spatial<'a> {
-	pub node: Node<'a>,
+	pub node: Rc<Node<'a>>,
 }
 
 impl<'a> Spatial<'a> {
@@ -43,12 +44,14 @@ impl<'a> Spatial<'a> {
 			)
 			.map_err(|_| NodeError::ServerCreationFailed)?;
 
-		Ok(Spatial { node })
+		Ok(Spatial {
+			node: Rc::new(node),
+		})
 	}
 
 	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Self, NodeError> {
 		Ok(Spatial {
-			node: Node::from_path(client, path)?,
+			node: Rc::new(Node::from_path(client, path)?),
 		})
 	}
 
