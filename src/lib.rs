@@ -5,6 +5,3 @@ pub mod messenger;
 pub mod scenegraph;
 
 pub use schemas;
-
-#[cfg(test)]
-mod tests;

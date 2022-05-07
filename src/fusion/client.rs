@@ -40,3 +40,8 @@ impl<'a> Client<'a> {
 		self.hmd.as_ref().unwrap()
 	}
 }
+
+#[test]
+fn connect() {
+	Client::connect().expect("Couldn't connect");
+}
