@@ -28,6 +28,9 @@ impl<'a> Client<'a> {
 
 		Some(client)
 	}
+	pub fn dispatch(&self) -> Result<(), std::io::Error> {
+		self.messenger.dispatch(&self.scenegraph)
+	}
 
 	pub fn get_weak_messenger(&self) -> rc::Weak<Messenger<'a>> {
 		rc::Rc::downgrade(&self.messenger)
