@@ -11,8 +11,11 @@ jobs:
     steps:
       - name: install dependancies
         run: |
-          sudo apt install -y flatbuffers-compiler
-          which flatc
+          sudo apt install -y wget
+          wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip
+          unzip Linux.flatc.binary.clang++-9.zip
+          chmod +x flatc
+          sudo mv flatc /usr/bin/
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -35,8 +38,11 @@ jobs:
     steps:
       - name: install dependancies
         run: |
-          sudo apt install -y flatbuffers-compiler
-          which flatc
+          sudo apt install -y wget
+          wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip
+          unzip Linux.flatc.binary.clang++-9.zip
+          chmod +x flatc
+          sudo mv flatc /usr/bin/
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -59,8 +65,11 @@ jobs:
     steps:
       - name: install dependancies
         run: |
-          sudo apt install -y flatbuffers-compiler
-          which flatc
+          sudo apt install -y wget
+          wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip
+          unzip Linux.flatc.binary.clang++-9.zip
+          chmod +x flatc
+          sudo mv flatc /usr/bin/
       - name: Checkout sources
         uses: actions/checkout@v2
         with:
