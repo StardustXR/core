@@ -4,6 +4,7 @@ use crate::flex;
 use super::client::Client;
 use super::node::{Node, NodeError};
 use std::rc::Rc;
+use crate::fusion::utilmacros::GenNodeInfo;
 
 pub struct Spatial<'a> {
 	pub node: Rc<Node<'a>>,
@@ -21,31 +22,23 @@ impl<'a> Spatial<'a> {
 		scalable: bool,
 		zoneable: bool,
 	) -> Result<Self, NodeError> {
-		let (node, id) = Node::generate_with_parent(client, "/spatial/spatial")?;
-
-		node.messenger
-			.upgrade()
-			.ok_or(NodeError::InvalidMessenger)?
-			.send_remote_signal(
-				"/spatial",
-				"createSpatial",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					vec.push(id.as_str());
-					vec.push(spatial_parent.node.get_path());
-					flex_from_vec3!(vec, position);
-					flex_from_quat!(vec, rotation);
-					flex_from_vec3!(vec, scale);
-					vec.push(translatable);
-					vec.push(rotatable);
-					vec.push(scalable);
-					vec.push(zoneable);
-				})
-				.as_slice(),
-			)
-			.map_err(|_| NodeError::ServerCreationFailed)?;
-
 		Ok(Spatial {
-			node: Rc::new(node),
+			node: Rc::new(
+				generate_node!(
+						GenNodeInfo{
+							client,
+							spatial_parent,
+							parent_name: "/spatial/spatial",
+							object_name: "/spatial",
+							method_name: "createSpatial"
+						},
+						position,
+						rotation,
+						scale,
+						translatable,
+						rotatable,
+						scalable,
+						zoneable)),
 		})
 	}
 

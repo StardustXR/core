@@ -31,16 +31,15 @@ pub struct GenNodeInfo<'a, 'b> {
 	pub(crate) object_name: &'b str,
 	pub(crate) method_name: &'b str
 }
-
 macro_rules! push_to_vec {
 	($vec:expr, $thing_to_pass:expr) => {{
 		{
-			match FlexBuffable::from($thing_to_pass) {
-				FlexBuffable::Float(f) => {$vec.push(f)},
-				FlexBuffable::Vec3(vec3) => {flex_from_vec3!($vec, vec3)},
-				FlexBuffable::Quat(quat) => {flex_from_quat!($vec, quat)},
-				FlexBuffable::Boolean(my_bool) => {$vec.push(my_bool)},
-				FlexBuffable::String(my_string) => {$vec.push(my_string.as_str())},
+			match crate::fusion::utilmacros::FlexBuffable::from($thing_to_pass) {
+				crate::fusion::utilmacros::FlexBuffable::Float(f) => {$vec.push(f)},
+				crate::fusion::utilmacros::FlexBuffable::Vec3(vec3) => {flex_from_vec3!($vec, vec3)},
+				crate::fusion::utilmacros::FlexBuffable::Quat(quat) => {flex_from_quat!($vec, quat)},
+				crate::fusion::utilmacros::FlexBuffable::Boolean(my_bool) => {$vec.push(my_bool)},
+				crate::fusion::utilmacros::FlexBuffable::String(my_string) => {$vec.push(my_string.as_str())},
 			}
 		}
 	}};

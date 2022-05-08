@@ -88,29 +88,21 @@ impl<'a> BoxField<'a> {
 		rotation: values::Quat,
 		size: values::Vec3,
 	) -> Result<Self, NodeError> {
-		let (node, id) = Node::generate_with_parent(client, "/field")?;
-
-		node.messenger
-			.upgrade()
-			.ok_or(NodeError::InvalidMessenger)?
-			.send_remote_signal(
-				"/field",
-				"createBoxField",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					vec.push(id.as_str());
-					vec.push(spatial_parent.node.get_path());
-					flex_from_vec3!(vec, position);
-					flex_from_quat!(vec, rotation);
-					flex_from_vec3!(vec, size);
-				})
-				.as_slice(),
-			)
-			.map_err(|_| NodeError::ServerCreationFailed)?;
-
 		Ok(BoxField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(node),
+					node: Rc::new(
+						generate_node!(
+								GenNodeInfo{
+									client: &client,
+									spatial_parent: &spatial_parent,
+									parent_name: "/field",
+									object_name: "/field",
+									method_name: "createBoxField"
+								},
+								position,
+								rotation,
+								size))
 				},
 			},
 		})
@@ -201,17 +193,22 @@ impl<'a> CylinderField<'a> {
 		length: f32,
 		radius: f32,
 	) -> Result<Self, NodeError> {
-		let node = generate_node!(GenNodeInfo{
-			client: &client,
-			spatial_parent: &spatial_parent,
-			parent_name: "/field",
-			object_name: "/field",
-			method_name: "createCylinderField"
-		}, position, rotation, length, radius);
 		Ok(CylinderField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(node),
+					node: Rc::new(
+						generate_node!(
+								GenNodeInfo{
+									client: &client,
+									spatial_parent: &spatial_parent,
+									parent_name: "/field",
+									object_name: "/field",
+									method_name: "createCylinderField"
+								},
+								position,
+								rotation,
+								length,
+								radius)),
 				},
 			},
 		})
@@ -253,28 +250,20 @@ impl<'a> SphereField<'a> {
 		position: values::Vec3,
 		radius: f32,
 	) -> Result<Self, NodeError> {
-		let (node, id) = Node::generate_with_parent(client, "/field")?;
-
-		node.messenger
-			.upgrade()
-			.ok_or(NodeError::InvalidMessenger)?
-			.send_remote_signal(
-				"/field",
-				"createSphereField",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					vec.push(id.as_str());
-					vec.push(spatial_parent.node.get_path());
-					flex_from_vec3!(vec, position);
-					vec.push(radius);
-				})
-				.as_slice(),
-			)
-			.map_err(|_| NodeError::ServerCreationFailed)?;
-
 		Ok(SphereField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(node),
+					node: Rc::new(
+						generate_node!(
+								GenNodeInfo{
+									client: &client,
+									spatial_parent: &spatial_parent,
+									parent_name: "/field",
+									object_name: "/field",
+									method_name: "createSphereField"
+								},
+								position,
+								radius)),
 				},
 			},
 		})
