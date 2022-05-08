@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use super::values;
 use crate::flex;
 
@@ -8,6 +9,7 @@ use super::{
 };
 
 use std::rc::Rc;
+use crate::fusion::utilmacros::FlexBuffable;
 
 pub struct Field<'a> {
 	pub spatial: Spatial<'a>,
@@ -200,7 +202,6 @@ impl<'a> CylinderField<'a> {
 		radius: f32,
 	) -> Result<Self, NodeError> {
 		let (node, id) = Node::generate_with_parent(client, "/field")?;
-
 		node.messenger
 			.upgrade()
 			.ok_or(NodeError::InvalidMessenger)?
@@ -208,12 +209,9 @@ impl<'a> CylinderField<'a> {
 				"/field",
 				"createCylinderField",
 				flex::flexbuffer_from_vector_arguments(|vec| {
-					vec.push(id.as_str());
-					vec.push(spatial_parent.node.get_path());
-					flex_from_vec3!(vec, position);
-					flex_from_quat!(vec, rotation);
-					vec.push(length);
-					vec.push(radius);
+					push_to_vec!(vec,
+						id.clone(), String::from(spatial_parent.node.get_path()),
+						position, rotation, length, radius);
 				})
 				.as_slice(),
 			)
