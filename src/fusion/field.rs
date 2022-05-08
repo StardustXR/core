@@ -9,7 +9,7 @@ use super::{
 };
 
 use std::rc::Rc;
-use crate::fusion::utilmacros::FlexBuffable;
+use crate::fusion::utilmacros::{FlexBuffable, GenNodeInfo};
 
 pub struct Field<'a> {
 	pub spatial: Spatial<'a>,
@@ -201,22 +201,13 @@ impl<'a> CylinderField<'a> {
 		length: f32,
 		radius: f32,
 	) -> Result<Self, NodeError> {
-		let (node, id) = Node::generate_with_parent(client, "/field")?;
-		node.messenger
-			.upgrade()
-			.ok_or(NodeError::InvalidMessenger)?
-			.send_remote_signal(
-				"/field",
-				"createCylinderField",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					push_to_vec!(vec,
-						id.clone(), String::from(spatial_parent.node.get_path()),
-						position, rotation, length, radius);
-				})
-				.as_slice(),
-			)
-			.map_err(|_| NodeError::ServerCreationFailed)?;
-
+		let node = generate_node!(GenNodeInfo{
+			client: &client,
+			spatial_parent: &spatial_parent,
+			parent_name: "/field",
+			object_name: "/field",
+			method_name: "createCylinderField"
+		}, position, rotation, length, radius);
 		Ok(CylinderField {
 			field: Field {
 				spatial: Spatial {
