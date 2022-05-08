@@ -34,7 +34,7 @@ impl<'a> Messenger<'a> {
 	/// This makes sure that there are no repeat id's, but every id is filled.
 	/// for example if a id like 2, finished, but you still had 1, 3, 4, and 5 waiting
 	/// then you could reuse 2
-	fn generate_message_id(&self) -> u32 {
+	pub fn generate_message_id(&self) -> u32 {
 		let mut id: u32 = 0;
 		while self.pending_callbacks.lock().unwrap().contains_key(&id) {
 			id += 1;
