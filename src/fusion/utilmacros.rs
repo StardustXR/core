@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use crate::fusion::client::Client;
 use crate::fusion::spatial::Spatial;
 use crate::fusion::values::{Quat, Vec3};
-//TODO this isn't finished.
+
 macro_rules! generate_node {
 	($gen_node_info:expr, $($things_to_pass:expr),*) => {
 		{

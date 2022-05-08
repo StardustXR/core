@@ -24,9 +24,8 @@ impl<'a> Field<'a> {
 	) -> Result<(), NodeError> {
 		self.spatial.node.execute_remote_method(
 			"distance",
-			flex::flexbuffer_from_vector_arguments(|vec| {
-				vec.push(space.node.get_path());
-				flex_from_vec3!(vec, point);
+			flex::flexbuffer_from_vector_arguments(|vec_builder| {
+				push_to_vec!(vec_builder, space.node.get_path(), point);
 			})
 			.as_slice(),
 			Box::new(move |data| {
@@ -44,9 +43,8 @@ impl<'a> Field<'a> {
 	) -> Result<(), NodeError> {
 		self.spatial.node.execute_remote_method(
 			"normal",
-			flex::flexbuffer_from_vector_arguments(|vec| {
-				vec.push(space.node.get_path());
-				flex_from_vec3!(vec, point);
+			flex::flexbuffer_from_vector_arguments(|vec_builder| {
+				push_to_vec!(vec_builder, space.node.get_path(), point);
 			})
 			.as_slice(),
 			Box::new(move |data| {
@@ -64,9 +62,8 @@ impl<'a> Field<'a> {
 	) -> Result<(), NodeError> {
 		self.spatial.node.execute_remote_method(
 			"closestPoint",
-			flex::flexbuffer_from_vector_arguments(|vec| {
-				vec.push(space.node.get_path());
-				flex_from_vec3!(vec, point);
+			flex::flexbuffer_from_vector_arguments(|vec_builder| {
+				push_to_vec!(vec_builder, space.node.get_path(), point);
 			})
 			.as_slice(),
 			Box::new(move |data| {
