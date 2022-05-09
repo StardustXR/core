@@ -5,10 +5,7 @@ use super::{
 	values,
 };
 use crate::{flex, fusion::utilmacros::GenNodeInfo};
-use std::{
-	path::{Path, PathBuf},
-	rc::Rc,
-};
+use std::path::{Path, PathBuf};
 
 pub struct Drawable<'a> {
 	pub spatial: Spatial<'a>,
@@ -31,8 +28,8 @@ impl<'a> Model<'a> {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client: client,
-							spatial_parent: &spatial_parent,
+							client,
+							spatial_parent,
 							parent_path: "/model",
 							interface_path: "/drawable",
 							interface_method: "createModelFromFile"

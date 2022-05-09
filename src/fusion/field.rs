@@ -6,7 +6,6 @@ use super::{
 	values,
 };
 use crate::flex;
-use std::rc::Rc;
 
 pub struct Field<'a> {
 	pub spatial: Spatial<'a>,
@@ -87,8 +86,8 @@ impl<'a> BoxField<'a> {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client: client,
-							spatial_parent: &spatial_parent,
+							client,
+							spatial_parent,
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createBoxField"
@@ -192,8 +191,8 @@ impl<'a> CylinderField<'a> {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client: client,
-							spatial_parent: &spatial_parent,
+							client,
+							spatial_parent,
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createCylinderField"
@@ -249,8 +248,8 @@ impl<'a> SphereField<'a> {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client: client,
-							spatial_parent: spatial_parent,
+							client,
+							spatial_parent,
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createSphereField"

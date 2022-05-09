@@ -8,8 +8,6 @@ use super::{
 };
 use crate::flex;
 
-use std::rc::Rc;
-
 pub struct PulseReceiver<'a> {
 	pub spatial: Spatial<'a>,
 	pub field: &'a Field<'a>,
@@ -27,8 +25,8 @@ impl<'a> PulseReceiver<'a> {
 			spatial: Spatial {
 				node: generate_node!(
 					GenNodeInfo {
-						client: client,
-						spatial_parent: &spatial_parent,
+						client,
+						spatial_parent,
 						parent_path: "/data/receiver",
 						interface_path: "/data",
 						interface_method: "createPulseReceiver"

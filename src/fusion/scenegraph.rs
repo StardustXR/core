@@ -2,15 +2,14 @@ use super::node::Node;
 use crate::{scenegraph, scenegraph::ScenegraphError};
 use std::{cell::RefCell, collections::HashMap, rc::Weak};
 
+#[derive(Default)]
 pub struct Scenegraph<'a> {
 	nodes: RefCell<HashMap<String, Weak<Node<'a>>>>,
 }
 
 impl<'a> Scenegraph<'a> {
 	pub fn new() -> Self {
-		Scenegraph {
-			nodes: RefCell::default(),
-		}
+		Default::default()
 	}
 
 	pub fn add_node(&self, node: Weak<Node<'a>>) {
