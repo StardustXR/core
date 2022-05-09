@@ -1,4 +1,3 @@
-name: Build
 on:
   pull_request:
   push:
@@ -11,8 +10,11 @@ jobs:
     steps:
       - name: install dependancies
         run: |
-          sudo apt install -y flatbuffers-compiler
-          which flatc
+          sudo apt install -y wget
+          wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip
+          unzip Linux.flatc.binary.clang++-9.zip
+          chmod +x flatc
+          sudo mv flatc /usr/bin/
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -29,38 +31,44 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-  tests:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: install dependancies
-        run: |
-          sudo apt install -y flatbuffers-compiler
-          which flatc
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - uses: Swatinem/rust-cache@v1
-
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+  #tests:
+    #name: Tests
+    #runs-on: ubuntu-latest
+    #steps:
+    #  - name: install dependancies
+    #    run: |
+    #      sudo apt install -y wget
+    #      wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip
+    #      unzip Linux.flatc.binary.clang++-9.zip
+    #      chmod +x flatc
+    #      sudo mv flatc /usr/bin/
+    #  - name: Checkout sources
+    #    uses: actions/checkout@v2
+    #
+    #  - name: Install stable toolchain
+    #    uses: actions-rs/toolchain@v1
+    #    with:
+    #      profile: minimal
+    #      toolchain: stable
+    #      override: true
+    #
+    #  - uses: Swatinem/rust-cache@v1
+    #
+    #  - name: Run cargo test
+    #    uses: actions-rs/cargo@v1
+    #    with:
+    #      command: test
   lints:
     name: Lints
     runs-on: ubuntu-latest
     steps:
       - name: install dependancies
         run: |
-          sudo apt install -y flatbuffers-compiler
-          which flatc
+          sudo apt install -y wget
+          wget https://github.com/google/flatbuffers/releases/download/v2.0.0/Linux.flatc.binary.clang++-9.zip
+          unzip Linux.flatc.binary.clang++-9.zip
+          chmod +x flatc
+          sudo mv flatc /usr/bin/
       - name: Checkout sources
         uses: actions/checkout@v2
         with:
