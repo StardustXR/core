@@ -1,9 +1,9 @@
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::{client, messenger::Messenger};
-use std::rc;
+use std::rc::{Rc, Weak};
 
 pub struct Client<'a> {
-	pub messenger: rc::Rc<Messenger<'a>>,
+	pub messenger: Rc<Messenger<'a>>,
 	pub scenegraph: Scenegraph<'a>,
 	root: Option<Spatial<'a>>,
 	hmd: Option<Spatial<'a>>,
@@ -14,7 +14,7 @@ impl<'a> Client<'a> {
 		let connection = client::connect()?;
 		let mut client = Client {
 			scenegraph: Scenegraph::new(),
-			messenger: rc::Rc::new(Messenger::new(connection)),
+			messenger: Rc::new(Messenger::new(connection)),
 			root: None,
 			hmd: None,
 		};
@@ -28,8 +28,8 @@ impl<'a> Client<'a> {
 		self.messenger.dispatch(&self.scenegraph)
 	}
 
-	pub fn get_weak_messenger(&self) -> rc::Weak<Messenger<'a>> {
-		rc::Rc::downgrade(&self.messenger)
+	pub fn get_weak_messenger(&self) -> Weak<Messenger<'a>> {
+		Rc::downgrade(&self.messenger)
 	}
 
 	pub fn get_root(&self) -> &Spatial<'a> {
