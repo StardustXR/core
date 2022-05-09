@@ -1,6 +1,8 @@
-use crate::fusion::client::Client;
-use crate::fusion::spatial::Spatial;
-use crate::fusion::values::{Quat, Vec3};
+use super::{
+	client::Client,
+	spatial::Spatial,
+	values::{Quat, Vec3},
+};
 use std::path::PathBuf;
 
 macro_rules! generate_node {

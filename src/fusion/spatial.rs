@@ -1,9 +1,10 @@
-use super::values;
+use super::{
+	client::Client,
+	node::{Node, NodeError},
+	utilmacros::GenNodeInfo,
+	values,
+};
 use crate::flex;
-
-use super::client::Client;
-use super::node::{Node, NodeError};
-use crate::fusion::utilmacros::GenNodeInfo;
 use std::rc::Rc;
 
 pub struct Spatial<'a> {

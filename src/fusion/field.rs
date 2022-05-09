@@ -1,13 +1,11 @@
-use super::values;
-use crate::flex;
-
 use super::{
 	client::Client,
 	node::{Node, NodeError},
 	spatial::Spatial,
+	utilmacros::GenNodeInfo,
+	values,
 };
-
-use crate::fusion::utilmacros::GenNodeInfo;
+use crate::flex;
 use std::rc::Rc;
 
 pub struct Field<'a> {

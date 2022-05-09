@@ -1,15 +1,14 @@
-use super::values;
-use crate::flex;
-use std::path::{Path, PathBuf};
-
 use super::{
 	client::Client,
 	node::{Node, NodeError},
 	spatial::Spatial,
+	values,
 };
-
-use crate::fusion::utilmacros::GenNodeInfo;
-use std::rc::Rc;
+use crate::{flex, fusion::utilmacros::GenNodeInfo};
+use std::{
+	path::{Path, PathBuf},
+	rc::Rc,
+};
 
 pub struct Drawable<'a> {
 	pub spatial: Spatial<'a>,

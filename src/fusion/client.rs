@@ -1,9 +1,5 @@
-use super::scenegraph::Scenegraph;
-use crate::client;
-use crate::messenger::Messenger;
-
-use super::spatial::Spatial;
-
+use super::{scenegraph::Scenegraph, spatial::Spatial};
+use crate::{client, messenger::Messenger};
 use std::rc;
 
 pub struct Client<'a> {

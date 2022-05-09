@@ -1,6 +1,5 @@
 use super::node::Node;
-use crate::scenegraph;
-use crate::scenegraph::ScenegraphError;
+use crate::{scenegraph, scenegraph::ScenegraphError};
 use std::{collections::HashMap, rc::Weak};
 
 pub struct Scenegraph<'a> {

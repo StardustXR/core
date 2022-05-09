@@ -1,17 +1,8 @@
-// macro_rules! impl_Coordinates {
-// 	($T:ident) => {
-// 		impl Coordinates for $T {
-// 			fn coordinate(&self) -> (f64, f64) { (self.x, self.y) }
-// 		}
-// 	}
-// }
-
 use super::client::Client;
-use crate::flex;
-use crate::messenger::Messenger;
+use crate::{flex, messenger::Messenger};
+use std::{collections::HashMap, rc::Weak, vec::Vec};
 
 use nanoid::nanoid;
-use std::{collections::HashMap, rc::Weak, vec::Vec};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
