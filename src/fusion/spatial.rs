@@ -24,7 +24,7 @@ impl<'a> Spatial<'a> {
 		zoneable: bool,
 	) -> Result<Self, NodeError> {
 		Ok(Spatial {
-			node: Rc::new(generate_node!(
+			node: generate_node!(
 				GenNodeInfo {
 					client,
 					spatial_parent,
@@ -39,13 +39,13 @@ impl<'a> Spatial<'a> {
 				rotatable,
 				scalable,
 				zoneable
-			)),
+			),
 		})
 	}
 
 	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Self, NodeError> {
 		Ok(Spatial {
-			node: Rc::new(Node::from_path(client, path)?),
+			node: Node::from_path(client, path)?,
 		})
 	}
 

@@ -1,6 +1,10 @@
 use super::client::Client;
 use crate::{flex, messenger::Messenger};
-use std::{collections::HashMap, rc::Weak, vec::Vec};
+use std::{
+	collections::HashMap,
+	rc::{Rc, Weak},
+	vec::Vec,
+};
 
 use nanoid::nanoid;
 use thiserror::Error;
@@ -40,7 +44,7 @@ impl<'a> Node<'a> {
 		self.path.as_str()
 	}
 
-	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Self, NodeError> {
+	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Rc<Self>, NodeError> {
 		if !path.starts_with('/') {
 			return Err(NodeError::InvalidPath);
 		}
@@ -51,14 +55,14 @@ impl<'a> Node<'a> {
 			local_signals: HashMap::new(),
 			local_methods: HashMap::new(),
 		};
-
-		// client.scenegraph.
-		Ok(node)
+		let node_ref = Rc::new(node);
+		client.scenegraph.add_node(Rc::downgrade(&node_ref));
+		Ok(node_ref)
 	}
 	pub fn generate_with_parent(
 		client: &Client<'a>,
 		parent: &str,
-	) -> Result<(Self, String), NodeError> {
+	) -> Result<(Rc<Self>, String), NodeError> {
 		let id = nanoid!(10);
 		let mut path = parent.to_string();
 		let trailing_slash_pos = path.len();
@@ -70,16 +74,17 @@ impl<'a> Node<'a> {
 		}
 		path.push_str(&id);
 
-		Ok((
-			Node {
-				path,
-				trailing_slash_pos,
-				messenger: client.get_weak_messenger(),
-				local_signals: HashMap::new(),
-				local_methods: HashMap::new(),
-			},
-			id,
-		))
+		let node = Node {
+			path,
+			trailing_slash_pos,
+			messenger: client.get_weak_messenger(),
+			local_signals: HashMap::new(),
+			local_methods: HashMap::new(),
+		};
+		let node_ref = Rc::new(node);
+		client.scenegraph.add_node(Rc::downgrade(&node_ref));
+
+		Ok((node_ref, id))
 	}
 
 	pub fn send_local_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {

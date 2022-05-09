@@ -29,7 +29,7 @@ impl<'a> Model<'a> {
 		Ok(Model {
 			drawable: Drawable {
 				spatial: Spatial {
-					node: Rc::new(generate_node!(
+					node: generate_node!(
 						GenNodeInfo {
 							client: client,
 							spatial_parent: &spatial_parent,
@@ -41,7 +41,7 @@ impl<'a> Model<'a> {
 						position,
 						rotation,
 						scale
-					)),
+					),
 				},
 			},
 		})

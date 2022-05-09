@@ -85,7 +85,7 @@ impl<'a> BoxField<'a> {
 		Ok(BoxField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(generate_node!(
+					node: generate_node!(
 						GenNodeInfo {
 							client: client,
 							spatial_parent: &spatial_parent,
@@ -96,7 +96,7 @@ impl<'a> BoxField<'a> {
 						position,
 						rotation,
 						size
-					)),
+					),
 				},
 			},
 		})
@@ -190,7 +190,7 @@ impl<'a> CylinderField<'a> {
 		Ok(CylinderField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(generate_node!(
+					node: generate_node!(
 						GenNodeInfo {
 							client: client,
 							spatial_parent: &spatial_parent,
@@ -202,7 +202,7 @@ impl<'a> CylinderField<'a> {
 						rotation,
 						length,
 						radius
-					)),
+					),
 				},
 			},
 		})
@@ -247,7 +247,7 @@ impl<'a> SphereField<'a> {
 		Ok(SphereField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(generate_node!(
+					node: generate_node!(
 						GenNodeInfo {
 							client: client,
 							spatial_parent: spatial_parent,
@@ -257,7 +257,7 @@ impl<'a> SphereField<'a> {
 						},
 						position,
 						radius
-					)),
+					),
 				},
 			},
 		})
