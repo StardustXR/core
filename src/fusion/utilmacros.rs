@@ -1,25 +1,25 @@
-use std::convert::TryInto;
 use crate::fusion::client::Client;
 use crate::fusion::spatial::Spatial;
 use crate::fusion::values::{Quat, Vec3};
+use std::path::PathBuf;
 
 macro_rules! generate_node {
 	($gen_node_info:expr, $($things_to_pass:expr),*) => {
 		{
-				let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_name)?;
-				node.messenger
-					.upgrade()
-					.ok_or(NodeError::InvalidMessenger)?
-					.send_remote_signal(
-						$gen_node_info.object_name,
-						$gen_node_info.method_name,
-						flex::flexbuffer_from_vector_arguments(|vec| {
-							push_to_vec![vec, id.as_str(), $gen_node_info.spatial_parent.node.get_path(), $($things_to_pass),+]
-						})
-						.as_slice(),
-					)
-					.map_err(|_| NodeError::ServerCreationFailed)?;
-					node
+			let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_name)?;
+			node.messenger
+				.upgrade()
+				.ok_or(NodeError::InvalidMessenger)?
+				.send_remote_signal(
+					$gen_node_info.object_name,
+					$gen_node_info.method_name,
+					flex::flexbuffer_from_vector_arguments(|vec| {
+						push_to_vec![vec, id.as_str(), $gen_node_info.spatial_parent.node.get_path(), $($things_to_pass),+]
+					})
+					.as_slice(),
+				)
+				.map_err(|_| NodeError::ServerCreationFailed)?;
+				node
 		}
 
 	}
@@ -29,7 +29,7 @@ pub struct GenNodeInfo<'a, 'b> {
 	pub(crate) spatial_parent: &'b Spatial<'a>,
 	pub(crate) parent_name: &'b str,
 	pub(crate) object_name: &'b str,
-	pub(crate) method_name: &'b str
+	pub(crate) method_name: &'b str,
 }
 macro_rules! push_to_vec {
 	($vec:expr, $thing_to_pass:expr) => {{
@@ -87,4 +87,8 @@ impl From<&str> for FlexBuffable {
 		FlexBuffable::String(String::from(var))
 	}
 }
-
+impl From<PathBuf> for FlexBuffable {
+	fn from(var: PathBuf) -> Self {
+		FlexBuffable::String(String::from(var.to_str().unwrap()))
+	}
+}

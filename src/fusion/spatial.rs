@@ -3,8 +3,8 @@ use crate::flex;
 
 use super::client::Client;
 use super::node::{Node, NodeError};
-use std::rc::Rc;
 use crate::fusion::utilmacros::GenNodeInfo;
+use std::rc::Rc;
 
 pub struct Spatial<'a> {
 	pub node: Rc<Node<'a>>,
@@ -23,22 +23,22 @@ impl<'a> Spatial<'a> {
 		zoneable: bool,
 	) -> Result<Self, NodeError> {
 		Ok(Spatial {
-			node: Rc::new(
-				generate_node!(
-						GenNodeInfo{
-							client,
-							spatial_parent,
-							parent_name: "/spatial/spatial",
-							object_name: "/spatial",
-							method_name: "createSpatial"
-						},
-						position,
-						rotation,
-						scale,
-						translatable,
-						rotatable,
-						scalable,
-						zoneable)),
+			node: Rc::new(generate_node!(
+				GenNodeInfo {
+					client,
+					spatial_parent,
+					parent_name: "/spatial/spatial",
+					object_name: "/spatial",
+					method_name: "createSpatial"
+				},
+				position,
+				rotation,
+				scale,
+				translatable,
+				rotatable,
+				scalable,
+				zoneable
+			)),
 		})
 	}
 

@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use super::values;
 use crate::flex;
 
@@ -8,8 +7,8 @@ use super::{
 	spatial::Spatial,
 };
 
+use crate::fusion::utilmacros::GenNodeInfo;
 use std::rc::Rc;
-use crate::fusion::utilmacros::{FlexBuffable, GenNodeInfo};
 
 pub struct Field<'a> {
 	pub spatial: Spatial<'a>,
@@ -88,18 +87,18 @@ impl<'a> BoxField<'a> {
 		Ok(BoxField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(
-						generate_node!(
-								GenNodeInfo{
-									client: &client,
-									spatial_parent: &spatial_parent,
-									parent_name: "/field",
-									object_name: "/field",
-									method_name: "createBoxField"
-								},
-								position,
-								rotation,
-								size))
+					node: Rc::new(generate_node!(
+						GenNodeInfo {
+							client: client,
+							spatial_parent: &spatial_parent,
+							parent_name: "/field",
+							object_name: "/field",
+							method_name: "createBoxField"
+						},
+						position,
+						rotation,
+						size
+					)),
 				},
 			},
 		})
@@ -193,19 +192,19 @@ impl<'a> CylinderField<'a> {
 		Ok(CylinderField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(
-						generate_node!(
-								GenNodeInfo{
-									client: &client,
-									spatial_parent: &spatial_parent,
-									parent_name: "/field",
-									object_name: "/field",
-									method_name: "createCylinderField"
-								},
-								position,
-								rotation,
-								length,
-								radius)),
+					node: Rc::new(generate_node!(
+						GenNodeInfo {
+							client: client,
+							spatial_parent: &spatial_parent,
+							parent_name: "/field",
+							object_name: "/field",
+							method_name: "createCylinderField"
+						},
+						position,
+						rotation,
+						length,
+						radius
+					)),
 				},
 			},
 		})
@@ -250,17 +249,17 @@ impl<'a> SphereField<'a> {
 		Ok(SphereField {
 			field: Field {
 				spatial: Spatial {
-					node: Rc::new(
-						generate_node!(
-								GenNodeInfo{
-									client: &client,
-									spatial_parent: &spatial_parent,
-									parent_name: "/field",
-									object_name: "/field",
-									method_name: "createSphereField"
-								},
-								position,
-								radius)),
+					node: Rc::new(generate_node!(
+						GenNodeInfo {
+							client: client,
+							spatial_parent: spatial_parent,
+							parent_name: "/field",
+							object_name: "/field",
+							method_name: "createSphereField"
+						},
+						position,
+						radius
+					)),
 				},
 			},
 		})
