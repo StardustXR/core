@@ -27,7 +27,7 @@ impl<'a> Model<'a> {
 		rotation: values::Quat,
 		scale: values::Vec3,
 	) -> Result<Self, NodeError> {
-		let object_name =
+		let interface_path =
 			String::from(format!("/model/{}", client.messenger.generate_message_id()));
 		Ok(Model {
 			drawable: Drawable {
@@ -36,9 +36,9 @@ impl<'a> Model<'a> {
 						GenNodeInfo {
 							client: client,
 							spatial_parent: &spatial_parent,
-							parent_name: "/drawable",
-							object_name: object_name.as_str(),
-							method_name: "createModelFromFile"
+							parent_path: "/drawable",
+							interface_path: interface_path.as_str(),
+							interface_method: "createModelFromFile"
 						},
 						PathBuf::from(file_path),
 						position,

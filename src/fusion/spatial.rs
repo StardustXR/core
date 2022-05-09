@@ -27,9 +27,9 @@ impl<'a> Spatial<'a> {
 				GenNodeInfo {
 					client,
 					spatial_parent,
-					parent_name: "/spatial/spatial",
-					object_name: "/spatial",
-					method_name: "createSpatial"
+					parent_path: "/spatial/spatial",
+					interface_path: "/spatial",
+					interface_method: "createSpatial"
 				},
 				position,
 				rotation,

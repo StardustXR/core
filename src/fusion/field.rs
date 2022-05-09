@@ -91,9 +91,9 @@ impl<'a> BoxField<'a> {
 						GenNodeInfo {
 							client: client,
 							spatial_parent: &spatial_parent,
-							parent_name: "/field",
-							object_name: "/field",
-							method_name: "createBoxField"
+							parent_path: "/field",
+							interface_path: "/field",
+							interface_method: "createBoxField"
 						},
 						position,
 						rotation,
@@ -196,9 +196,9 @@ impl<'a> CylinderField<'a> {
 						GenNodeInfo {
 							client: client,
 							spatial_parent: &spatial_parent,
-							parent_name: "/field",
-							object_name: "/field",
-							method_name: "createCylinderField"
+							parent_path: "/field",
+							interface_path: "/field",
+							interface_method: "createCylinderField"
 						},
 						position,
 						rotation,
@@ -253,9 +253,9 @@ impl<'a> SphereField<'a> {
 						GenNodeInfo {
 							client: client,
 							spatial_parent: spatial_parent,
-							parent_name: "/field",
-							object_name: "/field",
-							method_name: "createSphereField"
+							parent_path: "/field",
+							interface_path: "/field",
+							interface_method: "createSphereField"
 						},
 						position,
 						radius

@@ -6,13 +6,13 @@ use std::path::PathBuf;
 macro_rules! generate_node {
 	($gen_node_info:expr, $($things_to_pass:expr),*) => {
 		{
-			let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_name)?;
+			let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_path)?;
 			node.messenger
 				.upgrade()
 				.ok_or(NodeError::InvalidMessenger)?
 				.send_remote_signal(
-					$gen_node_info.object_name,
-					$gen_node_info.method_name,
+					$gen_node_info.interface_path,
+					$gen_node_info.interface_method,
 					flex::flexbuffer_from_vector_arguments(|vec| {
 						push_to_vec![vec, id.as_str(), $gen_node_info.spatial_parent.node.get_path(), $($things_to_pass),+]
 					})
@@ -27,9 +27,9 @@ macro_rules! generate_node {
 pub struct GenNodeInfo<'a, 'b> {
 	pub(crate) client: &'b Client<'a>,
 	pub(crate) spatial_parent: &'b Spatial<'a>,
-	pub(crate) parent_name: &'b str,
-	pub(crate) object_name: &'b str,
-	pub(crate) method_name: &'b str,
+	pub(crate) parent_path: &'b str,
+	pub(crate) interface_path: &'b str,
+	pub(crate) interface_method: &'b str,
 }
 macro_rules! push_to_vec {
 	($vec:expr, $thing_to_pass:expr) => {{
