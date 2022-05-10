@@ -5,7 +5,7 @@ pub mod utilmacros;
 
 pub mod client;
 pub mod data;
-mod drawable;
+pub mod drawable;
 pub mod field;
 pub mod node;
 pub mod scenegraph;

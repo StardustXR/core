@@ -4,6 +4,7 @@ use super::{
 	values::{Quat, Vec3},
 };
 use std::path::PathBuf;
+use crate::fusion::values::Vec2;
 
 macro_rules! generate_node {
 	($gen_node_info:expr, $($things_to_pass:expr),*) => {
@@ -54,14 +55,21 @@ macro_rules! push_to_vec {
 }
 pub enum FlexBuffable {
 	Float(f32),
+	Integer(i32),
 	Boolean(bool),
 	Vec3(Vec3),
+	Vec2(Vec2),
 	Quat(Quat),
 	String(String),
 }
 impl From<f32> for FlexBuffable {
 	fn from(var: f32) -> Self {
 		FlexBuffable::Float(var)
+	}
+}
+impl From<i32> for FlexBuffable {
+	fn from(var: i32) -> Self {
+		FlexBuffable::Integer(var)
 	}
 }
 impl From<bool> for FlexBuffable {
@@ -72,6 +80,11 @@ impl From<bool> for FlexBuffable {
 impl From<Vec3> for FlexBuffable {
 	fn from(var: Vec3) -> Self {
 		FlexBuffable::Vec3(var)
+	}
+}
+impl From<Vec2> for FlexBuffable {
+	fn from(var: Vec2) -> Self {
+		FlexBuffable::Vec2(var)
 	}
 }
 impl From<Quat> for FlexBuffable {
