@@ -4,6 +4,7 @@ name = "libstardustxr"
 version = "0.9.0"
 
 [dependencies]
+cluFlock = "1.2.7"
 color-rs = "0.7.1"
 flagset = "0.4.3"
 flatbuffers = "2.1.2"
