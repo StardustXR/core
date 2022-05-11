@@ -1,7 +1,6 @@
 use super::{
 	client::Client,
-	node::{Node, NodeError},
-	utilmacros::GenNodeInfo,
+	node::{GenNodeInfo, Node, NodeError},
 	values,
 };
 use crate::flex;
@@ -24,11 +23,11 @@ impl<'a> Spatial<'a> {
 			node: generate_node!(
 				GenNodeInfo {
 					client,
-					spatial_parent,
 					parent_path: "/spatial/spatial",
 					interface_path: "/spatial",
 					interface_method: "createSpatial"
 				},
+				spatial_parent.node.get_path(),
 				position,
 				rotation,
 				scale,

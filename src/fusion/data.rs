@@ -1,9 +1,8 @@
 use super::{
 	client::Client,
 	field::Field,
-	node::{Node, NodeError},
+	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
-	utilmacros::GenNodeInfo,
 	values,
 };
 use crate::flex;
@@ -26,11 +25,11 @@ impl<'a> PulseReceiver<'a> {
 				node: generate_node!(
 					GenNodeInfo {
 						client,
-						spatial_parent,
 						parent_path: "/data/receiver",
 						interface_path: "/data",
 						interface_method: "createPulseReceiver"
 					},
+					spatial_parent.node.get_path(),
 					position,
 					rotation,
 					field.spatial.node.get_path()

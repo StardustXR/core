@@ -9,6 +9,34 @@ use std::{
 use nanoid::nanoid;
 use thiserror::Error;
 
+pub struct GenNodeInfo<'a, 'b> {
+	pub(crate) client: &'b Client<'a>,
+	pub(crate) parent_path: &'b str,
+	pub(crate) interface_path: &'b str,
+	pub(crate) interface_method: &'b str,
+}
+macro_rules! generate_node {
+	($gen_node_info:expr, $($things_to_pass:expr),*) => {
+		{
+			let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_path)?;
+			node.messenger
+				.upgrade()
+				.ok_or(NodeError::InvalidMessenger)?
+				.send_remote_signal(
+					$gen_node_info.interface_path,
+					$gen_node_info.interface_method,
+					flex::flexbuffer_from_vector_arguments(|vec| {
+						push_to_vec![vec, id.as_str(), $($things_to_pass),+]
+					})
+					.as_slice(),
+				)
+				.map_err(|_| NodeError::ServerCreationFailed)?;
+				node
+		}
+
+	}
+}
+
 #[derive(Error, Debug)]
 pub enum NodeError {
 	#[error("server creation failed")]

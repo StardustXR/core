@@ -1,8 +1,8 @@
 use super::{
 	client::Client,
+	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
-	utilmacros::GenNodeInfo,
 	values,
 };
 use crate::flex;
@@ -87,11 +87,11 @@ impl<'a> BoxField<'a> {
 					node: generate_node!(
 						GenNodeInfo {
 							client,
-							spatial_parent,
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createBoxField"
 						},
+						spatial_parent.node.get_path(),
 						position,
 						rotation,
 						size
@@ -192,11 +192,11 @@ impl<'a> CylinderField<'a> {
 					node: generate_node!(
 						GenNodeInfo {
 							client,
-							spatial_parent,
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createCylinderField"
 						},
+						spatial_parent.node.get_path(),
 						position,
 						rotation,
 						length,
@@ -249,11 +249,11 @@ impl<'a> SphereField<'a> {
 					node: generate_node!(
 						GenNodeInfo {
 							client,
-							spatial_parent,
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createSphereField"
 						},
+						spatial_parent.node.get_path(),
 						position,
 						radius
 					),

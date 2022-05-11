@@ -7,6 +7,7 @@ version = "0.9.0"
 
 [dependencies]
 color-rs = "0.6.1"
+flagset = "0.4.3"
 flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
 mint = "0.5.9"
