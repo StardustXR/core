@@ -1,6 +1,9 @@
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::{client, messenger::Messenger};
-use std::rc::{Rc, Weak};
+use std::{
+	os::unix::net::UnixStream,
+	rc::{Rc, Weak},
+};
 
 pub struct Client<'a> {
 	pub messenger: Rc<Messenger<'a>>,
@@ -12,6 +15,9 @@ pub struct Client<'a> {
 impl<'a> Client<'a> {
 	pub fn connect() -> Option<Self> {
 		let connection = client::connect()?;
+		Client::from_connection(connection)
+	}
+	pub fn from_connection(connection: UnixStream) -> Option<Self> {
 		let mut client = Client {
 			scenegraph: Scenegraph::new(),
 			messenger: Rc::new(Messenger::new(connection)),
