@@ -29,6 +29,14 @@ impl<'a> Scenegraph<'a> {
 		}
 		self.nodes.borrow_mut().remove(node_ref.unwrap().get_path());
 	}
+
+	pub fn get_node(&self, path: &str) -> Weak<Node<'a>> {
+		self.nodes
+			.borrow()
+			.get(path)
+			.map(|v| v.clone())
+			.unwrap_or(Weak::new())
+	}
 }
 
 impl<'a> scenegraph::Scenegraph for Scenegraph<'a> {
