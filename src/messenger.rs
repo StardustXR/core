@@ -1,7 +1,7 @@
+use mio::net::UnixStream;
 use std::{
 	collections::HashMap,
 	io::{Read, Result, Write},
-	os::unix::net::UnixStream,
 	sync::Mutex,
 };
 

@@ -10,6 +10,7 @@ flagset = "0.4.3"
 flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
 mint = "0.5.9"
+mio = {version = "0.8.3", features = ["net", "os-poll"]}
 nanoid = "0.4.0"
 schemas = {path = "schemas"}
 thiserror = "1.0.31"

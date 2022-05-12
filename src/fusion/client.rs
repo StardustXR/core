@@ -1,9 +1,7 @@
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::{client, messenger::Messenger};
-use std::{
-	os::unix::net::UnixStream,
-	rc::{Rc, Weak},
-};
+use mio::net::UnixStream;
+use std::rc::{Rc, Weak};
 
 pub struct Client<'a> {
 	pub messenger: Rc<Messenger<'a>>,

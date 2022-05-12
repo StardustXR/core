@@ -1,4 +1,4 @@
-use std::os::unix::net::UnixStream;
+use mio::net::UnixStream;
 
 pub fn connect() -> Option<UnixStream> {
 	// Get the base XDG directories
