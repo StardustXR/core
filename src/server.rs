@@ -1,5 +1,5 @@
 use cluFlock::ExclusiveFlock;
-use std::{fs::File, os::unix::net::UnixListener};
+use std::{fs, fs::File, os::unix::net::UnixListener};
 
 pub fn setup_socket() -> Option<(UnixListener, String)> {
 	// Get the base XDG directories
@@ -14,11 +14,12 @@ pub fn setup_socket() -> Option<(UnixListener, String)> {
 		let socket_path = format!("{}/stardust-{}", runtime_dir, socket_number);
 		let socket_lock_path = format!("{}.lock", socket_path);
 		match File::create(socket_lock_path) {
-			Err(_err) => return None,
+			Err(_) => continue,
 			Ok(file) => match file.try_lock() {
-				Err(_err) => socket_number += 1,
-				Ok(_lock) => {
-					return Some((UnixListener::bind(socket_path.clone()).ok()?, socket_path))
+				Err(_) => socket_number += 1,
+				Ok(_) => {
+					fs::remove_file(socket_path.clone()).ok()?;
+					return Some((UnixListener::bind(socket_path.clone()).ok()?, socket_path));
 				}
 			},
 		}
@@ -27,6 +28,6 @@ pub fn setup_socket() -> Option<(UnixListener, String)> {
 
 #[test]
 fn test_setup_socket() {
-	let (socket_listener, socket_path) = setup_socket().expect("Unable to set up socket!");
+	let (_socket_listener, socket_path) = setup_socket().expect("Unable to set up socket!");
 	println!("Socket is set up at {}", socket_path);
 }
