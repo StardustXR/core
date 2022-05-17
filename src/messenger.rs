@@ -203,7 +203,7 @@ impl<'a> Messenger<'a> {
 			.read_exact(&mut message_length_buffer)?;
 		let message_length: u32 = u32::from_ne_bytes(message_length_buffer);
 
-		let mut message_buffer: Vec<u8> = Vec::with_capacity(message_length as usize);
+		let mut message_buffer: Vec<u8> = std::vec::from_elem(0_u8, message_length as usize);
 		self.connection
 			.lock()
 			.unwrap()
