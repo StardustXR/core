@@ -45,7 +45,7 @@ impl<'a> Field<'a> {
 			.as_slice(),
 			Box::new(move |data| {
 				let root = flexbuffers::Reader::get_root(data).unwrap();
-				callback(flex_to_vec3!(root));
+				callback(flex_to_vec3!(root).unwrap());
 			}),
 		)
 	}
@@ -64,7 +64,7 @@ impl<'a> Field<'a> {
 			.as_slice(),
 			Box::new(move |data| {
 				let root = flexbuffers::Reader::get_root(data).unwrap();
-				callback(flex_to_vec3!(root));
+				callback(flex_to_vec3!(root).unwrap());
 			}),
 		)
 	}

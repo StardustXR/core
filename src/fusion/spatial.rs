@@ -57,7 +57,7 @@ impl<'a> Spatial<'a> {
 				let pos = flex_to_vec3!(flex_vec.idx(0));
 				let rot = flex_to_quat!(flex_vec.idx(1));
 				let scl = flex_to_vec3!(flex_vec.idx(2));
-				callback(pos, rot, scl);
+				callback(pos.unwrap(), rot.unwrap(), scl.unwrap());
 			}),
 		)
 	}

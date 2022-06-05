@@ -47,35 +47,28 @@ macro_rules! flex_from_color {
 #[macro_export]
 macro_rules! flex_to_vec2 {
 	($F:expr) => {{
-		let vec = $F.get_vector().unwrap();
-		mint::Vector2 {
-			x: vec.idx(0).as_f32(),
-			y: vec.idx(1).as_f32(),
-		};
+		$F.get_vector().ok().map(|v| mint::Vector2 {
+			x: v.idx(0).as_f32(),
+			y: v.idx(1).as_f32(),
+		})
 	}};
 }
 #[macro_export]
 macro_rules! flex_to_vec3 {
 	($F:expr) => {{
-		let vec = $F.get_vector().unwrap();
-		mint::Vector3 {
-			x: vec.idx(0).as_f32(),
-			y: vec.idx(1).as_f32(),
-			z: vec.idx(2).as_f32(),
-		}
+		$F.get_vector().ok().map(|v| mint::Vector3 {
+			x: v.idx(0).as_f32(),
+			y: v.idx(1).as_f32(),
+			z: v.idx(2).as_f32(),
+		})
 	}};
 }
 #[macro_export]
 macro_rules! flex_to_quat {
 	($F:expr) => {{
-		let vec = $F.get_vector().unwrap();
-		mint::Quaternion {
-			v: mint::Vector3::from([
-				vec.idx(0).as_f32(),
-				vec.idx(1).as_f32(),
-				vec.idx(2).as_f32(),
-			]),
-			s: vec.idx(3).as_f32(),
-		}
+		$F.get_vector().ok().map(|v| mint::Quaternion {
+			v: mint::Vector3::from([v.idx(0).as_f32(), v.idx(1).as_f32(), v.idx(2).as_f32()]),
+			s: v.idx(3).as_f32(),
+		})
 	}};
 }
