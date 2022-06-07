@@ -72,14 +72,20 @@ impl<'a> Spatial<'a> {
 			"setTransform",
 			flex::flexbuffer_from_vector_arguments(|vec| {
 				vec.push(space.node.get_path());
-				if position.as_ref().is_some() {
-					flex_from_vec3!(vec, position.as_ref().unwrap());
+				if position.is_some() {
+					flex_from_vec3!(vec, position.unwrap());
+				} else {
+					vec.push(());
 				}
-				if rotation.as_ref().is_some() {
-					flex_from_quat!(vec, rotation.as_ref().unwrap());
+				if rotation.is_some() {
+					flex_from_quat!(vec, rotation.unwrap());
+				} else {
+					vec.push(());
 				}
-				if scale.as_ref().is_some() {
-					flex_from_vec3!(vec, scale.as_ref().unwrap());
+				if scale.is_some() {
+					flex_from_vec3!(vec, scale.unwrap());
+				} else {
+					vec.push(());
 				}
 			})
 			.as_slice(),
