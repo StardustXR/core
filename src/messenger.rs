@@ -88,10 +88,6 @@ impl<'a> Messenger<'a> {
 		);
 		fbb.finish(message_constructed, None);
 
-		println!(
-			"Message length's flexbuffer size is {}",
-			fbb.finished_data().len()
-		);
 		let message_length = fbb.finished_data().len() as u32;
 		self.connection
 			.lock()
