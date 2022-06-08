@@ -94,9 +94,9 @@ impl<'a> Spatial<'a> {
 }
 
 #[test]
-fn create_spatial() {
+fn spatial() {
 	let client = Client::connect().expect("Couldn't connect");
-	Spatial::create(
+	let spatial = Spatial::create(
 		&client,
 		client.get_root(),
 		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
@@ -104,5 +104,7 @@ fn create_spatial() {
 		mint::Vector3::from([1_f32, 1_f32, 1_f32]),
 		false,
 	)
-	.ok();
+	.unwrap();
+	drop(spatial);
+	client.dispatch().expect("Dispatch error");
 }
