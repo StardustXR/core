@@ -63,7 +63,7 @@ impl<'a> Spatial<'a> {
 	}
 	pub fn set_transform(
 		&self,
-		space: &Spatial,
+		relative_space: Option<&Spatial>,
 		position: Option<values::Vec3>,
 		rotation: Option<values::Quat>,
 		scale: Option<values::Vec3>,
@@ -71,7 +71,11 @@ impl<'a> Spatial<'a> {
 		self.node.send_remote_signal(
 			"setTransform",
 			flex::flexbuffer_from_vector_arguments(|vec| {
-				vec.push(space.node.get_path());
+				if let Some(space) = relative_space {
+					vec.push(space.node.get_path());
+				} else {
+					vec.push(())
+				}
 				if position.is_some() {
 					flex_from_vec3!(vec, position.unwrap());
 				} else {
