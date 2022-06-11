@@ -1,29 +1,7 @@
 use super::values::{Color, Quat, Vec2, Vec3};
+use flexbuffers::VectorBuilder;
 use std::path::PathBuf;
 
-macro_rules! push_to_vec {
-	($vec:expr, $thing_to_pass:expr) => {{
-		{
-			match crate::fusion::flex::FlexBuffable::from($thing_to_pass) {
-				crate::fusion::flex::FlexBuffable::Bool(v) => {$vec.push(v)},
-				crate::fusion::flex::FlexBuffable::UInt(v) => {$vec.push(v)},
-				crate::fusion::flex::FlexBuffable::Int(v) => {$vec.push(v)},
-				crate::fusion::flex::FlexBuffable::Float(v) => {$vec.push(v)},
-				crate::fusion::flex::FlexBuffable::Vec2(vec3) => {flex_from_vec2!($vec, vec3)},
-				crate::fusion::flex::FlexBuffable::Vec3(vec3) => {flex_from_vec3!($vec, vec3)},
-				crate::fusion::flex::FlexBuffable::Quat(quat) => {flex_from_quat!($vec, quat)},
-				crate::fusion::flex::FlexBuffable::Color(color) => {flex_from_color!($vec, color)},
-				crate::fusion::flex::FlexBuffable::String(v) => {$vec.push(v.as_str())},
-			}
-		}
-	}};
-	($vec:expr, $first_thing:expr, $($thing_to_pass:expr),+) => {{
-		{
-			push_to_vec! {$vec, $first_thing}
-			push_to_vec! {$vec, $($thing_to_pass),+}
-		}
-	}};
-}
 pub enum FlexBuffable {
 	Bool(bool),
 	UInt(u64),
@@ -119,4 +97,42 @@ impl From<PathBuf> for FlexBuffable {
 	fn from(var: PathBuf) -> Self {
 		FlexBuffable::String(String::from(var.to_str().unwrap()))
 	}
+}
+impl FlexBuffable {
+	pub fn push_to_vector(&self, vec: &mut VectorBuilder) {
+		match self {
+			FlexBuffable::Bool(v) => vec.push(*v),
+			FlexBuffable::UInt(v) => vec.push(*v),
+			FlexBuffable::Int(v) => vec.push(*v),
+			FlexBuffable::Float(v) => vec.push(*v),
+			FlexBuffable::Vec2(vec3) => {
+				flex_from_vec2!(vec, vec3)
+			}
+			FlexBuffable::Vec3(vec3) => {
+				flex_from_vec3!(vec, vec3)
+			}
+			FlexBuffable::Quat(quat) => {
+				flex_from_quat!(vec, quat)
+			}
+			FlexBuffable::Color(color) => {
+				flex_from_color!(vec, color)
+			}
+			FlexBuffable::String(v) => vec.push(v.as_str()),
+		}
+	}
+}
+
+#[macro_export]
+macro_rules! push_to_vec {
+	($vec:expr, $thing_to_pass:expr) => {{
+		{
+			$crate::fusion::flex::FlexBuffable::from($thing_to_pass).push_to_vector($vec);
+		}
+	}};
+	($vec:expr, $first_thing:expr, $($thing_to_pass:expr),+) => {{
+		{
+			push_to_vec! {$vec, $first_thing}
+			push_to_vec! {$vec, $($thing_to_pass),+}
+		}
+	}};
 }
