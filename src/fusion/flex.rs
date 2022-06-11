@@ -1,4 +1,5 @@
 use super::values::{Color, Quat, Vec2, Vec3};
+use crate::flex::flexbuffer_from_arguments;
 use flexbuffers::VectorBuilder;
 use std::path::PathBuf;
 
@@ -118,6 +119,22 @@ impl FlexBuffable {
 				flex_from_color!(vec, color)
 			}
 			FlexBuffable::String(v) => vec.push(v.as_str()),
+		}
+	}
+
+	pub fn build_singleton(&self) -> Vec<u8> {
+		match self {
+			FlexBuffable::Bool(v) => flexbuffers::singleton(*v),
+			FlexBuffable::UInt(v) => flexbuffers::singleton(*v),
+			FlexBuffable::Int(v) => flexbuffers::singleton(*v),
+			FlexBuffable::Float(v) => flexbuffers::singleton(*v),
+			FlexBuffable::Vec2(vec2) => flexbuffer_from_arguments(|fbb| flex_from_vec2!(fbb, vec2)),
+			FlexBuffable::Vec3(vec3) => flexbuffer_from_arguments(|fbb| flex_from_vec3!(fbb, vec3)),
+			FlexBuffable::Quat(quat) => flexbuffer_from_arguments(|fbb| flex_from_quat!(fbb, quat)),
+			FlexBuffable::Color(color) => {
+				flexbuffer_from_arguments(|fbb| flex_from_color!(fbb, color))
+			}
+			FlexBuffable::String(v) => flexbuffers::singleton(v.as_str()),
 		}
 	}
 }
