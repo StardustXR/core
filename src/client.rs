@@ -20,7 +20,7 @@ pub fn connect() -> Result<UnixStream, std::io::Error> {
 			.get_runtime_directory()
 			.unwrap()
 			.to_str()
-			.ok_or(Error::from(ErrorKind::AddrNotAvailable))?,
+			.ok_or_else(|| Error::from(ErrorKind::AddrNotAvailable))?,
 		stardust_instance
 	);
 	UnixStream::connect(socket_path)

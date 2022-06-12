@@ -76,18 +76,18 @@ impl<'a> Spatial<'a> {
 				} else {
 					vec.push(())
 				}
-				if position.is_some() {
-					flex_from_vec3!(vec, position.unwrap());
+				if let Some(position) = position {
+					flex_from_vec3!(vec, position);
 				} else {
 					vec.push(());
 				}
-				if rotation.is_some() {
-					flex_from_quat!(vec, rotation.unwrap());
+				if let Some(rotation) = rotation {
+					flex_from_quat!(vec, rotation);
 				} else {
 					vec.push(());
 				}
-				if scale.is_some() {
-					flex_from_vec3!(vec, scale.unwrap());
+				if let Some(scale) = scale {
+					flex_from_vec3!(vec, scale);
 				} else {
 					vec.push(());
 				}

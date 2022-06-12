@@ -33,11 +33,7 @@ impl<'a> Scenegraph<'a> {
 	}
 
 	pub fn get_node(&self, path: &str) -> Weak<Node<'a>> {
-		self.nodes
-			.get(path)
-			.as_deref()
-			.map(|node| node.clone())
-			.unwrap_or_default()
+		self.nodes.get(path).as_deref().cloned().unwrap_or_default()
 	}
 }
 

@@ -12,7 +12,7 @@ pub struct ClientStopper(Arc<Mutex<pipe::Sender>>);
 
 impl ClientStopper {
 	pub fn stop(&self) -> Result<(), std::io::Error> {
-		self.0.lock().write(&[0_u8; 1])?;
+		let _ = self.0.lock().write(&[0_u8; 1])?;
 		Ok(())
 	}
 }
@@ -94,7 +94,7 @@ impl<'a> Client<'a> {
 								if e.kind() == std::io::ErrorKind::WouldBlock {
 									break 'dispatch;
 								}
-								return Err(e.into());
+								return Err(e);
 							}
 						}
 					},
