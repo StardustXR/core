@@ -111,10 +111,10 @@ fn spatial() {
 	)
 	.unwrap();
 	drop(spatial);
-	ctrlc::set_handler(move || {
-		println!("Cleanly disconnected");
-		let _ = stopper.stop();
-	})
-	.expect("Failed to set SIGINT handler");
-	let _ = client.run_event_loop(None);
+	let wait_thread = std::thread::spawn(move || {
+		std::thread::sleep(core::time::Duration::from_secs(1));
+		stopper.stop()
+	});
+	client.run_event_loop(None).expect("Event loop failed");
+	let _ = wait_thread.join();
 }

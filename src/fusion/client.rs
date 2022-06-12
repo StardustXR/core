@@ -120,5 +120,14 @@ impl<'a> Client<'a> {
 
 #[test]
 fn connect() {
-	Client::connect().expect("Couldn't connect");
+	let mut client = Client::connect().expect("Couldn't connect");
+	let stopper = client.get_cross_thread_stopper();
+	std::thread::spawn(move || {
+		std::thread::sleep(core::time::Duration::from_secs(1));
+		let _ = stopper.stop().and_then(|_| {
+			println!("Successfully stopped");
+			Ok(())
+		});
+	});
+	client.run_event_loop(None).expect("Event loop failed");
 }
