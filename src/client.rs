@@ -1,6 +1,7 @@
 use mio::net::UnixStream;
+use std::io::{Error, ErrorKind};
 
-pub fn connect() -> Option<UnixStream> {
+pub fn connect() -> Result<UnixStream, std::io::Error> {
 	// Get the base XDG directories
 	let xdg_dirs = xdg::BaseDirectories::new().unwrap();
 
@@ -14,16 +15,14 @@ pub fn connect() -> Option<UnixStream> {
 	// Tries to connect the client to the server.
 	let socket_path = format!(
 		"{}/stardust-{}",
-		xdg_dirs.get_runtime_directory().unwrap().to_str()?,
+		xdg_dirs
+			.get_runtime_directory()
+			.unwrap()
+			.to_str()
+			.ok_or(Error::from(ErrorKind::AddrNotAvailable))?,
 		stardust_instance
 	);
-	match UnixStream::connect(socket_path) {
-		Ok(sock) => Some(sock),
-		Err(e) => {
-			println!("Couldn't connect: {:?}", e);
-			None
-		}
-	}
+	UnixStream::connect(socket_path)
 }
 
 #[test]

@@ -99,7 +99,8 @@ impl<'a> Spatial<'a> {
 
 #[test]
 fn spatial() {
-	let client = Client::connect().expect("Couldn't connect");
+	let mut client = Client::connect().expect("Couldn't connect");
+	let stopper = client.get_cross_thread_stopper();
 	let spatial = Spatial::create(
 		&client,
 		client.get_root(),
@@ -110,5 +111,10 @@ fn spatial() {
 	)
 	.unwrap();
 	drop(spatial);
-	client.dispatch().expect("Dispatch error");
+	ctrlc::set_handler(move || {
+		println!("Cleanly disconnected");
+		let _ = stopper.stop();
+	})
+	.expect("Failed to set SIGINT handler");
+	let _ = client.run_event_loop(None);
 }

@@ -6,12 +6,13 @@ version = "0.9.0"
 [dependencies]
 cluFlock = "1.2.7"
 color-rs = "0.7.1"
+ctrlc = "3.2.2"
 dashmap = "5.3.4"
 flagset = "0.4.3"
 flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
 mint = "0.5.9"
-mio = {version = "0.8.3", features = ["net", "os-poll"]}
+mio = {version = "0.8.3", features = ["net", "os-poll", "os-ext"]}
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"

@@ -281,6 +281,5 @@ fn sphere_field() {
 			|distance| assert_eq!(distance, 1_f32),
 		)
 		.expect("Unable to get sphere field distance");
-
-	while client.messenger.dispatch(&client.scenegraph).is_ok() {}
+	// client.run_event_loop(None);
 }
