@@ -4,10 +4,10 @@ use super::{
 	values,
 };
 use crate::flex;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Spatial<'a> {
-	pub node: Rc<Node<'a>>,
+	pub node: Arc<Node<'a>>,
 }
 
 impl<'a> Spatial<'a> {

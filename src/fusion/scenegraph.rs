@@ -1,10 +1,13 @@
 use super::node::Node;
 use crate::{scenegraph, scenegraph::ScenegraphError};
-use std::{cell::RefCell, collections::HashMap, rc::Weak};
+use core::hash::BuildHasherDefault;
+use dashmap::DashMap;
+use rustc_hash::FxHasher;
+use std::sync::Weak;
 
 #[derive(Default)]
 pub struct Scenegraph<'a> {
-	nodes: RefCell<HashMap<String, Weak<Node<'a>>>>,
+	nodes: DashMap<String, Weak<Node<'a>>, BuildHasherDefault<FxHasher>>,
 }
 
 impl<'a> Scenegraph<'a> {
@@ -18,7 +21,6 @@ impl<'a> Scenegraph<'a> {
 			return;
 		}
 		self.nodes
-			.borrow_mut()
 			.insert(String::from(node_ref.unwrap().get_path()), node);
 	}
 
@@ -27,18 +29,21 @@ impl<'a> Scenegraph<'a> {
 		if node_ref.is_none() {
 			return;
 		}
-		self.nodes.borrow_mut().remove(node_ref.unwrap().get_path());
+		self.nodes.remove(node_ref.unwrap().get_path());
 	}
 
 	pub fn get_node(&self, path: &str) -> Weak<Node<'a>> {
-		self.nodes.borrow().get(path).cloned().unwrap_or_default()
+		self.nodes
+			.get(path)
+			.as_deref()
+			.map(|node| node.clone())
+			.unwrap_or_default()
 	}
 }
 
 impl<'a> scenegraph::Scenegraph for Scenegraph<'a> {
 	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
 		self.nodes
-			.borrow()
 			.get(path)
 			.ok_or(ScenegraphError::NodeNotFound)?
 			.upgrade()
@@ -53,7 +58,6 @@ impl<'a> scenegraph::Scenegraph for Scenegraph<'a> {
 		data: &[u8],
 	) -> Result<Vec<u8>, ScenegraphError> {
 		self.nodes
-			.borrow()
 			.get(path)
 			.ok_or(ScenegraphError::NodeNotFound)?
 			.upgrade()

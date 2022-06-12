@@ -2,7 +2,7 @@ use super::client::Client;
 use crate::{flex, messenger::Messenger};
 use std::{
 	collections::HashMap,
-	rc::{Rc, Weak},
+	sync::{Arc, Weak},
 	vec::Vec,
 };
 
@@ -72,7 +72,7 @@ impl<'a> Node<'a> {
 		self.path.as_str()
 	}
 
-	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Rc<Self>, NodeError> {
+	pub fn from_path(client: &Client<'a>, path: &str) -> Result<Arc<Self>, NodeError> {
 		if !path.starts_with('/') {
 			return Err(NodeError::InvalidPath);
 		}
@@ -83,14 +83,14 @@ impl<'a> Node<'a> {
 			local_signals: HashMap::new(),
 			local_methods: HashMap::new(),
 		};
-		let node_ref = Rc::new(node);
-		client.scenegraph.add_node(Rc::downgrade(&node_ref));
+		let node_ref = Arc::new(node);
+		client.scenegraph.add_node(Arc::downgrade(&node_ref));
 		Ok(node_ref)
 	}
 	pub fn generate_with_parent(
 		client: &Client<'a>,
 		parent: &str,
-	) -> Result<(Rc<Self>, String), NodeError> {
+	) -> Result<(Arc<Self>, String), NodeError> {
 		let id = nanoid!(10);
 		let mut path = parent.to_string();
 		let trailing_slash_pos = path.len();
@@ -109,8 +109,8 @@ impl<'a> Node<'a> {
 			local_signals: HashMap::new(),
 			local_methods: HashMap::new(),
 		};
-		let node_ref = Rc::new(node);
-		client.scenegraph.add_node(Rc::downgrade(&node_ref));
+		let node_ref = Arc::new(node);
+		client.scenegraph.add_node(Arc::downgrade(&node_ref));
 
 		Ok((node_ref, id))
 	}
