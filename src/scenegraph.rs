@@ -9,9 +9,9 @@ pub enum ScenegraphError {
 	#[error("Method not found")]
 	MethodNotFound,
 	#[error("Signal error: {error}")]
-	SignalError { error: String },
+	SignalError { error: anyhow::Error },
 	#[error("Method error: {error}")]
-	MethodError { error: String },
+	MethodError { error: anyhow::Error },
 }
 
 pub trait Scenegraph {
