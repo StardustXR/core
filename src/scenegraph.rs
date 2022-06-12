@@ -8,6 +8,10 @@ pub enum ScenegraphError {
 	SignalNotFound,
 	#[error("Method not found")]
 	MethodNotFound,
+	#[error("Signal error: {error}")]
+	SignalError { error: String },
+	#[error("Method error: {error}")]
+	MethodError { error: String },
 }
 
 pub trait Scenegraph {
