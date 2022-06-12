@@ -2,9 +2,11 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ScenegraphError {
-	#[error("node doesn't exist")]
+	#[error("Node not found")]
 	NodeNotFound,
-	#[error("method doesn't exist")]
+	#[error("Signal not found")]
+	SignalNotFound,
+	#[error("Method not found")]
 	MethodNotFound,
 }
 

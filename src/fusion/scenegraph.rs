@@ -49,7 +49,7 @@ impl<'a> scenegraph::Scenegraph for Scenegraph<'a> {
 			.upgrade()
 			.ok_or(ScenegraphError::NodeNotFound)?
 			.send_local_signal(method, data)
-			.map_err(|_| ScenegraphError::MethodNotFound)
+			.map_err(|_| ScenegraphError::SignalNotFound)
 	}
 	fn execute_method(
 		&self,

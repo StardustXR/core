@@ -43,8 +43,9 @@ impl<'a> Messenger<'a> {
 	}
 
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
-	pub fn error(&self, object: &str, method: &str, err: &str) -> Result<()> {
-		self.send_call(0, None, object, method, Some(err), None)
+	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) -> Result<()> {
+		let error = format!("{}", err);
+		self.send_call(0, None, object, method, Some(error.as_str()), None)
 	}
 	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
 		self.send_call(1, None, object, method, None, Some(data))
@@ -101,22 +102,6 @@ impl<'a> Messenger<'a> {
 		Ok(())
 	}
 
-	fn handle_scenegraph_error(
-		&self,
-		path: &str,
-		method: &str,
-		error: scenegraph::ScenegraphError,
-	) {
-		match error {
-			scenegraph::ScenegraphError::NodeNotFound => {
-				self.error(path, method, "Node not found").ok();
-			}
-			scenegraph::ScenegraphError::MethodNotFound => {
-				self.error(path, method, "Method not found").ok();
-			}
-		}
-	}
-
 	fn handle_message(
 		&self,
 		message: &Message,
@@ -125,11 +110,11 @@ impl<'a> Messenger<'a> {
 		let message_type = message.type_();
 		match message_type {
 			// Errors
-			0 => println!(
-				"[Stardust XR][{:?}:{:?}] {:?}",
-				message.object(),
-				message.method(),
-				message.error()
+			0 => eprintln!(
+				"[Stardust XR][{}:{}] {}",
+				message.object().unwrap_or("unknown"),
+				message.method().unwrap_or("unknown"),
+				message.error().unwrap_or("unknown"),
 			),
 			// Signals
 			1 => {
@@ -140,11 +125,8 @@ impl<'a> Messenger<'a> {
 						message.data().unwrap(),
 					)
 					.unwrap_or_else(|error| {
-						self.handle_scenegraph_error(
-							message.object().unwrap(),
-							message.method().unwrap(),
-							error,
-						)
+						self.error(message.object().unwrap(), message.method().unwrap(), error)
+							.ok();
 					});
 			}
 			// Method called
@@ -163,11 +145,10 @@ impl<'a> Messenger<'a> {
 						None,
 						Some(&return_value),
 					)?,
-					Err(error) => self.handle_scenegraph_error(
-						message.object().unwrap(),
-						message.method().unwrap(),
-						error,
-					),
+					Err(error) => {
+						self.error(message.object().unwrap(), message.method().unwrap(), error)
+							.ok();
+					}
 				};
 			}
 			// Method return
