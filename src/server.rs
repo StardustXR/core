@@ -30,7 +30,7 @@ pub fn get_free_socket_path() -> Option<String> {
 }
 
 #[test]
-fn test_get_free_socket_path() {
+fn server_get_free_socket_path() {
 	let socket_path = get_free_socket_path().expect("Unable to set up socket!");
 	println!("Socket is free up at {}", socket_path);
 }

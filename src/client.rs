@@ -27,7 +27,7 @@ pub fn connect() -> Result<UnixStream, std::io::Error> {
 }
 
 #[test]
-fn test_connect() {
+fn client_connect() {
 	let socket = super::client::connect().expect("Socket not connected");
 	let peer_addr = socket.peer_addr().expect("Couldn't get peer address");
 	println!(

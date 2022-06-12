@@ -113,7 +113,7 @@ impl<'a> BoxField<'a> {
 }
 
 #[test]
-fn box_field() {
+fn fusion_box_field() {
 	let client = Client::connect().expect("Couldn't connect");
 
 	println!("Creating box field");
@@ -209,7 +209,7 @@ impl<'a> CylinderField<'a> {
 }
 
 #[test]
-fn cylinder_field() {
+fn fusion_cylinder_field() {
 	let client = Client::connect().expect("Couldn't connect");
 
 	let cylinder_field = CylinderField::create(
@@ -264,7 +264,7 @@ impl<'a> SphereField<'a> {
 }
 
 #[test]
-fn sphere_field() {
+fn fusion_sphere_field() {
 	let client = Client::connect().expect("Couldn't connect");
 	let sphere_field = SphereField::create(
 		&client,

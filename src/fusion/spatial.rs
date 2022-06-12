@@ -98,7 +98,7 @@ impl<'a> Spatial<'a> {
 }
 
 #[test]
-fn spatial() {
+fn fusion_spatial() {
 	let mut client = Client::connect().expect("Couldn't connect");
 	let stopper = client.get_cross_thread_stopper();
 	let spatial = Spatial::create(

@@ -119,7 +119,7 @@ impl<'a> Client<'a> {
 }
 
 #[test]
-fn connect() {
+fn fusion_client_connect() {
 	let mut client = Client::connect().expect("Couldn't connect");
 	let stopper = client.get_cross_thread_stopper();
 	std::thread::spawn(move || {
