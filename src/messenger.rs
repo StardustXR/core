@@ -13,17 +13,17 @@ use crate::{
 	},
 };
 
-pub type RawCallback<'a> = dyn Fn(&[u8]) + 'a;
+pub type RawCallback = dyn Fn(&[u8]);
 pub type Callback = dyn Fn(&flexbuffers::Reader<&[u8]>);
 
 /// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
 /// so pending_callbacks is the queue
-pub struct Messenger<'a> {
+pub struct Messenger {
 	connection: Mutex<UnixStream>,
-	pending_callbacks: Mutex<HashMap<u32, Box<RawCallback<'a>>>>,
+	pending_callbacks: Mutex<HashMap<u32, Box<RawCallback>>>,
 }
 
-impl<'a> Messenger<'a> {
+impl Messenger {
 	pub fn new(connection: UnixStream) -> Self {
 		Self {
 			connection: Mutex::new(connection),
@@ -55,7 +55,7 @@ impl<'a> Messenger<'a> {
 		object: &str,
 		method: &str,
 		data: &[u8],
-		callback: Box<RawCallback<'a>>,
+		callback: Box<RawCallback>,
 	) -> Result<()> {
 		let id = self.generate_message_id();
 		self.pending_callbacks.lock().unwrap().insert(id, callback);

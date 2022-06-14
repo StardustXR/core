@@ -59,7 +59,7 @@ type Method<'a> = dyn Fn(&[u8]) -> Vec<u8> + 'a;
 pub struct Node<'a> {
 	path: String,
 	trailing_slash_pos: usize,
-	pub messenger: Weak<Messenger<'a>>,
+	pub messenger: Weak<Messenger>,
 	local_signals: HashMap<String, Box<Signal<'a>>>,
 	local_methods: HashMap<String, Box<Method<'a>>>,
 }
@@ -138,7 +138,7 @@ impl<'a> Node<'a> {
 		&self,
 		method: &str,
 		data: &[u8],
-		callback: Box<dyn Fn(&[u8]) + 'a>,
+		callback: Box<dyn Fn(&[u8])>,
 	) -> Result<(), NodeError> {
 		self.messenger
 			.upgrade()

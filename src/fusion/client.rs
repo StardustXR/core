@@ -18,7 +18,7 @@ impl ClientStopper {
 }
 
 pub struct Client<'a> {
-	pub messenger: Arc<Messenger<'a>>,
+	pub messenger: Arc<Messenger>,
 	pub scenegraph: Scenegraph<'a>,
 
 	poll: Poll,
@@ -67,7 +67,7 @@ impl<'a> Client<'a> {
 		self.messenger.dispatch(&self.scenegraph)
 	}
 
-	pub fn get_weak_messenger(&self) -> Weak<Messenger<'a>> {
+	pub fn get_weak_messenger(&self) -> Weak<Messenger> {
 		Arc::downgrade(&self.messenger)
 	}
 

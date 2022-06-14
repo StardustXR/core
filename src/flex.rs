@@ -67,7 +67,7 @@ impl flexbuffers::Buffer for OwnedBuffer {
 	}
 	#[inline]
 	fn empty_str() -> Self::BufferString {
-		Self::empty().buffer_str().unwrap()
+		String::new()
 	}
 	fn buffer_str(&self) -> Result<Self::BufferString, std::str::Utf8Error> {
 		String::from_utf8(self.0.clone()).map_err(|e| e.utf8_error())

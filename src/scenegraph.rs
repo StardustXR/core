@@ -4,6 +4,8 @@ use thiserror::Error;
 pub enum ScenegraphError {
 	#[error("Node not found")]
 	NodeNotFound,
+	#[error("Alias has broken")]
+	BrokenAlias,
 	#[error("Signal not found")]
 	SignalNotFound,
 	#[error("Method not found")]
