@@ -45,7 +45,7 @@ impl<'a> Spatial<'a> {
 	pub fn get_transform(
 		&self,
 		space: &Spatial,
-		callback: impl Fn(values::Vec3, values::Quat, values::Vec3) + 'static,
+		callback: impl Fn(values::Vec3, values::Quat, values::Vec3) + Send + 'static,
 	) -> Result<(), NodeError> {
 		self.node.execute_remote_method(
 			"getTransform",

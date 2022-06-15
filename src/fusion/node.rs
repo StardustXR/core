@@ -138,7 +138,7 @@ impl<'a> Node<'a> {
 		&self,
 		method: &str,
 		data: &[u8],
-		callback: Box<dyn Fn(&[u8])>,
+		callback: Box<dyn Fn(&[u8]) + Send>,
 	) -> Result<(), NodeError> {
 		self.messenger
 			.upgrade()

@@ -16,7 +16,7 @@ impl<'a> Field<'a> {
 		&self,
 		space: &Spatial,
 		point: values::Vec3,
-		callback: impl Fn(f32) + 'static,
+		callback: impl Fn(f32) + Send + 'static,
 	) -> Result<(), NodeError> {
 		self.spatial.node.execute_remote_method(
 			"distance",
@@ -35,7 +35,7 @@ impl<'a> Field<'a> {
 		&self,
 		space: &Spatial,
 		point: values::Vec3,
-		callback: impl Fn(values::Vec3) + 'static,
+		callback: impl Fn(values::Vec3) + Send + 'static,
 	) -> Result<(), NodeError> {
 		self.spatial.node.execute_remote_method(
 			"normal",
@@ -54,7 +54,7 @@ impl<'a> Field<'a> {
 		&self,
 		space: &Spatial,
 		point: values::Vec3,
-		callback: impl Fn(values::Vec3) + 'static,
+		callback: impl Fn(values::Vec3) + Send + 'static,
 	) -> Result<(), NodeError> {
 		self.spatial.node.execute_remote_method(
 			"closestPoint",
