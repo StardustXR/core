@@ -1,9 +1,12 @@
 use mio::net::UnixStream;
 use std::{
-	collections::HashMap,
 	io::{Read, Result, Write},
 	sync::Mutex,
 };
+
+use core::hash::BuildHasherDefault;
+use dashmap::DashMap;
+use rustc_hash::FxHasher;
 
 use crate::{
 	scenegraph,
@@ -20,14 +23,14 @@ pub type Callback = dyn Fn(&flexbuffers::Reader<&[u8]>);
 /// so pending_callbacks is the queue
 pub struct Messenger {
 	connection: Mutex<UnixStream>,
-	pending_callbacks: Mutex<HashMap<u32, Box<RawCallback>>>,
+	pending_callbacks: Mutex<DashMap<u32, Box<RawCallback>, BuildHasherDefault<FxHasher>>>,
 }
 
 impl Messenger {
 	pub fn new(connection: UnixStream) -> Self {
 		Self {
 			connection: Mutex::new(connection),
-			pending_callbacks: Mutex::new(HashMap::new()),
+			pending_callbacks: Default::default(),
 		}
 	}
 
@@ -163,7 +166,7 @@ impl Messenger {
 					match callback_opt {
 						None => println!("The method callback on node \"{}\" with method \"{}\" and id {} is not pending",
 							  message.object().unwrap(), message.method().unwrap(), message.id()),
-						Some(callback) => callback(message.data().unwrap())
+						Some((_, callback)) => callback(message.data().unwrap())
 					}
 				}
 			}
