@@ -23,7 +23,7 @@ pub type Callback = dyn Fn(&flexbuffers::Reader<&[u8]>);
 /// so pending_callbacks is the queue
 pub struct Messenger {
 	connection: Mutex<UnixStream>,
-	pending_callbacks: Mutex<DashMap<u32, Box<RawCallback>, BuildHasherDefault<FxHasher>>>,
+	pending_callbacks: DashMap<u32, Box<RawCallback>, BuildHasherDefault<FxHasher>>,
 }
 
 impl Messenger {
@@ -39,7 +39,7 @@ impl Messenger {
 	/// then you could reuse 2
 	pub fn generate_message_id(&self) -> u32 {
 		let mut id: u32 = 0;
-		while self.pending_callbacks.lock().unwrap().contains_key(&id) {
+		while self.pending_callbacks.contains_key(&id) {
 			id += 1;
 		}
 		id
@@ -61,7 +61,7 @@ impl Messenger {
 		callback: Box<RawCallback>,
 	) -> Result<()> {
 		let id = self.generate_message_id();
-		self.pending_callbacks.lock().unwrap().insert(id, callback);
+		self.pending_callbacks.insert(id, callback);
 		self.send_call(1, None, object, method, None, Some(data))
 	}
 	fn send_call(
@@ -156,13 +156,8 @@ impl Messenger {
 			}
 			// Method return
 			3 => {
-				if self
-					.pending_callbacks
-					.lock()
-					.unwrap()
-					.contains_key(&message.id())
-				{
-					let callback_opt = self.pending_callbacks.lock().unwrap().remove(&message.id());
+				if self.pending_callbacks.contains_key(&message.id()) {
+					let callback_opt = self.pending_callbacks.remove(&message.id());
 					match callback_opt {
 						None => println!("The method callback on node \"{}\" with method \"{}\" and id {} is not pending",
 							  message.object().unwrap(), message.method().unwrap(), message.id()),
