@@ -16,8 +16,8 @@ use crate::{
 	},
 };
 
-pub type RawCallback = dyn Fn(&[u8]) + Send + Sync;
-pub type Callback = dyn Fn(&flexbuffers::Reader<&[u8]>);
+pub type RawCallback = dyn FnOnce(&[u8]) + Send + Sync;
+pub type Callback = dyn FnOnce(&flexbuffers::Reader<&[u8]>);
 
 /// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
 /// so pending_callbacks is the queue
