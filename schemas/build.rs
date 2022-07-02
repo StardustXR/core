@@ -47,7 +47,7 @@ fn main() -> anyhow::Result<()> {
 		));
 	}
 
-	let mut buf = String::with_capacity(files.len() * 100);
+	let mut buf = String::with_capacity(files.len() * 150);
 	for file in files {
 		let stem = file.file_stem().unwrap().to_str().unwrap();
 		let rs_file = file.with_extension("rs");
@@ -55,7 +55,7 @@ fn main() -> anyhow::Result<()> {
 
 		write!(
 			buf,
-			"pub mod {} {{ \n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
+			"pub mod {} {{ \n\tpub use stardust_xr::*;\n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
 			stem, name
 		)?;
 	}
