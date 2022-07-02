@@ -1,5 +1,5 @@
-include "PointerInput.fbs";
-include "HandInput.fbs";
+include "input_hand.fbs";
+include "input_pointer.fbs";
 namespace StardustXR;
 
 union InputDataRaw {

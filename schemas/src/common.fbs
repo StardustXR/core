@@ -1,25 +1,25 @@
 namespace StardustXR;
 
-struct vec3 {
+struct Vec3 {
 	x:float;
 	y:float;
 	z:float;
 }
 
-struct quat {
+struct Quat {
 	x:float;
 	y:float;
 	z:float;
 	w:float;
 }
 
-struct pose {
-	position:vec3;
-	rotation:quat;
+struct Pose {
+	position:Vec3;
+	rotation:Quat;
 }
 
-struct joint {
-	position:vec3;
-	rotation:quat;
+struct Joint {
+	position:Vec3;
+	rotation:Quat;
 	radius:float;
 }

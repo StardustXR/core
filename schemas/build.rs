@@ -4,10 +4,6 @@ use std::fs;
 use anyhow::Context;
 
 fn main() -> anyhow::Result<()> {
-	// HACK(philpax): the other modules don't actually build right now, so
-	// whitelist the ones we can actually use
-	const WHITELISTED: &[&str] = &["message"];
-
 	println!("cargo:rerun-if-changed=schemas");
 	let out_dir = std::path::Path::new(&std::env::var("OUT_DIR")?).to_owned();
 
@@ -15,11 +11,6 @@ fn main() -> anyhow::Result<()> {
 		.filter_map(Result::ok)
 		.map(|d| d.path())
 		.filter(|p| p.extension().unwrap_or_default() == "fbs")
-		.filter(|p| {
-			WHITELISTED
-				.iter()
-				.any(|w| *w == p.file_stem().unwrap().to_string_lossy())
-		})
 		.collect();
 
 	let args: Vec<_> = [
@@ -55,7 +46,7 @@ fn main() -> anyhow::Result<()> {
 
 		write!(
 			buf,
-			"pub mod {} {{ \n\tpub use stardust_xr::*;\n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
+			"pub mod {} {{ \n\tpub use self::stardust_xr::*;\n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
 			stem, name
 		)?;
 	}

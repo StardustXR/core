@@ -1,0 +1,10 @@
+include "common.fbs";
+namespace StardustXR;
+
+table Hand {
+	finger_joints:[Joint] (required);
+
+	palm:Joint (required);
+	wrist:Joint (required);
+	elbow:Joint;
+}
