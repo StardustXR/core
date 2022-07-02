@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::fs;
 
 use anyhow::Context;
@@ -46,22 +47,20 @@ fn main() -> anyhow::Result<()> {
 		));
 	}
 
-	// Generate a single module containing all of the generated modules;
-	// This is really messy :(
-	fs::write(
-		out_dir.join("mod.rs"),
-		&files
-			.iter()
-			.map(|path| {
-				let module_name = path.file_stem().unwrap().to_string_lossy();
-				let generated_path = out_dir.join(path.with_extension("rs").file_name().unwrap());
-				let module_contents = fs::read_to_string(generated_path).unwrap_or_default();
+	let mut buf = String::with_capacity(files.len() * 100);
+	for file in files {
+		let stem = file.file_stem().unwrap().to_str().unwrap();
+		let rs_file = file.with_extension("rs");
+		let name = rs_file.file_name().unwrap().to_str().unwrap();
 
-				format!("pub mod {} {{ {} }}", module_name, module_contents)
-			})
-			.collect::<Vec<_>>()
-			.join("\n"),
-	)?;
+		write!(
+			buf,
+			"pub mod {} {{ \n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
+			stem, name
+		)?;
+	}
+
+	fs::write(out_dir.join("mod.rs"), buf)?;
 
 	Ok(())
 }

@@ -10,10 +10,7 @@ use rustc_hash::FxHasher;
 
 use crate::{
 	scenegraph,
-	schemas::message::{
-		self,
-		stardust_xr::{Message, MessageArgs},
-	},
+	schemas::message::{root_as_message, Message, MessageArgs},
 };
 
 pub type RawCallback = dyn FnOnce(&[u8]) + Send + Sync;
@@ -79,7 +76,7 @@ impl Messenger {
 		let flex_err = err.map(|s| fbb.create_string(s));
 		let flex_data = data.map(|s| fbb.create_vector(s));
 
-		let message_constructed = message::stardust_xr::Message::create(
+		let message_constructed = Message::create(
 			&mut fbb,
 			&MessageArgs {
 				type_: call_type,
@@ -183,7 +180,7 @@ impl Messenger {
 			.lock()
 			.unwrap()
 			.read_exact(message_buffer.as_mut_slice())?;
-		let message_root = message::stardust_xr::root_as_message(&message_buffer);
+		let message_root = root_as_message(&message_buffer);
 		self.handle_message(&message_root.unwrap(), scenegraph)?;
 		Ok(())
 	}
