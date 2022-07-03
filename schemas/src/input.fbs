@@ -8,7 +8,7 @@ union InputDataRaw {
 }
 
 table InputData {
-	uuid:string (required);
+	uid:string (required);
 	input:InputDataRaw (required);
 	distance:float = 0;
 	datamap:[ubyte];
