@@ -3,6 +3,7 @@ use crate::{client, messenger::Messenger};
 use mio::net::UnixStream;
 use mio::unix::pipe;
 use mio::{Events, Interest, Poll, Token};
+use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use std::io::Write;
 use std::sync::{Arc, Weak};
@@ -24,8 +25,8 @@ pub struct Client<'a> {
 	poll: Poll,
 	stop_sender: ClientStopper,
 
-	root: Option<Spatial<'a>>,
-	hmd: Option<Spatial<'a>>,
+	root: OnceCell<Spatial<'a>>,
+	hmd: OnceCell<Spatial<'a>>,
 }
 
 const STOP_TOKEN: Token = Token(0);
@@ -47,19 +48,21 @@ impl<'a> Client<'a> {
 		poll.registry()
 			.register(&mut stop_receiver, STOP_TOKEN, Interest::READABLE)?;
 
-		let mut client = Client {
+		let client = Client {
 			scenegraph: Scenegraph::new(),
 			messenger: Arc::new(Messenger::new(connection)),
 
 			poll,
 			stop_sender: ClientStopper(Arc::new(Mutex::new(stop_sender))),
 
-			root: None,
-			hmd: None,
+			root: OnceCell::new(),
+			hmd: OnceCell::new(),
 		};
 
-		client.root = Some(Spatial::from_path(&client, "/").unwrap());
-		client.hmd = Some(Spatial::from_path(&client, "/hmd").unwrap());
+		let _ = client.root.set(Spatial::from_path(&client, "/").unwrap());
+		let _ = client
+			.root
+			.set(Spatial::from_path(&client, "/hmd").unwrap());
 
 		Ok(client)
 	}
@@ -72,10 +75,10 @@ impl<'a> Client<'a> {
 	}
 
 	pub fn get_root(&self) -> &Spatial<'a> {
-		self.root.as_ref().unwrap()
+		self.root.get().as_ref().unwrap()
 	}
 	pub fn get_hmd(&self) -> &Spatial<'a> {
-		self.hmd.as_ref().unwrap()
+		self.hmd.get().as_ref().unwrap()
 	}
 
 	pub fn run_event_loop(
