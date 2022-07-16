@@ -1,13 +1,16 @@
 use super::client::Client;
 use crate::{flex, messenger::Messenger};
 use std::{
-	collections::HashMap,
 	sync::{Arc, Weak},
 	vec::Vec,
 };
 
 use nanoid::nanoid;
 use thiserror::Error;
+
+use core::hash::BuildHasherDefault;
+use dashmap::DashMap;
+use rustc_hash::FxHasher;
 
 pub struct GenNodeInfo<'a, 'b> {
 	pub(crate) client: &'b Client<'a>,
@@ -60,8 +63,8 @@ pub struct Node<'a> {
 	path: String,
 	trailing_slash_pos: usize,
 	pub messenger: Weak<Messenger>,
-	local_signals: HashMap<String, Box<Signal<'a>>>,
-	local_methods: HashMap<String, Box<Method<'a>>>,
+	pub(crate) local_signals: DashMap<String, Box<Signal<'a>>, BuildHasherDefault<FxHasher>>,
+	pub(crate) local_methods: DashMap<String, Box<Method<'a>>, BuildHasherDefault<FxHasher>>,
 }
 
 impl<'a> Node<'a> {
@@ -80,8 +83,8 @@ impl<'a> Node<'a> {
 			path: path.to_string(),
 			trailing_slash_pos: path.rfind('/').ok_or(NodeError::InvalidPath)?,
 			messenger: client.get_weak_messenger(),
-			local_signals: HashMap::new(),
-			local_methods: HashMap::new(),
+			local_signals: DashMap::default(),
+			local_methods: DashMap::default(),
 		};
 		let node_ref = Arc::new(node);
 		client.scenegraph.add_node(Arc::downgrade(&node_ref));
@@ -106,8 +109,8 @@ impl<'a> Node<'a> {
 			path,
 			trailing_slash_pos,
 			messenger: client.get_weak_messenger(),
-			local_signals: HashMap::new(),
-			local_methods: HashMap::new(),
+			local_signals: DashMap::default(),
+			local_methods: DashMap::default(),
 		};
 		let node_ref = Arc::new(node);
 		client.scenegraph.add_node(Arc::downgrade(&node_ref));
