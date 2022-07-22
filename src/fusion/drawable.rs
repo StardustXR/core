@@ -9,20 +9,20 @@ use color::rgba;
 use flagset::{flags, FlagSet};
 use std::path::{Path, PathBuf};
 
-pub struct Drawable<'a> {
-	pub spatial: Spatial<'a>,
+pub struct Drawable {
+	pub spatial: Spatial,
 }
-pub struct Model<'a> {
-	pub drawable: Drawable<'a>,
+pub struct Model {
+	pub drawable: Drawable,
 }
-pub struct Text<'a> {
-	pub drawable: Drawable<'a>,
+pub struct Text {
+	pub drawable: Drawable,
 }
 //TODO add tests and finish completeting this.
-impl<'a> Model<'a> {
-	pub fn create(
-		client: &Client<'a>,
-		spatial_parent: &Spatial<'a>,
+impl Model {
+	pub async fn create(
+		client: &Client,
+		spatial_parent: &Spatial,
 		file_path: &Path,
 		position: Vec3,
 		rotation: Quat,
@@ -102,10 +102,10 @@ impl Default for TextStyle {
 	}
 }
 
-impl<'a> Text<'a> {
-	pub fn create(
-		client: &Client<'a>,
-		spatial_parent: &Spatial<'a>,
+impl Text {
+	pub async fn create(
+		client: &Client,
+		spatial_parent: &Spatial,
 		text_string: &str,
 		position: Vec3,
 		rotation: Quat,

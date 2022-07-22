@@ -7,18 +7,18 @@ use super::{
 };
 use crate::flex;
 
-pub struct PulseReceiver<'a> {
-	pub spatial: Spatial<'a>,
-	// pub field: &'a Field<'a>,
+pub struct PulseReceiver {
+	pub spatial: Spatial,
+	// pub field: &'a Field,
 }
 
-impl<'a> PulseReceiver<'a> {
-	pub fn create(
-		client: &Client<'a>,
-		spatial_parent: &Spatial<'a>,
+impl PulseReceiver {
+	pub async fn create(
+		client: &Client,
+		spatial_parent: &Spatial,
 		position: values::Vec3,
 		rotation: values::Quat,
-		field: &Field<'a>,
+		field: &Field,
 	) -> Result<Self, NodeError> {
 		Ok(PulseReceiver {
 			spatial: Spatial {
@@ -35,34 +35,37 @@ impl<'a> PulseReceiver<'a> {
 					field.spatial.node.get_path()
 				),
 			},
-			// field,
 		})
 	}
 }
 
-#[test]
-fn fusion_pulse_receiver() {
-	let mut client = Client::connect().expect("Couldn't connect");
-	let stopper = client.get_cross_thread_stopper();
+#[tokio::test]
+async fn fusion_pulse_receiver() {
+	let (client, event_loop) = Client::connect_with_async_loop()
+		.await
+		.expect("Couldn't connect");
+
 	let field = super::field::SphereField::create(
 		&client,
 		client.get_root(),
 		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
 		0.1_f32,
 	)
+	.await
 	.unwrap();
-	let pulse_receiver = PulseReceiver::create(
+	let _pulse_receiver = PulseReceiver::create(
 		&client,
 		client.get_root(),
 		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
 		mint::Quaternion::from([0_f32, 0_f32, 0_f32, 1_f32]),
 		&field.field,
 	)
+	.await
 	.unwrap();
-	let wait_thread = std::thread::spawn(move || {
-		std::thread::sleep(core::time::Duration::from_secs(1));
-		stopper.stop()
-	});
-	client.run_event_loop(None).expect("Event loop failed");
-	let _ = wait_thread.join();
+
+	tokio::select! {
+		biased;
+		_ = tokio::signal::ctrl_c() => (),
+		_ = event_loop => (),
+	};
 }

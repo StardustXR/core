@@ -1,70 +1,71 @@
-use mio::net::UnixStream;
-use std::{
-	io::{Read, Result, Write},
-	sync::Mutex,
-};
-
-use core::hash::BuildHasherDefault;
-use dashmap::DashMap;
-use rustc_hash::FxHasher;
+use anyhow::anyhow;
+use slotmap::{DefaultKey, Key, KeyData, SlotMap};
+use std::io::Result;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::UnixStream;
+use tokio::sync::oneshot;
+use tokio::sync::Mutex;
 
 use crate::{
 	scenegraph,
 	schemas::message::{root_as_message, Message, MessageArgs},
 };
 
-pub type RawCallback = dyn FnOnce(&[u8]) + Send + Sync;
-pub type Callback = dyn FnOnce(&flexbuffers::Reader<&[u8]>);
-
-/// if you send a method call and expect a response back, you need to queue the callback so whenever you handle all the messages the callback can be called
-/// so pending_callbacks is the queue
 pub struct Messenger {
 	connection: Mutex<UnixStream>,
-	pending_callbacks: DashMap<u32, Box<RawCallback>, BuildHasherDefault<FxHasher>>,
+	pending_method_futures: Mutex<SlotMap<DefaultKey, oneshot::Sender<anyhow::Result<Vec<u8>>>>>,
 }
 
 impl Messenger {
 	pub fn new(connection: UnixStream) -> Self {
 		Self {
 			connection: Mutex::new(connection),
-			pending_callbacks: Default::default(),
+			pending_method_futures: Mutex::new(Default::default()),
 		}
-	}
-
-	/// This makes sure that there are no repeat id's, but every id is filled.
-	/// for example if a id like 2, finished, but you still had 1, 3, 4, and 5 waiting
-	/// then you could reuse 2
-	pub fn generate_message_id(&self) -> u32 {
-		let mut id: u32 = 0;
-		while self.pending_callbacks.contains_key(&id) {
-			id += 1;
-		}
-		id
 	}
 
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
-	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) -> Result<()> {
+	pub async fn error<T: std::fmt::Display>(
+		&self,
+		object: &str,
+		method: &str,
+		err: T,
+	) -> Result<()> {
 		let error = format!("{}", err);
 		self.send_call(0, None, object, method, Some(error.as_str()), None)
+			.await
 	}
-	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
+	pub async fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
 		self.send_call(1, None, object, method, None, Some(data))
+			.await
 	}
-	pub fn execute_remote_method(
+	pub async fn execute_remote_method(
 		&self,
 		object: &str,
 		method: &str,
 		data: &[u8],
-		callback: Box<RawCallback>,
-	) -> Result<()> {
-		let id = self.generate_message_id();
-		self.pending_callbacks.insert(id, callback);
-		self.send_call(1, None, object, method, None, Some(data))
+	) -> anyhow::Result<Vec<u8>> {
+		let (tx, rx) = oneshot::channel();
+		let id = self.pending_method_futures.lock().await.insert(tx);
+		let num_id = id.data().as_ffi();
+		if let Err(err) = self
+			.send_call(1, Some(num_id), object, method, None, Some(data))
+			.await
+		{
+			let _ = self
+				.pending_method_futures
+				.lock()
+				.await
+				.remove(id)
+				.unwrap()
+				.send(Err(err.into()));
+		}
+		rx.await?
 	}
-	fn send_call(
+	async fn send_call(
 		&self,
 		call_type: u8,
-		id: Option<u32>,
+		id: Option<u64>,
 		path: &str,
 		method: &str,
 		err: Option<&str>,
@@ -92,42 +93,59 @@ impl Messenger {
 		let message_length = fbb.finished_data().len() as u32;
 		self.connection
 			.lock()
-			.unwrap()
-			.write_all(&message_length.to_ne_bytes())?;
+			.await
+			.write_all(&message_length.to_ne_bytes())
+			.await?;
 
 		self.connection
 			.lock()
-			.unwrap()
-			.write_all(fbb.finished_data())?;
+			.await
+			.write_all(fbb.finished_data())
+			.await?;
 		Ok(())
 	}
 
-	fn handle_message(
+	async fn handle_message(
 		&self,
-		message: &Message,
+		message: Vec<u8>,
 		scenegraph: &impl scenegraph::Scenegraph,
 	) -> Result<()> {
+		let message = root_as_message(&message).unwrap();
 		let message_type = message.type_();
 		match message_type {
 			// Errors
-			0 => eprintln!(
-				"[Stardust XR][{}:{}] {}",
-				message.object().unwrap_or("unknown"),
-				message.method().unwrap_or("unknown"),
-				message.error().unwrap_or("unknown"),
-			),
+			0 => {
+				let key: DefaultKey = KeyData::from_ffi(message.id()).into();
+				let future_opt = self.pending_method_futures.lock().await.remove(key);
+				match future_opt {
+					None => {
+						eprintln!(
+							"[Stardust XR][{}:{}] {}",
+							message.object().unwrap_or("unknown"),
+							message.method().unwrap_or("unknown"),
+							message.error().unwrap_or("unknown"),
+						)
+					}
+					Some(future) => {
+						let _ = future.send(Err(anyhow!(message
+							.error()
+							.unwrap_or("unknown")
+							.to_string())));
+					}
+				}
+			}
 			// Signals
 			1 => {
-				scenegraph
-					.send_signal(
-						message.object().unwrap(),
-						message.method().unwrap(),
-						message.data().unwrap(),
-					)
-					.unwrap_or_else(|error| {
-						self.error(message.object().unwrap(), message.method().unwrap(), error)
-							.ok();
-					});
+				let signal_status = scenegraph.send_signal(
+					message.object().unwrap(),
+					message.method().unwrap(),
+					message.data().unwrap(),
+				);
+				if let Err(e) = signal_status {
+					self.error(message.object().unwrap(), message.method().unwrap(), e)
+						.await
+						.ok();
+				}
 			}
 			// Method called
 			2 => {
@@ -137,28 +155,39 @@ impl Messenger {
 					message.data().unwrap(),
 				);
 				match method_result {
-					Ok(return_value) => self.send_call(
-						3,
-						Some(message.id()),
-						message.object().unwrap(),
-						message.method().unwrap(),
-						None,
-						Some(&return_value),
-					)?,
+					Ok(return_value) => {
+						self.send_call(
+							3,
+							Some(message.id()),
+							message.object().unwrap(),
+							message.method().unwrap(),
+							None,
+							Some(&return_value),
+						)
+						.await?
+					}
 					Err(error) => {
 						self.error(message.object().unwrap(), message.method().unwrap(), error)
+							.await
 							.ok();
 					}
 				};
 			}
 			// Method return
 			3 => {
-				if self.pending_callbacks.contains_key(&message.id()) {
-					let callback_opt = self.pending_callbacks.remove(&message.id());
-					match callback_opt {
-						None => println!("The method callback on node \"{}\" with method \"{}\" and id {} is not pending",
-							  message.object().unwrap(), message.method().unwrap(), message.id()),
-						Some((_, callback)) => callback(message.data().unwrap())
+				let key: DefaultKey = KeyData::from_ffi(message.id()).into();
+				let future_opt = self.pending_method_futures.lock().await.remove(key);
+				match future_opt {
+					None => {
+						self.error(
+							message.object().unwrap(),
+							message.method().unwrap(),
+							anyhow!("Method return without method call"),
+						)
+						.await?;
+					}
+					Some(future) => {
+						let _ = future.send(Ok(message.data().unwrap().to_vec()));
 					}
 				}
 			}
@@ -167,21 +196,22 @@ impl Messenger {
 		Ok(())
 	}
 
-	pub fn dispatch(&self, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
+	pub async fn dispatch(&self, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
 		let mut message_length_buffer: [u8; 4] = [0; 4];
 		self.connection
 			.lock()
-			.unwrap()
-			.read_exact(&mut message_length_buffer)?;
+			.await
+			.read_exact(&mut message_length_buffer)
+			.await?;
 		let message_length: u32 = u32::from_ne_bytes(message_length_buffer);
 
 		let mut message_buffer: Vec<u8> = std::vec::from_elem(0_u8, message_length as usize);
 		self.connection
 			.lock()
-			.unwrap()
-			.read_exact(message_buffer.as_mut_slice())?;
-		let message_root = root_as_message(&message_buffer);
-		self.handle_message(&message_root.unwrap(), scenegraph)?;
+			.await
+			.read_exact(message_buffer.as_mut_slice())
+			.await?;
+		self.handle_message(message_buffer, scenegraph).await?;
 		Ok(())
 	}
 }

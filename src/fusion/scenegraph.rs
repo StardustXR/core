@@ -6,16 +6,16 @@ use rustc_hash::FxHasher;
 use std::sync::Weak;
 
 #[derive(Default)]
-pub struct Scenegraph<'a> {
-	nodes: DashMap<String, Weak<Node<'a>>, BuildHasherDefault<FxHasher>>,
+pub struct Scenegraph {
+	nodes: DashMap<String, Weak<Node>, BuildHasherDefault<FxHasher>>,
 }
 
-impl<'a> Scenegraph<'a> {
+impl Scenegraph {
 	pub fn new() -> Self {
 		Default::default()
 	}
 
-	pub fn add_node(&self, node: Weak<Node<'a>>) {
+	pub fn add_node(&self, node: Weak<Node>) {
 		let node_ref = node.upgrade();
 		if node_ref.is_none() {
 			return;
@@ -24,7 +24,7 @@ impl<'a> Scenegraph<'a> {
 			.insert(String::from(node_ref.unwrap().get_path()), node);
 	}
 
-	pub fn remove_node(&self, node: Weak<Node<'a>>) {
+	pub fn remove_node(&self, node: Weak<Node>) {
 		let node_ref = node.upgrade();
 		if node_ref.is_none() {
 			return;
@@ -32,12 +32,12 @@ impl<'a> Scenegraph<'a> {
 		self.nodes.remove(node_ref.unwrap().get_path());
 	}
 
-	pub fn get_node(&self, path: &str) -> Weak<Node<'a>> {
+	pub fn get_node(&self, path: &str) -> Weak<Node> {
 		self.nodes.get(path).as_deref().cloned().unwrap_or_default()
 	}
 }
 
-impl<'a> scenegraph::Scenegraph for Scenegraph<'a> {
+impl scenegraph::Scenegraph for Scenegraph {
 	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
 		self.nodes
 			.get(path)

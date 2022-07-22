@@ -7,18 +7,22 @@ version = "0.9.0"
 anyhow = "1.0.57"
 cluFlock = "1.2.7"
 color-rs = "0.7.1"
-ctrlc = "3.2.2"
 dashmap = "5.3.4"
 flagset = "0.4.3"
 flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
 mint = "0.5.9"
-mio = {version = "0.8.3", features = ["net", "os-poll", "os-ext"]}
 nanoid = "0.4.0"
 once_cell = "1.12.0"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
 schemas = {path = "schemas"}
+slotmap = "1.0.6"
 thiserror = "1.0.31"
+tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }
 uds = "0.2.6"
 xdg = "2.4.1"
+
+[dev-dependencies]
+ctrlc = "3.2.2"
+glam = {version = "0.21.2", features = ["mint"]}

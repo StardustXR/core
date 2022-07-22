@@ -6,77 +6,73 @@ use super::{
 	values,
 };
 use crate::flex;
+use anyhow::{anyhow, Result};
 
-pub struct Field<'a> {
-	pub spatial: Spatial<'a>,
+pub struct Field {
+	pub spatial: Spatial,
 }
 
-impl<'a> Field<'a> {
-	pub fn distance(
+impl Field {
+	pub async fn distance(&self, space: &Spatial, point: values::Vec3) -> Result<f32> {
+		self.spatial
+			.node
+			.execute_remote_method(
+				"distance",
+				&flex::flexbuffer_from_vector_arguments(|vec_builder| {
+					push_to_vec!(vec_builder, space.node.get_path(), point);
+				}),
+			)
+			.await
+			.map(|data| {
+				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
+				root.get_f64().unwrap_or(0_f64) as f32
+			})
+	}
+
+	pub async fn normal(&self, space: &Spatial, point: values::Vec3) -> Result<values::Vec3> {
+		self.spatial
+			.node
+			.execute_remote_method(
+				"normal",
+				&flex::flexbuffer_from_vector_arguments(|vec_builder| {
+					push_to_vec!(vec_builder, space.node.get_path(), point);
+				}),
+			)
+			.await
+			.and_then(|data| {
+				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
+				flex_to_vec3!(root).ok_or_else(|| anyhow!("Parsing error"))
+			})
+	}
+
+	pub async fn closest_point(
 		&self,
 		space: &Spatial,
 		point: values::Vec3,
-		callback: impl Fn(f32) + Send + Sync + 'static,
-	) -> Result<(), NodeError> {
-		self.spatial.node.execute_remote_method(
-			"distance",
-			flex::flexbuffer_from_vector_arguments(|vec_builder| {
-				push_to_vec!(vec_builder, space.node.get_path(), point);
+	) -> Result<values::Vec3> {
+		self.spatial
+			.node
+			.execute_remote_method(
+				"closestPoint",
+				&flex::flexbuffer_from_vector_arguments(|vec_builder| {
+					push_to_vec!(vec_builder, space.node.get_path(), point);
+				}),
+			)
+			.await
+			.and_then(|data| {
+				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
+				flex_to_vec3!(root).ok_or_else(|| anyhow!("Parsing error"))
 			})
-			.as_slice(),
-			Box::new(move |data| {
-				let root = flexbuffers::Reader::get_root(data).unwrap();
-				callback(root.get_f64().unwrap_or(0_f64) as f32);
-			}),
-		)
-	}
-
-	pub fn normal(
-		&self,
-		space: &Spatial,
-		point: values::Vec3,
-		callback: impl Fn(values::Vec3) + Send + Sync + 'static,
-	) -> Result<(), NodeError> {
-		self.spatial.node.execute_remote_method(
-			"normal",
-			flex::flexbuffer_from_vector_arguments(|vec_builder| {
-				push_to_vec!(vec_builder, space.node.get_path(), point);
-			})
-			.as_slice(),
-			Box::new(move |data| {
-				let root = flexbuffers::Reader::get_root(data).unwrap();
-				callback(flex_to_vec3!(root).unwrap());
-			}),
-		)
-	}
-
-	pub fn closest_point(
-		&self,
-		space: &Spatial,
-		point: values::Vec3,
-		callback: impl Fn(values::Vec3) + Send + Sync + 'static,
-	) -> Result<(), NodeError> {
-		self.spatial.node.execute_remote_method(
-			"closestPoint",
-			flex::flexbuffer_from_vector_arguments(|vec_builder| {
-				push_to_vec!(vec_builder, space.node.get_path(), point);
-			})
-			.as_slice(),
-			Box::new(move |data| {
-				let root = flexbuffers::Reader::get_root(data).unwrap();
-				callback(flex_to_vec3!(root).unwrap());
-			}),
-		)
 	}
 }
 
-pub struct BoxField<'a> {
-	pub field: Field<'a>,
+pub struct BoxField {
+	pub field: Field,
 }
-impl<'a> BoxField<'a> {
-	pub fn create(
-		client: &Client<'a>,
-		spatial_parent: &Spatial<'a>,
+impl BoxField {
+	pub async fn create(
+		client: &Client,
+		spatial_parent: &Spatial,
 		position: values::Vec3,
 		rotation: values::Quat,
 		size: values::Vec3,
@@ -101,22 +97,26 @@ impl<'a> BoxField<'a> {
 		})
 	}
 
-	pub fn set_size(&self, size: values::Vec3) -> Result<(), NodeError> {
-		self.field.spatial.node.send_remote_signal(
-			"distance",
-			flex::flexbuffer_from_arguments(|fbb| {
-				flex_from_vec3!(fbb, size);
-			})
-			.as_slice(),
-		)
+	pub async fn set_size(&self, size: values::Vec3) -> Result<(), NodeError> {
+		self.field
+			.spatial
+			.node
+			.send_remote_signal(
+				"distance",
+				flex::flexbuffer_from_arguments(|fbb| {
+					flex_from_vec3!(fbb, size);
+				})
+				.as_slice(),
+			)
+			.await
 	}
 }
 
-#[test]
-fn fusion_box_field() {
-	let client = Client::connect().expect("Couldn't connect");
-
-	println!("Creating box field");
+#[tokio::test]
+async fn fusion_box_field() {
+	let (client, event_loop) = Client::connect_with_async_loop()
+		.await
+		.expect("Couldn't connect");
 	let box_field = BoxField::create(
 		&client,
 		client.get_root(),
@@ -124,63 +124,38 @@ fn fusion_box_field() {
 		mint::Quaternion::from([0_f32, 0_f32, 0_f32, 1_f32]),
 		mint::Vector3::from([1_f32, 1_f32, 1_f32]),
 	)
+	.await
 	.expect("Unable to make box field");
+
+	let client_captured = client.clone();
 	box_field
 		.set_size(mint::Vector3::from([0.5_f32, 0.5_f32, 0.5_f32]))
+		.await
 		.expect("Unable to set box field size");
-	box_field
+	let distance = box_field
 		.field
 		.distance(
-			client.get_root(),
+			client_captured.get_root(),
 			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-			|distance| assert_eq!(distance, 1_f32),
 		)
+		.await
 		.expect("Unable to get box field distance");
+	assert_eq!(distance, 1_f32);
 
-	let cylinder_field = CylinderField::create(
-		&client,
-		client.get_root(),
-		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
-		mint::Quaternion::from([0_f32, 0_f32, 0_f32, 1_f32]),
-		1_f32,
-		0.5_f32,
-	)
-	.expect("Unable to make cylinder field");
-	cylinder_field
-		.field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-			|distance| assert_eq!(distance, 1_f32),
-		)
-		.expect("Unable to cylinder box field distance");
-
-	let sphere_field = SphereField::create(
-		&client,
-		client.get_root(),
-		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
-		0.5_f32,
-	)
-	.expect("Unable to make sphere field");
-	sphere_field
-		.field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-			|distance| assert_eq!(distance, 1_f32),
-		)
-		.expect("Unable to get sphere field distance");
-
-	while client.messenger.dispatch(&client.scenegraph).is_ok() {}
+	tokio::select! {
+		biased;
+		_ = tokio::signal::ctrl_c() => (),
+		_ = event_loop => (),
+	};
 }
 
-pub struct CylinderField<'a> {
-	pub field: Field<'a>,
+pub struct CylinderField {
+	pub field: Field,
 }
-impl<'a> CylinderField<'a> {
-	pub fn create(
-		client: &Client<'a>,
-		spatial_parent: &Spatial<'a>,
+impl CylinderField {
+	pub async fn create(
+		client: &Client,
+		spatial_parent: &Spatial,
 		position: values::Vec3,
 		rotation: values::Quat,
 		length: f32,
@@ -208,9 +183,11 @@ impl<'a> CylinderField<'a> {
 	}
 }
 
-#[test]
-fn fusion_cylinder_field() {
-	let client = Client::connect().expect("Couldn't connect");
+#[tokio::test]
+async fn fusion_cylinder_field() {
+	let (client, event_loop) = Client::connect_with_async_loop()
+		.await
+		.expect("Couldn't connect");
 
 	let cylinder_field = CylinderField::create(
 		&client,
@@ -220,26 +197,32 @@ fn fusion_cylinder_field() {
 		1_f32,
 		0.5_f32,
 	)
+	.await
 	.expect("Unable to make cylinder field");
-	cylinder_field
+	let distance = cylinder_field
 		.field
 		.distance(
 			client.get_root(),
 			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-			|distance| assert_eq!(distance, 1_f32),
 		)
+		.await
 		.expect("Unable to cylinder box field distance");
+	assert_eq!(distance, 1_f32);
 
-	while client.messenger.dispatch(&client.scenegraph).is_ok() {}
+	tokio::select! {
+		biased;
+		_ = tokio::signal::ctrl_c() => (),
+		_ = event_loop => (),
+	};
 }
 
-pub struct SphereField<'a> {
-	pub field: Field<'a>,
+pub struct SphereField {
+	pub field: Field,
 }
-impl<'a> SphereField<'a> {
-	pub fn create(
-		client: &Client<'a>,
-		spatial_parent: &Spatial<'a>,
+impl SphereField {
+	pub async fn create(
+		client: &Client,
+		spatial_parent: &Spatial,
 		position: values::Vec3,
 		radius: f32,
 	) -> Result<Self, NodeError> {
@@ -263,23 +246,33 @@ impl<'a> SphereField<'a> {
 	}
 }
 
-#[test]
-fn fusion_sphere_field() {
-	let client = Client::connect().expect("Couldn't connect");
+#[tokio::test]
+async fn fusion_sphere_field() {
+	let (client, event_loop) = Client::connect_with_async_loop()
+		.await
+		.expect("Couldn't connect");
+
 	let sphere_field = SphereField::create(
 		&client,
 		client.get_root(),
 		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
 		0.5_f32,
 	)
+	.await
 	.expect("Unable to make sphere field");
-	sphere_field
+	let distance = sphere_field
 		.field
 		.distance(
 			client.get_root(),
 			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-			|distance| assert_eq!(distance, 1_f32),
 		)
+		.await
 		.expect("Unable to get sphere field distance");
-	// client.run_event_loop(None);
+	assert_eq!(distance, 1_f32);
+
+	tokio::select! {
+		biased;
+		_ = tokio::signal::ctrl_c() => (),
+		_ = event_loop => (),
+	};
 }

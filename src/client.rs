@@ -1,7 +1,7 @@
-use mio::net::UnixStream;
 use std::io::{Error, ErrorKind};
+use tokio::net::UnixStream;
 
-pub fn connect() -> Result<UnixStream, std::io::Error> {
+pub async fn connect() -> Result<UnixStream, std::io::Error> {
 	// Get the base XDG directories
 	let xdg_dirs = xdg::BaseDirectories::new().unwrap();
 
@@ -23,12 +23,14 @@ pub fn connect() -> Result<UnixStream, std::io::Error> {
 			.ok_or_else(|| Error::from(ErrorKind::AddrNotAvailable))?,
 		stardust_instance
 	);
-	UnixStream::connect(socket_path)
+	UnixStream::connect(socket_path).await
 }
 
-#[test]
-fn client_connect() {
-	let socket = super::client::connect().expect("Socket not connected");
+#[tokio::test]
+async fn client_connect() {
+	let socket = super::client::connect()
+		.await
+		.expect("Socket not connected");
 	let peer_addr = socket.peer_addr().expect("Couldn't get peer address");
 	println!(
 		"Socket peer address is {}",

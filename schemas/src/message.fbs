@@ -2,7 +2,7 @@ namespace StardustXR;
 
 table Message {
 	type: ubyte;
-	id: uint;
+	id: uint64;
 	object: string;
 	method: string;
 	error: string;
