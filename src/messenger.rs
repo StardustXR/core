@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
 use std::io::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
 use tokio::sync::oneshot;
 use tokio::sync::Mutex;
@@ -12,14 +13,18 @@ use crate::{
 };
 
 pub struct Messenger {
-	connection: Mutex<UnixStream>,
+	read: Mutex<OwnedReadHalf>,
+	write: Mutex<OwnedWriteHalf>,
+	// connection: Mutex<UnixStream>,
 	pending_method_futures: Mutex<SlotMap<DefaultKey, oneshot::Sender<anyhow::Result<Vec<u8>>>>>,
 }
 
 impl Messenger {
 	pub fn new(connection: UnixStream) -> Self {
+		let (read, write) = connection.into_split();
 		Self {
-			connection: Mutex::new(connection),
+			read: Mutex::new(read),
+			write: Mutex::new(write),
 			pending_method_futures: Mutex::new(Default::default()),
 		}
 	}
@@ -90,18 +95,10 @@ impl Messenger {
 		);
 		fbb.finish(message_constructed, None);
 
+		let mut connection = self.write.lock().await;
 		let message_length = fbb.finished_data().len() as u32;
-		self.connection
-			.lock()
-			.await
-			.write_all(&message_length.to_ne_bytes())
-			.await?;
-
-		self.connection
-			.lock()
-			.await
-			.write_all(fbb.finished_data())
-			.await?;
+		connection.write_all(&message_length.to_ne_bytes()).await?;
+		connection.write_all(fbb.finished_data()).await?;
 		Ok(())
 	}
 
@@ -197,20 +194,16 @@ impl Messenger {
 	}
 
 	pub async fn dispatch(&self, scenegraph: &impl scenegraph::Scenegraph) -> Result<()> {
+		let mut connection = self.read.lock().await;
+
 		let mut message_length_buffer: [u8; 4] = [0; 4];
-		self.connection
-			.lock()
-			.await
-			.read_exact(&mut message_length_buffer)
-			.await?;
+		connection.read_exact(&mut message_length_buffer).await?;
 		let message_length: u32 = u32::from_ne_bytes(message_length_buffer);
 
 		let mut message_buffer: Vec<u8> = std::vec::from_elem(0_u8, message_length as usize);
-		self.connection
-			.lock()
-			.await
-			.read_exact(message_buffer.as_mut_slice())
-			.await?;
+		connection.read_exact(message_buffer.as_mut_slice()).await?;
+
+		drop(connection);
 		self.handle_message(message_buffer, scenegraph).await?;
 		Ok(())
 	}
