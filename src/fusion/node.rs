@@ -54,10 +54,14 @@ pub enum NodeError {
 	NodeNotFound,
 	#[error("method doesn't exist")]
 	MethodNotFound,
+	#[error("Signal failed")]
+	SignalFailed,
+	#[error("Method failed")]
+	MethodFailed,
 }
 
-type Signal = dyn Fn(&[u8]) + Send + Sync + 'static;
-type Method = dyn Fn(&[u8]) -> Vec<u8> + Send + Sync + 'static;
+type Signal = dyn Fn(&[u8]) -> anyhow::Result<()> + Send + Sync + 'static;
+type Method = dyn Fn(&[u8]) -> anyhow::Result<Vec<u8>> + Send + Sync + 'static;
 
 pub struct Node {
 	path: String,
@@ -119,17 +123,18 @@ impl Node {
 	}
 
 	pub fn send_local_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
-		self.local_signals
+		let signal = self
+			.local_signals
 			.get(method)
-			.ok_or(NodeError::MethodNotFound)?(data);
-		Ok(())
+			.ok_or(NodeError::MethodNotFound)?;
+		signal(data).map_err(|_| NodeError::SignalFailed)
 	}
 	pub fn execute_local_method(&self, method: &str, data: &[u8]) -> Result<Vec<u8>, NodeError> {
 		let method = self
 			.local_methods
 			.get(method)
 			.ok_or(NodeError::MethodNotFound)?;
-		Ok(method(data))
+		method(data).map_err(|_| NodeError::MethodFailed)
 	}
 	pub async fn send_remote_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
 		self.messenger
