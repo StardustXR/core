@@ -11,3 +11,5 @@ pub mod drawable;
 pub mod field;
 pub mod scenegraph;
 pub mod spatial;
+
+pub mod root;

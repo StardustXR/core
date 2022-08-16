@@ -1,3 +1,4 @@
+use super::root::Root;
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::{client, messenger::Messenger};
 use once_cell::sync::OnceCell;
@@ -12,7 +13,7 @@ pub struct Client {
 
 	stop_notifier: Notify,
 
-	root: OnceCell<Spatial>,
+	root: OnceCell<Arc<Root>>,
 	hmd: OnceCell<Spatial>,
 }
 
@@ -23,7 +24,7 @@ impl Client {
 	}
 
 	pub async fn from_connection(connection: UnixStream) -> Result<Arc<Self>, std::io::Error> {
-		let client = Client {
+		let client = Arc::new(Client {
 			scenegraph: Scenegraph::new(),
 			messenger: Arc::new(Messenger::new(connection)),
 
@@ -31,14 +32,11 @@ impl Client {
 
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
-		};
+		});
+		let _ = client.root.set(Root::new(&client).await.unwrap());
+		let _ = client.hmd.set(Spatial::from_path(&client, "/hmd").unwrap());
 
-		let _ = client.root.set(Spatial::from_path(&client, "/").unwrap());
-		let _ = client
-			.root
-			.set(Spatial::from_path(&client, "/hmd").unwrap());
-
-		Ok(Arc::new(client))
+		Ok(client)
 	}
 
 	pub async fn connect_with_async_loop() -> Result<(Arc<Self>, JoinHandle<()>), std::io::Error> {
@@ -68,14 +66,14 @@ impl Client {
 		Arc::downgrade(&self.messenger)
 	}
 
-	pub fn get_root(&self) -> &Spatial {
+	pub fn get_root(&self) -> &Arc<Root> {
 		self.root.get().as_ref().unwrap()
 	}
 	pub fn get_hmd(&self) -> &Spatial {
 		self.hmd.get().as_ref().unwrap()
 	}
 
-	pub async fn stop_loop(&self) {
+	pub fn stop_loop(&self) {
 		self.stop_notifier.notify_one();
 	}
 }
