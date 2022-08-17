@@ -1,24 +1,29 @@
-use super::{client::Client, spatial::Spatial};
-use anyhow::{anyhow, Result};
-use std::{ops::Deref, sync::Arc};
-use tokio::sync::watch;
+use super::{client::Client, spatial::Spatial, HandlerWrapper};
+use anyhow::Result;
+use std::{
+	ops::Deref,
+	sync::{Arc, Weak},
+};
 
 #[derive(Default)]
 pub struct LogicStepInfo {
 	delta: f64,
 }
 
+pub trait RootHandler: Send + Sync + 'static {
+	fn logic_step(&self, _info: LogicStepInfo);
+}
+
 pub struct Root {
 	pub spatial: Spatial,
-	logic_step: watch::Sender<LogicStepInfo>,
+	handler: HandlerWrapper<dyn RootHandler>,
 }
 
 impl Root {
 	pub(crate) async fn new(client: &Client) -> Result<Arc<Self>> {
-		let (logic_step, _) = watch::channel(LogicStepInfo::default());
 		let root = Arc::new(Root {
 			spatial: Spatial::from_path(&client, "/")?,
-			logic_step,
+			handler: HandlerWrapper::new(),
 		});
 		root.spatial
 			.node
@@ -29,18 +34,29 @@ impl Root {
 		root.spatial.node.local_signals.insert(
 			"logicStep".to_owned(),
 			Box::new({
-				let root = root.clone();
+				let handler = root.handler.clone();
 				move |data| {
-					let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-					let info = LogicStepInfo {
-						delta: flex_vec.index(0)?.get_f64()?,
-					};
-					root.logic_step.send(info).map_err(|_| anyhow!("error"))
+					handler
+						.handle(|handler| -> Result<()> {
+							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+							let info = LogicStepInfo {
+								delta: flex_vec.index(0)?.get_f64()?,
+							};
+							handler.logic_step(info);
+							Ok(())
+						})
+						.transpose()?;
+					Ok(())
 				}
 			}),
 		);
 
 		Ok(root)
+	}
+
+	pub fn set_handler<T: RootHandler>(&self, handler: &Arc<T>) {
+		self.handler
+			.set_handler(Arc::downgrade(handler) as Weak<dyn RootHandler>)
 	}
 }
 
@@ -55,14 +71,20 @@ impl Deref for Root {
 async fn fusion_client_life_cycle() -> anyhow::Result<()> {
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
 
-	tokio::spawn({
-		let mut logic_step = client.get_root().logic_step.subscribe();
-		async move {
-			while logic_step.changed().await.is_ok() {
-				println!("Logic step delta is {}s", logic_step.borrow().delta);
-			}
+	struct LifeCycle {
+		root: Arc<Root>,
+	}
+	// impl Handler for LifeCycle {}
+	impl RootHandler for LifeCycle {
+		fn logic_step(&self, info: LogicStepInfo) {
+			println!("Logic step delta is {}s", info.delta);
 		}
+	}
+
+	let life_cycle = Arc::new(LifeCycle {
+		root: client.get_root().clone(),
 	});
+	life_cycle.root.set_handler(&life_cycle);
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
