@@ -5,6 +5,7 @@ use super::{
 	values::{Color, Quat, Vec2, Vec3},
 };
 use crate::flex;
+use anyhow::Result;
 use color::rgba;
 use flagset::{flags, FlagSet};
 use std::path::{Path, PathBuf};
@@ -34,7 +35,7 @@ impl Model {
 					node: generate_node!(
 						GenNodeInfo {
 							client,
-							parent_path: "/model",
+							parent_path: "/drawable/model",
 							interface_path: "/drawable",
 							interface_method: "createModelFromFile"
 						},
@@ -47,6 +48,26 @@ impl Model {
 				},
 			},
 		})
+	}
+}
+
+#[tokio::test]
+async fn fusion_model() -> Result<()> {
+	use glam::{vec3, Quat};
+	let client = super::client::Client::connect().await?;
+
+	Model::create(
+		&client,
+		&client.get_root(),
+		Path::new("/run/media/nova/MEDIA/xr/stardust/stardust-assets/StardustXRIcon.glb"),
+		vec3(0., 0., 0.).into(),
+		Quat::IDENTITY.into(),
+		vec3(0.1, 0.1, 0.1).into(),
+	)
+	.await?;
+
+	tokio::select! {
+		_ = tokio::time::sleep(core::time::Duration::from_secs(15)) => Ok(()),
 	}
 }
 
