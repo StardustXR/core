@@ -21,7 +21,7 @@ pub struct Text {
 }
 //TODO add tests and finish completeting this.
 impl Model {
-	pub async fn create(
+	pub async fn from_file(
 		client: &Client,
 		spatial_parent: &Spatial,
 		file_path: &Path,
@@ -49,26 +49,60 @@ impl Model {
 			},
 		})
 	}
+	pub async fn from_resource(
+		client: &Client,
+		spatial_parent: &Spatial,
+		resource_namespace: &str,
+		resource_path: &Path,
+		position: Vec3,
+		rotation: Quat,
+		scale: Vec3,
+	) -> Result<Self, NodeError> {
+		Ok(Model {
+			drawable: Drawable {
+				spatial: Spatial {
+					node: generate_node!(
+						GenNodeInfo {
+							client,
+							parent_path: "/drawable/model",
+							interface_path: "/drawable",
+							interface_method: "createModelFromResource"
+						},
+						spatial_parent.node.get_path(),
+						resource_namespace.to_string(),
+						PathBuf::from(resource_path),
+						position,
+						rotation,
+						scale
+					),
+				},
+			},
+		})
+	}
 }
 
 #[tokio::test]
 async fn fusion_model() -> Result<()> {
 	use glam::{vec3, Quat};
+	use manifest_dir_macros::directory_relative_path;
 	let client = super::client::Client::connect().await?;
+	client
+		.set_base_prefixes(&[directory_relative_path!("res")])
+		.await?;
 
-	Model::create(
+	Model::from_resource(
 		&client,
 		&client.get_root(),
-		Path::new("/run/media/nova/MEDIA/xr/stardust/stardust-assets/StardustXRIcon.glb"),
+		"libstardustxr",
+		Path::new("gyro_gem.glb"),
 		vec3(0., 0., 0.).into(),
 		Quat::IDENTITY.into(),
-		vec3(0.1, 0.1, 0.1).into(),
+		vec3(1.0, 1.0, 1.0).into(),
 	)
 	.await?;
 
-	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(15)) => Ok(()),
-	}
+	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
+	Ok(())
 }
 
 flags! {

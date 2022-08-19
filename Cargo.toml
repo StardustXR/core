@@ -25,3 +25,4 @@ xdg = "2.4.1"
 
 [dev-dependencies]
 glam = {version = "0.21.2", features = ["mint"]}
+manifest-dir-macros = "0.1.16"

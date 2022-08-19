@@ -1,8 +1,10 @@
 use super::HandlerWrapper;
 use super::{scenegraph::Scenegraph, spatial::Spatial};
+use crate::flex::flexbuffer_from_vector_arguments;
 use crate::{client, messenger::Messenger};
 use anyhow::Result;
 use once_cell::sync::OnceCell;
+use std::path::Path;
 use std::sync::{Arc, Weak};
 use tokio::net::UnixStream;
 use tokio::sync::Notify;
@@ -121,6 +123,25 @@ impl Client {
 	pub fn set_life_cycle_handler<T: LifeCycleHandler>(&self, handler: &Arc<T>) {
 		self.life_cycle_handler
 			.set_handler(Arc::downgrade(handler) as Weak<dyn LifeCycleHandler>)
+	}
+
+	pub async fn set_base_prefixes<T: AsRef<str>>(
+		&self,
+		prefixes: &[T],
+	) -> Result<(), std::io::Error> {
+		let flexbuffer = flexbuffer_from_vector_arguments(|fbb| {
+			for prefix in prefixes {
+				let prefix = prefix.as_ref();
+				let path = Path::new(prefix);
+				if path.is_absolute() && path.exists() {
+					fbb.push(prefix);
+				}
+			}
+		});
+
+		self.messenger
+			.send_remote_signal("/", "setBasePrefixes", &flexbuffer)
+			.await
 	}
 
 	pub fn stop_loop(&self) {
