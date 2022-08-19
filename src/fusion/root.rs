@@ -7,7 +7,7 @@ use std::{
 
 #[derive(Default)]
 pub struct LogicStepInfo {
-	delta: f64,
+	pub delta: f64,
 }
 
 pub trait RootHandler: Send + Sync + 'static {
