@@ -12,8 +12,6 @@ pub mod field;
 pub mod scenegraph;
 pub mod spatial;
 
-pub mod root;
-
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 

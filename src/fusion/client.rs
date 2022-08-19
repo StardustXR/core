@@ -1,11 +1,25 @@
-use super::root::Root;
+use super::HandlerWrapper;
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::{client, messenger::Messenger};
+use anyhow::Result;
 use once_cell::sync::OnceCell;
 use std::sync::{Arc, Weak};
 use tokio::net::UnixStream;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
+
+#[derive(Default)]
+pub struct LogicStepInfo {
+	pub delta: f64,
+}
+
+pub trait LifeCycleHandler: Send + Sync + 'static {
+	fn logic_step(&self, _info: LogicStepInfo);
+}
+
+pub struct Root {
+	pub spatial: Spatial,
+}
 
 pub struct Client {
 	pub messenger: Arc<Messenger>,
@@ -13,8 +27,10 @@ pub struct Client {
 
 	stop_notifier: Notify,
 
-	root: OnceCell<Arc<Root>>,
+	root: OnceCell<Spatial>,
 	hmd: OnceCell<Spatial>,
+
+	life_cycle_handler: HandlerWrapper<dyn LifeCycleHandler>,
 }
 
 impl Client {
@@ -32,9 +48,38 @@ impl Client {
 
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
+
+			life_cycle_handler: HandlerWrapper::new(),
 		});
-		let _ = client.root.set(Root::new(&client).await.unwrap());
+		let _ = client.root.set(Spatial::from_path(&client, "/").unwrap());
 		let _ = client.hmd.set(Spatial::from_path(&client, "/hmd").unwrap());
+
+		client
+			.get_root()
+			.node
+			.send_remote_signal("subscribeLogicStep", &[0, 0])
+			.await
+			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
+
+		client.get_root().node.local_signals.insert(
+			"logicStep".to_owned(),
+			Box::new({
+				let handler = client.life_cycle_handler.clone();
+				move |data| {
+					handler
+						.handle(|handler| -> Result<()> {
+							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+							let info = LogicStepInfo {
+								delta: flex_vec.index(0)?.get_f64()?,
+							};
+							handler.logic_step(info);
+							Ok(())
+						})
+						.transpose()?;
+					Ok(())
+				}
+			}),
+		);
 
 		Ok(client)
 	}
@@ -66,11 +111,16 @@ impl Client {
 		Arc::downgrade(&self.messenger)
 	}
 
-	pub fn get_root(&self) -> &Arc<Root> {
+	pub fn get_root(&self) -> &Spatial {
 		self.root.get().as_ref().unwrap()
 	}
 	pub fn get_hmd(&self) -> &Spatial {
 		self.hmd.get().as_ref().unwrap()
+	}
+
+	pub fn set_life_cycle_handler<T: LifeCycleHandler>(&self, handler: &Arc<T>) {
+		self.life_cycle_handler
+			.set_handler(Arc::downgrade(handler) as Weak<dyn LifeCycleHandler>)
 	}
 
 	pub fn stop_loop(&self) {
@@ -98,4 +148,25 @@ async fn fusion_client_connect() -> anyhow::Result<()> {
 	};
 	drop(client);
 	Ok(())
+}
+
+#[tokio::test]
+async fn fusion_client_life_cycle() -> anyhow::Result<()> {
+	let (client, event_loop) = Client::connect_with_async_loop().await?;
+
+	struct LifeCycle;
+	// impl Handler for LifeCycle {}
+	impl LifeCycleHandler for LifeCycle {
+		fn logic_step(&self, info: LogicStepInfo) {
+			println!("Logic step delta is {}s", info.delta);
+		}
+	}
+
+	let life_cycle = Arc::new(LifeCycle);
+	client.set_life_cycle_handler(&life_cycle);
+
+	tokio::select! {
+		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
+		_ = event_loop => Ok(()),
+	}
 }
