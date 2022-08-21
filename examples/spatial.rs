@@ -85,30 +85,14 @@ impl LifeCycleHandler for SpatialDemo {
 		let elapsed = info.elapsed as f32;
 
 		let _ = tokio::join!(
-			self.gem.set_transform(
-				None,
-				None,
-				Some(Quat::from_scaled_axis(vec3(0.0, elapsed, 0.0)).into()),
-				None
-			),
-			self.ring_inner.set_transform(
-				None,
-				None,
-				Some(Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed)).into()),
-				None
-			),
-			self.ring_middle.set_transform(
-				None,
-				None,
-				Some(Quat::from_scaled_axis(vec3(elapsed, 0.0, 0.0)).into()),
-				None
-			),
-			self.ring_outer.set_transform(
-				None,
-				None,
-				Some(Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed)).into()),
-				None
-			),
+			self.gem
+				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, elapsed, 0.0)).into()),
+			self.ring_inner
+				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed)).into()),
+			self.ring_middle
+				.set_rotation(None, Quat::from_scaled_axis(vec3(elapsed, 0.0, 0.0)).into(),),
+			self.ring_outer
+				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed)).into(),),
 		);
 	}
 }

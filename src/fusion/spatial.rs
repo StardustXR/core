@@ -66,6 +66,32 @@ impl<'a> Spatial {
 				(pos.unwrap(), rot.unwrap(), scl.unwrap())
 			})
 	}
+
+	pub async fn set_position(
+		&self,
+		relative_space: Option<&Spatial>,
+		position: values::Vec3,
+	) -> Result<(), NodeError> {
+		self.set_transform(relative_space, Some(position), None, None)
+			.await
+	}
+	pub async fn set_rotation(
+		&self,
+		relative_space: Option<&Spatial>,
+		rotation: values::Quat,
+	) -> Result<(), NodeError> {
+		self.set_transform(relative_space, None, Some(rotation), None)
+			.await
+	}
+	pub async fn set_scale(
+		&self,
+		relative_space: Option<&Spatial>,
+		scale: values::Vec3,
+	) -> Result<(), NodeError> {
+		self.set_transform(relative_space, None, None, Some(scale))
+			.await
+	}
+
 	pub async fn set_transform(
 		&self,
 		relative_space: Option<&Spatial>,
