@@ -2,7 +2,7 @@ use flexbuffers::{Builder, VectorBuilder};
 
 pub fn flexbuffer_from_arguments<S>(args_constructor: S) -> Vec<u8>
 where
-	S: Fn(&mut Builder),
+	S: FnOnce(&mut Builder),
 {
 	let mut fbb = Builder::default();
 	args_constructor(&mut fbb);
@@ -11,7 +11,7 @@ where
 
 pub fn flexbuffer_from_vector_arguments<S>(args_constructor: S) -> Vec<u8>
 where
-	S: Fn(&mut VectorBuilder),
+	S: FnOnce(&mut VectorBuilder),
 {
 	let mut fbb = Builder::default();
 	let mut vec = fbb.start_vector();
