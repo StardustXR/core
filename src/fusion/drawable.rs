@@ -1,14 +1,19 @@
 use super::{
 	client::Client,
 	node::{GenNodeInfo, Node, NodeError},
+	resource::Resource,
 	spatial::Spatial,
 	values::{Color, Quat, Vec2, Vec3},
 };
 use crate::flex;
 use anyhow::Result;
-use color::rgba;
+use color::{rgba, Rgba};
 use flagset::{flags, FlagSet};
-use std::path::{Path, PathBuf};
+use flexbuffers::VectorBuilder;
+use std::{
+	ops::Deref,
+	path::{Path, PathBuf},
+};
 
 pub trait MaterialParameter {
 	fn push_flex(&self, vec: &mut VectorBuilder);
@@ -70,8 +75,7 @@ impl Model {
 	pub async fn from_resource(
 		client: &Client,
 		spatial_parent: &Spatial,
-		resource_namespace: &str,
-		resource_path: &Path,
+		resource: &Resource,
 		position: Vec3,
 		rotation: Quat,
 		scale: Vec3,
@@ -86,14 +90,21 @@ impl Model {
 						interface_method: "createModelFromResource"
 					},
 					spatial_parent.node.get_path(),
-						resource_namespace.to_string(),
-						PathBuf::from(resource_path),
-						position,
-						rotation,
-						scale
-					),
+					resource.namespace.as_str(),
+					resource.path.as_str(),
+					position,
+					rotation,
+					scale
+				),
 			},
 		})
+	}
+}
+impl Deref for Model {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&&self.spatial
 	}
 }
 
@@ -109,8 +120,7 @@ async fn fusion_model() -> Result<()> {
 	Model::from_resource(
 		&client,
 		&client.get_root(),
-		"libstardustxr",
-		Path::new("gyro_gem.glb"),
+		&Resource::new("libstardustxr", "gyro_gem.glb"),
 		vec3(0., 0., 0.).into(),
 		Quat::IDENTITY.into(),
 		vec3(1.0, 1.0, 1.0).into(),
