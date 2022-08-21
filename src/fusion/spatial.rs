@@ -47,14 +47,16 @@ impl<'a> Spatial {
 		})
 	}
 
-	pub async fn get_transform(
+	pub async fn get_translation_rotation_scale(
 		&self,
-		space: &Spatial,
+		relative_space: &Spatial,
 	) -> Result<(values::Vec3, values::Quat, values::Vec3)> {
 		self.node
 			.execute_remote_method(
 				"getTransform",
-				&flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(space.node.get_path())),
+				&flex::flexbuffer_from_arguments(|fbb| {
+					fbb.build_singleton(relative_space.node.get_path())
+				}),
 			)
 			.await
 			.map(|data| {
