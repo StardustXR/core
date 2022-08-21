@@ -86,13 +86,13 @@ impl LifeCycleHandler for SpatialDemo {
 
 		let _ = tokio::join!(
 			self.gem
-				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, elapsed, 0.0)).into()),
+				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, elapsed, 0.0))),
 			self.ring_inner
-				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed)).into()),
+				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed))),
 			self.ring_middle
-				.set_rotation(None, Quat::from_scaled_axis(vec3(elapsed, 0.0, 0.0)).into(),),
+				.set_rotation(None, Quat::from_scaled_axis(vec3(elapsed, 0.0, 0.0))),
 			self.ring_outer
-				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed)).into(),),
+				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed))),
 		);
 	}
 }
