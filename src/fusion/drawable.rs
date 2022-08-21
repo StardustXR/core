@@ -14,10 +14,10 @@ pub struct Drawable {
 	pub spatial: Spatial,
 }
 pub struct Model {
-	pub drawable: Drawable,
+	pub spatial: Spatial,
 }
 pub struct Text {
-	pub drawable: Drawable,
+	pub spatial: Spatial,
 }
 //TODO add tests and finish completeting this.
 impl Model {
@@ -30,22 +30,20 @@ impl Model {
 		scale: Vec3,
 	) -> Result<Self, NodeError> {
 		Ok(Model {
-			drawable: Drawable {
-				spatial: Spatial {
-					node: generate_node!(
-						GenNodeInfo {
-							client,
-							parent_path: "/drawable/model",
-							interface_path: "/drawable",
-							interface_method: "createModelFromFile"
-						},
-						spatial_parent.node.get_path(),
-						PathBuf::from(file_path),
-						position,
-						rotation,
-						scale
-					),
-				},
+			spatial: Spatial {
+				node: generate_node!(
+					GenNodeInfo {
+						client,
+						parent_path: "/drawable/model",
+						interface_path: "/drawable",
+						interface_method: "createModelFromFile"
+					},
+					spatial_parent.node.get_path(),
+					PathBuf::from(file_path),
+					position,
+					rotation,
+					scale
+				),
 			},
 		})
 	}
@@ -59,23 +57,21 @@ impl Model {
 		scale: Vec3,
 	) -> Result<Self, NodeError> {
 		Ok(Model {
-			drawable: Drawable {
-				spatial: Spatial {
-					node: generate_node!(
-						GenNodeInfo {
-							client,
-							parent_path: "/drawable/model",
-							interface_path: "/drawable",
-							interface_method: "createModelFromResource"
-						},
-						spatial_parent.node.get_path(),
+			spatial: Spatial {
+				node: generate_node!(
+					GenNodeInfo {
+						client,
+						parent_path: "/drawable/model",
+						interface_path: "/drawable",
+						interface_method: "createModelFromResource"
+					},
+					spatial_parent.node.get_path(),
 						resource_namespace.to_string(),
 						PathBuf::from(resource_path),
 						position,
 						rotation,
 						scale
 					),
-				},
 			},
 		})
 	}
@@ -167,28 +163,26 @@ impl Text {
 		style: TextStyle,
 	) -> Result<Self, NodeError> {
 		Ok(Text {
-			drawable: Drawable {
-				spatial: Spatial {
-					node: generate_node!(
-						GenNodeInfo {
-							client,
-							parent_path: "/text",
-							interface_path: "/drawable",
-							interface_method: "createText"
-						},
-						spatial_parent.node.get_path(),
-						position,
-						rotation,
-						text_string,
-						style.font_path.as_str(),
-						style.character_height,
-						style.text_align.bits(),
-						style.bounds,
-						style.fit as u8,
-						style.bounds_align.bits(),
-						style.color
-					),
-				},
+			spatial: Spatial {
+				node: generate_node!(
+					GenNodeInfo {
+						client,
+						parent_path: "/text",
+						interface_path: "/drawable",
+						interface_method: "createText"
+					},
+					spatial_parent.node.get_path(),
+					position,
+					rotation,
+					text_string,
+					style.font_path.as_str(),
+					style.character_height,
+					style.text_align.bits(),
+					style.bounds,
+					style.fit as u8,
+					style.bounds_align.bits(),
+					style.color
+				),
 			},
 		})
 	}
