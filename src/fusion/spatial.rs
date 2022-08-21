@@ -1,23 +1,27 @@
 use super::{
 	client::Client,
 	node::{GenNodeInfo, Node, NodeError},
-	values,
+	values::{self, Quat, Vec3},
 };
-use crate::flex;
+use crate::{
+	flex,
+	fusion::values::{QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+};
 use anyhow::Result;
 use std::sync::Arc;
 
 pub struct Spatial {
 	pub node: Arc<Node>,
 }
-
-impl Spatial {
+#[buildstructor::buildstructor]
+impl<'a> Spatial {
+	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &Client,
-		spatial_parent: &Spatial,
-		position: values::Vec3,
-		rotation: values::Quat,
-		scale: values::Vec3,
+		client: &'a Client,
+		spatial_parent: &'a Spatial,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
+		scale: Option<Vec3>,
 		zoneable: bool,
 	) -> Result<Self, NodeError> {
 		Ok(Spatial {
@@ -29,9 +33,9 @@ impl Spatial {
 					interface_method: "createSpatial"
 				},
 				spatial_parent.node.get_path(),
-				position,
-				rotation,
-				scale,
+				position.unwrap_or(VEC3_ZERO),
+				rotation.unwrap_or(QUAT_IDENTITY),
+				scale.unwrap_or(VEC3_ONE),
 				zoneable
 			),
 		})
@@ -105,17 +109,13 @@ async fn fusion_spatial() {
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-
-	let spatial = Spatial::create(
-		&client,
-		client.get_root(),
-		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
-		mint::Quaternion::from([0_f32, 0_f32, 0_f32, 1_f32]),
-		mint::Vector3::from([1_f32, 1_f32, 1_f32]),
-		false,
-	)
-	.await
-	.unwrap();
+	let spatial = Spatial::builder()
+		.client(&client)
+		.spatial_parent(client.get_root())
+		.zoneable(true)
+		.build()
+		.await
+		.unwrap();
 	drop(spatial);
 
 	tokio::select! {

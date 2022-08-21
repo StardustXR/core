@@ -5,7 +5,10 @@ use super::{
 	spatial::Spatial,
 	values::{Color, Quat, Vec2, Vec3},
 };
-use crate::flex;
+use crate::{
+	flex,
+	fusion::values::{QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+};
 use anyhow::Result;
 use color::{rgba, Rgba};
 use flagset::{flags, FlagSet};
@@ -44,15 +47,16 @@ pub struct Model {
 pub struct Text {
 	pub spatial: Spatial,
 }
-//TODO add tests and finish completeting this.
-impl Model {
+#[buildstructor::buildstructor]
+impl<'a> Model {
+	#[builder(entry = "file_builder")]
 	pub async fn from_file(
-		client: &Client,
-		spatial_parent: &Spatial,
-		file_path: &Path,
-		position: Vec3,
-		rotation: Quat,
-		scale: Vec3,
+		client: &'a Client,
+		spatial_parent: &'a Spatial,
+		file_path: &'a Path,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
+		scale: Option<Vec3>,
 	) -> Result<Self, NodeError> {
 		Ok(Model {
 			spatial: Spatial {
@@ -65,20 +69,21 @@ impl Model {
 					},
 					spatial_parent.node.get_path(),
 					PathBuf::from(file_path),
-					position,
-					rotation,
-					scale
+					position.unwrap_or(VEC3_ZERO),
+					rotation.unwrap_or(QUAT_IDENTITY),
+					scale.unwrap_or(VEC3_ONE)
 				),
 			},
 		})
 	}
+	#[builder(entry = "resource_builder")]
 	pub async fn from_resource(
-		client: &Client,
-		spatial_parent: &Spatial,
-		resource: &Resource,
-		position: Vec3,
-		rotation: Quat,
-		scale: Vec3,
+		client: &'a Client,
+		spatial_parent: &'a Spatial,
+		resource: &'a Resource,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
+		scale: Option<Vec3>,
 	) -> Result<Self, NodeError> {
 		Ok(Model {
 			spatial: Spatial {
@@ -92,9 +97,9 @@ impl Model {
 					spatial_parent.node.get_path(),
 					resource.namespace.as_str(),
 					resource.path.as_str(),
-					position,
-					rotation,
-					scale
+					position.unwrap_or(VEC3_ZERO),
+					rotation.unwrap_or(QUAT_IDENTITY),
+					scale.unwrap_or(VEC3_ONE)
 				),
 			},
 		})
@@ -110,22 +115,18 @@ impl Deref for Model {
 
 #[tokio::test]
 async fn fusion_model() -> Result<()> {
-	use glam::{vec3, Quat};
 	use manifest_dir_macros::directory_relative_path;
 	let client = super::client::Client::connect().await?;
 	client
 		.set_base_prefixes(&[directory_relative_path!("res")])
 		.await?;
 
-	Model::from_resource(
-		&client,
-		&client.get_root(),
-		&Resource::new("libstardustxr", "gyro_gem.glb"),
-		vec3(0., 0., 0.).into(),
-		Quat::IDENTITY.into(),
-		vec3(1.0, 1.0, 1.0).into(),
-	)
-	.await?;
+	Model::resource_builder()
+		.client(&client)
+		.spatial_parent(client.get_root())
+		.resource(&Resource::new("libstardustxr", "gyro_gem.glb"))
+		.build()
+		.await?;
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 	Ok(())

@@ -3,9 +3,12 @@ use super::{
 	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
-	values,
+	values::{Quat, Vec3},
 };
-use crate::flex;
+use crate::{
+	flex,
+	fusion::values::{QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+};
 use anyhow::{anyhow, Result};
 
 pub struct Field {
@@ -13,7 +16,7 @@ pub struct Field {
 }
 
 impl Field {
-	pub async fn distance(&self, space: &Spatial, point: values::Vec3) -> Result<f32> {
+	pub async fn distance(&self, space: &Spatial, point: Vec3) -> Result<f32> {
 		self.spatial
 			.node
 			.execute_remote_method(
@@ -29,7 +32,7 @@ impl Field {
 			})
 	}
 
-	pub async fn normal(&self, space: &Spatial, point: values::Vec3) -> Result<values::Vec3> {
+	pub async fn normal(&self, space: &Spatial, point: Vec3) -> Result<Vec3> {
 		self.spatial
 			.node
 			.execute_remote_method(
@@ -45,11 +48,7 @@ impl Field {
 			})
 	}
 
-	pub async fn closest_point(
-		&self,
-		space: &Spatial,
-		point: values::Vec3,
-	) -> Result<values::Vec3> {
+	pub async fn closest_point(&self, space: &Spatial, point: Vec3) -> Result<Vec3> {
 		self.spatial
 			.node
 			.execute_remote_method(
@@ -69,13 +68,15 @@ impl Field {
 pub struct BoxField {
 	pub field: Field,
 }
-impl BoxField {
+#[buildstructor::buildstructor]
+impl<'a> BoxField {
+	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &Client,
-		spatial_parent: &Spatial,
-		position: values::Vec3,
-		rotation: values::Quat,
-		size: values::Vec3,
+		client: &'a Client,
+		spatial_parent: &'a Spatial,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
+		size: Option<Vec3>,
 	) -> Result<Self, NodeError> {
 		Ok(BoxField {
 			field: Field {
@@ -88,16 +89,16 @@ impl BoxField {
 							interface_method: "createBoxField"
 						},
 						spatial_parent.node.get_path(),
-						position,
-						rotation,
-						size
+						position.unwrap_or(VEC3_ZERO),
+						rotation.unwrap_or(QUAT_IDENTITY),
+						size.unwrap_or(VEC3_ONE)
 					),
 				},
 			},
 		})
 	}
 
-	pub async fn set_size(&self, size: values::Vec3) -> Result<(), NodeError> {
+	pub async fn set_size(&self, size: Vec3) -> Result<(), NodeError> {
 		self.field
 			.spatial
 			.node
@@ -117,15 +118,12 @@ async fn fusion_box_field() {
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	let box_field = BoxField::create(
-		&client,
-		client.get_root(),
-		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
-		mint::Quaternion::from([0_f32, 0_f32, 0_f32, 1_f32]),
-		mint::Vector3::from([1_f32, 1_f32, 1_f32]),
-	)
-	.await
-	.expect("Unable to make box field");
+	let box_field = BoxField::builder()
+		.client(&client)
+		.spatial_parent(client.get_root())
+		.build()
+		.await
+		.expect("Unable to make box field");
 
 	let client_captured = client.clone();
 	box_field
@@ -152,12 +150,14 @@ async fn fusion_box_field() {
 pub struct CylinderField {
 	pub field: Field,
 }
-impl CylinderField {
+#[buildstructor::buildstructor]
+impl<'a> CylinderField {
+	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &Client,
-		spatial_parent: &Spatial,
-		position: values::Vec3,
-		rotation: values::Quat,
+		client: &'a Client,
+		spatial_parent: &'a Spatial,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
 		length: f32,
 		radius: f32,
 	) -> Result<Self, NodeError> {
@@ -172,8 +172,8 @@ impl CylinderField {
 							interface_method: "createCylinderField"
 						},
 						spatial_parent.node.get_path(),
-						position,
-						rotation,
+						position.unwrap_or(VEC3_ZERO),
+						rotation.unwrap_or(QUAT_IDENTITY),
 						length,
 						radius
 					),
@@ -189,16 +189,14 @@ async fn fusion_cylinder_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let cylinder_field = CylinderField::create(
-		&client,
-		client.get_root(),
-		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
-		mint::Quaternion::from([0_f32, 0_f32, 0_f32, 1_f32]),
-		1_f32,
-		0.5_f32,
-	)
-	.await
-	.expect("Unable to make cylinder field");
+	let cylinder_field = CylinderField::builder()
+		.client(&client)
+		.spatial_parent(client.get_root())
+		.length(1.0)
+		.radius(0.5)
+		.build()
+		.await
+		.expect("Unable to make cylinder field");
 	let distance = cylinder_field
 		.field
 		.distance(
@@ -219,11 +217,13 @@ async fn fusion_cylinder_field() {
 pub struct SphereField {
 	pub field: Field,
 }
-impl SphereField {
+#[buildstructor::buildstructor]
+impl<'a> SphereField {
+	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &Client,
-		spatial_parent: &Spatial,
-		position: values::Vec3,
+		client: &'a Client,
+		spatial_parent: &'a Spatial,
+		position: Option<Vec3>,
 		radius: f32,
 	) -> Result<Self, NodeError> {
 		Ok(SphereField {
@@ -237,7 +237,7 @@ impl SphereField {
 							interface_method: "createSphereField"
 						},
 						spatial_parent.node.get_path(),
-						position,
+						position.unwrap_or(VEC3_ZERO),
 						radius
 					),
 				},
@@ -252,14 +252,13 @@ async fn fusion_sphere_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let sphere_field = SphereField::create(
-		&client,
-		client.get_root(),
-		mint::Vector3::from([0_f32, 0_f32, 0_f32]),
-		0.5_f32,
-	)
-	.await
-	.expect("Unable to make sphere field");
+	let sphere_field = SphereField::builder()
+		.client(&client)
+		.spatial_parent(client.get_root())
+		.radius(0.5)
+		.build()
+		.await
+		.expect("Unable to make sphere field");
 	let distance = sphere_field
 		.field
 		.distance(
