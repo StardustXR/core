@@ -10,9 +10,29 @@ use color::rgba;
 use flagset::{flags, FlagSet};
 use std::path::{Path, PathBuf};
 
-pub struct Drawable {
-	pub spatial: Spatial,
+pub trait MaterialParameter {
+	fn push_flex(&self, vec: &mut VectorBuilder);
 }
+impl MaterialParameter for f32 {
+	fn push_flex(&self, vec: &mut VectorBuilder) {
+		vec.push(*self);
+	}
+}
+impl MaterialParameter for f64 {
+	fn push_flex(&self, vec: &mut VectorBuilder) {
+		vec.push(*self);
+	}
+}
+impl MaterialParameter for Rgba {
+	fn push_flex(&self, vec: &mut VectorBuilder) {
+		let mut color_vec = vec.start_vector();
+		color_vec.push(self.c.r);
+		color_vec.push(self.c.g);
+		color_vec.push(self.c.b);
+		color_vec.push(self.a);
+	}
+}
+
 pub struct Model {
 	pub spatial: Spatial,
 }
