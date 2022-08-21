@@ -5,6 +5,7 @@ use crate::{client, messenger::Messenger};
 use anyhow::Result;
 use async_trait::async_trait;
 use once_cell::sync::OnceCell;
+use parking_lot::Mutex;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use tokio::net::UnixStream;
@@ -14,6 +15,7 @@ use tokio::task::JoinHandle;
 #[derive(Default)]
 pub struct LogicStepInfo {
 	pub delta: f64,
+	pub elapsed: f64,
 }
 
 #[async_trait]
@@ -34,6 +36,7 @@ pub struct Client {
 	root: OnceCell<Spatial>,
 	hmd: OnceCell<Spatial>,
 
+	elapsed_time: Mutex<f64>,
 	life_cycle_handler: HandlerWrapper<dyn LifeCycleHandler>,
 }
 
@@ -53,6 +56,7 @@ impl Client {
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
 
+			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: HandlerWrapper::new(),
 		});
 		let _ = client.root.set(Spatial::from_path(&client, "/").unwrap());
@@ -68,13 +72,18 @@ impl Client {
 		client.get_root().node.local_signals.insert(
 			"logicStep".to_owned(),
 			Box::new({
+				let client = client.clone();
 				let handler = client.life_cycle_handler.clone();
 				move |data| {
 					handler
 						.handle(|handler| -> Result<()> {
 							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+							let delta = flex_vec.index(0)?.get_f64()?;
+							let mut elapsed = client.elapsed_time.lock();
+							(*elapsed) += delta;
 							let info = LogicStepInfo {
-								delta: flex_vec.index(0)?.get_f64()?,
+								delta,
+								elapsed: *elapsed,
 							};
 							tokio::task::spawn(async move { handler.logic_step(info).await });
 							Ok(())
