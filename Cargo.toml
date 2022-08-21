@@ -3,6 +3,10 @@ edition = "2021"
 name = "libstardustxr"
 version = "0.9.0"
 
+[features]
+default = ["fusion"]
+fusion = []
+
 [dependencies]
 anyhow = "1.0.57"
 async-trait = "0.1.57"
