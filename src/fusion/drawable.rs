@@ -52,7 +52,6 @@ pub struct Text {
 impl<'a> Model {
 	#[builder(entry = "file_builder")]
 	pub async fn from_file(
-		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		file_path: &'a Path,
 		position: Option<Vec3>,
@@ -63,7 +62,7 @@ impl<'a> Model {
 			spatial: Spatial {
 				node: generate_node!(
 					GenNodeInfo {
-						client: client.clone(),
+						client: spatial_parent.node.client.clone(),
 						parent_path: "/drawable/model",
 						interface_path: "/drawable",
 						interface_method: "createModelFromFile"
@@ -79,7 +78,6 @@ impl<'a> Model {
 	}
 	#[builder(entry = "resource_builder")]
 	pub async fn from_resource(
-		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		resource: &'a Resource,
 		position: Option<Vec3>,
@@ -90,7 +88,7 @@ impl<'a> Model {
 			spatial: Spatial {
 				node: generate_node!(
 					GenNodeInfo {
-						client: client.clone(),
+						client: spatial_parent.node.client.clone(),
 						parent_path: "/drawable/model",
 						interface_path: "/drawable",
 						interface_method: "createModelFromResource"
@@ -117,14 +115,12 @@ impl Deref for Model {
 #[tokio::test]
 async fn fusion_model() -> Result<()> {
 	use manifest_dir_macros::directory_relative_path;
-	use std::sync::Arc;
 	let client = super::client::Client::connect().await?;
 	client
 		.set_base_prefixes(&[directory_relative_path!("res")])
 		.await?;
 
 	Model::resource_builder()
-		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.resource(&Resource::new("libstardustxr", "gyro_gem.glb"))
 		.build()

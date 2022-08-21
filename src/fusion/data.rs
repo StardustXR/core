@@ -1,7 +1,4 @@
-use std::sync::Weak;
-
 use super::{
-	client::Client,
 	field::Field,
 	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
@@ -21,7 +18,6 @@ pub struct PulseReceiver {
 impl<'a> PulseReceiver {
 	#[builder(entry = "builder")]
 	pub async fn create(
-		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -31,7 +27,7 @@ impl<'a> PulseReceiver {
 			spatial: Spatial {
 				node: generate_node!(
 					GenNodeInfo {
-						client: client.clone(),
+						client: spatial_parent.node.client.clone(),
 						parent_path: "/data/receiver",
 						interface_path: "/data",
 						interface_method: "createPulseReceiver"
@@ -48,20 +44,18 @@ impl<'a> PulseReceiver {
 
 #[tokio::test]
 async fn fusion_pulse_receiver() {
-	use std::sync::Arc;
+	use super::client::Client;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 
 	let field = super::field::SphereField::builder()
-		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.radius(0.1)
 		.build()
 		.await
 		.unwrap();
 	let _pulse_receiver = PulseReceiver::builder()
-		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.field(&field.field)
 		.build()

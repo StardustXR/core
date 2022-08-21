@@ -17,7 +17,6 @@ pub struct Spatial {
 impl<'a> Spatial {
 	#[builder(entry = "builder")]
 	pub async fn create(
-		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -27,7 +26,7 @@ impl<'a> Spatial {
 		Ok(Spatial {
 			node: generate_node!(
 				GenNodeInfo {
-					client: client.clone(),
+					client: spatial_parent.node.client.clone(),
 					parent_path: "/spatial/spatial",
 					interface_path: "/spatial",
 					interface_method: "createSpatial"
@@ -41,7 +40,7 @@ impl<'a> Spatial {
 		})
 	}
 
-	pub fn from_path(client: Weak<Client>, path: &str) -> Result<Self, NodeError> {
+	pub(crate) fn from_path(client: Weak<Client>, path: &str) -> Result<Self, NodeError> {
 		Ok(Spatial {
 			node: Node::from_path(client, path)?,
 		})
@@ -134,11 +133,11 @@ impl<'a> Spatial {
 
 #[tokio::test]
 async fn fusion_spatial() {
+	use super::client::Client;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 	let spatial = Spatial::builder()
-		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.zoneable(true)
 		.build()

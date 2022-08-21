@@ -105,7 +105,6 @@ impl Node {
 	) -> Result<(Arc<Self>, String), NodeError> {
 		let id = nanoid!(10);
 		let mut path = parent.to_string();
-		let trailing_slash_pos = path.len();
 		if !path.starts_with('/') {
 			return Err(NodeError::InvalidPath);
 		}
