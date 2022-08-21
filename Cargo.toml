@@ -5,6 +5,7 @@ version = "0.9.0"
 
 [dependencies]
 anyhow = "1.0.57"
+async-trait = "0.1.57"
 cluFlock = "1.2.7"
 color-rs = "0.7.1"
 dashmap = "5.3.4"

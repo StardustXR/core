@@ -12,6 +12,8 @@ pub mod field;
 pub mod scenegraph;
 pub mod spatial;
 
+pub use async_trait::async_trait;
+
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 

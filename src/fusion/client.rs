@@ -3,6 +3,7 @@ use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::flex::flexbuffer_from_vector_arguments;
 use crate::{client, messenger::Messenger};
 use anyhow::Result;
+use async_trait::async_trait;
 use once_cell::sync::OnceCell;
 use std::path::Path;
 use std::sync::{Arc, Weak};
@@ -15,8 +16,9 @@ pub struct LogicStepInfo {
 	pub delta: f64,
 }
 
+#[async_trait]
 pub trait LifeCycleHandler: Send + Sync + 'static {
-	fn logic_step(&self, _info: LogicStepInfo);
+	async fn logic_step(&self, _info: LogicStepInfo);
 }
 
 pub struct Root {
@@ -74,7 +76,7 @@ impl Client {
 							let info = LogicStepInfo {
 								delta: flex_vec.index(0)?.get_f64()?,
 							};
-							handler.logic_step(info);
+							tokio::task::spawn(async move { handler.logic_step(info).await });
 							Ok(())
 						})
 						.transpose()?;
@@ -176,9 +178,9 @@ async fn fusion_client_life_cycle() -> anyhow::Result<()> {
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
 
 	struct LifeCycle;
-	// impl Handler for LifeCycle {}
+	#[async_trait]
 	impl LifeCycleHandler for LifeCycle {
-		fn logic_step(&self, info: LogicStepInfo) {
+		async fn logic_step(&self, info: LogicStepInfo) {
 			println!("Logic step delta is {}s", info.delta);
 		}
 	}
