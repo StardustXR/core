@@ -1,5 +1,5 @@
 use anyhow::Result;
-use glam::{vec3, Quat, Vec3};
+use glam::{Quat, Vec3};
 use libstardustxr::fusion::{
 	async_trait,
 	client::{Client, LifeCycleHandler, LogicStepInfo},
@@ -38,32 +38,32 @@ impl SpatialDemo {
 	async fn new(client: &Arc<Client>) -> Result<Self> {
 		// let root = Spatial::create(client, client.get_root(), None, None, None, false).await?;
 		let root = Spatial::builder()
-			.client(client)
+			.client(Arc::downgrade(&client))
 			.spatial_parent(client.get_root())
 			.zoneable(true)
 			.build()
 			.await?;
 
 		let gem = Model::resource_builder()
-			.client(&client)
+			.client(Arc::downgrade(&client))
 			.spatial_parent(&root)
 			.resource(&Resource::new("libstardustxr", "gyro_gem.glb"))
 			.build()
 			.await?;
 		let ring_inner = Model::resource_builder()
-			.client(&client)
+			.client(Arc::downgrade(&client))
 			.spatial_parent(&root)
 			.resource(&Resource::new("libstardustxr", "gyro_inside.glb"))
 			.build()
 			.await?;
 		let ring_middle = Model::resource_builder()
-			.client(&client)
+			.client(Arc::downgrade(&client))
 			.spatial_parent(&ring_inner)
 			.resource(&Resource::new("libstardustxr", "gyro_middle.glb"))
 			.build()
 			.await?;
 		let ring_outer = Model::resource_builder()
-			.client(&client)
+			.client(Arc::downgrade(&client))
 			.spatial_parent(&ring_middle)
 			.resource(&Resource::new("libstardustxr", "gyro_outside.glb"))
 			.build()

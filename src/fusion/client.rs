@@ -28,7 +28,7 @@ pub struct Root {
 }
 
 pub struct Client {
-	pub messenger: Arc<Messenger>,
+	pub messenger: Messenger,
 	pub scenegraph: Scenegraph,
 
 	stop_notifier: Notify,
@@ -49,7 +49,7 @@ impl Client {
 	pub async fn from_connection(connection: UnixStream) -> Result<Arc<Self>, std::io::Error> {
 		let client = Arc::new(Client {
 			scenegraph: Scenegraph::new(),
-			messenger: Arc::new(Messenger::new(connection)),
+			messenger: Messenger::new(connection),
 
 			stop_notifier: Default::default(),
 
@@ -59,8 +59,13 @@ impl Client {
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: HandlerWrapper::new(),
 		});
-		let _ = client.root.set(Spatial::from_path(&client, "/").unwrap());
-		let _ = client.hmd.set(Spatial::from_path(&client, "/hmd").unwrap());
+		let weak_client = Arc::downgrade(&client);
+		let _ = client
+			.root
+			.set(Spatial::from_path(weak_client.clone(), "/").unwrap());
+		let _ = client
+			.hmd
+			.set(Spatial::from_path(weak_client, "/hmd").unwrap());
 
 		client
 			.get_root()
@@ -118,10 +123,6 @@ impl Client {
 
 	pub async fn dispatch(&self) -> Result<(), std::io::Error> {
 		self.messenger.dispatch(&self.scenegraph).await
-	}
-
-	pub fn get_weak_messenger(&self) -> Weak<Messenger> {
-		Arc::downgrade(&self.messenger)
 	}
 
 	pub fn get_root(&self) -> &Spatial {

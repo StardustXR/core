@@ -1,5 +1,5 @@
 use super::client::Client;
-use crate::{flex, messenger::Messenger};
+use crate::flex;
 use std::{
 	sync::{Arc, Weak},
 	vec::Vec,
@@ -13,7 +13,7 @@ use dashmap::DashMap;
 use rustc_hash::FxHasher;
 
 pub struct GenNodeInfo<'a> {
-	pub(crate) client: &'a Client,
+	pub(crate) client: Weak<Client>,
 	pub(crate) parent_path: &'a str,
 	pub(crate) interface_path: &'a str,
 	pub(crate) interface_method: &'a str,
@@ -22,9 +22,10 @@ macro_rules! generate_node {
 	($gen_node_info:expr, $($things_to_pass:expr),*) => {
 		{
 			let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_path)?;
-			node.messenger
+			node.client
 				.upgrade()
-				.ok_or(NodeError::InvalidMessenger)?
+				.ok_or(NodeError::ClientDropped)?
+				.messenger
 				.send_remote_signal(
 					$gen_node_info.interface_path,
 					$gen_node_info.interface_method,
@@ -44,8 +45,8 @@ macro_rules! generate_node {
 pub enum NodeError {
 	#[error("server creation failed")]
 	ServerCreationFailed,
-	#[error("messenger is invalid")]
-	InvalidMessenger,
+	#[error("client has been dropped")]
+	ClientDropped,
 	#[error("messenger write failed")]
 	MessengerWrite,
 	#[error("invalid path")]
@@ -66,7 +67,7 @@ type Method = dyn Fn(&[u8]) -> anyhow::Result<Vec<u8>> + Send + Sync + 'static;
 pub struct Node {
 	path: String,
 	trailing_slash_pos: usize,
-	pub messenger: Weak<Messenger>,
+	pub client: Weak<Client>,
 	pub(crate) local_signals: DashMap<String, Box<Signal>, BuildHasherDefault<FxHasher>>,
 	pub(crate) local_methods: DashMap<String, Box<Method>, BuildHasherDefault<FxHasher>>,
 }
@@ -79,23 +80,27 @@ impl Node {
 		self.path.as_str()
 	}
 
-	pub fn from_path(client: &Client, path: &str) -> Result<Arc<Self>, NodeError> {
+	pub fn from_path(client: Weak<Client>, path: &str) -> Result<Arc<Self>, NodeError> {
 		if !path.starts_with('/') {
 			return Err(NodeError::InvalidPath);
 		}
 		let node = Node {
 			path: path.to_string(),
 			trailing_slash_pos: path.rfind('/').ok_or(NodeError::InvalidPath)?,
-			messenger: client.get_weak_messenger(),
+			client: client.clone(),
 			local_signals: DashMap::default(),
 			local_methods: DashMap::default(),
 		};
 		let node_ref = Arc::new(node);
-		client.scenegraph.add_node(Arc::downgrade(&node_ref));
+		client
+			.upgrade()
+			.ok_or(NodeError::ClientDropped)?
+			.scenegraph
+			.add_node(Arc::downgrade(&node_ref));
 		Ok(node_ref)
 	}
 	pub fn generate_with_parent(
-		client: &Client,
+		client: Weak<Client>,
 		parent: &str,
 	) -> Result<(Arc<Self>, String), NodeError> {
 		let id = nanoid!(10);
@@ -109,17 +114,7 @@ impl Node {
 		}
 		path.push_str(&id);
 
-		let node = Node {
-			path,
-			trailing_slash_pos,
-			messenger: client.get_weak_messenger(),
-			local_signals: DashMap::default(),
-			local_methods: DashMap::default(),
-		};
-		let node_ref = Arc::new(node);
-		client.scenegraph.add_node(Arc::downgrade(&node_ref));
-
-		Ok((node_ref, id))
+		Node::from_path(client, path.as_str()).map(|node| (node, id))
 	}
 
 	pub fn send_local_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
@@ -137,9 +132,10 @@ impl Node {
 		method(data).map_err(|_| NodeError::MethodFailed)
 	}
 	pub async fn send_remote_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
-		self.messenger
+		self.client
 			.upgrade()
-			.ok_or(NodeError::InvalidMessenger)?
+			.ok_or(NodeError::ClientDropped)?
+			.messenger
 			.send_remote_signal(self.path.as_str(), method, data)
 			.await
 			.map_err(|_| NodeError::MessengerWrite)
@@ -149,10 +145,11 @@ impl Node {
 		method: &str,
 		data: &[u8],
 	) -> anyhow::Result<Vec<u8>> {
-		match self.messenger.upgrade() {
-			None => Err(NodeError::InvalidMessenger.into()),
-			Some(messenger) => {
-				messenger
+		match self.client.upgrade() {
+			None => Err(NodeError::ClientDropped.into()),
+			Some(client) => {
+				client
+					.messenger
 					.execute_remote_method(self.path.as_str(), method, data)
 					.await
 			}

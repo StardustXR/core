@@ -1,3 +1,5 @@
+use std::sync::Weak;
+
 use super::{
 	client::Client,
 	node::GenNodeInfo,
@@ -72,7 +74,7 @@ pub struct BoxField {
 impl<'a> BoxField {
 	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &'a Client,
+		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -83,7 +85,7 @@ impl<'a> BoxField {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client,
+							client: client.clone(),
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createBoxField"
@@ -115,11 +117,12 @@ impl<'a> BoxField {
 
 #[tokio::test]
 async fn fusion_box_field() {
+	use std::sync::Arc;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 	let box_field = BoxField::builder()
-		.client(&client)
+		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.build()
 		.await
@@ -154,7 +157,7 @@ pub struct CylinderField {
 impl<'a> CylinderField {
 	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &'a Client,
+		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -166,7 +169,7 @@ impl<'a> CylinderField {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client,
+							client: client.clone(),
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createCylinderField"
@@ -185,12 +188,13 @@ impl<'a> CylinderField {
 
 #[tokio::test]
 async fn fusion_cylinder_field() {
+	use std::sync::Arc;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 
 	let cylinder_field = CylinderField::builder()
-		.client(&client)
+		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.length(1.0)
 		.radius(0.5)
@@ -221,7 +225,7 @@ pub struct SphereField {
 impl<'a> SphereField {
 	#[builder(entry = "builder")]
 	pub async fn create(
-		client: &'a Client,
+		client: Weak<Client>,
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		radius: f32,
@@ -231,7 +235,7 @@ impl<'a> SphereField {
 				spatial: Spatial {
 					node: generate_node!(
 						GenNodeInfo {
-							client,
+							client: client.clone(),
 							parent_path: "/field",
 							interface_path: "/field",
 							interface_method: "createSphereField"
@@ -248,12 +252,13 @@ impl<'a> SphereField {
 
 #[tokio::test]
 async fn fusion_sphere_field() {
+	use std::sync::Arc;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 
 	let sphere_field = SphereField::builder()
-		.client(&client)
+		.client(Arc::downgrade(&client))
 		.spatial_parent(client.get_root())
 		.radius(0.5)
 		.build()
