@@ -1,5 +1,5 @@
 use anyhow::Result;
-use glam::{vec3, Quat};
+use glam::{vec3, Quat, Vec3};
 use libstardustxr::fusion::{
 	async_trait,
 	client::{Client, LifeCycleHandler, LogicStepInfo},
@@ -86,13 +86,13 @@ impl LifeCycleHandler for SpatialDemo {
 
 		let _ = tokio::join!(
 			self.gem
-				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, elapsed, 0.0))),
+				.set_rotation(None, Quat::from_axis_angle(Vec3::Y, elapsed)),
 			self.ring_inner
-				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed))),
+				.set_rotation(None, Quat::from_axis_angle(Vec3::Z, elapsed)),
 			self.ring_middle
-				.set_rotation(None, Quat::from_scaled_axis(vec3(elapsed, 0.0, 0.0))),
+				.set_rotation(None, Quat::from_axis_angle(Vec3::X, elapsed)),
 			self.ring_outer
-				.set_rotation(None, Quat::from_scaled_axis(vec3(0.0, 0.0, elapsed))),
+				.set_rotation(None, Quat::from_axis_angle(Vec3::Z, elapsed)),
 		);
 	}
 }
