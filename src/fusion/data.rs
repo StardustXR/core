@@ -2,11 +2,10 @@ use super::{
 	field::Field,
 	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
-	values::{Quat, Vec3},
 };
 use crate::{
 	flex,
-	fusion::values::{QUAT_IDENTITY, VEC3_ZERO},
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
 };
 
 pub struct PulseReceiver {

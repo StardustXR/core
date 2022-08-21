@@ -2,11 +2,10 @@ use super::{
 	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
-	values::{Quat, Vec3},
 };
 use crate::{
-	flex,
-	fusion::values::{QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+	flex, flex_from_vec3, flex_to_vec3, push_to_vec,
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use anyhow::{anyhow, Result};
 

@@ -3,11 +3,10 @@ use super::{
 	node::{GenNodeInfo, Node, NodeError},
 	resource::Resource,
 	spatial::Spatial,
-	values::{Color, Quat, Vec2, Vec3},
 };
 use crate::{
-	flex,
-	fusion::values::{QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+	flex, push_to_vec,
+	values::{Color, Quat, Vec2, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use anyhow::Result;
 use color::{rgba, Rgba};

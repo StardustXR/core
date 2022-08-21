@@ -27,8 +27,7 @@ async fn main() -> Result<()> {
 }
 
 struct SpatialDemo {
-	client: Arc<Client>,
-	root: Spatial,
+	// root: Spatial,
 	gem: Model,
 	ring_inner: Model,
 	ring_middle: Model,
@@ -65,8 +64,7 @@ impl SpatialDemo {
 			.await?;
 
 		Ok(SpatialDemo {
-			client: client.clone(),
-			root,
+			// root,
 			gem,
 			ring_inner,
 			ring_middle,

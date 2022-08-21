@@ -1,9 +1,5 @@
 pub mod resource;
 #[macro_use]
-pub mod values;
-#[macro_use]
-pub mod flex;
-#[macro_use]
 pub mod node;
 
 pub mod client;

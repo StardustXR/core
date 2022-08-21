@@ -1,11 +1,10 @@
 use super::{
 	client::Client,
 	node::{GenNodeInfo, Node, NodeError},
-	values::{self, Quat, Vec3},
 };
 use crate::{
-	flex,
-	fusion::values::{QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+	flex, flex_from_quat, flex_from_vec3, flex_to_quat, flex_to_vec3,
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use anyhow::Result;
 use std::sync::{Arc, Weak};
@@ -49,7 +48,7 @@ impl<'a> Spatial {
 	pub async fn get_translation_rotation_scale(
 		&self,
 		relative_space: &Spatial,
-	) -> Result<(values::Vec3, values::Quat, values::Vec3)> {
+	) -> Result<(Vec3, Quat, Vec3)> {
 		self.node
 			.execute_remote_method(
 				"getTransform",
@@ -71,7 +70,7 @@ impl<'a> Spatial {
 	pub async fn set_position(
 		&self,
 		relative_space: Option<&Spatial>,
-		position: impl Into<values::Vec3>,
+		position: impl Into<Vec3>,
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, Some(position.into()), None, None)
 			.await
@@ -79,7 +78,7 @@ impl<'a> Spatial {
 	pub async fn set_rotation(
 		&self,
 		relative_space: Option<&Spatial>,
-		rotation: impl Into<values::Quat>,
+		rotation: impl Into<Quat>,
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, None, Some(rotation.into()), None)
 			.await
@@ -87,7 +86,7 @@ impl<'a> Spatial {
 	pub async fn set_scale(
 		&self,
 		relative_space: Option<&Spatial>,
-		scale: impl Into<values::Vec3>,
+		scale: impl Into<Vec3>,
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, None, None, Some(scale.into()))
 			.await
@@ -96,9 +95,9 @@ impl<'a> Spatial {
 	pub async fn set_transform(
 		&self,
 		relative_space: Option<&Spatial>,
-		position: Option<values::Vec3>,
-		rotation: Option<values::Quat>,
-		scale: Option<values::Vec3>,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
+		scale: Option<Vec3>,
 	) -> Result<(), NodeError> {
 		self.node
 			.send_remote_signal(

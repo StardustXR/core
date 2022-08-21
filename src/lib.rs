@@ -1,6 +1,11 @@
 #![allow(dead_code)]
-pub mod client;
+
+#[macro_use]
 pub mod flex;
+#[macro_use]
+pub mod values;
+
+pub mod client;
 pub mod fusion;
 pub mod messenger;
 pub mod scenegraph;
