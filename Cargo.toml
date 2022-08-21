@@ -30,5 +30,5 @@ uds = "0.2.6"
 xdg = "2.4.1"
 
 [dev-dependencies]
-glam = {version = "0.21.2", features = ["mint"]}
+glam = {version = "0.21.3", features = ["mint"]}
 manifest-dir-macros = "0.1.16"
