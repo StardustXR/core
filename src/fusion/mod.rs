@@ -1,3 +1,4 @@
+pub mod resource;
 #[macro_use]
 pub mod values;
 #[macro_use]
