@@ -107,7 +107,7 @@ impl Deref for Model {
 	type Target = Spatial;
 
 	fn deref(&self) -> &Self::Target {
-		&&self.spatial
+		&self.spatial
 	}
 }
 
