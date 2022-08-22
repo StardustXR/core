@@ -29,7 +29,7 @@ pub trait Item: Send + Sync {
 
 #[async_trait]
 pub trait ItemUIHandler<I: Item>: Send + Sync {
-	async fn create(&self, item_id: &str);
+	async fn create(&self, item_id: &str, item: &I);
 	async fn destroy(&self, item_id: &str);
 }
 
@@ -73,14 +73,15 @@ impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
 						item_ui.handler.handle(|handler| {
 							let item = I::from_path(
 								item_ui.node.client.clone(),
-								&format!("{}/{}", I::ROOT_PATH, name),
+								&format!("{}/item/{}", I::ROOT_PATH, name),
 							);
 							let item_ui = item_ui.clone();
 							tokio::task::spawn({
 								let name = name.to_string();
 								async move {
-									item_ui.items.lock().await.insert(name.clone(), item);
-									handler.create(&name).await
+									let mut items = item_ui.items.lock().await;
+									items.insert(name.clone(), item);
+									handler.create(&name, items.get(&name).unwrap()).await
 								}
 							});
 						});
@@ -254,7 +255,7 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 	}
 	#[async_trait]
 	impl ItemUIHandler<EnvironmentItem> for EnvironmentUI {
-		async fn create(&self, item_id: &str) {
+		async fn create(&self, item_id: &str, _item: &EnvironmentItem) {
 			println!("Environment item {item_id} created");
 		}
 		async fn destroy(&self, item_id: &str) {
@@ -287,14 +288,9 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 	}
 	#[async_trait]
 	impl ItemUIHandler<PanelItem> for PanelUI {
-		async fn create(&self, item_id: &str) {
+		async fn create(&self, item_id: &str, item: &PanelItem) {
 			println!("Panel item {item_id} created");
-			let panel_items = self.ui.items.lock().await;
-			let _ = panel_items
-				.get(item_id)
-				.unwrap()
-				.apply_surface_material(&self.tex_cube, 0)
-				.await;
+			let _ = item.apply_surface_material(&self.tex_cube, 0).await;
 		}
 		async fn destroy(&self, item_id: &str) {
 			println!("Panel item {item_id} destroyed");
@@ -308,6 +304,7 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 				"libstardustxr",
 				"tex_cube.glb",
 			))
+			.scale(glam::vec3(0.1, 0.1, 0.1))
 			.build()
 			.await?,
 		ui: ItemUI::register(&client).await?,
