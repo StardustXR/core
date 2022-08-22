@@ -29,7 +29,7 @@ macro_rules! generate_node {
 				.send_remote_signal(
 					$gen_node_info.interface_path,
 					$gen_node_info.interface_method,
-					flex::flexbuffer_from_vector_arguments(|vec| {
+					$crate::flex::flexbuffer_from_vector_arguments(|vec| {
 						push_to_vec![vec, id.as_str(), $($things_to_pass),+]
 					})
 					.as_slice(),

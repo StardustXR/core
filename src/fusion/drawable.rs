@@ -5,7 +5,7 @@ use super::{
 	spatial::Spatial,
 };
 use crate::{
-	flex, push_to_vec,
+	push_to_vec,
 	values::{Color, Quat, Vec2, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use anyhow::Result;
