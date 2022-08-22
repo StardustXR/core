@@ -1,18 +1,22 @@
 use super::{
 	client::Client,
+	drawable::Model,
 	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use crate::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use crate::{
+	flex,
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
+};
 use async_trait::async_trait;
-use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use std::{
 	ops::Deref,
 	path::Path,
 	sync::{Arc, Weak},
 };
+use tokio::sync::Mutex;
 
 pub trait Item: Send + Sync {
 	type ItemType;
@@ -71,10 +75,13 @@ impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
 								item_ui.node.client.clone(),
 								&format!("{}/{}", I::ROOT_PATH, name),
 							);
-							item_ui.items.lock().insert(name.to_string(), item);
+							let item_ui = item_ui.clone();
 							tokio::task::spawn({
 								let name = name.to_string();
-								async move { handler.create(&name).await }
+								async move {
+									item_ui.items.lock().await.insert(name.clone(), item);
+									handler.create(&name).await
+								}
 							});
 						});
 						Ok(())
@@ -87,13 +94,16 @@ impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
 					let item_ui = item_ui.clone();
 					move |data| {
 						let name = flexbuffers::Reader::get_root(data)?.get_str()?;
-						item_ui.handler.handle(|handler| {
-							let items = item_ui.items.lock();
-							if items.contains_key(name) {
-								tokio::task::spawn({
-									let name = name.to_string();
-									async move { handler.destroy(&name).await }
-								});
+						tokio::task::spawn({
+							let name = name.to_string();
+							let item_ui = item_ui.clone();
+							async move {
+								if item_ui.items.lock().await.contains_key(&name) {
+									if let Some(handler) = item_ui.handler.handle(|handler| handler)
+									{
+										handler.destroy(&name).await;
+									}
+								}
 							}
 						});
 						Ok(())
@@ -173,6 +183,52 @@ impl Deref for EnvironmentItem {
 	}
 }
 
+pub struct PanelItem {
+	pub spatial: Spatial,
+}
+impl PanelItem {
+	pub async fn apply_surface_material(
+		&self,
+		model: &Model,
+		material_index: u32,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"applySurfaceMaterial",
+				flex::flexbuffer_from_vector_arguments(|vec| {
+					vec.push(model.node.get_path());
+					vec.push(material_index);
+				})
+				.as_slice(),
+			)
+			.await
+	}
+}
+impl Item for PanelItem {
+	type ItemType = PanelItem;
+	const REGISTER_UI_FN: &'static str = "registerPanelItemUI";
+	const ROOT_PATH: &'static str = "/item/panel";
+
+	fn node(&self) -> &Node {
+		&self.spatial.node
+	}
+
+	fn from_path(client: Weak<Client>, path: &str) -> Self {
+		Self {
+			spatial: Spatial {
+				node: Node::from_path(client, path).unwrap(),
+			},
+		}
+	}
+}
+impl Deref for PanelItem {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
+	}
+}
+
 #[tokio::test]
 async fn fusion_environment_item() {
 	use super::client::Client;
@@ -207,6 +263,53 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 	}
 
 	let test = Arc::new(EnvironmentUI {
+		ui: ItemUI::register(&client).await?,
+	});
+	test.ui.set_handler(&test);
+
+	tokio::select! {
+		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
+		_ = event_loop => Ok(()),
+	}
+}
+
+#[tokio::test]
+async fn fusion_panel_ui() -> anyhow::Result<()> {
+	use manifest_dir_macros::directory_relative_path;
+	let (client, event_loop) = Client::connect_with_async_loop().await?;
+	client
+		.set_base_prefixes(&[directory_relative_path!("res")])
+		.await?;
+
+	struct PanelUI {
+		tex_cube: Model,
+		ui: Arc<ItemUI<PanelItem>>,
+	}
+	#[async_trait]
+	impl ItemUIHandler<PanelItem> for PanelUI {
+		async fn create(&self, item_id: &str) {
+			println!("Panel item {item_id} created");
+			let panel_items = self.ui.items.lock().await;
+			let _ = panel_items
+				.get(item_id)
+				.unwrap()
+				.apply_surface_material(&self.tex_cube, 0)
+				.await;
+		}
+		async fn destroy(&self, item_id: &str) {
+			println!("Panel item {item_id} destroyed");
+		}
+	}
+
+	let test = Arc::new(PanelUI {
+		tex_cube: Model::resource_builder()
+			.spatial_parent(client.get_root())
+			.resource(&crate::fusion::resource::Resource::new(
+				"libstardustxr",
+				"tex_cube.glb",
+			))
+			.build()
+			.await?,
 		ui: ItemUI::register(&client).await?,
 	});
 	test.ui.set_handler(&test);
