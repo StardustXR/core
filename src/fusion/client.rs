@@ -4,6 +4,7 @@ use crate::flex::flexbuffer_from_vector_arguments;
 use crate::{client, messenger::Messenger};
 use anyhow::Result;
 use async_trait::async_trait;
+use erased_set::ErasedSyncSet;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use std::path::Path;
@@ -35,6 +36,7 @@ pub struct Client {
 
 	root: OnceCell<Spatial>,
 	hmd: OnceCell<Spatial>,
+	pub(crate) item_uis: Mutex<ErasedSyncSet>,
 
 	elapsed_time: Mutex<f64>,
 	life_cycle_handler: HandlerWrapper<dyn LifeCycleHandler>,
@@ -55,6 +57,7 @@ impl Client {
 
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
+			item_uis: Mutex::new(ErasedSyncSet::new()),
 
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: HandlerWrapper::new(),
