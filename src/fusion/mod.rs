@@ -6,6 +6,7 @@ pub mod client;
 pub mod data;
 pub mod drawable;
 pub mod field;
+pub mod item;
 pub mod scenegraph;
 pub mod spatial;
 
