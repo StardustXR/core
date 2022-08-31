@@ -81,22 +81,18 @@ impl Client {
 			"logicStep".to_owned(),
 			Box::new({
 				let client = client.clone();
-				let handler = client.life_cycle_handler.clone();
 				move |data| {
-					handler
-						.handle(|handler| -> Result<()> {
-							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-							let delta = flex_vec.index(0)?.get_f64()?;
-							let mut elapsed = client.elapsed_time.lock();
-							(*elapsed) += delta;
-							let info = LogicStepInfo {
-								delta,
-								elapsed: *elapsed,
-							};
-							tokio::task::spawn(async move { handler.logic_step(info).await });
-							Ok(())
-						})
-						.transpose()?;
+					if let Some(handler) = client.life_cycle_handler.get_handler() {
+						let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+						let delta = flex_vec.index(0)?.get_f64()?;
+						let mut elapsed = client.elapsed_time.lock();
+						(*elapsed) += delta;
+						let info = LogicStepInfo {
+							delta,
+							elapsed: *elapsed,
+						};
+						tokio::task::spawn(async move { handler.logic_step(info).await });
+					}
 					Ok(())
 				}
 			}),

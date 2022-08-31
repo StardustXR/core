@@ -6,10 +6,11 @@ use super::{
 	HandlerWrapper,
 };
 use crate::{
-	flex,
+	flex::{self, flexbuffer_from_vector_arguments},
 	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
 };
 use async_trait::async_trait;
+use mint::Vector2;
 use rustc_hash::FxHashMap;
 use std::{
 	ops::Deref,
@@ -20,23 +21,27 @@ use tokio::sync::Mutex;
 
 pub trait Item: Send + Sync {
 	type ItemType;
+	type InitData: Send;
 	const REGISTER_UI_FN: &'static str;
 	const ROOT_PATH: &'static str;
 
+	fn parse_init_data(
+		flex_vec: flexbuffers::VectorReader<&[u8]>,
+	) -> Result<Self::InitData, flexbuffers::ReaderError>;
 	fn from_path(client: Weak<Client>, path: &str) -> Self;
 	fn node(&self) -> &Node;
 }
 
 #[async_trait]
 pub trait ItemUIHandler<I: Item>: Send + Sync {
-	async fn create(&self, item_id: &str, item: &I);
+	async fn create(&self, item_id: &str, item: &Arc<I>, init_data: I::InitData);
 	async fn destroy(&self, item_id: &str);
 }
 
 pub struct ItemUI<I: Item> {
 	handler: HandlerWrapper<dyn ItemUIHandler<I>>,
 	node: Arc<Node>,
-	pub items: Mutex<FxHashMap<String, I>>,
+	pub items: Mutex<FxHashMap<String, Arc<I>>>,
 }
 impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
 	pub async fn register(client: &Arc<Client>) -> Result<Arc<ItemUI<I>>, NodeError> {
@@ -69,22 +74,25 @@ impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
 				Box::new({
 					let item_ui = item_ui.clone();
 					move |data| {
-						let name = flexbuffers::Reader::get_root(data)?.get_str()?;
-						item_ui.handler.handle(|handler| {
+						if let Some(handler) = item_ui.handler.get_handler() {
+							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+							let name = flex_vec.index(0)?.get_str()?.to_string();
 							let item = I::from_path(
 								item_ui.node.client.clone(),
 								&format!("{}/item/{}", I::ROOT_PATH, name),
 							);
 							let item_ui = item_ui.clone();
+							let init_data = I::parse_init_data(flex_vec.index(1)?.get_vector()?)?;
 							tokio::task::spawn({
-								let name = name.to_string();
 								async move {
 									let mut items = item_ui.items.lock().await;
-									items.insert(name.clone(), item);
-									handler.create(&name, items.get(&name).unwrap()).await
+									items.insert(name.clone(), Arc::new(item));
+									handler
+										.create(&name, items.get(&name).unwrap(), init_data)
+										.await
 								}
 							});
-						});
+						}
 						Ok(())
 					}
 				}),
@@ -100,8 +108,7 @@ impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
 							let item_ui = item_ui.clone();
 							async move {
 								if item_ui.items.lock().await.contains_key(&name) {
-									if let Some(handler) = item_ui.handler.handle(|handler| handler)
-									{
+									if let Some(handler) = item_ui.handler.get_handler() {
 										handler.destroy(&name).await;
 									}
 								}
@@ -161,6 +168,7 @@ impl<'a> EnvironmentItem {
 }
 impl Item for EnvironmentItem {
 	type ItemType = EnvironmentItem;
+	type InitData = String;
 	const REGISTER_UI_FN: &'static str = "registerEnvironmentItemUI";
 	const ROOT_PATH: &'static str = "/item/environment";
 
@@ -175,6 +183,12 @@ impl Item for EnvironmentItem {
 			},
 		}
 	}
+
+	fn parse_init_data(
+		flex_vec: flexbuffers::VectorReader<&[u8]>,
+	) -> Result<String, flexbuffers::ReaderError> {
+		Ok(flex_vec.index(0)?.get_str()?.to_string())
+	}
 }
 impl Deref for EnvironmentItem {
 	type Target = Spatial;
@@ -184,10 +198,26 @@ impl Deref for EnvironmentItem {
 	}
 }
 
+#[async_trait]
+pub trait PanelItemHandler: Send + Sync {
+	async fn resize(&self, size: Vector2<u64>);
+}
+
+#[derive(Debug)]
+pub struct PanelItemInitData {
+	pub size: Vector2<u32>,
+}
+
 pub struct PanelItem {
 	pub spatial: Spatial,
+	handler: HandlerWrapper<dyn PanelItemHandler>,
 }
 impl PanelItem {
+	pub fn set_handler<T: PanelItemHandler + 'static>(&self, handler: &Arc<T>) {
+		self.handler
+			.set_handler(Arc::downgrade(handler) as Weak<dyn PanelItemHandler>)
+	}
+
 	pub async fn apply_surface_material(
 		&self,
 		model: &Model,
@@ -204,9 +234,55 @@ impl PanelItem {
 			)
 			.await
 	}
+
+	pub async fn pointer_deactivate(&self) -> Result<(), NodeError> {
+		self.node.send_remote_signal("pointerDeactivate", &[]).await
+	}
+
+	pub async fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"pointerMotion",
+				&flexbuffer_from_vector_arguments(|vec| {
+					let position = position.into();
+					vec.push(position.x);
+					vec.push(position.y);
+				}),
+			)
+			.await
+	}
+
+	pub async fn pointer_button(&self, button: u32, state: u32) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"pointerButton",
+				&flexbuffer_from_vector_arguments(|vec| {
+					vec.push(button);
+					vec.push(state);
+				}),
+			)
+			.await
+	}
+
+	pub async fn pointer_scroll(
+		&self,
+		scroll_distance: Vector2<f32>,
+		scroll_steps: Vector2<f32>,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"pointerScroll",
+				&flexbuffer_from_vector_arguments(|vec| {
+					push_to_vec!(vec, scroll_distance);
+					push_to_vec!(vec, scroll_steps);
+				}),
+			)
+			.await
+	}
 }
 impl Item for PanelItem {
 	type ItemType = PanelItem;
+	type InitData = PanelItemInitData;
 	const REGISTER_UI_FN: &'static str = "registerPanelItemUI";
 	const ROOT_PATH: &'static str = "/item/panel";
 
@@ -215,11 +291,45 @@ impl Item for PanelItem {
 	}
 
 	fn from_path(client: Weak<Client>, path: &str) -> Self {
-		Self {
+		let panel_item = Self {
 			spatial: Spatial {
 				node: Node::from_path(client, path).unwrap(),
 			},
-		}
+			handler: HandlerWrapper::new(),
+		};
+
+		panel_item.node.local_signals.insert(
+			"resize".to_string(),
+			Box::new({
+				let handler = panel_item.handler.clone();
+				move |data| {
+					if let Some(handler) = handler.get_handler() {
+						let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+						let x = flex_vec.idx(0).get_u64()?;
+						let y = flex_vec.idx(1).get_u64()?;
+						tokio::task::spawn(
+							async move { handler.resize(Vector2::from([x, y])).await },
+						);
+					}
+					Ok(())
+				}
+			}),
+		);
+
+		panel_item
+	}
+
+	fn parse_init_data(
+		flex_vec: flexbuffers::VectorReader<&[u8]>,
+	) -> Result<PanelItemInitData, flexbuffers::ReaderError> {
+		let size_vec = flex_vec.index(0)?.get_vector()?;
+
+		Ok(PanelItemInitData {
+			size: Vector2::from_slice(&[
+				size_vec.idx(0).get_u64()? as u32,
+				size_vec.idx(1).get_u64()? as u32,
+			]),
+		})
 	}
 }
 impl Deref for PanelItem {
@@ -255,8 +365,8 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 	}
 	#[async_trait]
 	impl ItemUIHandler<EnvironmentItem> for EnvironmentUI {
-		async fn create(&self, item_id: &str, _item: &EnvironmentItem) {
-			println!("Environment item {item_id} created");
+		async fn create(&self, item_id: &str, _item: &Arc<EnvironmentItem>, init_data: String) {
+			println!("Environment item {item_id} created with path {init_data}");
 		}
 		async fn destroy(&self, item_id: &str) {
 			println!("Environment item {item_id} destroyed");
@@ -282,22 +392,43 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 		.set_base_prefixes(&[directory_relative_path!("res")])
 		.await?;
 
-	struct PanelUI {
+	struct PanelUIDemo {
 		tex_cube: Model,
 		ui: Arc<ItemUI<PanelItem>>,
+		panels: Mutex<FxHashMap<String, Arc<PanelItemUI>>>,
 	}
 	#[async_trait]
-	impl ItemUIHandler<PanelItem> for PanelUI {
-		async fn create(&self, item_id: &str, item: &PanelItem) {
-			println!("Panel item {item_id} created");
+	impl ItemUIHandler<PanelItem> for PanelUIDemo {
+		async fn create(&self, item_id: &str, item: &Arc<PanelItem>, init_data: PanelItemInitData) {
+			println!("Panel item {item_id} created with size {:?}", init_data);
+			let item_ui = Arc::new(PanelItemUI {
+				item: Arc::downgrade(item),
+			});
+			item.set_handler(&item_ui);
+			self.panels
+				.lock()
+				.await
+				.insert(item_id.to_string(), item_ui);
 			let _ = item.apply_surface_material(&self.tex_cube, 0).await;
+			let _ =
+				item.pointer_motion([(init_data.size.x / 2) as f32, (init_data.size.x / 2) as f32]);
 		}
 		async fn destroy(&self, item_id: &str) {
 			println!("Panel item {item_id} destroyed");
 		}
 	}
 
-	let test = Arc::new(PanelUI {
+	struct PanelItemUI {
+		item: Weak<PanelItem>,
+	}
+	#[async_trait]
+	impl PanelItemHandler for PanelItemUI {
+		async fn resize(&self, size: Vector2<u64>) {
+			println!("Got resize of {}, {}", size.x, size.y);
+		}
+	}
+
+	let test = Arc::new(PanelUIDemo {
 		tex_cube: Model::resource_builder()
 			.spatial_parent(client.get_root())
 			.resource(&crate::fusion::resource::Resource::new(
@@ -308,6 +439,7 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 			.build()
 			.await?,
 		ui: ItemUI::register(&client).await?,
+		panels: Mutex::new(FxHashMap::default()),
 	});
 	test.ui.set_handler(&test);
 

@@ -24,15 +24,8 @@ impl<H: ?Sized> HandlerWrapper<H> {
 	pub fn set_handler(&self, handler: Weak<H>) {
 		self.0.lock().replace(handler);
 	}
-	pub fn handle<F, O>(&self, closure: F) -> Option<O>
-	where
-		F: FnOnce(Arc<H>) -> O,
-	{
-		self.0
-			.lock()
-			.clone()
-			.and_then(|handler| handler.upgrade())
-			.map(closure)
+	pub fn get_handler(&self) -> Option<Arc<H>> {
+		self.0.lock().clone().and_then(|handler| handler.upgrade())
 	}
 }
 impl<H: ?Sized> Clone for HandlerWrapper<H> {
