@@ -410,8 +410,9 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 				.await
 				.insert(item_id.to_string(), item_ui);
 			let _ = item.apply_surface_material(&self.tex_cube, 0).await;
-			let _ =
-				item.pointer_motion([(init_data.size.x / 2) as f32, (init_data.size.x / 2) as f32]);
+			let _ = item
+				.pointer_motion([(init_data.size.x / 2) as f32, (init_data.size.x / 2) as f32])
+				.await;
 		}
 		async fn destroy(&self, item_id: &str) {
 			println!("Panel item {item_id} destroyed");
