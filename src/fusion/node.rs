@@ -5,6 +5,7 @@ use std::{
 	vec::Vec,
 };
 
+use futures::executor::block_on;
 use nanoid::nanoid;
 use thiserror::Error;
 
@@ -165,6 +166,7 @@ impl Node {
 
 impl Drop for Node {
 	fn drop(&mut self) {
-		let _ = self.send_remote_signal("destroy", &[0; 0]);
+		// Maybe we shouldn't use block_on but honestly idk how to do it better sooooo
+		let _ = block_on(self.send_remote_signal("destroy", &[0; 0]));
 	}
 }
