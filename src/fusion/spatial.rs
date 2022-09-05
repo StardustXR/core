@@ -3,7 +3,8 @@ use super::{
 	node::{GenNodeInfo, Node, NodeError},
 };
 use crate::{
-	flex, flex_from_quat, flex_from_vec3, flex_to_quat, flex_to_vec3,
+	flex::{self, flexbuffer_from_arguments},
+	flex_from_quat, flex_from_vec3, flex_to_quat, flex_to_vec3,
 	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use anyhow::Result;
@@ -125,6 +126,24 @@ impl<'a> Spatial {
 					}
 				})
 				.as_slice(),
+			)
+			.await
+	}
+
+	pub async fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"setSpatialParent",
+				&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
+			)
+			.await
+	}
+
+	pub async fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"setSpatialParentInPlace",
+				&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
 			)
 			.await
 	}
