@@ -198,14 +198,22 @@ impl Deref for EnvironmentItem {
 	}
 }
 
+#[derive(Debug)]
+pub struct PanelItemCursor {
+	pub size: Vector2<u32>,
+	pub hotspot: Vector2<i32>,
+}
+
 #[async_trait]
 pub trait PanelItemHandler: Send + Sync {
-	async fn resize(&self, size: Vector2<u64>);
+	async fn resize(&self, size: Vector2<u32>);
+	async fn set_cursor(&self, info: Option<PanelItemCursor>);
 }
 
 #[derive(Debug)]
 pub struct PanelItemInitData {
 	pub size: Vector2<u32>,
+	pub cursor: Option<PanelItemCursor>,
 }
 
 pub struct PanelItem {
@@ -226,6 +234,24 @@ impl PanelItem {
 		self.node
 			.send_remote_signal(
 				"applySurfaceMaterial",
+				flex::flexbuffer_from_vector_arguments(|vec| {
+					vec.push(model.node.get_path());
+					vec.push(material_index);
+				})
+				.as_slice(),
+			)
+			.await
+	}
+
+	pub async fn apply_cursor_material(
+		&self,
+		_cursor: &PanelItemCursor,
+		model: &Model,
+		material_index: u32,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"applyCursorMaterial",
 				flex::flexbuffer_from_vector_arguments(|vec| {
 					vec.push(model.node.get_path());
 					vec.push(material_index);
@@ -305,11 +331,41 @@ impl Item for PanelItem {
 				move |data| {
 					if let Some(handler) = handler.get_handler() {
 						let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-						let x = flex_vec.idx(0).get_u64()?;
-						let y = flex_vec.idx(1).get_u64()?;
+						let x = flex_vec.idx(0).get_u64()? as u32;
+						let y = flex_vec.idx(1).get_u64()? as u32;
 						tokio::task::spawn(
 							async move { handler.resize(Vector2::from([x, y])).await },
 						);
+					}
+					Ok(())
+				}
+			}),
+		);
+
+		panel_item.node.local_signals.insert(
+			"setCursor".to_string(),
+			Box::new({
+				let handler = panel_item.handler.clone();
+				move |data| {
+					if let Some(handler) = handler.get_handler() {
+						let flex = flexbuffers::Reader::get_root(data)?;
+						let data: Option<PanelItemCursor> = if !flex.flexbuffer_type().is_null() {
+							let flex_vec = flex.get_vector()?;
+							let size_vec = flex_vec.idx(0).get_vector()?;
+							let size_x = size_vec.idx(0).get_u64()? as u32;
+							let size_y = size_vec.idx(1).get_u64()? as u32;
+
+							let hotspot_vec = flex_vec.idx(1).get_vector()?;
+							let hotspot_x = hotspot_vec.idx(0).get_i64()? as i32;
+							let hotspot_y = hotspot_vec.idx(1).get_i64()? as i32;
+							Some(PanelItemCursor {
+								size: Vector2::from([size_x, size_y]),
+								hotspot: Vector2::from([hotspot_x, hotspot_y]),
+							})
+						} else {
+							None
+						};
+						tokio::task::spawn(async move { handler.set_cursor(data).await });
 					}
 					Ok(())
 				}
@@ -325,10 +381,32 @@ impl Item for PanelItem {
 		let size_vec = flex_vec.index(0)?.get_vector()?;
 
 		Ok(PanelItemInitData {
-			size: Vector2::from_slice(&[
+			size: Vector2::from([
 				size_vec.idx(0).get_u64()? as u32,
 				size_vec.idx(1).get_u64()? as u32,
 			]),
+			cursor: {
+				let cursor = flex_vec.index(1)?;
+				match cursor.flexbuffer_type() {
+					flexbuffers::FlexBufferType::Null => None,
+					flexbuffers::FlexBufferType::Vector => {
+						let cursor_vec = cursor.get_vector()?;
+						let cursor_size_vec = cursor_vec.idx(0).get_vector()?;
+						let cursor_hotspot_vec = cursor_vec.idx(1).get_vector()?;
+						Some(PanelItemCursor {
+							size: Vector2::from([
+								cursor_size_vec.index(0)?.get_u64()? as u32,
+								cursor_size_vec.index(1)?.get_u64()? as u32,
+							]),
+							hotspot: Vector2::from([
+								cursor_hotspot_vec.index(0)?.get_i64()? as i32,
+								cursor_hotspot_vec.index(1)?.get_i64()? as i32,
+							]),
+						})
+					}
+					_ => return Err(flexbuffers::ReaderError::FlexbufferOutOfBounds),
+				}
+			},
 		})
 	}
 }
@@ -424,8 +502,12 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 	}
 	#[async_trait]
 	impl PanelItemHandler for PanelItemUI {
-		async fn resize(&self, size: Vector2<u64>) {
+		async fn resize(&self, size: Vector2<u32>) {
 			println!("Got resize of {}, {}", size.x, size.y);
+		}
+
+		async fn set_cursor(&self, info: Option<PanelItemCursor>) {
+			println!("Set cursor with info {:?}", info);
 		}
 	}
 
