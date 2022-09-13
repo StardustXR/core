@@ -16,7 +16,7 @@ use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 
 #[derive(Debug)]
-struct HandlerWrapper<H: ?Sized>(Arc<Mutex<Option<Weak<H>>>>);
+pub(crate) struct HandlerWrapper<H: ?Sized>(Arc<Mutex<Option<Weak<H>>>>);
 impl<H: ?Sized> HandlerWrapper<H> {
 	pub fn new() -> Self {
 		HandlerWrapper(Arc::new(Mutex::new(None)))
