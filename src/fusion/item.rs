@@ -18,6 +18,7 @@ use std::{
 	sync::{Arc, Weak},
 };
 use tokio::sync::Mutex;
+use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 pub trait Item: Send + Sync {
 	type ItemType;
@@ -301,6 +302,36 @@ impl PanelItem {
 				&flexbuffer_from_vector_arguments(|vec| {
 					push_to_vec!(vec, scroll_distance);
 					push_to_vec!(vec, scroll_steps);
+				}),
+			)
+			.await
+	}
+
+	pub async fn keyboard_activate(&self, keymap: &str) -> Result<(), NodeError> {
+		Keymap::new_from_string(
+			&xkb::Context::new(0),
+			keymap.to_string(),
+			KEYMAP_FORMAT_TEXT_V1,
+			0,
+		)
+		.ok_or(NodeError::InvalidPath)?;
+		let data = flexbuffers::singleton(keymap);
+		self.node
+			.send_remote_signal("keyboardActivateString", &data)
+			.await
+	}
+	pub async fn keyboard_deactivate(&self) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("keyboardDeactivate", &[])
+			.await
+	}
+	pub async fn keyboard_key_state(&self, key: u32, state: bool) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal(
+				"keyboardKeyState",
+				&flexbuffer_from_vector_arguments(|vec| {
+					vec.push(key);
+					vec.push(state as u32);
 				}),
 			)
 			.await

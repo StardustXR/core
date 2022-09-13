@@ -30,6 +30,7 @@ thiserror = "1.0.31"
 tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }
 uds = "0.2.6"
 xdg = "2.4.1"
+xkbcommon = { version = "0.5.0", default-features = false }
 
 [dev-dependencies]
 glam = {version = "0.21.3", features = ["mint"]}
