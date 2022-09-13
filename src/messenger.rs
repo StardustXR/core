@@ -54,7 +54,7 @@ impl Messenger {
 		let id = self.pending_method_futures.lock().await.insert(tx);
 		let num_id = id.data().as_ffi();
 		if let Err(err) = self
-			.send_call(1, Some(num_id), object, method, None, Some(data))
+			.send_call(2, Some(num_id), object, method, None, Some(data))
 			.await
 		{
 			let _ = self
