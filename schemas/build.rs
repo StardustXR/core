@@ -1,7 +1,6 @@
+use anyhow::Context;
 use std::fmt::Write;
 use std::fs;
-
-use anyhow::Context;
 
 fn main() -> anyhow::Result<()> {
 	println!("cargo:rerun-if-changed=schemas");
@@ -16,6 +15,8 @@ fn main() -> anyhow::Result<()> {
 	let args: Vec<_> = [
 		"--rust",
 		"--gen-mutable",
+		"--gen-object-api",
+		"--gen-name-strings",
 		"-o",
 		out_dir.to_str().unwrap(),
 		"--filename-suffix",
