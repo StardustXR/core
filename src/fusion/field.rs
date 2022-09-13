@@ -1,10 +1,12 @@
+use std::ops::Deref;
+
 use super::{
 	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
 };
 use crate::{
-	flex, flex_from_vec3, flex_to_vec3, push_to_vec,
+	flex, flex_to_vec3, push_to_vec,
 	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use anyhow::{anyhow, Result};
@@ -12,7 +14,6 @@ use anyhow::{anyhow, Result};
 pub struct Field {
 	pub spatial: Spatial,
 }
-
 impl Field {
 	pub async fn distance(&self, space: &Spatial, point: Vec3) -> Result<f32> {
 		self.spatial
@@ -62,6 +63,13 @@ impl Field {
 			})
 	}
 }
+impl Deref for Field {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
+	}
+}
 
 pub struct BoxField {
 	pub field: Field,
@@ -94,19 +102,12 @@ impl<'a> BoxField {
 			},
 		})
 	}
+}
+impl Deref for BoxField {
+	type Target = Field;
 
-	pub async fn set_size(&self, size: Vec3) -> Result<(), NodeError> {
-		self.field
-			.spatial
-			.node
-			.send_remote_signal(
-				"distance",
-				flex::flexbuffer_from_arguments(|fbb| {
-					flex_from_vec3!(fbb, size);
-				})
-				.as_slice(),
-			)
-			.await
+	fn deref(&self) -> &Self::Target {
+		&self.field
 	}
 }
 
@@ -123,10 +124,6 @@ async fn fusion_box_field() {
 		.expect("Unable to make box field");
 
 	let client_captured = client.clone();
-	box_field
-		.set_size(mint::Vector3::from([0.5_f32, 0.5_f32, 0.5_f32]))
-		.await
-		.expect("Unable to set box field size");
 	let distance = box_field
 		.field
 		.distance(
@@ -176,6 +173,13 @@ impl<'a> CylinderField {
 				},
 			},
 		})
+	}
+}
+impl Deref for CylinderField {
+	type Target = Field;
+
+	fn deref(&self) -> &Self::Target {
+		&self.field
 	}
 }
 
@@ -238,6 +242,13 @@ impl<'a> SphereField {
 				},
 			},
 		})
+	}
+}
+impl Deref for SphereField {
+	type Target = Field;
+
+	fn deref(&self) -> &Self::Target {
+		&self.field
 	}
 }
 

@@ -53,7 +53,7 @@ async fn fusion_pulse_receiver() {
 		.unwrap();
 	let _pulse_receiver = PulseReceiver::builder()
 		.spatial_parent(client.get_root())
-		.field(&field.field)
+		.field(&field)
 		.build()
 		.await
 		.unwrap();
