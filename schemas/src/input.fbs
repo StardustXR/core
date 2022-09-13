@@ -11,7 +11,7 @@ table InputData {
 	uid:string (required);
 	input:InputDataRaw (required);
 	distance:float = 0;
-	datamap:[ubyte];
+	datamap:[ubyte] (flexbuffer);
 }
 
 root_type InputData;
