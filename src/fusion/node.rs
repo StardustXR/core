@@ -1,4 +1,4 @@
-use super::client::Client;
+use super::{client::Client, HandlerWrapper};
 use crate::flex;
 use std::{
 	sync::{Arc, Weak},
@@ -13,7 +13,7 @@ use core::hash::BuildHasherDefault;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
 
-pub struct GenNodeInfo<'a> {
+pub(crate) struct GenNodeInfo<'a> {
 	pub(crate) client: Weak<Client>,
 	pub(crate) parent_path: &'a str,
 	pub(crate) interface_path: &'a str,
@@ -161,6 +161,43 @@ impl Node {
 			flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(enabled)).as_slice(),
 		)
 		.await
+	}
+
+	pub(crate) fn add_handled_signal<H>(
+		&self,
+		name: &str,
+		handler: HandlerWrapper<H>,
+		parse: fn(Arc<H>, &[u8]) -> anyhow::Result<()>,
+	) where
+		H: ?Sized + Send + Sync + 'static,
+	{
+		self.local_signals.insert(
+			name.to_string(),
+			Box::new(move |data| {
+				if let Some(handler) = handler.get_handler() {
+					parse(handler, data)?;
+				}
+				Ok(())
+			}),
+		);
+	}
+	pub(crate) fn add_handled_method<H>(
+		&self,
+		name: &str,
+		handler: HandlerWrapper<H>,
+		parse: fn(Arc<H>, &[u8]) -> anyhow::Result<Vec<u8>>,
+	) where
+		H: ?Sized + Send + Sync + 'static,
+	{
+		self.local_methods.insert(
+			name.to_string(),
+			Box::new(move |data| {
+				let handler = handler
+					.get_handler()
+					.ok_or_else(|| anyhow::anyhow!("No handler for this method"))?;
+				parse(handler, data)
+			}),
+		);
 	}
 }
 
