@@ -50,7 +50,7 @@ pub struct Text {
 #[buildstructor::buildstructor]
 impl<'a> Model {
 	#[builder(entry = "file_builder")]
-	pub async fn from_file(
+	pub fn from_file(
 		spatial_parent: &'a Spatial,
 		file_path: &'a Path,
 		position: Option<Vec3>,
@@ -76,7 +76,7 @@ impl<'a> Model {
 		})
 	}
 	#[builder(entry = "resource_builder")]
-	pub async fn from_resource(
+	pub fn from_resource(
 		spatial_parent: &'a Spatial,
 		resource: &'a Resource,
 		position: Option<Vec3>,
@@ -115,15 +115,12 @@ impl Deref for Model {
 async fn fusion_model() -> Result<()> {
 	use manifest_dir_macros::directory_relative_path;
 	let client = super::client::Client::connect().await?;
-	client
-		.set_base_prefixes(&[directory_relative_path!("res")])
-		.await?;
+	client.set_base_prefixes(&[directory_relative_path!("res")])?;
 
-	Model::resource_builder()
+	let _model = Model::resource_builder()
 		.spatial_parent(client.get_root())
 		.resource(&Resource::new("libstardustxr", "gyro_gem.glb"))
-		.build()
-		.await?;
+		.build()?;
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 	Ok(())
@@ -182,6 +179,7 @@ impl Default for TextStyle {
 }
 
 impl Text {
+	#[allow(clippy::redundant_clone)]
 	pub async fn create(
 		client: Weak<Client>,
 		spatial_parent: &Spatial,

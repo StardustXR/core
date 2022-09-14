@@ -77,7 +77,7 @@ pub struct BoxField {
 #[buildstructor::buildstructor]
 impl<'a> BoxField {
 	#[builder(entry = "builder")]
-	pub async fn create(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -120,7 +120,6 @@ async fn fusion_box_field() {
 	let box_field = BoxField::builder()
 		.spatial_parent(client.get_root())
 		.build()
-		.await
 		.expect("Unable to make box field");
 
 	let client_captured = client.clone();
@@ -147,7 +146,7 @@ pub struct CylinderField {
 #[buildstructor::buildstructor]
 impl<'a> CylinderField {
 	#[builder(entry = "builder")]
-	pub async fn create(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -195,7 +194,6 @@ async fn fusion_cylinder_field() {
 		.length(1.0)
 		.radius(0.5)
 		.build()
-		.await
 		.expect("Unable to make cylinder field");
 	let distance = cylinder_field
 		.field
@@ -220,7 +218,7 @@ pub struct SphereField {
 #[buildstructor::buildstructor]
 impl<'a> SphereField {
 	#[builder(entry = "builder")]
-	pub async fn create(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		radius: f32,
@@ -263,7 +261,6 @@ async fn fusion_sphere_field() {
 		.spatial_parent(client.get_root())
 		.radius(0.5)
 		.build()
-		.await
 		.expect("Unable to make sphere field");
 	let distance = sphere_field
 		.field

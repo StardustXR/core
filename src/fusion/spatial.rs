@@ -16,7 +16,7 @@ pub struct Spatial {
 #[buildstructor::buildstructor]
 impl<'a> Spatial {
 	#[builder(entry = "builder")]
-	pub async fn create(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -68,84 +68,75 @@ impl<'a> Spatial {
 			})
 	}
 
-	pub async fn set_position(
+	pub fn set_position(
 		&self,
 		relative_space: Option<&Spatial>,
 		position: impl Into<Vec3>,
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, Some(position.into()), None, None)
-			.await
 	}
-	pub async fn set_rotation(
+	pub fn set_rotation(
 		&self,
 		relative_space: Option<&Spatial>,
 		rotation: impl Into<Quat>,
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, None, Some(rotation.into()), None)
-			.await
 	}
-	pub async fn set_scale(
+	pub fn set_scale(
 		&self,
 		relative_space: Option<&Spatial>,
 		scale: impl Into<Vec3>,
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, None, None, Some(scale.into()))
-			.await
 	}
 
-	pub async fn set_transform(
+	pub fn set_transform(
 		&self,
 		relative_space: Option<&Spatial>,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
 		scale: Option<Vec3>,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"setTransform",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					if let Some(space) = relative_space {
-						vec.push(space.node.get_path());
-					} else {
-						vec.push(())
-					}
-					if let Some(position) = position {
-						flex_from_vec3!(vec, position);
-					} else {
-						vec.push(());
-					}
-					if let Some(rotation) = rotation {
-						flex_from_quat!(vec, rotation);
-					} else {
-						vec.push(());
-					}
-					if let Some(scale) = scale {
-						flex_from_vec3!(vec, scale);
-					} else {
-						vec.push(());
-					}
-				})
-				.as_slice(),
-			)
-			.await
+		self.node.send_remote_signal(
+			"setTransform",
+			flex::flexbuffer_from_vector_arguments(|vec| {
+				if let Some(space) = relative_space {
+					vec.push(space.node.get_path());
+				} else {
+					vec.push(())
+				}
+				if let Some(position) = position {
+					flex_from_vec3!(vec, position);
+				} else {
+					vec.push(());
+				}
+				if let Some(rotation) = rotation {
+					flex_from_quat!(vec, rotation);
+				} else {
+					vec.push(());
+				}
+				if let Some(scale) = scale {
+					flex_from_vec3!(vec, scale);
+				} else {
+					vec.push(());
+				}
+			})
+			.as_slice(),
+		)
 	}
 
-	pub async fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"setSpatialParent",
-				&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
-			)
-			.await
+	pub fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"setSpatialParent",
+			&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
+		)
 	}
 
-	pub async fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"setSpatialParentInPlace",
-				&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
-			)
-			.await
+	pub fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"setSpatialParentInPlace",
+			&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
+		)
 	}
 }
 
@@ -159,7 +150,6 @@ async fn fusion_spatial() {
 		.spatial_parent(client.get_root())
 		.zoneable(true)
 		.build()
-		.await
 		.unwrap();
 	drop(spatial);
 

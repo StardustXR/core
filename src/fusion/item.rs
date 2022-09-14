@@ -3,13 +3,12 @@ use super::{
 	drawable::Model,
 	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
-	HandlerWrapper,
+	HandlerWrapper, WeakHandler,
 };
 use crate::{
 	flex::{self, flexbuffer_from_vector_arguments},
 	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
 };
-use async_trait::async_trait;
 use mint::Vector2;
 use rustc_hash::FxHashMap;
 use std::{
@@ -20,7 +19,7 @@ use std::{
 use tokio::sync::Mutex;
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
-pub trait Item: Send + Sync {
+pub trait Item: Sized + Send + Sync {
 	type ItemType;
 	type InitData: Send;
 	const REGISTER_UI_FN: &'static str;
@@ -29,106 +28,123 @@ pub trait Item: Send + Sync {
 	fn parse_init_data(
 		flex_vec: flexbuffers::VectorReader<&[u8]>,
 	) -> Result<Self::InitData, flexbuffers::ReaderError>;
-	fn from_path(client: Weak<Client>, path: &str) -> Self;
 	fn node(&self) -> &Node;
 }
 
-#[async_trait]
-pub trait ItemUIHandler<I: Item>: Send + Sync {
-	async fn create(&self, item_id: &str, item: &Arc<I>, init_data: I::InitData);
-	async fn destroy(&self, item_id: &str);
+pub struct ItemUI<I: Item, T: Send + Sync + 'static> {
+	node: Arc<Node>,
+	items: Mutex<FxHashMap<String, HandlerWrapper<I, T>>>,
 }
 
-pub struct ItemUI<I: Item> {
-	handler: HandlerWrapper<dyn ItemUIHandler<I>>,
-	node: Arc<Node>,
-	pub items: Mutex<FxHashMap<String, Arc<I>>>,
-}
-impl<I: Item<ItemType = I> + 'static> ItemUI<I> {
-	pub async fn register(client: &Arc<Client>) -> Result<Arc<ItemUI<I>>, NodeError> {
-		Ok(if client.item_uis.lock().contains::<Arc<ItemUI<I>>>() {
-			client
+pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
+	type Item: Item + 'static;
+
+	fn register<F>(
+		client: &Arc<Client>,
+		item_ui_init: F,
+	) -> Result<Arc<ItemUI<Self::Item, T>>, NodeError>
+	where
+		F: FnMut(<<Self as ItemUIType<T>>::Item as Item>::InitData, &Self::Item) -> T
+			+ Clone
+			+ Send
+			+ Sync
+			+ 'static,
+	{
+		if client
+			.item_uis
+			.lock()
+			.contains::<Arc<ItemUI<Self::Item, T>>>()
+		{
+			Ok(client
 				.item_uis
 				.lock()
-				.get::<Arc<ItemUI<I>>>()
+				.get::<Arc<ItemUI<Self::Item, T>>>()
 				.unwrap()
-				.clone()
+				.clone())
 		} else {
-			let item_ui = Arc::new(ItemUI::<I> {
-				handler: HandlerWrapper::new(),
-				node: Node::from_path(Arc::downgrade(client), I::ROOT_PATH)?,
-				items: Mutex::new(FxHashMap::default()),
-			});
+			Self::new_item_ui(client, item_ui_init)
+		}
+	}
 
-			item_ui
-				.node
-				.client
-				.upgrade()
-				.unwrap()
-				.messenger
-				.send_remote_signal("/item", I::REGISTER_UI_FN, &[])
-				.await
-				.map_err(|_| NodeError::ServerCreationFailed)?;
+	fn new_item_ui<F>(
+		client: &Arc<Client>,
+		item_ui_init: F,
+	) -> Result<Arc<ItemUI<Self::Item, T>>, NodeError>
+	where
+		F: FnMut(<<Self as ItemUIType<T>>::Item as Item>::InitData, &Self::Item) -> T
+			+ Clone
+			+ Send
+			+ Sync
+			+ 'static,
+	{
+		let item_ui = Arc::new(ItemUI::<Self::Item, T> {
+			node: Node::from_path(Arc::downgrade(client), Self::Item::ROOT_PATH).unwrap(),
+			items: Mutex::new(FxHashMap::default()),
+		});
 
-			item_ui.node.local_signals.insert(
-				"create".to_string(),
-				Box::new({
-					let item_ui = item_ui.clone();
-					move |data| {
-						if let Some(handler) = item_ui.handler.get_handler() {
-							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-							let name = flex_vec.index(0)?.get_str()?.to_string();
-							let item = I::from_path(
-								item_ui.node.client.clone(),
-								&format!("{}/item/{}", I::ROOT_PATH, name),
-							);
-							let item_ui = item_ui.clone();
-							let init_data = I::parse_init_data(flex_vec.index(1)?.get_vector()?)?;
-							tokio::task::spawn({
-								async move {
-									let mut items = item_ui.items.lock().await;
-									items.insert(name.clone(), Arc::new(item));
-									handler
-										.create(&name, items.get(&name).unwrap(), init_data)
-										.await
-								}
-							});
+		item_ui
+			.node
+			.client
+			.upgrade()
+			.unwrap()
+			.messenger
+			.send_remote_signal("/item", Self::Item::REGISTER_UI_FN, &[])
+			.map_err(|_| NodeError::ServerCreationFailed)?;
+
+		item_ui.node.local_signals.insert(
+			"create".to_string(),
+			Box::new({
+				let item_ui = item_ui.clone();
+				move |data| {
+					let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+					let name = flex_vec.index(0)?.get_str()?.to_string();
+					let init_data = Self::Item::parse_init_data(flex_vec.index(1)?.get_vector()?)?;
+
+					let item = Self::from_path(
+						item_ui.node.client.clone(),
+						&format!("{}/item/{}", Self::Item::ROOT_PATH, name),
+						init_data,
+						item_ui_init.clone(),
+					);
+					tokio::task::spawn({
+						let item_ui = item_ui.clone();
+						async move {
+							item_ui.items.lock().await.insert(name.clone(), item);
 						}
-						Ok(())
-					}
-				}),
-			);
-			item_ui.node.local_signals.insert(
-				"destroy".to_string(),
-				Box::new({
-					let item_ui = item_ui.clone();
-					move |data| {
-						let name = flexbuffers::Reader::get_root(data)?.get_str()?;
-						tokio::task::spawn({
-							let name = name.to_string();
-							let item_ui = item_ui.clone();
-							async move {
-								if item_ui.items.lock().await.contains_key(&name) {
-									if let Some(handler) = item_ui.handler.get_handler() {
-										handler.destroy(&name).await;
-									}
-								}
-							}
-						});
-						Ok(())
-					}
-				}),
-			);
+					});
+					Ok(())
+				}
+			}),
+		);
+		item_ui.node.local_signals.insert(
+			"destroy".to_string(),
+			Box::new({
+				let item_ui = item_ui.clone();
+				move |data| {
+					let name = flexbuffers::Reader::get_root(data)?.get_str()?;
+					item_ui.items.blocking_lock().remove(name);
+					Ok(())
+				}
+			}),
+		);
 
-			client.item_uis.lock().insert(item_ui.clone());
-			item_ui
-		})
+		client.item_uis.lock().insert(item_ui.clone());
+		Ok(item_ui)
 	}
 
-	pub fn set_handler<T: ItemUIHandler<I> + 'static>(&self, handler: &Arc<T>) {
-		self.handler
-			.set_handler(Arc::downgrade(handler) as Weak<dyn ItemUIHandler<I>>)
-	}
+	fn from_path<F>(
+		client: Weak<Client>,
+		path: &str,
+		init_data: <<Self as ItemUIType<T>>::Item as Item>::InitData,
+		ui_init_fn: F,
+	) -> HandlerWrapper<Self::Item, T>
+	where
+		F: FnMut(<<Self as ItemUIType<T>>::Item as Item>::InitData, &Self::Item) -> T
+			+ Clone
+			+ Send
+			+ Sync
+			+ 'static,
+		T: Send + Sync + 'static;
 }
 
 pub struct EnvironmentItem {
@@ -138,7 +154,7 @@ pub struct EnvironmentItem {
 #[buildstructor::buildstructor]
 impl<'a> EnvironmentItem {
 	#[builder(entry = "builder")]
-	pub async fn create(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -177,18 +193,31 @@ impl Item for EnvironmentItem {
 		&self.spatial.node
 	}
 
-	fn from_path(client: Weak<Client>, path: &str) -> Self {
-		Self {
-			spatial: Spatial {
-				node: Node::from_path(client, path).unwrap(),
-			},
-		}
-	}
-
 	fn parse_init_data(
 		flex_vec: flexbuffers::VectorReader<&[u8]>,
 	) -> Result<String, flexbuffers::ReaderError> {
 		Ok(flex_vec.index(0)?.get_str()?.to_string())
+	}
+}
+impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
+	type Item = EnvironmentItem;
+
+	fn from_path<F>(
+		client: Weak<Client>,
+		path: &str,
+		init_data: String,
+		mut ui_init_fn: F,
+	) -> HandlerWrapper<EnvironmentItem, T>
+	where
+		F: FnMut(String, &Self::Item) -> T + Clone + Send + Sync + 'static,
+		T: Send + Sync + 'static,
+	{
+		let item = EnvironmentItem {
+			spatial: Spatial {
+				node: Node::from_path(client, path).unwrap(),
+			},
+		};
+		HandlerWrapper::new(item, |_, f| ui_init_fn(init_data, f))
 	}
 }
 impl Deref for EnvironmentItem {
@@ -205,10 +234,9 @@ pub struct PanelItemCursor {
 	pub hotspot: Vector2<i32>,
 }
 
-#[async_trait]
 pub trait PanelItemHandler: Send + Sync {
-	async fn resize(&self, size: Vector2<u32>);
-	async fn set_cursor(&self, info: Option<PanelItemCursor>);
+	fn resize(&self, size: Vector2<u32>);
+	fn set_cursor(&self, info: Option<PanelItemCursor>);
 }
 
 #[derive(Debug)]
@@ -219,95 +247,79 @@ pub struct PanelItemInitData {
 
 pub struct PanelItem {
 	pub spatial: Spatial,
-	handler: HandlerWrapper<dyn PanelItemHandler>,
 }
 impl PanelItem {
-	pub fn set_handler<T: PanelItemHandler + 'static>(&self, handler: &Arc<T>) {
-		self.handler
-			.set_handler(Arc::downgrade(handler) as Weak<dyn PanelItemHandler>)
-	}
-
-	pub async fn apply_surface_material(
+	pub fn apply_surface_material(
 		&self,
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"applySurfaceMaterial",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					vec.push(model.node.get_path());
-					vec.push(material_index);
-				})
-				.as_slice(),
-			)
-			.await
+		self.node.send_remote_signal(
+			"applySurfaceMaterial",
+			flex::flexbuffer_from_vector_arguments(|vec| {
+				vec.push(model.node.get_path());
+				vec.push(material_index);
+			})
+			.as_slice(),
+		)
 	}
 
-	pub async fn apply_cursor_material(
+	pub fn apply_cursor_material(
 		&self,
 		_cursor: &PanelItemCursor,
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"applyCursorMaterial",
-				flex::flexbuffer_from_vector_arguments(|vec| {
-					vec.push(model.node.get_path());
-					vec.push(material_index);
-				})
-				.as_slice(),
-			)
-			.await
+		self.node.send_remote_signal(
+			"applyCursorMaterial",
+			flex::flexbuffer_from_vector_arguments(|vec| {
+				vec.push(model.node.get_path());
+				vec.push(material_index);
+			})
+			.as_slice(),
+		)
 	}
 
-	pub async fn pointer_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("pointerDeactivate", &[]).await
+	pub fn pointer_deactivate(&self) -> Result<(), NodeError> {
+		self.node.send_remote_signal("pointerDeactivate", &[])
 	}
 
-	pub async fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"pointerMotion",
-				&flexbuffer_from_vector_arguments(|vec| {
-					let position = position.into();
-					vec.push(position.x);
-					vec.push(position.y);
-				}),
-			)
-			.await
+	pub fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"pointerMotion",
+			&flexbuffer_from_vector_arguments(|vec| {
+				let position = position.into();
+				vec.push(position.x);
+				vec.push(position.y);
+			}),
+		)
 	}
 
-	pub async fn pointer_button(&self, button: u32, state: u32) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"pointerButton",
-				&flexbuffer_from_vector_arguments(|vec| {
-					vec.push(button);
-					vec.push(state);
-				}),
-			)
-			.await
+	pub fn pointer_button(&self, button: u32, state: u32) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"pointerButton",
+			&flexbuffer_from_vector_arguments(|vec| {
+				vec.push(button);
+				vec.push(state);
+			}),
+		)
 	}
 
-	pub async fn pointer_scroll(
+	pub fn pointer_scroll(
 		&self,
 		scroll_distance: Vector2<f32>,
 		scroll_steps: Vector2<f32>,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"pointerScroll",
-				&flexbuffer_from_vector_arguments(|vec| {
-					push_to_vec!(vec, scroll_distance);
-					push_to_vec!(vec, scroll_steps);
-				}),
-			)
-			.await
+		self.node.send_remote_signal(
+			"pointerScroll",
+			&flexbuffer_from_vector_arguments(|vec| {
+				push_to_vec!(vec, scroll_distance);
+				push_to_vec!(vec, scroll_steps);
+			}),
+		)
 	}
 
-	pub async fn keyboard_activate(&self, keymap: &str) -> Result<(), NodeError> {
+	pub fn keyboard_activate(&self, keymap: &str) -> Result<(), NodeError> {
 		Keymap::new_from_string(
 			&xkb::Context::new(0),
 			keymap.to_string(),
@@ -318,23 +330,18 @@ impl PanelItem {
 		let data = flexbuffers::singleton(keymap);
 		self.node
 			.send_remote_signal("keyboardActivateString", &data)
-			.await
 	}
-	pub async fn keyboard_deactivate(&self) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("keyboardDeactivate", &[])
-			.await
+	pub fn keyboard_deactivate(&self) -> Result<(), NodeError> {
+		self.node.send_remote_signal("keyboardDeactivate", &[])
 	}
-	pub async fn keyboard_key_state(&self, key: u32, state: bool) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal(
-				"keyboardKeyState",
-				&flexbuffer_from_vector_arguments(|vec| {
-					vec.push(key);
-					vec.push(state as u32);
-				}),
-			)
-			.await
+	pub fn keyboard_key_state(&self, key: u32, state: bool) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"keyboardKeyState",
+			&flexbuffer_from_vector_arguments(|vec| {
+				vec.push(key);
+				vec.push(state as u32);
+			}),
+		)
 	}
 }
 impl Item for PanelItem {
@@ -345,65 +352,6 @@ impl Item for PanelItem {
 
 	fn node(&self) -> &Node {
 		&self.spatial.node
-	}
-
-	fn from_path(client: Weak<Client>, path: &str) -> Self {
-		let panel_item = Self {
-			spatial: Spatial {
-				node: Node::from_path(client, path).unwrap(),
-			},
-			handler: HandlerWrapper::new(),
-		};
-
-		panel_item.node.local_signals.insert(
-			"resize".to_string(),
-			Box::new({
-				let handler = panel_item.handler.clone();
-				move |data| {
-					if let Some(handler) = handler.get_handler() {
-						let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-						let x = flex_vec.idx(0).get_u64()? as u32;
-						let y = flex_vec.idx(1).get_u64()? as u32;
-						tokio::task::spawn(
-							async move { handler.resize(Vector2::from([x, y])).await },
-						);
-					}
-					Ok(())
-				}
-			}),
-		);
-
-		panel_item.node.local_signals.insert(
-			"setCursor".to_string(),
-			Box::new({
-				let handler = panel_item.handler.clone();
-				move |data| {
-					if let Some(handler) = handler.get_handler() {
-						let flex = flexbuffers::Reader::get_root(data)?;
-						let data: Option<PanelItemCursor> = if !flex.flexbuffer_type().is_null() {
-							let flex_vec = flex.get_vector()?;
-							let size_vec = flex_vec.idx(0).get_vector()?;
-							let size_x = size_vec.idx(0).get_u64()? as u32;
-							let size_y = size_vec.idx(1).get_u64()? as u32;
-
-							let hotspot_vec = flex_vec.idx(1).get_vector()?;
-							let hotspot_x = hotspot_vec.idx(0).get_i64()? as i32;
-							let hotspot_y = hotspot_vec.idx(1).get_i64()? as i32;
-							Some(PanelItemCursor {
-								size: Vector2::from([size_x, size_y]),
-								hotspot: Vector2::from([hotspot_x, hotspot_y]),
-							})
-						} else {
-							None
-						};
-						tokio::task::spawn(async move { handler.set_cursor(data).await });
-					}
-					Ok(())
-				}
-			}),
-		);
-
-		panel_item
 	}
 
 	fn parse_init_data(
@@ -441,6 +389,75 @@ impl Item for PanelItem {
 		})
 	}
 }
+impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<PanelItem, T> {
+	type Item = PanelItem;
+
+	fn from_path<F>(
+		client: Weak<Client>,
+		path: &str,
+		init_data: PanelItemInitData,
+		mut ui_init_fn: F,
+	) -> HandlerWrapper<PanelItem, T>
+	where
+		F: FnMut(PanelItemInitData, &PanelItem) -> T + Clone + Send + Sync + 'static,
+		T: Send + Sync + 'static,
+	{
+		let item = PanelItem {
+			spatial: Spatial {
+				node: Node::from_path(client, path).unwrap(),
+			},
+		};
+
+		HandlerWrapper::new(item, |handler: WeakHandler<T>, item| {
+			item.node.local_signals.insert(
+				"resize".to_string(),
+				Box::new({
+					let handler = handler.clone();
+					move |data| {
+						if let Some(handler) = handler.upgrade() {
+							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
+							let x = flex_vec.idx(0).get_u64()? as u32;
+							let y = flex_vec.idx(1).get_u64()? as u32;
+							handler.lock().resize(Vector2::from([x, y]))
+						}
+						Ok(())
+					}
+				}),
+			);
+
+			item.node.local_signals.insert(
+				"setCursor".to_string(),
+				Box::new({
+					move |data| {
+						if let Some(handler) = handler.upgrade() {
+							let flex = flexbuffers::Reader::get_root(data)?;
+							let data: Option<PanelItemCursor> = if !flex.flexbuffer_type().is_null()
+							{
+								let flex_vec = flex.get_vector()?;
+								let size_vec = flex_vec.idx(0).get_vector()?;
+								let size_x = size_vec.idx(0).get_u64()? as u32;
+								let size_y = size_vec.idx(1).get_u64()? as u32;
+
+								let hotspot_vec = flex_vec.idx(1).get_vector()?;
+								let hotspot_x = hotspot_vec.idx(0).get_i64()? as i32;
+								let hotspot_y = hotspot_vec.idx(1).get_i64()? as i32;
+								Some(PanelItemCursor {
+									size: Vector2::from([size_x, size_y]),
+									hotspot: Vector2::from([hotspot_x, hotspot_y]),
+								})
+							} else {
+								None
+							};
+							handler.lock().set_cursor(data)
+						}
+						Ok(())
+					}
+				}),
+			);
+			ui_init_fn(init_data, item)
+		})
+	}
+}
 impl Deref for PanelItem {
 	type Target = Spatial;
 
@@ -461,7 +478,6 @@ async fn fusion_environment_item() {
 		.spatial_parent(client.get_root())
 		.file_path(file_relative_path!("res/libstardustxr/grid_sky.hdr"))
 		.build()
-		.await
 		.unwrap();
 }
 
@@ -470,22 +486,23 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
 
 	struct EnvironmentUI {
-		ui: Arc<ItemUI<EnvironmentItem>>,
+		path: String,
 	}
-	#[async_trait]
-	impl ItemUIHandler<EnvironmentItem> for EnvironmentUI {
-		async fn create(&self, item_id: &str, _item: &Arc<EnvironmentItem>, init_data: String) {
-			println!("Environment item {item_id} created with path {init_data}");
+	impl EnvironmentUI {
+		pub fn new(path: String) -> Self {
+			println!("Environment item with path {path} created");
+			EnvironmentUI { path }
 		}
-		async fn destroy(&self, item_id: &str) {
-			println!("Environment item {item_id} destroyed");
+	}
+	impl Drop for EnvironmentUI {
+		fn drop(&mut self) {
+			println!("Environment item with path {} destroyed", self.path)
 		}
 	}
 
-	let test = Arc::new(EnvironmentUI {
-		ui: ItemUI::register(&client).await?,
-	});
-	test.ui.set_handler(&test);
+	let _item_ui = ItemUI::register(&client, |init_data, _item: &EnvironmentItem| {
+		EnvironmentUI::new(init_data)
+	})?;
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
@@ -497,65 +514,34 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 async fn fusion_panel_ui() -> anyhow::Result<()> {
 	use manifest_dir_macros::directory_relative_path;
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
-	client
-		.set_base_prefixes(&[directory_relative_path!("res")])
-		.await?;
+	client.set_base_prefixes(&[directory_relative_path!("res")])?;
 
-	struct PanelUIDemo {
-		tex_cube: Model,
-		ui: Arc<ItemUI<PanelItem>>,
-		panels: Mutex<FxHashMap<String, Arc<PanelItemUI>>>,
-	}
-	#[async_trait]
-	impl ItemUIHandler<PanelItem> for PanelUIDemo {
-		async fn create(&self, item_id: &str, item: &Arc<PanelItem>, init_data: PanelItemInitData) {
-			println!("Panel item {item_id} created with size {:?}", init_data);
-			let item_ui = Arc::new(PanelItemUI {
-				item: Arc::downgrade(item),
-			});
-			item.set_handler(&item_ui);
-			self.panels
-				.lock()
-				.await
-				.insert(item_id.to_string(), item_ui);
-			let _ = item.apply_surface_material(&self.tex_cube, 0).await;
-			let _ = item
-				.pointer_motion([(init_data.size.x / 2) as f32, (init_data.size.x / 2) as f32])
-				.await;
-		}
-		async fn destroy(&self, item_id: &str) {
-			println!("Panel item {item_id} destroyed");
+	struct PanelItemUI;
+	impl PanelItemUI {
+		fn new(init_data: PanelItemInitData) -> Self {
+			println!("Panel item created with {:?}", init_data);
+			PanelItemUI
 		}
 	}
-
-	struct PanelItemUI {
-		item: Weak<PanelItem>,
-	}
-	#[async_trait]
 	impl PanelItemHandler for PanelItemUI {
-		async fn resize(&self, size: Vector2<u32>) {
+		fn resize(&self, size: Vector2<u32>) {
 			println!("Got resize of {}, {}", size.x, size.y);
 		}
 
-		async fn set_cursor(&self, info: Option<PanelItemCursor>) {
+		fn set_cursor(&self, info: Option<PanelItemCursor>) {
 			println!("Set cursor with info {:?}", info);
 		}
 	}
+	impl Drop for PanelItemUI {
+		fn drop(&mut self) {
+			println!("Panel item destroyed");
+		}
+	}
 
-	let test = Arc::new(PanelUIDemo {
-		tex_cube: Model::resource_builder()
-			.spatial_parent(client.get_root())
-			.resource(&crate::fusion::resource::Resource::new(
-				"libstardustxr",
-				"tex_cube.glb",
-			))
-			.scale(glam::vec3(0.1, 0.1, 0.1))
-			.build()
-			.await?,
-		ui: ItemUI::register(&client).await?,
-		panels: Mutex::new(FxHashMap::default()),
-	});
-	test.ui.set_handler(&test);
+	let _item_ui =
+		ItemUI::<PanelItem, PanelItemUI>::register(&client, |init_data, _item: &PanelItem| {
+			PanelItemUI::new(init_data)
+		})?;
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),

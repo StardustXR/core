@@ -7,30 +7,40 @@ pub mod data;
 pub mod drawable;
 pub mod field;
 pub mod input;
+pub mod input_action;
 pub mod item;
 pub mod scenegraph;
 pub mod spatial;
 
-pub use async_trait::async_trait;
-
-use parking_lot::Mutex;
+use parking_lot::{Mutex, MutexGuard};
 use std::sync::{Arc, Weak};
 
-#[derive(Debug)]
-pub(crate) struct HandlerWrapper<H: ?Sized>(Arc<Mutex<Option<Weak<H>>>>);
-impl<H: ?Sized> HandlerWrapper<H> {
-	pub fn new() -> Self {
-		HandlerWrapper(Arc::new(Mutex::new(None)))
-	}
-	pub fn set_handler(&self, handler: Weak<H>) {
-		self.0.lock().replace(handler);
-	}
-	pub fn get_handler(&self) -> Option<Arc<H>> {
-		self.0.lock().clone().and_then(|handler| handler.upgrade())
-	}
+pub(crate) type WeakHandler<T> = Weak<Mutex<T>>;
+
+pub struct HandlerWrapper<N: Sized, T: Send + Sync> {
+	node: N,
+	wrapped: Arc<Mutex<T>>,
 }
-impl<H: ?Sized> Clone for HandlerWrapper<H> {
-	fn clone(&self) -> Self {
-		Self(self.0.clone())
+impl<N: Sized, T: Send + Sync> HandlerWrapper<N, T> {
+	pub(crate) fn new<F>(node: N, wrapper_handler_init: F) -> Self
+	where
+		F: FnOnce(WeakHandler<T>, &N) -> T,
+	{
+		Self {
+			wrapped: Arc::new_cyclic(|weak| Mutex::new(wrapper_handler_init(weak.clone(), &node))),
+			node,
+		}
+	}
+
+	pub fn lock_wrapped(&self) -> MutexGuard<T> {
+		self.wrapped.lock()
+	}
+
+	pub fn node(&self) -> &N {
+		&self.node
+	}
+
+	pub(crate) fn weak_wrapped(&self) -> WeakHandler<T> {
+		Arc::downgrade(&self.wrapped)
 	}
 }

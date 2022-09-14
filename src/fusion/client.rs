@@ -3,7 +3,6 @@ use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::flex::flexbuffer_from_vector_arguments;
 use crate::{client, messenger::Messenger};
 use anyhow::Result;
-use async_trait::async_trait;
 use erased_set::ErasedSyncSet;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
@@ -19,9 +18,15 @@ pub struct LogicStepInfo {
 	pub elapsed: f64,
 }
 
-#[async_trait]
 pub trait LifeCycleHandler: Send + Sync + 'static {
-	async fn logic_step(&self, _info: LogicStepInfo);
+	fn logic_step(&mut self, _info: LogicStepInfo);
+}
+
+struct LifeCycleHandlerDummy;
+impl LifeCycleHandler for LifeCycleHandlerDummy {
+	fn logic_step(&mut self, info: LogicStepInfo) {
+		println!("Logic step delta is {}s", info.delta);
+	}
 }
 
 pub struct Root {
@@ -39,7 +44,7 @@ pub struct Client {
 	pub(crate) item_uis: Mutex<ErasedSyncSet>,
 
 	elapsed_time: Mutex<f64>,
-	life_cycle_handler: HandlerWrapper<dyn LifeCycleHandler>,
+	life_cycle_handler: Mutex<Weak<Mutex<dyn LifeCycleHandler>>>,
 }
 
 impl Client {
@@ -51,7 +56,7 @@ impl Client {
 	pub async fn from_connection(connection: UnixStream) -> Result<Arc<Self>, std::io::Error> {
 		let client = Arc::new(Client {
 			scenegraph: Scenegraph::new(),
-			messenger: Messenger::new(connection),
+			messenger: Messenger::new(tokio::runtime::Handle::current(), connection),
 
 			stop_notifier: Default::default(),
 
@@ -60,7 +65,7 @@ impl Client {
 			item_uis: Mutex::new(ErasedSyncSet::new()),
 
 			elapsed_time: Mutex::new(0.0),
-			life_cycle_handler: HandlerWrapper::new(),
+			life_cycle_handler: Mutex::new(Weak::<Mutex<LifeCycleHandlerDummy>>::new()),
 		});
 		let weak_client = Arc::downgrade(&client);
 		let _ = client
@@ -74,7 +79,6 @@ impl Client {
 			.get_root()
 			.node
 			.send_remote_signal("subscribeLogicStep", &[0, 0])
-			.await
 			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
 
 		client.get_root().node.local_signals.insert(
@@ -82,7 +86,7 @@ impl Client {
 			Box::new({
 				let client = client.clone();
 				move |data| {
-					if let Some(handler) = client.life_cycle_handler.get_handler() {
+					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
 						let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
 						let delta = flex_vec.index(0)?.get_f64()?;
 						let mut elapsed = client.elapsed_time.lock();
@@ -91,7 +95,7 @@ impl Client {
 							delta,
 							elapsed: *elapsed,
 						};
-						tokio::task::spawn(async move { handler.logic_step(info).await });
+						handler.lock().logic_step(info);
 					}
 					Ok(())
 				}
@@ -107,11 +111,13 @@ impl Client {
 		let event_loop = tokio::task::spawn({
 			let client = client.clone();
 			async move {
-				let event_loop = async { while client.dispatch().await.is_ok() {} };
+				let dispatch_loop = async { while client.dispatch().await.is_ok() {} };
+				let flush_loop = async { while client.flush().await.is_ok() {} };
 
 				tokio::select! {
 					_ = client.stop_notifier.notified() => (),
-					_ = event_loop => (),
+					_ = dispatch_loop => (),
+					_ = flush_loop => (),
 				}
 				println!("Stopped the loop");
 			}
@@ -124,6 +130,10 @@ impl Client {
 		self.messenger.dispatch(&self.scenegraph).await
 	}
 
+	pub async fn flush(&self) -> Result<(), std::io::Error> {
+		self.messenger.flush().await
+	}
+
 	pub fn get_root(&self) -> &Spatial {
 		self.root.get().as_ref().unwrap()
 	}
@@ -131,15 +141,13 @@ impl Client {
 		self.hmd.get().as_ref().unwrap()
 	}
 
-	pub fn set_life_cycle_handler<T: LifeCycleHandler>(&self, handler: &Arc<T>) {
-		self.life_cycle_handler
-			.set_handler(Arc::downgrade(handler) as Weak<dyn LifeCycleHandler>)
+	pub fn wrap_root<T: LifeCycleHandler>(&self, wrapped: T) -> HandlerWrapper<(), T> {
+		let wrapper = HandlerWrapper::new((), move |_, _| wrapped);
+		*self.life_cycle_handler.lock() = wrapper.weak_wrapped();
+		wrapper
 	}
 
-	pub async fn set_base_prefixes<T: AsRef<str>>(
-		&self,
-		prefixes: &[T],
-	) -> Result<(), std::io::Error> {
+	pub fn set_base_prefixes<T: AsRef<str>>(&self, prefixes: &[T]) -> Result<(), std::io::Error> {
 		let flexbuffer = flexbuffer_from_vector_arguments(|fbb| {
 			for prefix in prefixes {
 				let prefix = prefix.as_ref();
@@ -152,7 +160,6 @@ impl Client {
 
 		self.messenger
 			.send_remote_signal("/", "setBasePrefixes", &flexbuffer)
-			.await
 	}
 
 	pub fn stop_loop(&self) {
@@ -186,16 +193,7 @@ async fn fusion_client_connect() -> anyhow::Result<()> {
 async fn fusion_client_life_cycle() -> anyhow::Result<()> {
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
 
-	struct LifeCycle;
-	#[async_trait]
-	impl LifeCycleHandler for LifeCycle {
-		async fn logic_step(&self, info: LogicStepInfo) {
-			println!("Logic step delta is {}s", info.delta);
-		}
-	}
-
-	let life_cycle = Arc::new(LifeCycle);
-	client.set_life_cycle_handler(&life_cycle);
+	let _wrapper = client.wrap_root(LifeCycleHandlerDummy);
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),

@@ -13,7 +13,7 @@ pub struct PulseReceiver {
 #[buildstructor::buildstructor]
 impl<'a> PulseReceiver {
 	#[builder(entry = "builder")]
-	pub async fn create(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
@@ -49,13 +49,11 @@ async fn fusion_pulse_receiver() {
 		.spatial_parent(client.get_root())
 		.radius(0.1)
 		.build()
-		.await
 		.unwrap();
 	let _pulse_receiver = PulseReceiver::builder()
 		.spatial_parent(client.get_root())
 		.field(&field)
 		.build()
-		.await
 		.unwrap();
 
 	tokio::select! {

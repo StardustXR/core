@@ -1,12 +1,12 @@
 use super::{client::Client, HandlerWrapper};
 use crate::flex;
+use anyhow::Result;
+use nanoid::nanoid;
+use parking_lot::Mutex;
 use std::{
 	sync::{Arc, Weak},
 	vec::Vec,
 };
-
-use futures::executor::block_on;
-use nanoid::nanoid;
 use thiserror::Error;
 
 use core::hash::BuildHasherDefault;
@@ -34,7 +34,7 @@ macro_rules! generate_node {
 						push_to_vec![vec, id.as_str(), $($things_to_pass),+]
 					})
 					.as_slice(),
-				).await
+				)
 				.map_err(|_| NodeError::ServerCreationFailed)?;
 				node
 		}
@@ -62,8 +62,8 @@ pub enum NodeError {
 	MethodFailed,
 }
 
-type Signal = dyn Fn(&[u8]) -> anyhow::Result<()> + Send + Sync + 'static;
-type Method = dyn Fn(&[u8]) -> anyhow::Result<Vec<u8>> + Send + Sync + 'static;
+type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;
+type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
 
 pub struct Node {
 	path: String,
@@ -131,20 +131,15 @@ impl Node {
 			.ok_or(NodeError::MethodNotFound)?;
 		method(data).map_err(|_| NodeError::MethodFailed)
 	}
-	pub async fn send_remote_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
+	pub fn send_remote_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
 		self.client
 			.upgrade()
 			.ok_or(NodeError::ClientDropped)?
 			.messenger
 			.send_remote_signal(self.path.as_str(), method, data)
-			.await
 			.map_err(|_| NodeError::MessengerWrite)
 	}
-	pub async fn execute_remote_method(
-		&self,
-		method: &str,
-		data: &[u8],
-	) -> anyhow::Result<Vec<u8>> {
+	pub async fn execute_remote_method(&self, method: &str, data: &[u8]) -> Result<Vec<u8>> {
 		match self.client.upgrade() {
 			None => Err(NodeError::ClientDropped.into()),
 			Some(client) => {
@@ -155,45 +150,43 @@ impl Node {
 			}
 		}
 	}
-	async fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
+	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
 		self.send_remote_signal(
 			"setEnabled",
 			flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(enabled)).as_slice(),
 		)
-		.await
 	}
 
-	pub(crate) fn add_handled_signal<H>(
+	pub(crate) fn add_handled_signal<N, T: Send + Sync + 'static>(
 		&self,
 		name: &str,
-		handler: HandlerWrapper<H>,
-		parse: fn(Arc<H>, &[u8]) -> anyhow::Result<()>,
-	) where
-		H: ?Sized + Send + Sync + 'static,
-	{
+		wrapper: HandlerWrapper<N, T>,
+		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<()>,
+	) {
+		let handler = wrapper.weak_wrapped();
 		self.local_signals.insert(
 			name.to_string(),
 			Box::new(move |data| {
-				if let Some(handler) = handler.get_handler() {
-					parse(handler, data)?;
+				if let Some(handler) = handler.upgrade() {
+					parse(handler, data)?
 				}
 				Ok(())
 			}),
 		);
 	}
-	pub(crate) fn add_handled_method<H>(
+	#[allow(clippy::type_complexity)]
+	pub(crate) fn add_handled_method<N, T: Send + Sync + 'static>(
 		&self,
 		name: &str,
-		handler: HandlerWrapper<H>,
-		parse: fn(Arc<H>, &[u8]) -> anyhow::Result<Vec<u8>>,
-	) where
-		H: ?Sized + Send + Sync + 'static,
-	{
+		wrapper: HandlerWrapper<N, T>,
+		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
+	) {
+		let handler = wrapper.weak_wrapped();
 		self.local_methods.insert(
 			name.to_string(),
 			Box::new(move |data| {
 				let handler = handler
-					.get_handler()
+					.upgrade()
 					.ok_or_else(|| anyhow::anyhow!("No handler for this method"))?;
 				parse(handler, data)
 			}),
@@ -203,7 +196,6 @@ impl Node {
 
 impl Drop for Node {
 	fn drop(&mut self) {
-		// Maybe we shouldn't use block_on but honestly idk how to do it better sooooo
-		let _ = block_on(self.send_remote_signal("destroy", &[0; 0]));
+		let _ = self.send_remote_signal("destroy", &[0; 0]);
 	}
 }
