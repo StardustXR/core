@@ -1,8 +1,7 @@
-use super::{client::Client, HandlerWrapper};
+use super::client::Client;
 use crate::flex;
 use anyhow::Result;
 use nanoid::nanoid;
-use parking_lot::Mutex;
 use std::{
 	sync::{Arc, Weak},
 	vec::Vec,
@@ -60,6 +59,15 @@ pub enum NodeError {
 	SignalFailed,
 	#[error("Method failed")]
 	MethodFailed,
+	#[error("Attempted to register to a singleton twice")]
+	OverrideSingleton,
+}
+
+pub trait NodeType: Sized {
+	fn node(&self) -> &Node;
+	fn client(&self) -> Option<Arc<Client>> {
+		self.node().client.upgrade()
+	}
 }
 
 type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;

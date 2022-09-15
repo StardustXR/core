@@ -1,8 +1,8 @@
 use super::{
 	field::Field,
-	node::{GenNodeInfo, Node, NodeError},
+	node::{GenNodeInfo, Node, NodeError, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakHandler,
+	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
 use crate::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
 use anyhow::{anyhow, bail};
@@ -139,7 +139,7 @@ impl Debug for InputData {
 }
 
 pub trait InputHandlerHandler: Send + Sync {
-	fn input(&self, input: InputData) -> bool;
+	fn input(&mut self, input: InputData) -> bool;
 }
 
 pub struct InputHandler {
@@ -157,7 +157,7 @@ impl<'a> InputHandler {
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Self, T>, NodeError>
 	where
-		F: FnOnce(&InputHandler) -> T,
+		F: FnOnce(WeakNodeRef<InputHandler>, &InputHandler) -> T,
 		T: InputHandlerHandler + 'static,
 	{
 		let handler = InputHandler {
@@ -177,28 +177,35 @@ impl<'a> InputHandler {
 			},
 		};
 
-		let handler_wrapper = HandlerWrapper::new(handler, |weak_handler, input_handler| {
-			let contents = wrapped_init(input_handler);
-			input_handler.node.local_methods.insert(
-				"input".to_string(),
-				Box::new({
-					let weak_handler: WeakHandler<dyn InputHandlerHandler> = weak_handler;
-					move |data| {
-						let capture = if let Some(handler) = weak_handler.upgrade() {
-							let input = root_as_input_data(data)?.unpack();
+		let handler_wrapper =
+			HandlerWrapper::new(handler, |weak_handler, weak_node_ref, input_handler| {
+				let contents = wrapped_init(weak_node_ref, input_handler);
+				input_handler.node.local_methods.insert(
+					"input".to_string(),
+					Box::new({
+						let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;
+						move |data| {
+							let capture = if let Some(handler) = weak_handler.upgrade() {
+								let input = root_as_input_data(data)?.unpack();
 
-							handler.lock().input(input.try_into()?)
-						} else {
-							false
-						};
-						Ok(flexbuffers::singleton(capture))
-					}
-				}),
-			);
-			contents
-		});
+								handler.lock().input(input.try_into()?)
+							} else {
+								false
+							};
+							Ok(flexbuffers::singleton(capture))
+						}
+					}),
+				);
+				contents
+			});
 
+		// handler_wrapper.
 		Ok(handler_wrapper)
+	}
+}
+impl NodeType for InputHandler {
+	fn node(&self) -> &Node {
+		&self.spatial.node
 	}
 }
 impl std::ops::Deref for InputHandler {
@@ -224,7 +231,7 @@ async fn fusion_input_handler() {
 
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
-		fn input(&self, input: InputData) -> bool {
+		fn input(&mut self, input: InputData) -> bool {
 			dbg!(input);
 			false
 		}
@@ -237,8 +244,10 @@ async fn fusion_input_handler() {
 	// 	.build()
 	// 	.await
 	// 	.unwrap();
-	let _input_handler =
-		InputHandler::create(client.get_root(), None, None, &field, |_| InputHandlerTest).unwrap();
+	let _input_handler = InputHandler::create(client.get_root(), None, None, &field, |_, _| {
+		InputHandlerTest
+	})
+	.unwrap();
 
 	tokio::select! {
 		biased;

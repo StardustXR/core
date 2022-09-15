@@ -1,25 +1,26 @@
 use super::{
 	client::Client,
 	drawable::Model,
-	node::{GenNodeInfo, Node, NodeError},
+	node::{GenNodeInfo, Node, NodeError, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakHandler,
+	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
 use crate::{
 	flex::{self, flexbuffer_from_vector_arguments},
 	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
 };
 use mint::Vector2;
+use parking_lot::{Mutex, MutexGuard};
 use rustc_hash::FxHashMap;
 use std::{
+	any::TypeId,
 	ops::Deref,
 	path::Path,
 	sync::{Arc, Weak},
 };
-use tokio::sync::Mutex;
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
-pub trait Item: Sized + Send + Sync {
+pub trait Item: NodeType + Sized + Send + Sync {
 	type ItemType;
 	type InitData: Send;
 	const REGISTER_UI_FN: &'static str;
@@ -31,56 +32,60 @@ pub trait Item: Sized + Send + Sync {
 	fn node(&self) -> &Node;
 }
 
-pub struct ItemUI<I: Item, T: Send + Sync + 'static> {
+pub struct ItemUI<I: Item + 'static, T: Send + Sync + 'static> {
 	node: Arc<Node>,
-	items: Mutex<FxHashMap<String, HandlerWrapper<I, T>>>,
+	items: Arc<Mutex<FxHashMap<String, HandlerWrapper<I, T>>>>,
 }
-
 pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 	type Item: Item + 'static;
 
 	fn register<F>(
 		client: &Arc<Client>,
 		item_ui_init: F,
-	) -> Result<Arc<ItemUI<Self::Item, T>>, NodeError>
+	) -> Result<ItemUI<Self::Item, T>, NodeError>
 	where
-		F: FnMut(<<Self as ItemUIType<T>>::Item as Item>::InitData, &Self::Item) -> T
+		F: FnMut(
+				<<Self as ItemUIType<T>>::Item as Item>::InitData,
+				WeakWrapped<T>,
+				WeakNodeRef<Self::Item>,
+				&Self::Item,
+			) -> T
 			+ Clone
 			+ Send
 			+ Sync
 			+ 'static,
 	{
-		if client
-			.item_uis
+		if !client
+			.registered_item_uis
 			.lock()
-			.contains::<Arc<ItemUI<Self::Item, T>>>()
+			.contains(&TypeId::of::<Self::Item>())
 		{
-			Ok(client
-				.item_uis
-				.lock()
-				.get::<Arc<ItemUI<Self::Item, T>>>()
-				.unwrap()
-				.clone())
-		} else {
 			Self::new_item_ui(client, item_ui_init)
+		} else {
+			Err(NodeError::OverrideSingleton)
 		}
 	}
 
 	fn new_item_ui<F>(
 		client: &Arc<Client>,
 		item_ui_init: F,
-	) -> Result<Arc<ItemUI<Self::Item, T>>, NodeError>
+	) -> Result<ItemUI<Self::Item, T>, NodeError>
 	where
-		F: FnMut(<<Self as ItemUIType<T>>::Item as Item>::InitData, &Self::Item) -> T
+		F: FnMut(
+				<<Self as ItemUIType<T>>::Item as Item>::InitData,
+				WeakWrapped<T>,
+				WeakNodeRef<Self::Item>,
+				&Self::Item,
+			) -> T
 			+ Clone
 			+ Send
 			+ Sync
 			+ 'static,
 	{
-		let item_ui = Arc::new(ItemUI::<Self::Item, T> {
+		let item_ui = ItemUI::<Self::Item, T> {
 			node: Node::from_path(Arc::downgrade(client), Self::Item::ROOT_PATH).unwrap(),
-			items: Mutex::new(FxHashMap::default()),
-		});
+			items: Arc::new(Mutex::new(FxHashMap::default())),
+		};
 
 		item_ui
 			.node
@@ -94,24 +99,20 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 		item_ui.node.local_signals.insert(
 			"create".to_string(),
 			Box::new({
-				let item_ui = item_ui.clone();
+				let client = Arc::downgrade(client);
+				let items = item_ui.items.clone();
 				move |data| {
 					let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
 					let name = flex_vec.index(0)?.get_str()?.to_string();
 					let init_data = Self::Item::parse_init_data(flex_vec.index(1)?.get_vector()?)?;
 
 					let item = Self::from_path(
-						item_ui.node.client.clone(),
+						client.clone(),
 						&format!("{}/item/{}", Self::Item::ROOT_PATH, name),
 						init_data,
 						item_ui_init.clone(),
 					);
-					tokio::task::spawn({
-						let item_ui = item_ui.clone();
-						async move {
-							item_ui.items.lock().await.insert(name.clone(), item);
-						}
-					});
+					items.lock().insert(name, item);
 					Ok(())
 				}
 			}),
@@ -119,16 +120,19 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 		item_ui.node.local_signals.insert(
 			"destroy".to_string(),
 			Box::new({
-				let item_ui = item_ui.clone();
+				let items = item_ui.items.clone();
 				move |data| {
 					let name = flexbuffers::Reader::get_root(data)?.get_str()?;
-					item_ui.items.blocking_lock().remove(name);
+					items.lock().remove(name);
 					Ok(())
 				}
 			}),
 		);
 
-		client.item_uis.lock().insert(item_ui.clone());
+		client
+			.registered_item_uis
+			.lock()
+			.push(TypeId::of::<Self::Item>());
 		Ok(item_ui)
 	}
 
@@ -139,12 +143,33 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 		ui_init_fn: F,
 	) -> HandlerWrapper<Self::Item, T>
 	where
-		F: FnMut(<<Self as ItemUIType<T>>::Item as Item>::InitData, &Self::Item) -> T
+		F: FnMut(
+				<<Self as ItemUIType<T>>::Item as Item>::InitData,
+				WeakWrapped<T>,
+				WeakNodeRef<Self::Item>,
+				&Self::Item,
+			) -> T
 			+ Clone
 			+ Send
 			+ Sync
 			+ 'static,
 		T: Send + Sync + 'static;
+}
+impl<I: Item + 'static, T: Send + Sync> ItemUI<I, T> {
+	pub fn items(&self) -> MutexGuard<FxHashMap<String, HandlerWrapper<I, T>>> {
+		self.items.lock()
+	}
+}
+impl<I: Item + 'static, T: Send + Sync> Drop for ItemUI<I, T> {
+	fn drop(&mut self) {
+		let type_id = TypeId::of::<I>();
+		if let Some(client) = self.node.client.upgrade() {
+			let mut registered_item_uis = client.registered_item_uis.lock();
+			if let Ok(type_id_loc) = registered_item_uis.binary_search(&type_id) {
+				registered_item_uis.remove(type_id_loc);
+			}
+		}
+	}
 }
 
 pub struct EnvironmentItem {
@@ -183,6 +208,11 @@ impl<'a> EnvironmentItem {
 		})
 	}
 }
+impl NodeType for EnvironmentItem {
+	fn node(&self) -> &Node {
+		&self.spatial.node
+	}
+}
 impl Item for EnvironmentItem {
 	type ItemType = EnvironmentItem;
 	type InitData = String;
@@ -209,7 +239,11 @@ impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<EnvironmentItem, T>
 	where
-		F: FnMut(String, &Self::Item) -> T + Clone + Send + Sync + 'static,
+		F: FnMut(String, WeakWrapped<T>, WeakNodeRef<EnvironmentItem>, &EnvironmentItem) -> T
+			+ Clone
+			+ Send
+			+ Sync
+			+ 'static,
 		T: Send + Sync + 'static,
 	{
 		let item = EnvironmentItem {
@@ -217,7 +251,9 @@ impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
 				node: Node::from_path(client, path).unwrap(),
 			},
 		};
-		HandlerWrapper::new(item, |_, f| ui_init_fn(init_data, f))
+		HandlerWrapper::new(item, |weak_wrapped, weak_node_ref, f| {
+			ui_init_fn(init_data, weak_wrapped, weak_node_ref, f)
+		})
 	}
 }
 impl Deref for EnvironmentItem {
@@ -235,8 +271,8 @@ pub struct PanelItemCursor {
 }
 
 pub trait PanelItemHandler: Send + Sync {
-	fn resize(&self, size: Vector2<u32>);
-	fn set_cursor(&self, info: Option<PanelItemCursor>);
+	fn resize(&mut self, size: Vector2<u32>);
+	fn set_cursor(&mut self, info: Option<PanelItemCursor>);
 }
 
 #[derive(Debug)]
@@ -389,6 +425,11 @@ impl Item for PanelItem {
 		})
 	}
 }
+impl NodeType for PanelItem {
+	fn node(&self) -> &Node {
+		&self.spatial.node
+	}
+}
 impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<PanelItem, T> {
 	type Item = PanelItem;
 
@@ -399,7 +440,11 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<PanelItem, T>
 	where
-		F: FnMut(PanelItemInitData, &PanelItem) -> T + Clone + Send + Sync + 'static,
+		F: FnMut(PanelItemInitData, WeakWrapped<T>, WeakNodeRef<PanelItem>, &PanelItem) -> T
+			+ Clone
+			+ Send
+			+ Sync
+			+ 'static,
 		T: Send + Sync + 'static,
 	{
 		let item = PanelItem {
@@ -408,7 +453,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 			},
 		};
 
-		HandlerWrapper::new(item, |handler: WeakHandler<T>, item| {
+		HandlerWrapper::new(item, |handler: WeakWrapped<T>, weak_node_ref, item| {
 			item.node.local_signals.insert(
 				"resize".to_string(),
 				Box::new({
@@ -428,6 +473,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 			item.node.local_signals.insert(
 				"setCursor".to_string(),
 				Box::new({
+					let handler = handler.clone();
 					move |data| {
 						if let Some(handler) = handler.upgrade() {
 							let flex = flexbuffers::Reader::get_root(data)?;
@@ -454,7 +500,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 					}
 				}),
 			);
-			ui_init_fn(init_data, item)
+			ui_init_fn(init_data, handler, weak_node_ref, item)
 		})
 	}
 }
@@ -487,11 +533,12 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 
 	struct EnvironmentUI {
 		path: String,
+		item: WeakNodeRef<EnvironmentItem>,
 	}
 	impl EnvironmentUI {
-		pub fn new(path: String) -> Self {
+		pub fn new(path: String, item: WeakNodeRef<EnvironmentItem>) -> Self {
 			println!("Environment item with path {path} created");
-			EnvironmentUI { path }
+			EnvironmentUI { path, item }
 		}
 	}
 	impl Drop for EnvironmentUI {
@@ -500,9 +547,12 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 		}
 	}
 
-	let _item_ui = ItemUI::register(&client, |init_data, _item: &EnvironmentItem| {
-		EnvironmentUI::new(init_data)
-	})?;
+	let _item_ui = ItemUI::register(
+		&client,
+		|init_data, _weak_wrapped, weak_node_ref, _item: &EnvironmentItem| {
+			EnvironmentUI::new(init_data, weak_node_ref)
+		},
+	)?;
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
@@ -524,11 +574,11 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 		}
 	}
 	impl PanelItemHandler for PanelItemUI {
-		fn resize(&self, size: Vector2<u32>) {
+		fn resize(&mut self, size: Vector2<u32>) {
 			println!("Got resize of {}, {}", size.x, size.y);
 		}
 
-		fn set_cursor(&self, info: Option<PanelItemCursor>) {
+		fn set_cursor(&mut self, info: Option<PanelItemCursor>) {
 			println!("Set cursor with info {:?}", info);
 		}
 	}
@@ -538,10 +588,10 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 		}
 	}
 
-	let _item_ui =
-		ItemUI::<PanelItem, PanelItemUI>::register(&client, |init_data, _item: &PanelItem| {
-			PanelItemUI::new(init_data)
-		})?;
+	let _item_ui = ItemUI::<PanelItem, PanelItemUI>::register(
+		&client,
+		|init_data, _weak_wrapped, _weak_node_ref, _item: &PanelItem| PanelItemUI::new(init_data),
+	)?;
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),

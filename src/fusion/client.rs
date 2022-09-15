@@ -3,9 +3,9 @@ use super::{scenegraph::Scenegraph, spatial::Spatial};
 use crate::flex::flexbuffer_from_vector_arguments;
 use crate::{client, messenger::Messenger};
 use anyhow::Result;
-use erased_set::ErasedSyncSet;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use std::any::TypeId;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use tokio::net::UnixStream;
@@ -39,9 +39,9 @@ pub struct Client {
 
 	stop_notifier: Notify,
 
-	root: OnceCell<Spatial>,
+	root: OnceCell<Arc<Spatial>>,
 	hmd: OnceCell<Spatial>,
-	pub(crate) item_uis: Mutex<ErasedSyncSet>,
+	pub(crate) registered_item_uis: Mutex<Vec<TypeId>>,
 
 	elapsed_time: Mutex<f64>,
 	life_cycle_handler: Mutex<Weak<Mutex<dyn LifeCycleHandler>>>,
@@ -62,15 +62,15 @@ impl Client {
 
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
-			item_uis: Mutex::new(ErasedSyncSet::new()),
+			registered_item_uis: Mutex::new(Vec::new()),
 
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: Mutex::new(Weak::<Mutex<LifeCycleHandlerDummy>>::new()),
 		});
 		let weak_client = Arc::downgrade(&client);
-		let _ = client
-			.root
-			.set(Spatial::from_path(weak_client.clone(), "/").unwrap());
+		let _ = client.root.set(Arc::new(
+			Spatial::from_path(weak_client.clone(), "/").unwrap(),
+		));
 		let _ = client
 			.hmd
 			.set(Spatial::from_path(weak_client, "/hmd").unwrap());
@@ -141,8 +141,13 @@ impl Client {
 		self.hmd.get().as_ref().unwrap()
 	}
 
-	pub fn wrap_root<T: LifeCycleHandler>(&self, wrapped: T) -> HandlerWrapper<(), T> {
-		let wrapper = HandlerWrapper::new((), move |_, _| wrapped);
+	pub fn wrap_root<T: LifeCycleHandler>(&self, wrapped: T) -> HandlerWrapper<Spatial, T> {
+		let wrapper = HandlerWrapper::new(
+			Spatial {
+				node: self.root.get().unwrap().node.clone(),
+			},
+			move |_, _, _| wrapped,
+		);
 		*self.life_cycle_handler.lock() = wrapper.weak_wrapped();
 		wrapper
 	}

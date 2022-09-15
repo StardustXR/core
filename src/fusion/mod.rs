@@ -12,35 +12,100 @@ pub mod item;
 pub mod scenegraph;
 pub mod spatial;
 
+use anyhow::Result;
 use parking_lot::{Mutex, MutexGuard};
 use std::sync::{Arc, Weak};
 
-pub(crate) type WeakHandler<T> = Weak<Mutex<T>>;
+use self::node::NodeType;
 
-pub struct HandlerWrapper<N: Sized, T: Send + Sync> {
-	node: N,
+pub type WeakWrapped<T> = Weak<Mutex<T>>;
+
+pub struct WeakNodeRef<N: NodeType + Sized>(pub(crate) Weak<N>);
+impl<N: NodeType + Sized> WeakNodeRef<N> {
+	pub fn empty() -> Self {
+		WeakNodeRef(Weak::new())
+	}
+	pub fn with_node<F, O>(&self, f: F) -> Option<O>
+	where
+		F: FnOnce(&N) -> O,
+	{
+		self.0.upgrade().as_deref().map(f)
+	}
+}
+impl<N: NodeType + Sized> Clone for WeakNodeRef<N> {
+	fn clone(&self) -> Self {
+		Self(self.0.clone())
+	}
+}
+
+pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
+	node: Arc<N>,
 	wrapped: Arc<Mutex<T>>,
 }
-impl<N: Sized, T: Send + Sync> HandlerWrapper<N, T> {
-	pub(crate) fn new<F>(node: N, wrapper_handler_init: F) -> Self
+impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
+	pub fn new<F>(node: N, wrapper_handler_init: F) -> Self
 	where
-		F: FnOnce(WeakHandler<T>, &N) -> T,
+		F: FnOnce(WeakWrapped<T>, WeakNodeRef<N>, &N) -> T,
 	{
+		let node = Arc::new(node);
 		Self {
-			wrapped: Arc::new_cyclic(|weak| Mutex::new(wrapper_handler_init(weak.clone(), &node))),
+			wrapped: Arc::new_cyclic(|weak| {
+				Mutex::new(wrapper_handler_init(
+					weak.clone(),
+					WeakNodeRef(Arc::downgrade(&node)),
+					&node,
+				))
+			}),
 			node,
 		}
 	}
 
-	pub fn lock_wrapped(&self) -> MutexGuard<T> {
+	pub fn lock_inner(&self) -> MutexGuard<T> {
 		self.wrapped.lock()
 	}
 
 	pub fn node(&self) -> &N {
 		&self.node
 	}
+	pub fn weak_node_ref(&self) -> WeakNodeRef<N> {
+		WeakNodeRef(Arc::downgrade(&self.node))
+	}
 
-	pub(crate) fn weak_wrapped(&self) -> WeakHandler<T> {
+	pub fn weak_wrapped(&self) -> WeakWrapped<T> {
 		Arc::downgrade(&self.wrapped)
 	}
+
+	pub(crate) fn add_handled_signal(
+		&self,
+		name: &str,
+		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<()>,
+	) {
+		let handler = self.weak_wrapped();
+		self.node.node().local_signals.insert(
+			name.to_string(),
+			Box::new(move |data| {
+				if let Some(handler) = handler.upgrade() {
+					parse(handler, data)?
+				}
+				Ok(())
+			}),
+		);
+	}
+	// #[allow(clippy::type_complexity)]
+	// pub(crate) fn add_handled_method(
+	// 	&self,
+	// 	name: &str,
+	// 	parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
+	// ) {
+	// 	let handler = wrapper.weak_inner();
+	// 	self.node.local_methods.insert(
+	// 		name.to_string(),
+	// 		Box::new(move |data| {
+	// 			let handler = handler
+	// 				.upgrade()
+	// 				.ok_or_else(|| anyhow::anyhow!("No handler for this method"))?;
+	// 			parse(handler, data)
+	// 		}),
+	// 	);
+	// }
 }

@@ -1,6 +1,6 @@
 use super::{
 	client::Client,
-	node::{GenNodeInfo, Node, NodeError},
+	node::{GenNodeInfo, Node, NodeError, NodeType},
 };
 use crate::{
 	flex::{self, flexbuffer_from_arguments},
@@ -11,7 +11,7 @@ use anyhow::Result;
 use std::sync::{Arc, Weak};
 
 pub struct Spatial {
-	pub node: Arc<Node>,
+	pub(crate) node: Arc<Node>,
 }
 #[buildstructor::buildstructor]
 impl<'a> Spatial {
@@ -137,6 +137,11 @@ impl<'a> Spatial {
 			"setSpatialParentInPlace",
 			&flexbuffer_from_arguments(|flex| flex.build_singleton(parent.node.get_path())),
 		)
+	}
+}
+impl NodeType for Spatial {
+	fn node(&self) -> &Node {
+		&self.node
 	}
 }
 
