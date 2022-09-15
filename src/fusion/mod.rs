@@ -15,7 +15,7 @@ use anyhow::Result;
 use parking_lot::{Mutex, MutexGuard};
 use std::sync::{Arc, Weak};
 
-use self::node::NodeType;
+use self::node::{Node, NodeType};
 
 pub type WeakWrapped<T> = Weak<Mutex<T>>;
 
@@ -107,4 +107,10 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 	// 		}),
 	// 	);
 	// }
+}
+
+impl<N: NodeType, T: Send + Sync + 'static> NodeType for HandlerWrapper<N, T> {
+	fn node(&self) -> &Node {
+		self.node().node()
+	}
 }
