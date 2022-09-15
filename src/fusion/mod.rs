@@ -8,7 +8,7 @@ pub mod drawable;
 pub mod field;
 pub mod input;
 pub mod input_action;
-pub mod item;
+pub mod items;
 pub mod scenegraph;
 pub mod spatial;
 
