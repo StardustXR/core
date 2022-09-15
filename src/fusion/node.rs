@@ -156,42 +156,6 @@ impl Node {
 			flex::flexbuffer_from_arguments(|fbb| fbb.build_singleton(enabled)).as_slice(),
 		)
 	}
-
-	pub(crate) fn add_handled_signal<N, T: Send + Sync + 'static>(
-		&self,
-		name: &str,
-		wrapper: HandlerWrapper<N, T>,
-		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<()>,
-	) {
-		let handler = wrapper.weak_wrapped();
-		self.local_signals.insert(
-			name.to_string(),
-			Box::new(move |data| {
-				if let Some(handler) = handler.upgrade() {
-					parse(handler, data)?
-				}
-				Ok(())
-			}),
-		);
-	}
-	#[allow(clippy::type_complexity)]
-	pub(crate) fn add_handled_method<N, T: Send + Sync + 'static>(
-		&self,
-		name: &str,
-		wrapper: HandlerWrapper<N, T>,
-		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
-	) {
-		let handler = wrapper.weak_wrapped();
-		self.local_methods.insert(
-			name.to_string(),
-			Box::new(move |data| {
-				let handler = handler
-					.upgrade()
-					.ok_or_else(|| anyhow::anyhow!("No handler for this method"))?;
-				parse(handler, data)
-			}),
-		);
-	}
 }
 
 impl Drop for Node {
