@@ -95,7 +95,10 @@ impl<S: InputActionState> InputActionHandler<S> {
 		}
 	}
 
-	fn update_actions<'a>(&mut self, actions: impl IntoIterator<Item = &'a mut InputAction<S>>) {
+	pub fn update_actions<'a>(
+		&mut self,
+		actions: impl IntoIterator<Item = &'a mut InputAction<S>>,
+	) {
 		self.back_state = self.state.clone();
 
 		self.actions = actions
