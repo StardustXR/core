@@ -1,5 +1,5 @@
 use super::{
-	field::Field,
+	fields::Field,
 	node::{GenNodeInfo, Node, NodeError, NodeType},
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
@@ -223,7 +223,7 @@ async fn fusion_input_handler() {
 		.await
 		.expect("Couldn't connect");
 
-	let field = super::field::SphereField::builder()
+	let field = super::fields::SphereField::builder()
 		.spatial_parent(client.get_root())
 		.radius(0.1)
 		.build()

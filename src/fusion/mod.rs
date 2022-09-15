@@ -5,7 +5,7 @@ pub mod node;
 pub mod client;
 pub mod data;
 pub mod drawable;
-pub mod field;
+pub mod fields;
 pub mod input;
 pub mod input_action;
 pub mod items;
