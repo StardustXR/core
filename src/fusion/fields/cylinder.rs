@@ -1,5 +1,6 @@
 use super::Field;
 use crate::{
+	flex::flexbuffer_from_vector_arguments,
 	fusion::{
 		node::GenNodeInfo,
 		node::{Node, NodeError},
@@ -44,6 +45,16 @@ impl<'a> CylinderField {
 			},
 		})
 	}
+
+	pub fn set_size(&self, length: f32, radius: f32) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"setSize",
+			&flexbuffer_from_vector_arguments(|vec| {
+				vec.push(length);
+				vec.push(radius);
+			}),
+		)
+	}
 }
 impl Deref for CylinderField {
 	type Target = Field;
@@ -56,7 +67,7 @@ impl Deref for CylinderField {
 #[tokio::test]
 async fn fusion_cylinder_field() {
 	use crate::fusion::client::Client;
-	let (client, event_loop) = Client::connect_with_async_loop()
+	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 
@@ -70,15 +81,9 @@ async fn fusion_cylinder_field() {
 		.field
 		.distance(
 			client.get_root(),
-			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
+			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
 		.await
 		.expect("Unable to cylinder box field distance");
 	assert_eq!(distance, 1_f32);
-
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		_ = event_loop => (),
-	};
 }

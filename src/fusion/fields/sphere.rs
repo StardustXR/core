@@ -40,6 +40,11 @@ impl<'a> SphereField {
 			},
 		})
 	}
+
+	pub fn set_radius(&self, radius: f32) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("setRadius", &flexbuffers::singleton(radius))
+	}
 }
 impl Deref for SphereField {
 	type Target = Field;
@@ -52,7 +57,7 @@ impl Deref for SphereField {
 #[tokio::test]
 async fn fusion_sphere_field() {
 	use crate::fusion::client::Client;
-	let (client, event_loop) = Client::connect_with_async_loop()
+	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 
@@ -65,15 +70,19 @@ async fn fusion_sphere_field() {
 		.field
 		.distance(
 			client.get_root(),
+			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
+		)
+		.await
+		.expect("Unable to get sphere field distance");
+	assert_eq!(distance, 0.5_f32);
+	sphere_field.set_radius(1.0).unwrap();
+	let distance = sphere_field
+		.field
+		.distance(
+			client.get_root(),
 			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
 		)
 		.await
 		.expect("Unable to get sphere field distance");
 	assert_eq!(distance, 1_f32);
-
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		_ = event_loop => (),
-	};
 }

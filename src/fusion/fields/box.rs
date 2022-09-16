@@ -1,11 +1,12 @@
 use crate::{
+	flex::FlexBuffable,
 	fusion::{
 		node::GenNodeInfo,
 		node::{Node, NodeError},
 		spatial::Spatial,
 	},
 	push_to_vec,
-	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
 };
 use anyhow::Result;
 use std::ops::Deref;
@@ -22,7 +23,7 @@ impl<'a> BoxField {
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
-		size: Option<Vec3>,
+		size: Vec3,
 	) -> Result<Self, NodeError> {
 		Ok(BoxField {
 			field: Field {
@@ -37,11 +38,17 @@ impl<'a> BoxField {
 						spatial_parent.node.get_path(),
 						position.unwrap_or(VEC3_ZERO),
 						rotation.unwrap_or(QUAT_IDENTITY),
-						size.unwrap_or(VEC3_ONE)
+						size
 					),
 				},
 			},
 		})
+	}
+
+	pub fn set_size(&self, size: impl Into<Vec3>) -> Result<(), NodeError> {
+		let size: Vec3 = size.into();
+		self.node
+			.send_remote_signal("setSize", &FlexBuffable::build_singleton(&size.into()))
 	}
 }
 impl Deref for BoxField {
@@ -55,11 +62,12 @@ impl Deref for BoxField {
 #[tokio::test]
 async fn fusion_box_field() {
 	use crate::fusion::client::Client;
-	let (client, event_loop) = Client::connect_with_async_loop()
+	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 	let box_field = BoxField::builder()
 		.spatial_parent(client.get_root())
+		.size(Vec3::from([1.0, 1.0, 1.0]))
 		.build()
 		.expect("Unable to make box field");
 
@@ -73,10 +81,4 @@ async fn fusion_box_field() {
 		.await
 		.expect("Unable to get box field distance");
 	assert_eq!(distance, 1_f32);
-
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		_ = event_loop => (),
-	};
 }
