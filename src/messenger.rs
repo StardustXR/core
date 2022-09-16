@@ -106,7 +106,13 @@ impl Messenger {
 		message: Vec<u8>,
 		scenegraph: &impl scenegraph::Scenegraph,
 	) -> Result<()> {
-		let message = root_as_message(&message).unwrap();
+		let message = match root_as_message(&message) {
+			Ok(message) => message,
+			Err(e) => {
+				self.error("", "", e)?;
+				return Ok(());
+			}
+		};
 		let message_type = message.type_();
 		match message_type {
 			// Errors
