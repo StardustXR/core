@@ -70,15 +70,13 @@ async fn fusion_box_field() {
 		.size(Vec3::from([1.0, 1.0, 1.0]))
 		.build()
 		.expect("Unable to make box field");
-
-	let client_captured = client.clone();
 	let distance = box_field
 		.field
 		.distance(
-			client_captured.get_root(),
-			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
+			client.get_root(),
+			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
 		.await
 		.expect("Unable to get box field distance");
-	assert_eq!(distance, 1_f32);
+	assert_eq!(distance, 0.5_f32);
 }
