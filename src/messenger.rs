@@ -93,10 +93,10 @@ impl Messenger {
 		fbb.finish(message_constructed, None);
 
 		let message_length = fbb.finished_data().len() as u32;
-		let message_length = message_length.to_ne_bytes().to_vec();
-		let message = fbb.finished_data().to_vec();
+		let mut message = Vec::with_capacity(message_length as usize + 4);
+		message.extend_from_slice(&message_length.to_ne_bytes());
+		message.extend_from_slice(fbb.finished_data());
 
-		self.send_queue_tx.send(message_length).unwrap();
 		self.send_queue_tx.send(message).unwrap();
 		Ok(())
 	}
