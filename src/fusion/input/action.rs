@@ -5,20 +5,30 @@ use std::{fmt::Debug, iter::FromIterator, mem::swap, sync::Arc};
 pub trait InputActionState: Sized + Clone + Send + Sync + 'static {}
 impl<T: Sized + Clone + Send + Sync + 'static> InputActionState for T {}
 
-pub type ActiveCondtion<S> = fn(&InputData, state: &S) -> bool;
+pub type ActiveCondition<S> = fn(&InputData, state: &S) -> bool;
+
+pub trait InputAction<S: InputActionState> {
+	fn base(&mut self) -> &mut BaseInputAction<S>;
+	fn type_erase(&mut self) -> &mut dyn InputAction<S>
+	where
+		Self: Sized,
+	{
+		self as &mut dyn InputAction<S>
+	}
+}
 
 #[derive(Clone)]
-pub struct InputAction<S: InputActionState> {
+pub struct BaseInputAction<S: InputActionState> {
 	pub capture_on_trigger: bool,
-	pub active_condition: ActiveCondtion<S>,
+	pub active_condition: ActiveCondition<S>,
 
 	pub started_acting: FxHashSet<Arc<InputData>>,
 	pub actively_acting: FxHashSet<Arc<InputData>>,
 	pub stopped_acting: FxHashSet<Arc<InputData>>,
 	queued_inputs: FxHashSet<Arc<InputData>>,
 }
-impl<S: InputActionState> InputAction<S> {
-	pub fn new(capture_on_trigger: bool, active_condition: ActiveCondtion<S>) -> Self {
+impl<S: InputActionState> BaseInputAction<S> {
+	pub fn new(capture_on_trigger: bool, active_condition: ActiveCondition<S>) -> Self {
 		Self {
 			capture_on_trigger,
 			active_condition,
@@ -30,7 +40,7 @@ impl<S: InputActionState> InputAction<S> {
 		}
 	}
 
-	fn update(&mut self, external: &mut InputAction<S>) {
+	fn update(&mut self, external: &mut BaseInputAction<S>) {
 		self.started_acting = FxHashSet::from_iter(
 			self.queued_inputs
 				.difference(&self.actively_acting)
@@ -62,13 +72,19 @@ impl<S: InputActionState> InputAction<S> {
 		}
 	}
 }
-impl<S: InputActionState> PartialEq for InputAction<S> {
+
+impl<S: InputActionState> InputAction<S> for BaseInputAction<S> {
+	fn base(&mut self) -> &mut BaseInputAction<S> {
+		self
+	}
+}
+impl<S: InputActionState> PartialEq for BaseInputAction<S> {
 	fn eq(&self, other: &Self) -> bool {
 		self.capture_on_trigger == other.capture_on_trigger
 			&& self.active_condition as usize == other.active_condition as usize
 	}
 }
-impl<S: InputActionState> Debug for InputAction<S> {
+impl<S: InputActionState> Debug for BaseInputAction<S> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("InputAction")
 			.field("capture_on_trigger", &self.capture_on_trigger)
@@ -82,7 +98,7 @@ impl<S: InputActionState> Debug for InputAction<S> {
 
 #[derive(Debug, Default)]
 pub struct InputActionHandler<S: InputActionState> {
-	actions: Vec<InputAction<S>>,
+	actions: Vec<BaseInputAction<S>>,
 	state: S,
 	back_state: S,
 }
@@ -97,7 +113,7 @@ impl<S: InputActionState> InputActionHandler<S> {
 
 	pub fn update_actions<'a>(
 		&mut self,
-		actions: impl IntoIterator<Item = &'a mut InputAction<S>>,
+		actions: impl IntoIterator<Item = &'a mut (dyn InputAction<S> + 'a)>,
 	) {
 		self.back_state = self.state.clone();
 
@@ -107,11 +123,11 @@ impl<S: InputActionState> InputActionHandler<S> {
 				if let Some(internal_action) = self
 					.actions
 					.iter_mut()
-					.find(|internal_action| **internal_action == *action)
+					.find(|internal_action| **internal_action == *action.base())
 				{
-					internal_action.update(action);
+					internal_action.update(action.base());
 				}
-				action.clone()
+				action.base().clone()
 			})
 			.collect();
 	}
@@ -136,7 +152,8 @@ async fn fusion_input_action_handler() {
 	struct InputActionHandlerTest {
 		field: SphereField,
 		input_handler: crate::fusion::HandlerWrapper<InputHandler, InputActionHandler<f32>>,
-		hover_action: InputAction<f32>,
+		hover_action: BaseInputAction<f32>,
+		fancy_action: FancyInputAction<f32>,
 	}
 
 	let field = SphereField::builder()
@@ -149,19 +166,39 @@ async fn fusion_input_action_handler() {
 			InputActionHandler::new(0.05)
 		})
 		.unwrap(),
-		hover_action: InputAction::new(false, |input_data, max_distance| {
+		hover_action: BaseInputAction::new(false, |input_data, max_distance| {
 			dbg!(input_data);
 			input_data.distance < *max_distance
 		}),
+		fancy_action: FancyInputAction::default(),
 		field,
 	};
+	struct FancyInputAction<S: InputActionState> {
+		action: BaseInputAction<S>,
+	}
+	impl<S: InputActionState> Default for FancyInputAction<S> {
+		fn default() -> Self {
+			Self {
+				action: BaseInputAction::new(false, |_, _| true),
+			}
+		}
+	}
+	impl<S: InputActionState> InputAction<S> for FancyInputAction<S> {
+		fn base(&mut self) -> &mut BaseInputAction<S> {
+			&mut self.action
+		}
+	}
 
 	impl crate::fusion::client::LifeCycleHandler for InputActionHandlerTest {
 		fn logic_step(&mut self, info: crate::fusion::client::LogicStepInfo) {
 			println!("Life cycle step {}s", info.elapsed);
-			self.input_handler
-				.lock_inner()
-				.update_actions([&mut self.hover_action].into_iter());
+			self.input_handler.lock_inner().update_actions(
+				[
+					self.hover_action.type_erase(),
+					self.fancy_action.type_erase(),
+				]
+				.into_iter(),
+			);
 			// dbg!(&self.hover_action);
 		}
 	}
