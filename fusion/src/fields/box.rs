@@ -1,28 +1,30 @@
-use super::Field;
 use crate::{
-	fusion::{
-		node::GenNodeInfo,
-		node::{Node, NodeError},
-		spatial::Spatial,
-	},
-	push_to_vec,
-	values::{Vec3, VEC3_ZERO},
+	node::GenNodeInfo,
+	node::{Node, NodeError},
+	spatial::Spatial,
 };
 use anyhow::Result;
+use stardust_xr::{
+	flex::FlexBuffable,
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
+};
 use std::ops::Deref;
 
-pub struct SphereField {
+use super::Field;
+
+pub struct BoxField {
 	pub field: Field,
 }
 #[buildstructor::buildstructor]
-impl<'a> SphereField {
+impl<'a> BoxField {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
-		radius: f32,
+		rotation: Option<Quat>,
+		size: Vec3,
 	) -> Result<Self, NodeError> {
-		Ok(SphereField {
+		Ok(BoxField {
 			field: Field {
 				spatial: Spatial {
 					node: generate_node!(
@@ -30,23 +32,25 @@ impl<'a> SphereField {
 							client: spatial_parent.node.client.clone(),
 							parent_path: "/field",
 							interface_path: "/field",
-							interface_method: "createSphereField"
+							interface_method: "createBoxField"
 						},
 						spatial_parent.node.get_path(),
 						position.unwrap_or(VEC3_ZERO),
-						radius
+						rotation.unwrap_or(QUAT_IDENTITY),
+						size
 					),
 				},
 			},
 		})
 	}
 
-	pub fn set_radius(&self, radius: f32) -> Result<(), NodeError> {
+	pub fn set_size(&self, size: impl Into<Vec3>) -> Result<(), NodeError> {
+		let size: Vec3 = size.into();
 		self.node
-			.send_remote_signal("setRadius", &flexbuffers::singleton(radius))
+			.send_remote_signal("setSize", &FlexBuffable::build_singleton(&size.into()))
 	}
 }
-impl Deref for SphereField {
+impl Deref for BoxField {
 	type Target = Field;
 
 	fn deref(&self) -> &Self::Target {
@@ -55,34 +59,23 @@ impl Deref for SphereField {
 }
 
 #[tokio::test]
-async fn fusion_sphere_field() {
-	use crate::fusion::client::Client;
+async fn fusion_box_field() {
+	use crate::client::Client;
 	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-
-	let sphere_field = SphereField::builder()
+	let box_field = BoxField::builder()
 		.spatial_parent(client.get_root())
-		.radius(0.5)
+		.size(Vec3::from([1.0, 1.0, 1.0]))
 		.build()
-		.expect("Unable to make sphere field");
-	let distance = sphere_field
+		.expect("Unable to make box field");
+	let distance = box_field
 		.field
 		.distance(
 			client.get_root(),
 			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
 		.await
-		.expect("Unable to get sphere field distance");
+		.expect("Unable to get box field distance");
 	assert_eq!(distance, 0.5_f32);
-	sphere_field.set_radius(1.0).unwrap();
-	let distance = sphere_field
-		.field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-		)
-		.await
-		.expect("Unable to get sphere field distance");
-	assert_eq!(distance, 1_f32);
 }

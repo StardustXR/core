@@ -1,8 +1,8 @@
 use super::node::Node;
-use crate::{scenegraph, scenegraph::ScenegraphError};
 use core::hash::BuildHasherDefault;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
+use stardust_xr::{scenegraph, scenegraph::ScenegraphError};
 use std::sync::Weak;
 
 #[derive(Default)]

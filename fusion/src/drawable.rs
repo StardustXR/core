@@ -4,14 +4,11 @@ use super::{
 	resource::Resource,
 	spatial::Spatial,
 };
-use crate::{
-	push_to_vec,
-	values::{Color, Quat, Vec2, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
-};
 use anyhow::Result;
 use color::{rgba, Rgba};
 use flagset::{flags, FlagSet};
 use flexbuffers::VectorBuilder;
+use stardust_xr::values::{Color, Quat, Vec2, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO};
 use std::{
 	ops::Deref,
 	path::{Path, PathBuf},

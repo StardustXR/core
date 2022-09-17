@@ -2,11 +2,11 @@ use std::ops::Deref;
 use std::path::Path;
 use std::sync::Weak;
 
-use crate::fusion::client::Client;
-use crate::fusion::node::{GenNodeInfo, Node, NodeError, NodeType};
-use crate::fusion::spatial::Spatial;
-use crate::fusion::{HandlerWrapper, WeakNodeRef, WeakWrapped};
-use crate::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use crate::client::Client;
+use crate::node::{GenNodeInfo, Node, NodeError, NodeType};
+use crate::spatial::Spatial;
+use crate::{HandlerWrapper, WeakNodeRef, WeakWrapped};
+use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
 
 use super::{Item, ItemUI, ItemUIType};
 
@@ -122,12 +122,12 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 
 	struct EnvironmentUI {
 		path: String,
-		item: WeakNodeRef<EnvironmentItem>,
+		_item: WeakNodeRef<EnvironmentItem>,
 	}
 	impl EnvironmentUI {
-		pub fn new(path: String, item: WeakNodeRef<EnvironmentItem>) -> Self {
+		pub fn new(path: String, _item: WeakNodeRef<EnvironmentItem>) -> Self {
 			println!("Environment item with path {path} created");
-			EnvironmentUI { path, item }
+			EnvironmentUI { path, _item }
 		}
 	}
 	impl Drop for EnvironmentUI {

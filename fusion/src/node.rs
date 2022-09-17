@@ -1,7 +1,7 @@
 use super::client::Client;
-use crate::flex;
 use anyhow::Result;
 use nanoid::nanoid;
+use stardust_xr::flex;
 use std::{
 	sync::{Arc, Weak},
 	vec::Vec,
@@ -29,8 +29,8 @@ macro_rules! generate_node {
 				.send_remote_signal(
 					$gen_node_info.interface_path,
 					$gen_node_info.interface_method,
-					$crate::flex::flexbuffer_from_vector_arguments(|vec| {
-						push_to_vec![vec, id.as_str(), $($things_to_pass),+]
+					stardust_xr::flex::flexbuffer_from_vector_arguments(|vec| {
+						stardust_xr::push_to_vec![vec, id.as_str(), $($things_to_pass),+]
 					})
 					.as_slice(),
 				)

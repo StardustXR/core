@@ -144,14 +144,14 @@ impl<S: InputActionState> InputHandlerHandler for InputActionHandler<S> {
 
 #[tokio::test]
 async fn fusion_input_action_handler() {
-	use crate::fusion::{client::Client, fields::SphereField, input::InputHandler};
+	use crate::{client::Client, fields::SphereField, input::InputHandler};
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 
 	struct InputActionHandlerTest {
 		field: SphereField,
-		input_handler: crate::fusion::HandlerWrapper<InputHandler, InputActionHandler<f32>>,
+		input_handler: crate::HandlerWrapper<InputHandler, InputActionHandler<f32>>,
 		hover_action: BaseInputAction<f32>,
 		fancy_action: FancyInputAction<f32>,
 	}
@@ -189,8 +189,8 @@ async fn fusion_input_action_handler() {
 		}
 	}
 
-	impl crate::fusion::client::LifeCycleHandler for InputActionHandlerTest {
-		fn logic_step(&mut self, info: crate::fusion::client::LogicStepInfo) {
+	impl crate::client::LifeCycleHandler for InputActionHandlerTest {
+		fn logic_step(&mut self, info: crate::client::LogicStepInfo) {
 			println!("Life cycle step {}s", info.elapsed);
 			self.input_handler.lock_inner().update_actions(
 				[

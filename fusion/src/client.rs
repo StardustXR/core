@@ -1,10 +1,10 @@
 use super::HandlerWrapper;
 use super::{scenegraph::Scenegraph, spatial::Spatial};
-use crate::flex::flexbuffer_from_vector_arguments;
-use crate::{client, messenger::Messenger};
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use stardust_xr::flex::flexbuffer_from_vector_arguments;
+use stardust_xr::{client, messenger::Messenger};
 use std::any::TypeId;
 use std::path::Path;
 use std::sync::{Arc, Weak};

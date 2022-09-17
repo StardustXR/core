@@ -1,7 +1,7 @@
-use crate::values::{Quat, Vec3};
 use glam::Mat4;
 use mint::RowMatrix4;
 use once_cell::sync::OnceCell;
+use stardust_xr::values::{Quat, Vec3};
 use std::fmt::Debug;
 
 #[derive(Clone)]

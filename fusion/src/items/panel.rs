@@ -4,14 +4,15 @@ use mint::Vector2;
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 use crate::{
+	client::Client,
+	drawable::Model,
+	node::{Node, NodeError, NodeType},
+	spatial::Spatial,
+	HandlerWrapper, WeakNodeRef, WeakWrapped,
+};
+use stardust_xr::{
 	flex::{self, flexbuffer_from_vector_arguments},
-	fusion::{
-		client::Client,
-		drawable::Model,
-		node::{Node, NodeError, NodeType},
-		spatial::Spatial,
-		HandlerWrapper, WeakNodeRef, WeakWrapped,
-	},
+	push_to_vec,
 };
 
 use super::{Item, ItemUI, ItemUIType};

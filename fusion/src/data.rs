@@ -3,7 +3,7 @@ use super::{
 	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
 };
-use crate::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
 
 pub struct PulseReceiver {
 	pub spatial: Spatial,

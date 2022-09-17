@@ -2,12 +2,12 @@ use super::{
 	client::Client,
 	node::{GenNodeInfo, Node, NodeError, NodeType},
 };
-use crate::{
+use anyhow::Result;
+use stardust_xr::{
 	flex::{self, flexbuffer_from_arguments},
 	flex_from_quat, flex_from_vec3, flex_to_quat, flex_to_vec3,
 	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
-use anyhow::Result;
 use std::sync::{Arc, Weak};
 
 pub struct Spatial {

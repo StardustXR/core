@@ -1,7 +1,7 @@
 use anyhow::Result;
 use glam::{Quat, Vec3};
 use manifest_dir_macros::directory_relative_path;
-use stardust_xr::fusion::{
+use stardust_xr_fusion::{
 	client::{Client, LifeCycleHandler, LogicStepInfo},
 	drawable::Model,
 	resource::Resource,

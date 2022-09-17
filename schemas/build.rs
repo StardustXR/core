@@ -1,12 +1,12 @@
-use anyhow::Context;
 use std::fmt::Write;
 use std::fs;
 
-fn main() -> anyhow::Result<()> {
+fn main() {
 	println!("cargo:rerun-if-changed=schemas");
-	let out_dir = std::path::Path::new(&std::env::var("OUT_DIR")?).to_owned();
+	let out_dir = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).to_owned();
 
-	let files: Vec<_> = fs::read_dir("src")?
+	let files: Vec<_> = fs::read_dir("src")
+		.unwrap()
 		.filter_map(Result::ok)
 		.map(|d| d.path())
 		.filter(|p| p.extension().unwrap_or_default() == "fbs")
@@ -30,13 +30,10 @@ fn main() -> anyhow::Result<()> {
 	let output = std::process::Command::new("flatc")
 		.args(&args)
 		.output()
-		.context("failed to execute flatc")?;
+		.expect("failed to execute flatc");
 
 	if !output.status.success() {
-		return Err(anyhow::anyhow!(
-			"{}",
-			String::from_utf8_lossy(&output.stdout)
-		));
+		panic!("{}", String::from_utf8_lossy(&output.stdout));
 	}
 
 	let mut buf = String::with_capacity(files.len() * 150);
@@ -49,10 +46,8 @@ fn main() -> anyhow::Result<()> {
 			buf,
 			"pub mod {} {{ \n\tpub use self::stardust_xr::*;\n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
 			stem, name
-		)?;
+		).unwrap();
 	}
 
-	fs::write(out_dir.join("mod.rs"), buf)?;
-
-	Ok(())
+	fs::write(out_dir.join("mod.rs"), buf).unwrap();
 }

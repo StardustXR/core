@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
+use stardust_xr_schemas::message::{root_as_message, Message, MessageArgs};
 use std::io::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
@@ -8,13 +9,10 @@ use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::{
-	scenegraph,
-	schemas::message::{root_as_message, Message, MessageArgs},
-};
+use crate::scenegraph;
 
 pub struct Messenger {
-	async_rt: Handle,
+	_async_rt: Handle,
 	read: Mutex<OwnedReadHalf>,
 	write: Mutex<OwnedWriteHalf>,
 	send_queue_tx: mpsc::UnboundedSender<Vec<u8>>,
@@ -27,7 +25,7 @@ impl Messenger {
 		let (read, write) = connection.into_split();
 		let (send_queue_tx, send_queue_rx) = mpsc::unbounded_channel();
 		Self {
-			async_rt,
+			_async_rt: async_rt,
 			read: Mutex::new(read),
 			write: Mutex::new(write),
 			send_queue_tx,

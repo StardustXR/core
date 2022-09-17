@@ -150,8 +150,8 @@ macro_rules! push_to_vec {
 	}};
 	($vec:expr, $first_thing:expr, $($thing_to_pass:expr),+) => {{
 		{
-			push_to_vec! {$vec, $first_thing}
-			push_to_vec! {$vec, $($thing_to_pass),+}
+			$crate::push_to_vec! {$vec, $first_thing}
+			$crate::push_to_vec! {$vec, $($thing_to_pass),+}
 		}
 	}};
 }

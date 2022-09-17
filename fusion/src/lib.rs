@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod resource;
 #[macro_use]
 pub mod node;

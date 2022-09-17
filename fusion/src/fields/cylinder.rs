@@ -1,31 +1,30 @@
+use super::Field;
 use crate::{
-	flex::FlexBuffable,
-	fusion::{
-		node::GenNodeInfo,
-		node::{Node, NodeError},
-		spatial::Spatial,
-	},
-	push_to_vec,
-	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
+	node::GenNodeInfo,
+	node::{Node, NodeError},
+	spatial::Spatial,
 };
 use anyhow::Result;
+use stardust_xr::{
+	flex::flexbuffer_from_vector_arguments,
+	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
+};
 use std::ops::Deref;
 
-use super::Field;
-
-pub struct BoxField {
+pub struct CylinderField {
 	pub field: Field,
 }
 #[buildstructor::buildstructor]
-impl<'a> BoxField {
+impl<'a> CylinderField {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
-		size: Vec3,
+		length: f32,
+		radius: f32,
 	) -> Result<Self, NodeError> {
-		Ok(BoxField {
+		Ok(CylinderField {
 			field: Field {
 				spatial: Spatial {
 					node: generate_node!(
@@ -33,25 +32,30 @@ impl<'a> BoxField {
 							client: spatial_parent.node.client.clone(),
 							parent_path: "/field",
 							interface_path: "/field",
-							interface_method: "createBoxField"
+							interface_method: "createCylinderField"
 						},
 						spatial_parent.node.get_path(),
 						position.unwrap_or(VEC3_ZERO),
 						rotation.unwrap_or(QUAT_IDENTITY),
-						size
+						length,
+						radius
 					),
 				},
 			},
 		})
 	}
 
-	pub fn set_size(&self, size: impl Into<Vec3>) -> Result<(), NodeError> {
-		let size: Vec3 = size.into();
-		self.node
-			.send_remote_signal("setSize", &FlexBuffable::build_singleton(&size.into()))
+	pub fn set_size(&self, length: f32, radius: f32) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"setSize",
+			&flexbuffer_from_vector_arguments(|vec| {
+				vec.push(length);
+				vec.push(radius);
+			}),
+		)
 	}
 }
-impl Deref for BoxField {
+impl Deref for CylinderField {
 	type Target = Field;
 
 	fn deref(&self) -> &Self::Target {
@@ -60,23 +64,25 @@ impl Deref for BoxField {
 }
 
 #[tokio::test]
-async fn fusion_box_field() {
-	use crate::fusion::client::Client;
+async fn fusion_cylinder_field() {
+	use crate::client::Client;
 	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	let box_field = BoxField::builder()
+
+	let cylinder_field = CylinderField::builder()
 		.spatial_parent(client.get_root())
-		.size(Vec3::from([1.0, 1.0, 1.0]))
+		.length(1.0)
+		.radius(0.5)
 		.build()
-		.expect("Unable to make box field");
-	let distance = box_field
+		.expect("Unable to make cylinder field");
+	let distance = cylinder_field
 		.field
 		.distance(
 			client.get_root(),
 			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
 		.await
-		.expect("Unable to get box field distance");
-	assert_eq!(distance, 0.5_f32);
+		.expect("Unable to cylinder box field distance");
+	assert_eq!(distance, 1_f32);
 }

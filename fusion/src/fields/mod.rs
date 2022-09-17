@@ -6,9 +6,11 @@ pub use cylinder::*;
 pub use r#box::*;
 pub use sphere::*;
 
-use crate::{flex, flex_to_vec3, fusion::spatial::Spatial, push_to_vec, values::Vec3};
 use anyhow::{anyhow, Result};
+use stardust_xr::{flex, flex_to_vec3, push_to_vec, values::Vec3};
 use std::ops::Deref;
+
+use crate::spatial::Spatial;
 
 pub struct Field {
 	pub spatial: Spatial,

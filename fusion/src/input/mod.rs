@@ -5,7 +5,7 @@ mod pointer;
 pub use action as action_handler;
 pub use data::*;
 pub use pointer::*;
-pub use schemas::input_hand::HandT as Hand;
+pub use stardust_xr_schemas::input_hand::HandT as Hand;
 // pub use hand::*;
 
 use super::{
@@ -14,8 +14,8 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
-use crate::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
-use schemas::input::root_as_input_data;
+use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use stardust_xr_schemas::input::root_as_input_data;
 use std::convert::TryInto;
 
 pub trait InputHandlerHandler: Send + Sync {
