@@ -2,6 +2,11 @@
 edition = "2021"
 name = "stardust-xr-fusion"
 version = "0.9.0"
+authors = ["Nova King <technobaboo@proton.me>"]
+description = "High level client library for the Stardust XR display server"
+license = "MIT"
+repository = "https://github.com/StardustXR/stardust-xr/"
+homepage = "https://stardustxr.org"
 
 [dependencies]
 anyhow = "1.0.57"
@@ -22,7 +27,7 @@ ouroboros = "0.15.4"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
 stardust-xr-schemas = {path = "../schemas", version = "0.1.0"}
-stardust-xr = {path = "../core"}
+stardust-xr = {path = "../core", version = "0.1.0"}
 slotmap = "1.0.6"
 thiserror = "1.0.31"
 tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }
