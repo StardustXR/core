@@ -1,13 +1,16 @@
 use super::Pointer;
 use anyhow::{anyhow, bail};
 use ouroboros::self_referencing;
-use schemas::input::{InputDataRawT, InputDataT};
+use schemas::{
+	input::{InputDataRawT, InputDataT},
+	input_hand::HandT,
+};
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 
 #[derive(Debug, Clone)]
 pub enum InputDataType {
 	Pointer(Pointer),
-	// Hand(Hand),
+	Hand(HandT),
 }
 
 pub struct Datamap(DatamapInner);
@@ -70,7 +73,7 @@ impl TryFrom<InputDataT> for InputData {
 					pointer.orientation.into(),
 					pointer.deepest_point.into(),
 				)),
-				InputDataRawT::Hand(_hand) => todo!("need hand struct format"),
+				InputDataRawT::Hand(hand) => InputDataType::Hand(*hand),
 				_ => bail!("Invalid input type"),
 			},
 			distance: input.distance,

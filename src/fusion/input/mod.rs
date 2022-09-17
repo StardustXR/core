@@ -1,11 +1,11 @@
 pub mod action;
 mod data;
-mod hand;
 mod pointer;
 
 pub use action as action_handler;
 pub use data::*;
 pub use pointer::*;
+pub use schemas::input_hand::HandT as Hand;
 // pub use hand::*;
 
 use super::{
@@ -112,7 +112,23 @@ async fn fusion_input_handler() {
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
 		fn input(&mut self, input: InputData) -> bool {
-			dbg!(input);
+			dbg!(input.uid);
+			dbg!(input.distance);
+			match &input.input {
+				InputDataType::Pointer(_) => {
+					println!("Pointer input");
+				}
+				InputDataType::Hand(_) => {
+					println!("Hand input");
+					let _ = input.datamap.with_data(|datamap| {
+						dbg!(datamap
+							.iter_keys()
+							.zip(datamap.iter_values())
+							.collect::<Vec<_>>());
+						let _ = dbg!(datamap.idx("right").get_bool());
+					});
+				}
+			}
 			false
 		}
 	}

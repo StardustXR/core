@@ -1,8 +1,27 @@
 include "common.fbs";
 namespace StardustXR;
 
+struct Finger {
+	tip: Joint;
+	distal: Joint;
+	intermediate: Joint;
+	proximal: Joint;
+	metacarpal: Joint;
+}
+struct Thumb {
+	tip: Joint;
+	distal: Joint;
+	proximal: Joint;
+	metacarpal: Joint;
+}
+
 table Hand {
-	finger_joints:[Joint] (required);
+	right: bool;
+	thumb: Thumb (required);
+	index: Finger (required);
+	middle: Finger (required);
+	ring: Finger (required);
+	little: Finger (required);
 
 	palm:Joint (required);
 	wrist:Joint (required);
