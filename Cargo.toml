@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
-name = "libstardustxr"
-version = "0.9.0"
+name = "stardust-xr"
+version = "0.9.1"
 
 [features]
 default = ["fusion"]

@@ -1,12 +1,12 @@
 use anyhow::Result;
 use glam::{Quat, Vec3};
-use libstardustxr::fusion::{
+use manifest_dir_macros::directory_relative_path;
+use stardust_xr::fusion::{
 	client::{Client, LifeCycleHandler, LogicStepInfo},
 	drawable::Model,
 	resource::Resource,
 	spatial::Spatial,
 };
-use manifest_dir_macros::directory_relative_path;
 use std::sync::Arc;
 
 #[tokio::main(flavor = "current_thread")]
