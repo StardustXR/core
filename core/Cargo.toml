@@ -4,6 +4,9 @@ name = "stardust-xr"
 version = "0.1.0"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "Base library for the Stardust XR display server"
+license = "MIT"
+repository = "https://github.com/StardustXR/stardust-xr/"
+homepage = "https://stardustxr.org"
 
 [dependencies]
 anyhow = "1.0.57"
