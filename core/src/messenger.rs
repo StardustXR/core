@@ -37,9 +37,22 @@ impl Messenger {
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
 	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) -> Result<()> {
 		let error = format!("{}", err);
+		if std::env::var("STARDUST_LOG_CALLS").is_ok() {
+			println!("[STARDUST][ERROR] [{}:{}] {}", object, method, error);
+		}
 		self.send_call(0, None, object, method, Some(error.as_str()), None)
 	}
 	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
+		if std::env::var("STARDUST_LOG_CALLS").is_ok() {
+			println!(
+				"[STARDUST][SIGNAL][{}:{}] {}",
+				object,
+				method,
+				flexbuffers::Reader::get_root(data)
+					.map(|root| format!("{}", root))
+					.unwrap_or_else(|_| String::from_utf8_lossy(data).into_owned())
+			);
+		}
 		self.send_call(1, None, object, method, None, Some(data))
 	}
 	pub async fn execute_remote_method(
@@ -48,6 +61,16 @@ impl Messenger {
 		method: &str,
 		data: &[u8],
 	) -> anyhow::Result<Vec<u8>> {
+		if std::env::var("STARDUST_LOG_CALLS").is_ok() {
+			println!(
+				"[STARDUST][METHOD][{}:{}] {}",
+				object,
+				method,
+				flexbuffers::Reader::get_root(data)
+					.map(|root| format!("{}", root))
+					.unwrap_or_else(|_| String::from_utf8_lossy(data).into_owned())
+			);
+		}
 		let (tx, rx) = oneshot::channel();
 		let id = self.pending_method_futures.lock().await.insert(tx);
 		let num_id = id.data().as_ffi();
@@ -96,6 +119,17 @@ impl Messenger {
 		message.extend_from_slice(fbb.finished_data());
 
 		self.send_queue_tx.send(message).unwrap();
+		Ok(())
+	}
+
+	pub async fn flush(&self) -> Result<()> {
+		let (mut write, mut send_queue) = tokio::join! {
+			self.write.lock(),
+			self.send_queue_rx.lock()
+		};
+		while let Some(message) = send_queue.recv().await {
+			write.write_all(message.as_slice()).await?
+		}
 		Ok(())
 	}
 
@@ -202,17 +236,6 @@ impl Messenger {
 
 		drop(connection);
 		self.handle_message(message_buffer, scenegraph).await?;
-		Ok(())
-	}
-
-	pub async fn flush(&self) -> Result<()> {
-		let (mut write, mut send_queue) = tokio::join! {
-			self.write.lock(),
-			self.send_queue_rx.lock()
-		};
-		while let Some(message) = send_queue.recv().await {
-			write.write_all(message.as_slice()).await?
-		}
 		Ok(())
 	}
 }
