@@ -21,3 +21,4 @@ slotmap = "1.0.6"
 thiserror = "1.0.31"
 tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }
 xdg = "2.4.1"
+chrono = "0.4.22"

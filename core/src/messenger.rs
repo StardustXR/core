@@ -30,7 +30,8 @@ pub fn log_calls(
 				.unwrap_or("Unknown".to_string()),
 		);
 		println!(
-			"[STARDUST]{}[{}:{}] {}",
+			"[{}][STARDUST]{}[{}:{}] {}",
+			chrono::Local::now().format("%+").to_string(),
 			match message_type {
 				0 => "[ERROR] ",
 				1 => "[SIGNAL]",
