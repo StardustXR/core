@@ -11,6 +11,40 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::scenegraph;
 
+pub fn log_calls(
+	message_type: u8,
+	node: &str,
+	method: &str,
+	data: Option<&[u8]>,
+	error: Option<&str>,
+) {
+	// let formatted_call = format!("[STARDUST]{}", format());
+	if std::env::var_os("STARDUST_LOG_CALLS").is_some() {
+		let data = data.map(|data| match flexbuffers::Reader::get_root(data) {
+			Ok(root) => format!("{}", root),
+			Err(_) => String::from_utf8_lossy(data).into_owned(),
+		});
+		let content = data.unwrap_or(
+			error
+				.map(|err| err.to_string())
+				.unwrap_or("Unknown".to_string()),
+		);
+		println!(
+			"[STARDUST]{}[{}:{}] {}",
+			match message_type {
+				0 => "[ERROR] ",
+				1 => "[SIGNAL]",
+				2 => "[METHOD]",
+				3 => "[RETURN]",
+				_ => "[INVALID]",
+			},
+			node,
+			method,
+			content
+		)
+	}
+}
+
 pub struct Messenger {
 	_async_rt: Handle,
 	read: Mutex<OwnedReadHalf>,
@@ -37,22 +71,9 @@ impl Messenger {
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
 	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) -> Result<()> {
 		let error = format!("{}", err);
-		if std::env::var("STARDUST_LOG_CALLS").is_ok() {
-			println!("[STARDUST][ERROR] [{}:{}] {}", object, method, error);
-		}
 		self.send_call(0, None, object, method, Some(error.as_str()), None)
 	}
 	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
-		if std::env::var("STARDUST_LOG_CALLS").is_ok() {
-			println!(
-				"[STARDUST][SIGNAL][{}:{}] {}",
-				object,
-				method,
-				flexbuffers::Reader::get_root(data)
-					.map(|root| format!("{}", root))
-					.unwrap_or_else(|_| String::from_utf8_lossy(data).into_owned())
-			);
-		}
 		self.send_call(1, None, object, method, None, Some(data))
 	}
 	pub async fn execute_remote_method(
@@ -61,16 +82,6 @@ impl Messenger {
 		method: &str,
 		data: &[u8],
 	) -> anyhow::Result<Vec<u8>> {
-		if std::env::var("STARDUST_LOG_CALLS").is_ok() {
-			println!(
-				"[STARDUST][METHOD][{}:{}] {}",
-				object,
-				method,
-				flexbuffers::Reader::get_root(data)
-					.map(|root| format!("{}", root))
-					.unwrap_or_else(|_| String::from_utf8_lossy(data).into_owned())
-			);
-		}
 		let (tx, rx) = oneshot::channel();
 		let id = self.pending_method_futures.lock().await.insert(tx);
 		let num_id = id.data().as_ffi();
@@ -94,6 +105,7 @@ impl Messenger {
 		err: Option<&str>,
 		data: Option<&[u8]>,
 	) -> Result<()> {
+		log_calls(call_type, path, method, data, err);
 		let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 		let flex_path = fbb.create_string(path);
 		let flex_method = fbb.create_string(method);
