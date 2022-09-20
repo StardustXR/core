@@ -132,6 +132,15 @@ impl PanelItem {
 			}),
 		)
 	}
+	pub fn resize(&self, width: u32, height: u32) -> Result<(), NodeError> {
+		self.node.send_remote_signal(
+			"resize",
+			&flexbuffer_from_vector_arguments(|vec| {
+				vec.push(width);
+				vec.push(height);
+			}),
+		)
+	}
 }
 impl Item for PanelItem {
 	type ItemType = PanelItem;
