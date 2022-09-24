@@ -12,6 +12,7 @@ pub mod input;
 pub mod items;
 pub mod scenegraph;
 pub mod spatial;
+pub mod startup_settings;
 
 use anyhow::Result;
 use parking_lot::{Mutex, MutexGuard};

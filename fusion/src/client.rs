@@ -75,6 +75,17 @@ impl Client {
 			.hmd
 			.set(Spatial::from_path(weak_client, "/hmd").unwrap());
 
+		if let Ok(desktop_startup_id) = dbg!(std::env::var("DESKTOP_STARTUP_ID")) {
+			client
+				.get_root()
+				.node
+				.send_remote_signal(
+					"applyDesktopStartupID",
+					&flexbuffers::singleton(desktop_startup_id.as_str()),
+				)
+				.unwrap();
+		}
+
 		client
 			.get_root()
 			.node
