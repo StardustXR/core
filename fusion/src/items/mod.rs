@@ -86,8 +86,7 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 			.upgrade()
 			.unwrap()
 			.messenger
-			.send_remote_signal("/item", Self::Item::REGISTER_UI_FN, &[])
-			.map_err(|_| NodeError::ServerCreationFailed)?;
+			.send_remote_signal("/item", Self::Item::REGISTER_UI_FN, &[]);
 
 		item_ui.node.local_signals.insert(
 			"create".to_string(),

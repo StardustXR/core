@@ -112,7 +112,7 @@ impl Deref for Model {
 async fn fusion_model() -> Result<()> {
 	use manifest_dir_macros::directory_relative_path;
 	let client = super::client::Client::connect().await?;
-	client.set_base_prefixes(&[directory_relative_path!("res")])?;
+	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
 	let _model = Model::resource_builder()
 		.spatial_parent(client.get_root())

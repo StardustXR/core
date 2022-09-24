@@ -278,7 +278,7 @@ impl Deref for PanelItem {
 async fn fusion_panel_ui() -> anyhow::Result<()> {
 	use manifest_dir_macros::directory_relative_path;
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
-	client.set_base_prefixes(&[directory_relative_path!("res")])?;
+	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
 	struct PanelItemUI;
 	impl PanelItemUI {

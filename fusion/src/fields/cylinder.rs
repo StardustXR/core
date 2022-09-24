@@ -82,6 +82,7 @@ async fn fusion_cylinder_field() {
 			client.get_root(),
 			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
+		.unwrap()
 		.await
 		.expect("Unable to cylinder box field distance");
 	assert_eq!(distance, 1_f32);

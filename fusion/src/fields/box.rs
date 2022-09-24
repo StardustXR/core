@@ -75,6 +75,7 @@ async fn fusion_box_field() {
 			client.get_root(),
 			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
+		.unwrap()
 		.await
 		.expect("Unable to get box field distance");
 	assert_eq!(distance, 0.5_f32);

@@ -1,5 +1,6 @@
 use super::client::Client;
 use anyhow::Result;
+use futures::Future;
 use nanoid::nanoid;
 use stardust_xr::flex;
 use std::{
@@ -33,8 +34,7 @@ macro_rules! generate_node {
 						stardust_xr::push_to_vec![vec, id.as_str(), $($things_to_pass),+]
 					})
 					.as_slice(),
-				)
-				.map_err(|_| NodeError::ServerCreationFailed)?;
+				);
 				node
 		}
 
@@ -144,17 +144,20 @@ impl Node {
 			.upgrade()
 			.ok_or(NodeError::ClientDropped)?
 			.messenger
-			.send_remote_signal(self.path.as_str(), method, data)
-			.map_err(|_| NodeError::MessengerWrite)
+			.send_remote_signal(self.path.as_str(), method, data);
+		Ok(())
 	}
-	pub async fn execute_remote_method(&self, method: &str, data: &[u8]) -> Result<Vec<u8>> {
+	pub fn execute_remote_method(
+		&self,
+		method: &str,
+		data: &[u8],
+	) -> Result<impl Future<Output = Result<Vec<u8>>>, NodeError> {
 		match self.client.upgrade() {
 			None => Err(NodeError::ClientDropped.into()),
 			Some(client) => {
-				client
+				Ok(client
 					.messenger
-					.execute_remote_method(self.path.as_str(), method, data)
-					.await
+					.execute_remote_method(self.path.as_str(), method, data))
 			}
 		}
 	}

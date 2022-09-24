@@ -1,12 +1,14 @@
 use anyhow::anyhow;
+use parking_lot::Mutex;
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
 use stardust_xr_schemas::message::{root_as_message, Message, MessageArgs};
+use std::future::Future;
 use std::io::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
 use tokio::runtime::Handle;
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::scenegraph;
@@ -48,10 +50,10 @@ pub fn log_calls(
 
 pub struct Messenger {
 	_async_rt: Handle,
-	read: Mutex<OwnedReadHalf>,
-	write: Mutex<OwnedWriteHalf>,
+	read: AsyncMutex<OwnedReadHalf>,
+	write: AsyncMutex<OwnedWriteHalf>,
 	send_queue_tx: mpsc::UnboundedSender<Vec<u8>>,
-	send_queue_rx: Mutex<mpsc::UnboundedReceiver<Vec<u8>>>,
+	send_queue_rx: AsyncMutex<mpsc::UnboundedReceiver<Vec<u8>>>,
 	pending_method_futures: Mutex<SlotMap<DefaultKey, oneshot::Sender<anyhow::Result<Vec<u8>>>>>,
 }
 
@@ -61,41 +63,33 @@ impl Messenger {
 		let (send_queue_tx, send_queue_rx) = mpsc::unbounded_channel();
 		Self {
 			_async_rt: async_rt,
-			read: Mutex::new(read),
-			write: Mutex::new(write),
+			read: AsyncMutex::new(read),
+			write: AsyncMutex::new(write),
 			send_queue_tx,
-			send_queue_rx: Mutex::new(send_queue_rx),
+			send_queue_rx: AsyncMutex::new(send_queue_rx),
 			pending_method_futures: Mutex::new(Default::default()),
 		}
 	}
 
 	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
-	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) -> Result<()> {
+	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) {
 		let error = format!("{}", err);
 		self.send_call(0, None, object, method, Some(error.as_str()), None)
 	}
-	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) -> Result<()> {
+	pub fn send_remote_signal(&self, object: &str, method: &str, data: &[u8]) {
 		self.send_call(1, None, object, method, None, Some(data))
 	}
-	pub async fn execute_remote_method(
+	pub fn execute_remote_method(
 		&self,
 		object: &str,
 		method: &str,
 		data: &[u8],
-	) -> anyhow::Result<Vec<u8>> {
+	) -> impl Future<Output = anyhow::Result<Vec<u8>>> {
 		let (tx, rx) = oneshot::channel();
-		let id = self.pending_method_futures.lock().await.insert(tx);
-		let num_id = id.data().as_ffi();
-		if let Err(err) = self.send_call(2, Some(num_id), object, method, None, Some(data)) {
-			let _ = self
-				.pending_method_futures
-				.lock()
-				.await
-				.remove(id)
-				.unwrap()
-				.send(Err(err.into()));
-		}
-		rx.await?
+		let id = self.pending_method_futures.lock().insert(tx);
+		let id = id.data().as_ffi();
+		self.send_call(2, Some(id), object, method, None, Some(data));
+		async move { rx.await? }
 	}
 	fn send_call(
 		&self,
@@ -105,7 +99,7 @@ impl Messenger {
 		method: &str,
 		err: Option<&str>,
 		data: Option<&[u8]>,
-	) -> Result<()> {
+	) {
 		log_calls(call_type, path, method, data, err);
 		let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 		let flex_path = fbb.create_string(path);
@@ -132,16 +126,15 @@ impl Messenger {
 		message.extend_from_slice(fbb.finished_data());
 
 		self.send_queue_tx.send(message).unwrap();
-		Ok(())
 	}
 
 	pub async fn flush(&self) -> Result<()> {
-		let (mut write, mut send_queue) = tokio::join! {
-			self.write.lock(),
-			self.send_queue_rx.lock()
-		};
-		while let Some(message) = send_queue.recv().await {
-			write.write_all(message.as_slice()).await?
+		while let Some(message) = self.send_queue_rx.lock().await.recv().await {
+			self.write
+				.lock()
+				.await
+				.write_all(message.as_slice())
+				.await?
 		}
 		Ok(())
 	}
@@ -154,7 +147,7 @@ impl Messenger {
 		let message = match root_as_message(&message) {
 			Ok(message) => message,
 			Err(e) => {
-				self.error("", "", e)?;
+				self.error("", "", e);
 				return Ok(());
 			}
 		};
@@ -163,7 +156,7 @@ impl Messenger {
 			// Errors
 			0 => {
 				let key: DefaultKey = KeyData::from_ffi(message.id()).into();
-				let future_opt = self.pending_method_futures.lock().await.remove(key);
+				let future_opt = self.pending_method_futures.lock().remove(key);
 				match future_opt {
 					None => {
 						eprintln!(
@@ -189,8 +182,7 @@ impl Messenger {
 					message.data().unwrap(),
 				);
 				if let Err(e) = signal_status {
-					self.error(message.object().unwrap(), message.method().unwrap(), e)
-						.ok();
+					self.error(message.object().unwrap(), message.method().unwrap(), e);
 				}
 			}
 			// Method called
@@ -208,24 +200,23 @@ impl Messenger {
 						message.method().unwrap(),
 						None,
 						Some(&return_value),
-					)?,
+					),
 					Err(error) => {
-						self.error(message.object().unwrap(), message.method().unwrap(), error)
-							.ok();
+						self.error(message.object().unwrap(), message.method().unwrap(), error);
 					}
 				};
 			}
 			// Method return
 			3 => {
 				let key: DefaultKey = KeyData::from_ffi(message.id()).into();
-				let future_opt = self.pending_method_futures.lock().await.remove(key);
+				let future_opt = self.pending_method_futures.lock().remove(key);
 				match future_opt {
 					None => {
 						self.error(
 							message.object().unwrap(),
 							message.method().unwrap(),
 							anyhow!("Method return without method call"),
-						)?;
+						);
 					}
 					Some(future) => {
 						let _ = future.send(Ok(message.data().unwrap().to_vec()));

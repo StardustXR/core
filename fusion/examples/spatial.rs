@@ -12,7 +12,7 @@ use std::sync::Arc;
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
 	let (client, event_loop) = Client::connect_with_async_loop().await?;
-	client.set_base_prefixes(&[directory_relative_path!("res")])?;
+	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
 	let _root = client.wrap_root(SpatialDemo::new(&client)?);
 

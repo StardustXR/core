@@ -3,6 +3,7 @@ use super::{
 	node::{GenNodeInfo, Node, NodeError, NodeType},
 };
 use anyhow::Result;
+use futures::Future;
 use stardust_xr::{
 	flex::{self, flexbuffer_from_arguments},
 	flex_from_quat, flex_from_vec3, flex_to_quat, flex_to_vec3,
@@ -46,19 +47,18 @@ impl<'a> Spatial {
 		})
 	}
 
-	pub async fn get_translation_rotation_scale(
+	pub fn get_translation_rotation_scale<'d>(
 		&self,
-		relative_space: &Spatial,
-	) -> Result<(Vec3, Quat, Vec3)> {
-		self.node
-			.execute_remote_method(
-				"getTransform",
-				&flex::flexbuffer_from_arguments(|fbb| {
-					fbb.build_singleton(relative_space.node.get_path())
-				}),
-			)
-			.await
-			.map(|data| {
+		relative_space: &'d Spatial,
+	) -> Result<impl Future<Output = Result<(Vec3, Quat, Vec3)>>, NodeError> {
+		let future = self.node.execute_remote_method(
+			"getTransform",
+			&flex::flexbuffer_from_arguments(|fbb| {
+				fbb.build_singleton(relative_space.node.get_path())
+			}),
+		)?;
+		Ok(async move {
+			future.await.map(|data| {
 				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
 				let flex_vec = root.get_vector().unwrap();
 				let pos = flex_to_vec3!(flex_vec.idx(0));
@@ -66,6 +66,7 @@ impl<'a> Spatial {
 				let scl = flex_to_vec3!(flex_vec.idx(2));
 				(pos.unwrap(), rot.unwrap(), scl.unwrap())
 			})
+		})
 	}
 
 	pub fn set_position(

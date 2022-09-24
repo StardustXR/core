@@ -69,6 +69,7 @@ async fn fusion_sphere_field() {
 			client.get_root(),
 			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
 		)
+		.unwrap()
 		.await
 		.expect("Unable to get sphere field distance");
 	assert_eq!(distance, 0.5_f32);
@@ -79,6 +80,7 @@ async fn fusion_sphere_field() {
 			client.get_root(),
 			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
 		)
+		.unwrap()
 		.await
 		.expect("Unable to get sphere field distance");
 	assert_eq!(distance, 1_f32);

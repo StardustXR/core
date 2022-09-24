@@ -152,7 +152,7 @@ impl Client {
 		wrapper
 	}
 
-	pub fn set_base_prefixes<T: AsRef<str>>(&self, prefixes: &[T]) -> Result<(), std::io::Error> {
+	pub fn set_base_prefixes<T: AsRef<str>>(&self, prefixes: &[T]) {
 		let flexbuffer = flexbuffer_from_vector_arguments(|fbb| {
 			for prefix in prefixes {
 				let prefix = prefix.as_ref();
@@ -164,7 +164,7 @@ impl Client {
 		});
 
 		self.messenger
-			.send_remote_signal("/", "setBasePrefixes", &flexbuffer)
+			.send_remote_signal("/", "setBasePrefixes", &flexbuffer);
 	}
 
 	pub fn stop_loop(&self) {
