@@ -38,13 +38,13 @@ pub enum TextFit {
 }
 
 pub struct TextStyle<R: Resource> {
-	character_height: f32,
-	color: Color,
-	font_resource: Option<R>,
-	text_align: FlagSet<Alignment>,
-	bounds: Vec2,
-	fit: TextFit,
-	bounds_align: FlagSet<Alignment>,
+	pub character_height: f32,
+	pub color: Color,
+	pub font_resource: Option<R>,
+	pub text_align: FlagSet<Alignment>,
+	pub bounds: Vec2,
+	pub fit: TextFit,
+	pub bounds_align: FlagSet<Alignment>,
 }
 
 impl<R: Resource> Default for TextStyle<R> {
@@ -67,7 +67,7 @@ pub struct Text {
 #[buildstructor::buildstructor]
 impl Text {
 	#[builder(entry = "builder")]
-	fn create<'a, R: Resource>(
+	pub fn create<'a, R: Resource>(
 		spatial_parent: &'a Spatial,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
