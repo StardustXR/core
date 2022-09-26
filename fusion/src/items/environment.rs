@@ -111,7 +111,7 @@ async fn fusion_environment_item() {
 
 	let _environment_item = EnvironmentItem::builder()
 		.spatial_parent(client.get_root())
-		.file_path(file_relative_path!("res/libstardustxr/grid_sky.hdr"))
+		.file_path(file_relative_path!("res/fusion/sky.hdr"))
 		.build()
 		.unwrap();
 }
