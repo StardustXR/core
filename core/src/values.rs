@@ -3,27 +3,33 @@ use mint::{Quaternion, Vector2, Vector3};
 
 pub type Vec2 = Vector2<f32>;
 pub type Vec3 = Vector3<f32>;
-pub type Quat = mint::Quaternion<f32>;
+pub type Quat = Quaternion<f32>;
 pub type Color = color::Rgba;
 
-pub const VEC3_ZERO: Vec3 = Vec3 {
-	x: 0.0,
-	y: 0.0,
-	z: 0.0,
-};
-pub const VEC3_ONE: Vec3 = Vec3 {
-	x: 1.0,
-	y: 1.0,
-	z: 1.0,
-};
-pub const QUAT_IDENTITY: Quat = Quat {
-	v: Vec3 {
-		x: 0.0,
-		y: 0.0,
-		z: 0.0,
-	},
-	s: 1.0,
-};
+pub struct Transform {
+	pub position: Option<Vec3>,
+	pub rotation: Option<Quat>,
+	pub scale: Option<Vec3>,
+}
+
+// pub const VEC3_ZERO: Vec3 = Vec3 {
+// 	x: 0.0,
+// 	y: 0.0,
+// 	z: 0.0,
+// };
+// pub const VEC3_ONE: Vec3 = Vec3 {
+// 	x: 1.0,
+// 	y: 1.0,
+// 	z: 1.0,
+// };
+// pub const QUAT_IDENTITY: Quat = Quat {
+// 	v: Vec3 {
+// 		x: 0.0,
+// 		y: 0.0,
+// 		z: 0.0,
+// 	},
+// 	s: 1.0,
+// };
 
 #[macro_export]
 macro_rules! flex_from_vec2 {
