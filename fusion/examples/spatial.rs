@@ -1,5 +1,5 @@
 use anyhow::Result;
-use glam::{Quat, Vec3};
+use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
 use stardust_xr_fusion::{
 	client::{Client, LifeCycleHandler, LogicStepInfo},
@@ -38,22 +38,19 @@ impl SpatialDemo {
 
 		let gem = Model::builder()
 			.spatial_parent(&_root)
-			.resource(&NamespacedResource::new("libstardustxr", "gyro_gem.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_gem.glb"))
 			.build()?;
 		let ring_inner = Model::builder()
 			.spatial_parent(&_root)
-			.resource(&NamespacedResource::new("libstardustxr", "gyro_inside.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_inside.glb"))
 			.build()?;
 		let ring_middle = Model::builder()
 			.spatial_parent(&ring_inner)
-			.resource(&NamespacedResource::new("libstardustxr", "gyro_middle.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_middle.glb"))
 			.build()?;
 		let ring_outer = Model::builder()
 			.spatial_parent(&ring_middle)
-			.resource(&NamespacedResource::new(
-				"libstardustxr",
-				"gyro_outside.glb",
-			))
+			.resource(&NamespacedResource::new("fusion", "gyro_outside.glb"))
 			.build()?;
 
 		Ok(SpatialDemo {
@@ -70,16 +67,16 @@ impl LifeCycleHandler for SpatialDemo {
 		let elapsed = info.elapsed as f32;
 
 		self.gem
-			.set_rotation(None, Quat::from_axis_angle(Vec3::Y, elapsed))
+			.set_rotation(None, Quat::from_rotation_y(elapsed))
 			.unwrap();
 		self.ring_inner
-			.set_rotation(None, Quat::from_axis_angle(Vec3::Z, elapsed))
+			.set_rotation(None, Quat::from_rotation_z(elapsed))
 			.unwrap();
 		self.ring_middle
-			.set_rotation(None, Quat::from_axis_angle(Vec3::X, elapsed))
+			.set_rotation(None, Quat::from_rotation_x(elapsed))
 			.unwrap();
 		self.ring_outer
-			.set_rotation(None, Quat::from_axis_angle(Vec3::Z, elapsed))
+			.set_rotation(None, Quat::from_rotation_z(elapsed))
 			.unwrap();
 	}
 }
