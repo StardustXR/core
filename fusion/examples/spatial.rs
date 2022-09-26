@@ -4,7 +4,7 @@ use manifest_dir_macros::directory_relative_path;
 use stardust_xr_fusion::{
 	client::{Client, LifeCycleHandler, LogicStepInfo},
 	drawable::Model,
-	resource::Resource,
+	resource::NamespacedResource,
 	spatial::Spatial,
 };
 use std::sync::Arc;
@@ -36,21 +36,24 @@ impl SpatialDemo {
 			.zoneable(true)
 			.build()?;
 
-		let gem = Model::resource_builder()
+		let gem = Model::builder()
 			.spatial_parent(&_root)
-			.resource(&Resource::new("libstardustxr", "gyro_gem.glb"))
+			.resource(&NamespacedResource::new("libstardustxr", "gyro_gem.glb"))
 			.build()?;
-		let ring_inner = Model::resource_builder()
+		let ring_inner = Model::builder()
 			.spatial_parent(&_root)
-			.resource(&Resource::new("libstardustxr", "gyro_inside.glb"))
+			.resource(&NamespacedResource::new("libstardustxr", "gyro_inside.glb"))
 			.build()?;
-		let ring_middle = Model::resource_builder()
+		let ring_middle = Model::builder()
 			.spatial_parent(&ring_inner)
-			.resource(&Resource::new("libstardustxr", "gyro_middle.glb"))
+			.resource(&NamespacedResource::new("libstardustxr", "gyro_middle.glb"))
 			.build()?;
-		let ring_outer = Model::resource_builder()
+		let ring_outer = Model::builder()
 			.spatial_parent(&ring_middle)
-			.resource(&Resource::new("libstardustxr", "gyro_outside.glb"))
+			.resource(&NamespacedResource::new(
+				"libstardustxr",
+				"gyro_outside.glb",
+			))
 			.build()?;
 
 		Ok(SpatialDemo {

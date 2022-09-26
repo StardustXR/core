@@ -7,10 +7,7 @@ use anyhow::Result;
 use color::Rgba;
 use flexbuffers::VectorBuilder;
 use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO};
-use std::{
-	ops::Deref,
-	path::{Path, PathBuf},
-};
+use std::ops::Deref;
 
 pub trait MaterialParameter {
 	fn push_flex(&self, vec: &mut VectorBuilder);
@@ -40,10 +37,10 @@ pub struct Model {
 }
 #[buildstructor::buildstructor]
 impl<'a> Model {
-	#[builder(entry = "file_builder")]
-	pub fn from_file(
+	#[builder(entry = "builder")]
+	pub fn create<R: Resource + 'a>(
 		spatial_parent: &'a Spatial,
-		file_path: &'a Path,
+		resource: &'a R,
 		position: Option<Vec3>,
 		rotation: Option<Quat>,
 		scale: Option<Vec3>,
@@ -55,37 +52,10 @@ impl<'a> Model {
 						client: spatial_parent.node.client.clone(),
 						parent_path: "/drawable/model",
 						interface_path: "/drawable",
-						interface_method: "createModelFromFile"
+						interface_method: "createModel"
 					},
 					spatial_parent.node.get_path(),
-					PathBuf::from(file_path),
-					position.unwrap_or(VEC3_ZERO),
-					rotation.unwrap_or(QUAT_IDENTITY),
-					scale.unwrap_or(VEC3_ONE)
-				),
-			},
-		})
-	}
-	#[builder(entry = "resource_builder")]
-	pub fn from_resource(
-		spatial_parent: &'a Spatial,
-		resource: &'a Resource,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
-		scale: Option<Vec3>,
-	) -> Result<Self, NodeError> {
-		Ok(Model {
-			spatial: Spatial {
-				node: generate_node!(
-					GenNodeInfo {
-						client: spatial_parent.node.client.clone(),
-						parent_path: "/drawable/model",
-						interface_path: "/drawable",
-						interface_method: "createModelFromResource"
-					},
-					spatial_parent.node.get_path(),
-					resource.namespace.as_str(),
-					resource.path.as_str(),
+					resource.parse().as_str(),
 					position.unwrap_or(VEC3_ZERO),
 					rotation.unwrap_or(QUAT_IDENTITY),
 					scale.unwrap_or(VEC3_ONE)
@@ -104,13 +74,15 @@ impl Deref for Model {
 
 #[tokio::test]
 async fn fusion_model() -> Result<()> {
-	use manifest_dir_macros::directory_relative_path;
-	let client = crate::client::Client::connect().await?;
-	client.set_base_prefixes(&[directory_relative_path!("res")]);
+	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
+	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let _model = Model::resource_builder()
+	let _model = Model::builder()
 		.spatial_parent(client.get_root())
-		.resource(&Resource::new("libstardustxr", "gyro_gem.glb"))
+		.resource(&crate::resource::NamespacedResource::new(
+			"fusion",
+			"gyro_gem.glb",
+		))
 		.build()?;
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
