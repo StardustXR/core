@@ -65,10 +65,10 @@ macro_rules! flex_from_quat {
 macro_rules! flex_from_color {
 	($B:expr, $V:expr) => {{
 		let mut vec = $B.start_vector();
-		vec.push($V.c.r);
-		vec.push($V.c.g);
-		vec.push($V.c.b);
-		vec.push($V.a);
+		vec.push($V.c.r as f32 / 255.0);
+		vec.push($V.c.g as f32 / 255.0);
+		vec.push($V.c.b as f32 / 255.0);
+		vec.push($V.a as f32 / 255.0);
 		vec.end_vector();
 	}};
 }
