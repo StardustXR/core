@@ -1,13 +1,13 @@
 use crate::{
-	client::Client,
 	node::{GenNodeInfo, Node, NodeError},
+	resource::Resource,
 	spatial::Spatial,
 };
 use anyhow::Result;
 use color::rgba;
 use flagset::{flags, FlagSet};
-use stardust_xr::values::{Color, Quat, Vec2, Vec3};
-use std::sync::Weak;
+use stardust_xr::values::{Color, Quat, Transform, Vec2, Vec3};
+use std::ops::Deref;
 
 flags! {
 pub enum Alignment: u8 {
@@ -37,22 +37,22 @@ pub enum TextFit {
 	Overflow = 1 << 4,
 }
 
-pub struct TextStyle {
+pub struct TextStyle<R: Resource> {
 	character_height: f32,
 	color: Color,
-	font_path: String,
+	font_resource: Option<R>,
 	text_align: FlagSet<Alignment>,
 	bounds: Vec2,
 	fit: TextFit,
 	bounds_align: FlagSet<Alignment>,
 }
 
-impl Default for TextStyle {
+impl<R: Resource> Default for TextStyle<R> {
 	fn default() -> Self {
 		TextStyle {
 			character_height: 1_f32,
 			color: rgba!(255, 255, 255, 255),
-			font_path: "".to_owned(),
+			font_resource: None,
 			text_align: Alignment::TopLeft.into(),
 			bounds: Vec2::from([0f32, 0f32]),
 			fit: TextFit::Overflow,
@@ -64,30 +64,34 @@ impl Default for TextStyle {
 pub struct Text {
 	pub spatial: Spatial,
 }
+#[buildstructor::buildstructor]
 impl Text {
-	#[allow(clippy::redundant_clone)]
-	pub async fn create(
-		client: Weak<Client>,
-		spatial_parent: &Spatial,
-		text_string: &str,
-		position: Vec3,
-		rotation: Quat,
-		style: TextStyle,
+	#[builder(entry = "builder")]
+	fn create<'a, R: Resource>(
+		spatial_parent: &'a Spatial,
+		position: Option<Vec3>,
+		rotation: Option<Quat>,
+		scale: Option<Vec3>,
+		text_string: &'a str,
+		style: TextStyle<R>,
 	) -> Result<Self, NodeError> {
 		Ok(Text {
 			spatial: Spatial {
 				node: generate_node!(
 					GenNodeInfo {
-						client: client.clone(),
-						parent_path: "/text",
+						client: spatial_parent.node.client.clone(),
+						parent_path: "/drawable/text",
 						interface_path: "/drawable",
 						interface_method: "createText"
 					},
 					spatial_parent.node.get_path(),
-					position,
-					rotation,
+					Transform {
+						position,
+						rotation,
+						scale
+					},
 					text_string,
-					style.font_path.as_str(),
+					style.font_resource.map(|res| res.parse()),
 					style.character_height,
 					style.text_align.bits(),
 					style.bounds,
@@ -98,4 +102,32 @@ impl Text {
 			},
 		})
 	}
+}
+impl Deref for Text {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
+	}
+}
+
+#[tokio::test]
+async fn fusion_text() -> Result<()> {
+	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
+	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+
+	let mut style = TextStyle::default();
+	style.font_resource = Some(crate::resource::NamespacedResource::new(
+		"fusion",
+		"common_case.ttf",
+	));
+
+	let _text = Text::builder()
+		.spatial_parent(client.get_root())
+		.text_string("Test Text")
+		.style(style)
+		.build()?;
+
+	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
+	Ok(())
 }
