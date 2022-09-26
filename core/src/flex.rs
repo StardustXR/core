@@ -16,6 +16,7 @@ pub enum FlexBuffable {
 	Transform(Transform),
 	Color(Color),
 	String(String),
+	Option(Option<Box<FlexBuffable>>),
 }
 impl From<bool> for FlexBuffable {
 	fn from(var: bool) -> Self {
@@ -107,6 +108,11 @@ impl From<PathBuf> for FlexBuffable {
 		FlexBuffable::String(String::from(var.to_str().unwrap()))
 	}
 }
+impl<O: Into<FlexBuffable>> From<Option<O>> for FlexBuffable {
+	fn from(var: Option<O>) -> Self {
+		FlexBuffable::Option(var.map(|var| Box::from(var.into())))
+	}
+}
 impl FlexBuffable {
 	pub fn push_to_vector(&self, vec: &mut VectorBuilder) {
 		match self {
@@ -145,6 +151,13 @@ impl FlexBuffable {
 				flex_from_color!(vec, color)
 			}
 			FlexBuffable::String(v) => vec.push(v.as_str()),
+			FlexBuffable::Option(o) => {
+				if let Some(o) = o {
+					o.push_to_vector(vec);
+				} else {
+					vec.push(());
+				}
+			}
 		}
 	}
 
@@ -178,6 +191,13 @@ impl FlexBuffable {
 				flexbuffer_from_arguments(|fbb| flex_from_color!(fbb, color))
 			}
 			FlexBuffable::String(v) => flexbuffers::singleton(v.as_str()),
+			FlexBuffable::Option(o) => {
+				if let Some(o) = o {
+					o.build_singleton()
+				} else {
+					flexbuffers::singleton(())
+				}
+			}
 		}
 	}
 }
