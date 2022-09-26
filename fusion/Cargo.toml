@@ -27,7 +27,7 @@ ouroboros = "0.15.4"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
 stardust-xr-schemas = {path = "../schemas", version = "0.1.0"}
-stardust-xr = {path = "../core", version = "0.2.0"}
+stardust-xr = {path = "../core", version = "0.2.1"}
 slotmap = "1.0.6"
 thiserror = "1.0.31"
 tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }

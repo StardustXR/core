@@ -2,12 +2,12 @@ use super::{
 	client::Client,
 	node::{GenNodeInfo, Node, NodeError, NodeType},
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use futures::Future;
 use stardust_xr::{
 	flex::{self, flexbuffer_from_arguments},
-	flex_from_quat, flex_from_vec3, flex_to_quat, flex_to_vec3,
-	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+	flex_from_quat, flex_from_vec3,
+	values::{parse_quat, parse_vec3, Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
 };
 use std::sync::{Arc, Weak};
 
@@ -58,13 +58,13 @@ impl<'a> Spatial {
 			}),
 		)?;
 		Ok(async move {
-			future.await.map(|data| {
+			future.await.and_then(|data| {
 				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
 				let flex_vec = root.get_vector().unwrap();
-				let pos = flex_to_vec3!(flex_vec.idx(0));
-				let rot = flex_to_quat!(flex_vec.idx(1));
-				let scl = flex_to_vec3!(flex_vec.idx(2));
-				(pos.unwrap(), rot.unwrap(), scl.unwrap())
+				let pos = parse_vec3(flex_vec.idx(0)).ok_or_else(|| anyhow!("Parsing error"))?;
+				let rot = parse_quat(flex_vec.idx(1)).ok_or_else(|| anyhow!("Parsing error"))?;
+				let scl = parse_vec3(flex_vec.idx(2)).ok_or_else(|| anyhow!("Parsing error"))?;
+				Ok((pos, rot, scl))
 			})
 		})
 	}

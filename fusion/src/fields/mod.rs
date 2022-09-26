@@ -8,7 +8,10 @@ pub use r#box::*;
 pub use sphere::*;
 
 use anyhow::{anyhow, Result};
-use stardust_xr::{flex, flex_to_vec3, push_to_vec, values::Vec3};
+use stardust_xr::{
+	flex, push_to_vec,
+	values::{parse_f32, parse_vec3, Vec3},
+};
 use std::ops::Deref;
 
 use crate::{node::NodeError, spatial::Spatial};
@@ -29,9 +32,9 @@ impl Field {
 			}),
 		)?;
 		Ok(async move {
-			future.await.map(|data| {
+			future.await.and_then(|data| {
 				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
-				root.get_f64().unwrap_or(0_f64) as f32
+				parse_f32(root).ok_or_else(|| anyhow!("Parsing error"))
 			})
 		})
 	}
@@ -50,7 +53,7 @@ impl Field {
 		Ok(async move {
 			future.await.and_then(|data| {
 				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
-				flex_to_vec3!(root).ok_or_else(|| anyhow!("Parsing error"))
+				parse_vec3(root).ok_or_else(|| anyhow!("Parsing error"))
 			})
 		})
 	}
@@ -69,7 +72,7 @@ impl Field {
 		Ok(async move {
 			future.await.and_then(|data| {
 				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
-				flex_to_vec3!(root).ok_or_else(|| anyhow!("Parsing error"))
+				parse_vec3(root).ok_or_else(|| anyhow!("Parsing error"))
 			})
 		})
 	}
