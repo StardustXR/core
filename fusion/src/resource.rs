@@ -3,7 +3,7 @@ use std::path::Path;
 pub trait Resource {
 	fn parse(&self) -> String;
 }
-impl Resource for dyn AsRef<&Path> {
+impl<R: AsRef<Path>> Resource for R {
 	fn parse(&self) -> String {
 		self.as_ref().to_str().unwrap().to_string()
 	}

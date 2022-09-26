@@ -102,6 +102,15 @@ impl Text {
 			},
 		})
 	}
+
+	pub fn set_character_height(&self, height: f32) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("setCharacterHeight", &flexbuffers::singleton(height))
+	}
+	pub fn set_text(&self, text: impl AsRef<str>) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("setText", &flexbuffers::singleton(text.as_ref()))
+	}
 }
 impl Deref for Text {
 	type Target = Spatial;
@@ -113,20 +122,21 @@ impl Deref for Text {
 
 #[tokio::test]
 async fn fusion_text() -> Result<()> {
+	use crate::resource::NamespacedResource;
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let mut style = TextStyle::default();
-	style.font_resource = Some(crate::resource::NamespacedResource::new(
-		"fusion",
-		"common_case.ttf",
-	));
+	let mut style: TextStyle<NamespacedResource> = TextStyle::default();
+	style.font_resource = Some(NamespacedResource::new("fusion", "common_case.ttf"));
 
-	let _text = Text::builder()
+	let text = Text::builder()
 		.spatial_parent(client.get_root())
 		.text_string("Test Text")
 		.style(style)
 		.build()?;
+
+	text.set_character_height(0.05)?;
+	text.set_text("Test Text: Changed")?;
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 	Ok(())
