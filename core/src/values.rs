@@ -1,5 +1,8 @@
-pub type Vec2 = mint::Vector2<f32>;
-pub type Vec3 = mint::Vector3<f32>;
+use flexbuffers::{Buffer, Reader};
+use mint::{Quaternion, Vector2, Vector3};
+
+pub type Vec2 = Vector2<f32>;
+pub type Vec3 = Vector3<f32>;
 pub type Quat = mint::Quaternion<f32>;
 pub type Color = color::Rgba;
 
@@ -64,31 +67,33 @@ macro_rules! flex_from_color {
 	}};
 }
 
-#[macro_export]
-macro_rules! flex_to_vec2 {
-	($F:expr) => {{
-		$F.get_vector().ok().map(|v| mint::Vector2 {
-			x: v.idx(0).as_f32(),
-			y: v.idx(1).as_f32(),
-		})
-	}};
+pub fn parse_f32<B: Buffer>(reader: Reader<B>) -> Option<f32> {
+	Some(reader.get_f64().ok()? as f32)
 }
-#[macro_export]
-macro_rules! flex_to_vec3 {
-	($F:expr) => {{
-		$F.get_vector().ok().map(|v| mint::Vector3 {
-			x: v.idx(0).as_f32(),
-			y: v.idx(1).as_f32(),
-			z: v.idx(2).as_f32(),
-		})
-	}};
+pub fn parse_vec2<B: Buffer>(reader: Reader<B>) -> Option<Vector2<f32>> {
+	let vec = reader.get_vector().ok()?;
+
+	Some(Vector2::from([
+		parse_f32(vec.index(0).ok()?)?,
+		parse_f32(vec.index(1).ok()?)?,
+	]))
 }
-#[macro_export]
-macro_rules! flex_to_quat {
-	($F:expr) => {{
-		$F.get_vector().ok().map(|v| mint::Quaternion {
-			v: mint::Vector3::from([v.idx(0).as_f32(), v.idx(1).as_f32(), v.idx(2).as_f32()]),
-			s: v.idx(3).as_f32(),
-		})
-	}};
+pub fn parse_vec3<B: Buffer>(reader: Reader<B>) -> Option<Vector3<f32>> {
+	let vec = reader.get_vector().ok()?;
+
+	Some(Vector3::from([
+		parse_f32(vec.index(0).ok()?)?,
+		parse_f32(vec.index(1).ok()?)?,
+		parse_f32(vec.index(2).ok()?)?,
+	]))
+}
+pub fn parse_quat<B: Buffer>(reader: Reader<B>) -> Option<Quaternion<f32>> {
+	let vec = reader.get_vector().ok()?;
+
+	Some(Quaternion::from([
+		parse_f32(vec.index(0).ok()?)?,
+		parse_f32(vec.index(1).ok()?)?,
+		parse_f32(vec.index(2).ok()?)?,
+		parse_f32(vec.index(3).ok()?)?,
+	]))
 }
