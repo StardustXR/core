@@ -5,7 +5,8 @@ use crate::{
 	spatial::Spatial,
 };
 use anyhow::Result;
-use stardust_xr::values::{Vec3, VEC3_ZERO};
+use mint::Vector3;
+use stardust_xr::values::Vec3;
 use std::ops::Deref;
 
 pub struct SphereField {
@@ -30,7 +31,7 @@ impl<'a> SphereField {
 							interface_method: "createSphereField"
 						},
 						spatial_parent.node.get_path(),
-						position.unwrap_or(VEC3_ZERO),
+						position.unwrap_or(Vector3::from([0.0; 3])),
 						radius
 					),
 				},

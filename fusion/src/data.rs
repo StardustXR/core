@@ -3,7 +3,7 @@ use super::{
 	node::{GenNodeInfo, Node, NodeError},
 	spatial::Spatial,
 };
-use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use stardust_xr::values::{Quat, Transform, Vec3};
 
 pub struct PulseReceiver {
 	pub spatial: Spatial,
@@ -29,8 +29,11 @@ impl<'a> PulseReceiver {
 						interface_method: "createPulseReceiver"
 					},
 					spatial_parent.node.get_path(),
-					position.unwrap_or(VEC3_ZERO),
-					rotation.unwrap_or(QUAT_IDENTITY),
+					Transform {
+						position,
+						rotation,
+						scale: None,
+					},
 					field.spatial.node.get_path()
 				),
 			},

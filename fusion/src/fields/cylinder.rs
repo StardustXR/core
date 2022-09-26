@@ -7,7 +7,7 @@ use crate::{
 use anyhow::Result;
 use stardust_xr::{
 	flex::flexbuffer_from_vector_arguments,
-	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
+	values::{Quat, Transform, Vec3},
 };
 use std::ops::Deref;
 
@@ -35,8 +35,11 @@ impl<'a> CylinderField {
 							interface_method: "createCylinderField"
 						},
 						spatial_parent.node.get_path(),
-						position.unwrap_or(VEC3_ZERO),
-						rotation.unwrap_or(QUAT_IDENTITY),
+						Transform {
+							position,
+							rotation,
+							scale: None,
+						},
 						length,
 						radius
 					),
@@ -85,5 +88,5 @@ async fn fusion_cylinder_field() {
 		.unwrap()
 		.await
 		.expect("Unable to cylinder box field distance");
-	assert_eq!(distance, 1_f32);
+	assert_eq!(distance, 0.5_f32);
 }

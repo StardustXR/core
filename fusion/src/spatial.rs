@@ -7,7 +7,7 @@ use futures::Future;
 use stardust_xr::{
 	flex::{self, flexbuffer_from_arguments},
 	flex_from_quat, flex_from_vec3,
-	values::{parse_quat, parse_vec3, Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO},
+	values::{parse_quat, parse_vec3, Quat, Transform, Vec3},
 };
 use std::sync::{Arc, Weak};
 
@@ -33,9 +33,11 @@ impl<'a> Spatial {
 					interface_method: "createSpatial"
 				},
 				spatial_parent.node.get_path(),
-				position.unwrap_or(VEC3_ZERO),
-				rotation.unwrap_or(QUAT_IDENTITY),
-				scale.unwrap_or(VEC3_ONE),
+				Transform {
+					position,
+					rotation,
+					scale,
+				},
 				zoneable
 			),
 		})

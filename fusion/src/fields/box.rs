@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 use stardust_xr::{
 	flex::FlexBuffable,
-	values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO},
+	values::{Quat, Transform, Vec3},
 };
 use std::ops::Deref;
 
@@ -35,8 +35,11 @@ impl<'a> BoxField {
 							interface_method: "createBoxField"
 						},
 						spatial_parent.node.get_path(),
-						position.unwrap_or(VEC3_ZERO),
-						rotation.unwrap_or(QUAT_IDENTITY),
+						Transform {
+							position,
+							rotation,
+							scale: None,
+						},
 						size
 					),
 				},

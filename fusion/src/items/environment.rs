@@ -6,7 +6,7 @@ use crate::client::Client;
 use crate::node::{GenNodeInfo, Node, NodeError, NodeType};
 use crate::spatial::Spatial;
 use crate::{HandlerWrapper, WeakNodeRef, WeakWrapped};
-use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use stardust_xr::values::{Quat, Transform, Vec3};
 
 use super::{Item, ItemUI, ItemUIType};
 
@@ -38,8 +38,11 @@ impl<'a> EnvironmentItem {
 						interface_method: "createEnvironmentItem"
 					},
 					spatial_parent.node.get_path(),
-					position.unwrap_or(VEC3_ZERO),
-					rotation.unwrap_or(QUAT_IDENTITY),
+					Transform {
+						position,
+						rotation,
+						scale: None,
+					},
 					file_path
 				),
 			},

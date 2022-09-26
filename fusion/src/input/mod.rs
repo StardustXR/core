@@ -14,7 +14,7 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
-use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ZERO};
+use stardust_xr::values::{Quat, Transform, Vec3};
 use stardust_xr_schemas::input::root_as_input_data;
 use std::convert::TryInto;
 
@@ -50,8 +50,11 @@ impl<'a> InputHandler {
 						interface_method: "createInputHandler"
 					},
 					spatial_parent.node.get_path(),
-					position.unwrap_or(VEC3_ZERO),
-					rotation.unwrap_or(QUAT_IDENTITY),
+					Transform {
+						position,
+						rotation,
+						scale: None,
+					},
 					field.spatial.node.get_path()
 				),
 			},

@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 use color::Rgba;
 use flexbuffers::VectorBuilder;
-use stardust_xr::values::{Quat, Vec3, QUAT_IDENTITY, VEC3_ONE, VEC3_ZERO};
+use stardust_xr::values::{Quat, Transform, Vec3};
 use std::ops::Deref;
 
 pub trait MaterialParameter {
@@ -55,10 +55,12 @@ impl<'a> Model {
 						interface_method: "createModel"
 					},
 					spatial_parent.node.get_path(),
-					resource.parse().as_str(),
-					position.unwrap_or(VEC3_ZERO),
-					rotation.unwrap_or(QUAT_IDENTITY),
-					scale.unwrap_or(VEC3_ONE)
+					Transform {
+						position,
+						rotation,
+						scale,
+					},
+					resource.parse().as_str()
 				),
 			},
 		})
