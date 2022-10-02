@@ -1,10 +1,12 @@
 include "input_hand.fbs";
 include "input_pointer.fbs";
+include "input_tip.fbs";
 namespace StardustXR;
 
 union InputDataRaw {
 	Pointer,
 	Hand,
+	Tip,
 }
 
 table InputData {
