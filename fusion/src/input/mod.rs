@@ -1,11 +1,13 @@
 pub mod action;
 mod data;
 mod pointer;
+mod tip;
 
 pub use action as action_handler;
 pub use data::*;
 pub use pointer::*;
 pub use stardust_xr_schemas::input_hand::HandT as Hand;
+pub use tip::*;
 // pub use hand::*;
 
 use super::{
@@ -130,6 +132,9 @@ async fn fusion_input_handler() {
 							.collect::<Vec<_>>());
 						let _ = dbg!(datamap.idx("right").get_bool());
 					});
+				}
+				InputDataType::Tip(_) => {
+					println!("Tip input");
 				}
 			}
 			false

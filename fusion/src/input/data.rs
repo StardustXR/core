@@ -1,4 +1,4 @@
-use super::Pointer;
+use super::{Pointer, Tip};
 use anyhow::{anyhow, bail};
 use ouroboros::self_referencing;
 use stardust_xr_schemas::{
@@ -11,6 +11,7 @@ use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 pub enum InputDataType {
 	Pointer(Pointer),
 	Hand(HandT),
+	Tip(Tip),
 }
 
 pub struct Datamap(DatamapInner);
@@ -74,6 +75,11 @@ impl TryFrom<InputDataT> for InputData {
 					pointer.deepest_point.into(),
 				)),
 				InputDataRawT::Hand(hand) => InputDataType::Hand(*hand),
+				InputDataRawT::Tip(tip) => InputDataType::Tip(Tip::new(
+					tip.origin.into(),
+					tip.orientation.into(),
+					tip.radius,
+				)),
 				_ => bail!("Invalid input type"),
 			},
 			distance: input.distance,
