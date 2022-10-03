@@ -1,11 +1,16 @@
+use manifest_dir_macros::{directory_relative_path, file_relative_path};
 use std::fmt::Write;
 use std::fs;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 fn main() {
 	println!("cargo:rerun-if-changed=schemas");
-	let out_dir = std::path::Path::new(&std::env::var("OUT_DIR").unwrap()).to_owned();
+	let out_dir = PathBuf::from_str(directory_relative_path!("src/generated")).unwrap();
+	fs::remove_dir_all(&out_dir).unwrap();
+	fs::create_dir_all(&out_dir).unwrap();
 
-	let files: Vec<_> = fs::read_dir("src")
+	let files: Vec<_> = fs::read_dir(directory_relative_path!("fbs"))
 		.unwrap()
 		.filter_map(Result::ok)
 		.map(|d| d.path())
@@ -44,10 +49,11 @@ fn main() {
 
 		write!(
 			buf,
-			"pub mod {} {{ \n\tpub use self::stardust_xr::*;\n\tinclude!(concat!(env!(\"OUT_DIR\"), \"/{}\")); \n}}\n",
+			"pub mod {} {{ \n\tpub use self::stardust_xr::*;\n\tinclude!(\"{}\"); \n}}\n",
 			stem, name
-		).unwrap();
+		)
+		.unwrap();
 	}
 
-	fs::write(out_dir.join("mod.rs"), buf).unwrap();
+	fs::write(file_relative_path!("src/generated/mod.rs"), buf).unwrap();
 }
