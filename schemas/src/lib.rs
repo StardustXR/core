@@ -46,9 +46,9 @@ use input_hand::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct Joint {
-	position: mint::Vector3<f32>,
-	rotation: mint::Quaternion<f32>,
-	radius: f32,
+	pub position: mint::Vector3<f32>,
+	pub rotation: mint::Quaternion<f32>,
+	pub radius: f32,
 }
 impl From<JointT> for Joint {
 	fn from(joint: JointT) -> Self {
@@ -67,11 +67,11 @@ impl Into<FlatJoint> for Joint {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Finger {
-	tip: Joint,
-	distal: Joint,
-	intermediate: Joint,
-	proximal: Joint,
-	metacarpal: Joint,
+	pub tip: Joint,
+	pub distal: Joint,
+	pub intermediate: Joint,
+	pub proximal: Joint,
+	pub metacarpal: Joint,
 }
 impl From<FingerT> for Finger {
 	fn from(finger: FingerT) -> Self {
@@ -98,10 +98,10 @@ impl Into<FlatFinger> for Finger {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Thumb {
-	tip: Joint,
-	distal: Joint,
-	proximal: Joint,
-	metacarpal: Joint,
+	pub tip: Joint,
+	pub distal: Joint,
+	pub proximal: Joint,
+	pub metacarpal: Joint,
 }
 impl From<ThumbT> for Thumb {
 	fn from(thumb: ThumbT) -> Self {
@@ -126,14 +126,14 @@ impl Into<FlatThumb> for Thumb {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Hand {
-	thumb: Thumb,
-	index: Finger,
-	middle: Finger,
-	ring: Finger,
-	little: Finger,
-	palm: Joint,
-	wrist: Joint,
-	elbow: Option<Joint>,
+	pub thumb: Thumb,
+	pub index: Finger,
+	pub middle: Finger,
+	pub ring: Finger,
+	pub little: Finger,
+	pub palm: Joint,
+	pub wrist: Joint,
+	pub elbow: Option<Joint>,
 }
 
 impl From<HandT> for Hand {
