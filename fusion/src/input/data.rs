@@ -3,14 +3,14 @@ use anyhow::{anyhow, bail};
 use ouroboros::self_referencing;
 use stardust_xr_schemas::{
 	input::{InputDataRawT, InputDataT},
-	input_hand::HandT,
+	Hand,
 };
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 
 #[derive(Debug, Clone)]
 pub enum InputDataType {
 	Pointer(Pointer),
-	Hand(HandT),
+	Hand(Hand),
 	Tip(Tip),
 }
 
@@ -74,7 +74,7 @@ impl TryFrom<InputDataT> for InputData {
 					pointer.orientation.into(),
 					pointer.deepest_point.into(),
 				)),
-				InputDataRawT::Hand(hand) => InputDataType::Hand(*hand),
+				InputDataRawT::Hand(hand) => InputDataType::Hand((*hand).into()),
 				InputDataRawT::Tip(tip) => InputDataType::Tip(Tip::new(
 					tip.origin.into(),
 					tip.orientation.into(),
