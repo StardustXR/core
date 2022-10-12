@@ -16,7 +16,7 @@ flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
 mint = "0.5.9"
 parking_lot = "0.12.1"
-stardust-xr-schemas = {path = "../schemas", version = "0.2.1"}
+stardust-xr-schemas = {path = "../schemas", version = "1.0.0"}
 slotmap = "1.0.6"
 thiserror = "1.0.31"
 tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }
