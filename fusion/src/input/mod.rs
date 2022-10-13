@@ -6,8 +6,8 @@ mod tip;
 pub use action as action_handler;
 pub use data::*;
 pub use pointer::*;
+pub use stardust_xr::schemas::input_hand::HandT as Hand;
 use stardust_xr::values::Transform;
-pub use stardust_xr_schemas::input_hand::HandT as Hand;
 pub use tip::*;
 // pub use hand::*;
 
@@ -17,7 +17,7 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
-use stardust_xr_schemas::input::root_as_input_data;
+use stardust_xr::schemas::input::root_as_input_data;
 use std::convert::TryInto;
 
 pub trait InputHandlerHandler: Send + Sync {

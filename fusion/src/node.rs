@@ -3,7 +3,7 @@ use anyhow::Result;
 use futures::Future;
 use nanoid::nanoid;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
-use stardust_xr_schemas::flex::{deserialize, serialize};
+use stardust_xr::schemas::flex::{deserialize, serialize};
 use std::{
 	sync::{Arc, Weak},
 	vec::Vec,

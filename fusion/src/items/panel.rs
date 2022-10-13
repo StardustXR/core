@@ -1,7 +1,7 @@
 use std::{ops::Deref, sync::Weak};
 
 use mint::Vector2;
-use stardust_xr_schemas::flex::deserialize;
+use stardust_xr::schemas::flex::deserialize;
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 use crate::{

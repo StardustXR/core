@@ -26,7 +26,6 @@ once_cell = "1.12.0"
 ouroboros = "0.15.4"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
-stardust-xr-schemas = {path = "../schemas", version = "1.0.1"}
 stardust-xr = {path = "../core", version = "0.4.1"}
 serde = "1.0.145"
 serde_repr = "0.1.9"

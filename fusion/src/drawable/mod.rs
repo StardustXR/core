@@ -2,7 +2,7 @@ mod model;
 mod text;
 
 pub use model::*;
-use stardust_xr_schemas::flex::serialize;
+use stardust_xr::schemas::flex::serialize;
 pub use text::*;
 
 use crate::{client::Client, node::NodeError};

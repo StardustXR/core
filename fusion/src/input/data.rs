@@ -1,7 +1,7 @@
 use super::{Pointer, Tip};
 use anyhow::{anyhow, bail};
 use ouroboros::self_referencing;
-use stardust_xr_schemas::{
+use stardust_xr::schemas::{
 	input::{InputDataRawT, InputDataT},
 	Hand,
 };
