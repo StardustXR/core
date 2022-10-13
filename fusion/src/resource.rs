@@ -1,9 +1,9 @@
-use std::path::Path;
+use std::{fmt::Debug, path::Path};
 
-pub trait Resource {
+pub trait Resource: Debug {
 	fn parse(&self) -> String;
 }
-impl<R: AsRef<Path>> Resource for R {
+impl<R: AsRef<Path> + Debug> Resource for R {
 	fn parse(&self) -> String {
 		self.as_ref().to_str().unwrap().to_string()
 	}

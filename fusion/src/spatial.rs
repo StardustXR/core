@@ -10,6 +10,7 @@ use serde::{Serialize, Serializer};
 use stardust_xr::values::Transform;
 use std::sync::{Arc, Weak};
 
+#[derive(Debug)]
 pub struct Spatial {
 	pub(crate) node: Arc<Node>,
 }
@@ -91,8 +92,17 @@ impl Spatial {
 		rotation: Option<mint::Quaternion<f32>>,
 		scale: Option<mint::Vector3<f32>>,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("setTransform", &(relative_space, position, rotation, scale))
+		self.node.send_remote_signal(
+			"setTransform",
+			&(
+				relative_space,
+				Transform {
+					position,
+					rotation,
+					scale,
+				},
+			),
+		)
 	}
 
 	pub fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {

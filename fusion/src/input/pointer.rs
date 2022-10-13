@@ -53,6 +53,7 @@ impl Debug for Pointer {
 			.field("origin", &self.origin)
 			.field("orientation", &self.orientation)
 			.field("deepest_point", &self.deepest_point)
+			.field("transform", &self.transform())
 			.finish()
 	}
 }

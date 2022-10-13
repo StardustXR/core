@@ -1,6 +1,7 @@
 use std::{ops::Deref, sync::Weak};
 
 use mint::Vector2;
+use serde::Deserialize;
 use stardust_xr::schemas::flex::deserialize;
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
@@ -14,23 +15,23 @@ use crate::{
 
 use super::{Item, ItemUI, ItemUIType};
 
-#[derive(Debug)]
-pub struct PanelItemCursor {
-	pub size: Vector2<u32>,
-	pub hotspot: Vector2<i32>,
-}
-
 pub trait PanelItemHandler: Send + Sync {
 	fn resize(&mut self, size: Vector2<u32>);
 	fn set_cursor(&mut self, info: Option<PanelItemCursor>);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct PanelItemCursor {
+	pub size: Vector2<u32>,
+	pub hotspot: Vector2<i32>,
+}
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct PanelItemInitData {
 	pub size: Vector2<u32>,
 	pub cursor: Option<PanelItemCursor>,
 }
 
+#[derive(Debug)]
 pub struct PanelItem {
 	pub spatial: Spatial,
 }
@@ -109,41 +110,6 @@ impl Item for PanelItem {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
-
-	fn parse_init_data(
-		flex_vec: flexbuffers::VectorReader<&[u8]>,
-	) -> Result<PanelItemInitData, flexbuffers::ReaderError> {
-		let size_vec = flex_vec.index(0)?.get_vector()?;
-
-		Ok(PanelItemInitData {
-			size: Vector2::from([
-				size_vec.idx(0).get_u64()? as u32,
-				size_vec.idx(1).get_u64()? as u32,
-			]),
-			cursor: {
-				let cursor = flex_vec.index(1)?;
-				match cursor.flexbuffer_type() {
-					flexbuffers::FlexBufferType::Null => None,
-					flexbuffers::FlexBufferType::Vector => {
-						let cursor_vec = cursor.get_vector()?;
-						let cursor_size_vec = cursor_vec.idx(0).get_vector()?;
-						let cursor_hotspot_vec = cursor_vec.idx(1).get_vector()?;
-						Some(PanelItemCursor {
-							size: Vector2::from([
-								cursor_size_vec.index(0)?.get_u64()? as u32,
-								cursor_size_vec.index(1)?.get_u64()? as u32,
-							]),
-							hotspot: Vector2::from([
-								cursor_hotspot_vec.index(0)?.get_i64()? as i32,
-								cursor_hotspot_vec.index(1)?.get_i64()? as i32,
-							]),
-						})
-					}
-					_ => return Err(flexbuffers::ReaderError::FlexbufferOutOfBounds),
-				}
-			},
-		})
-	}
 }
 impl NodeType for PanelItem {
 	fn node(&self) -> &Node {
@@ -174,7 +140,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 		};
 
 		HandlerWrapper::new(item, |handler: WeakWrapped<T>, weak_node_ref, item| {
-			item.node.local_signals.insert(
+			item.node.local_signals.lock().insert(
 				"resize".to_string(),
 				Box::new({
 					let handler = handler.clone();
@@ -187,7 +153,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 				}),
 			);
 
-			item.node.local_signals.insert(
+			item.node.local_signals.lock().insert(
 				"setCursor".to_string(),
 				Box::new({
 					let handler = handler.clone();

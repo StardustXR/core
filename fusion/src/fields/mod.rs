@@ -13,6 +13,7 @@ use std::ops::Deref;
 
 use crate::{node::NodeError, spatial::Spatial};
 
+#[derive(Debug)]
 pub struct Field {
 	pub spatial: Spatial,
 }

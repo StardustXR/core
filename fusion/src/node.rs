@@ -2,45 +2,16 @@ use super::client::Client;
 use anyhow::Result;
 use futures::Future;
 use nanoid::nanoid;
+use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::schemas::flex::{deserialize, serialize};
 use std::{
+	fmt::Debug,
 	sync::{Arc, Weak},
 	vec::Vec,
 };
 use thiserror::Error;
-
-use core::hash::BuildHasherDefault;
-use dashmap::DashMap;
-use rustc_hash::FxHasher;
-
-// pub(crate) struct GenNodeInfo<'a> {
-// 	pub(crate) client: Weak<Client>,
-// 	pub(crate) parent_path: &'a str,
-// 	pub(crate) interface_path: &'a str,
-// 	pub(crate) interface_method: &'a str,
-// }
-// macro_rules! generate_node {
-// 	($gen_node_info:expr, $($things_to_pass:expr),*) => {
-// 		{
-// 			let (node, id) = Node::generate_with_parent($gen_node_info.client, $gen_node_info.parent_path)?;
-// 			node.client
-// 				.upgrade()
-// 				.ok_or(NodeError::ClientDropped)?
-// 				.messenger
-// 				.send_remote_signal(
-// 					$gen_node_info.interface_path,
-// 					$gen_node_info.interface_method,
-// 					stardust_xr::flex::flexbuffer_from_vector_arguments(|vec| {
-// 						stardust_xr::push_to_vec![vec, id.as_str(), $($things_to_pass),+]
-// 					})
-// 					.as_slice(),
-// 				);
-// 				node
-// 		}
-
-// 	}
-// }
 
 #[derive(Error, Debug)]
 pub enum NodeError {
@@ -82,8 +53,8 @@ pub struct Node {
 	path: String,
 	trailing_slash_pos: usize,
 	pub client: Weak<Client>,
-	pub(crate) local_signals: DashMap<String, Box<Signal>, BuildHasherDefault<FxHasher>>,
-	pub(crate) local_methods: DashMap<String, Box<Method>, BuildHasherDefault<FxHasher>>,
+	pub(crate) local_signals: Mutex<FxHashMap<String, Box<Signal>>>,
+	pub(crate) local_methods: Mutex<FxHashMap<String, Box<Method>>>,
 }
 
 impl Node {
@@ -131,8 +102,8 @@ impl Node {
 			trailing_slash_pos: path.rfind('/').ok_or(NodeError::InvalidPath)?,
 			path: path,
 			client: client.clone(),
-			local_signals: DashMap::default(),
-			local_methods: DashMap::default(),
+			local_signals: Mutex::new(FxHashMap::default()),
+			local_methods: Mutex::new(FxHashMap::default()),
 		};
 		let node_ref = Arc::new(node);
 		client
@@ -159,18 +130,14 @@ impl Node {
 		Node::from_path(client, path).map(|node| (node, id))
 	}
 
-	pub fn send_local_signal(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
-		let signal = self
-			.local_signals
-			.get(method)
-			.ok_or(NodeError::MethodNotFound)?;
+	pub fn send_local_signal(&self, signal: &str, data: &[u8]) -> Result<(), NodeError> {
+		let local_signals = self.local_signals.lock();
+		let signal = local_signals.get(signal).ok_or(NodeError::MethodNotFound)?;
 		signal(data).map_err(|_| NodeError::SignalFailed)
 	}
 	pub fn execute_local_method(&self, method: &str, data: &[u8]) -> Result<Vec<u8>, NodeError> {
-		let method = self
-			.local_methods
-			.get(method)
-			.ok_or(NodeError::MethodNotFound)?;
+		let local_methods = self.local_methods.lock();
+		let method = local_methods.get(method).ok_or(NodeError::MethodNotFound)?;
 		method(data).map_err(|_| NodeError::MethodFailed)
 	}
 	pub fn send_remote_signal<S: Serialize>(
@@ -229,6 +196,32 @@ impl Serialize for Node {
 		S: Serializer,
 	{
 		self.get_path().serialize(serializer)
+	}
+}
+
+impl Debug for Node {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Node")
+			.field("path", &self.path)
+			.field(
+				"local_signals",
+				&self
+					.local_signals
+					.lock()
+					.iter()
+					.map(|(key, _)| key)
+					.collect::<Vec<_>>(),
+			)
+			.field(
+				"local_methods",
+				&self
+					.local_methods
+					.lock()
+					.iter()
+					.map(|(key, _)| key)
+					.collect::<Vec<_>>(),
+			)
+			.finish()
 	}
 }
 

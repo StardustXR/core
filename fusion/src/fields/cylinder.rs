@@ -7,6 +7,7 @@ use anyhow::Result;
 use stardust_xr::values::Transform;
 use std::ops::Deref;
 
+#[derive(Debug)]
 pub struct CylinderField {
 	pub field: Field,
 }

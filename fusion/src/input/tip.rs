@@ -41,6 +41,7 @@ impl Debug for Tip {
 			.field("origin", &self.origin)
 			.field("orientation", &self.orientation)
 			.field("radius", &self.radius)
+			.field("transform", &self.transform())
 			.finish()
 	}
 }

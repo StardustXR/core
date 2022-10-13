@@ -8,6 +8,8 @@ use super::{
 };
 use parking_lot::{Mutex, MutexGuard};
 use rustc_hash::FxHashMap;
+use serde::{de::DeserializeOwned, Deserialize};
+use stardust_xr::schemas::flex::deserialize;
 use std::{
 	any::TypeId,
 	sync::{Arc, Weak},
@@ -15,13 +17,10 @@ use std::{
 
 pub trait Item: NodeType + Sized + Send + Sync {
 	type ItemType;
-	type InitData: Send;
+	type InitData: DeserializeOwned + Send;
 	const REGISTER_UI_FN: &'static str;
 	const ROOT_PATH: &'static str;
 
-	fn parse_init_data(
-		flex_vec: flexbuffers::VectorReader<&[u8]>,
-	) -> Result<Self::InitData, flexbuffers::ReaderError>;
 	fn node(&self) -> &Node;
 }
 
@@ -89,28 +88,29 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 			.messenger
 			.send_remote_signal("/item", Self::Item::REGISTER_UI_FN, &[]);
 
-		item_ui.node.local_signals.insert(
+		item_ui.node.local_signals.lock().insert(
 			"create".to_string(),
 			Box::new({
 				let client = Arc::downgrade(client);
 				let items = item_ui.items.clone();
 				move |data| {
-					let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-					let name = flex_vec.index(0)?.get_str()?.to_string();
-					let init_data = Self::Item::parse_init_data(flex_vec.index(1)?.get_vector()?)?;
+					#[derive(Deserialize)]
+					struct Init<D>(String, D);
+					let init_data: Init<<<Self as ItemUIType<T>>::Item as Item>::InitData> =
+						deserialize(data)?;
 
 					let item = Self::from_path(
 						client.clone(),
-						&format!("{}/item/{}", Self::Item::ROOT_PATH, name),
-						init_data,
+						&format!("{}/item/{}", Self::Item::ROOT_PATH, init_data.0),
+						init_data.1,
 						item_ui_init.clone(),
 					);
-					items.lock().insert(name, item);
+					items.lock().insert(init_data.0, item);
 					Ok(())
 				}
 			}),
 		);
-		item_ui.node.local_signals.insert(
+		item_ui.node.local_signals.lock().insert(
 			"destroy".to_string(),
 			Box::new({
 				let items = item_ui.items.clone();

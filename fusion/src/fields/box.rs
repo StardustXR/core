@@ -9,6 +9,7 @@ use std::ops::Deref;
 
 use super::Field;
 
+#[derive(Debug)]
 pub struct BoxField {
 	pub field: Field,
 }

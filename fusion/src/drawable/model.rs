@@ -32,6 +32,7 @@ impl MaterialParameter for Rgba {
 	}
 }
 
+#[derive(Debug)]
 pub struct Model {
 	pub spatial: Spatial,
 }

@@ -24,6 +24,7 @@ pub trait InputHandlerHandler: Send + Sync {
 	fn input(&mut self, input: InputData) -> bool;
 }
 
+#[derive(Debug)]
 pub struct InputHandler {
 	pub spatial: Spatial,
 }
@@ -68,7 +69,7 @@ impl<'a> InputHandler {
 		let handler_wrapper =
 			HandlerWrapper::new(handler, |weak_handler, weak_node_ref, input_handler| {
 				let contents = wrapped_init(weak_node_ref, input_handler);
-				input_handler.node.local_methods.insert(
+				input_handler.node.local_methods.lock().insert(
 					"input".to_string(),
 					Box::new({
 						let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;

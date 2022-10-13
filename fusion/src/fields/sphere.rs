@@ -4,9 +4,9 @@ use crate::{
 	spatial::Spatial,
 };
 use anyhow::Result;
-use mint::Vector3;
 use std::ops::Deref;
 
+#[derive(Debug)]
 pub struct SphereField {
 	pub field: Field,
 }
@@ -28,12 +28,7 @@ impl<'a> SphereField {
 						"createSphereField",
 						"/field",
 						&id.clone(),
-						(
-							id,
-							spatial_parent,
-							position.unwrap_or(Vector3::from([0.0; 3])),
-							radius,
-						),
+						(id, spatial_parent, position, radius),
 					)?,
 				},
 			},

@@ -7,6 +7,7 @@ use crate::{
 };
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct StartupSettings {
 	pub(crate) node: Arc<Node>,
 }

@@ -83,7 +83,7 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<()>,
 	) {
 		let handler = self.weak_wrapped();
-		self.node.node().local_signals.insert(
+		self.node.node().local_signals.lock().insert(
 			name.to_string(),
 			Box::new(move |data| {
 				if let Some(handler) = handler.upgrade() {

@@ -4,6 +4,7 @@ use crate::node::Node;
 
 use super::{fields::Field, node::NodeError, spatial::Spatial};
 
+#[derive(Debug)]
 pub struct PulseReceiver {
 	pub spatial: Spatial,
 	// pub field: &'a Field,

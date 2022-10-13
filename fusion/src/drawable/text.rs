@@ -29,7 +29,7 @@ pub enum Alignment: u8 {
 	BottomRight = (Alignment::XRight | Alignment::YBottom).bits(),
 }
 }
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum TextFit {
 	Wrap = 1 << 0,
 	Clip = 1 << 1,
@@ -38,6 +38,7 @@ pub enum TextFit {
 	Overflow = 1 << 4,
 }
 
+#[derive(Debug)]
 pub struct TextStyle<R: Resource> {
 	pub character_height: f32,
 	pub color: color::Rgba,
@@ -62,6 +63,7 @@ impl<R: Resource> Default for TextStyle<R> {
 	}
 }
 
+#[derive(Debug)]
 pub struct Text {
 	pub spatial: Spatial,
 }

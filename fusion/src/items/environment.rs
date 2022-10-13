@@ -67,12 +67,6 @@ impl Item for EnvironmentItem {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
-
-	fn parse_init_data(
-		flex_vec: flexbuffers::VectorReader<&[u8]>,
-	) -> Result<String, flexbuffers::ReaderError> {
-		Ok(flex_vec.index(0)?.get_str()?.to_string())
-	}
 }
 impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
 	type Item = EnvironmentItem;

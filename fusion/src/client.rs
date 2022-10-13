@@ -97,7 +97,7 @@ impl Client {
 			.send_remote_signal("subscribeLogicStep", &[0, 0])
 			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
 
-		client.get_root().node.local_signals.insert(
+		client.get_root().node.local_signals.lock().insert(
 			"logicStep".to_owned(),
 			Box::new({
 				let client = client.clone();
