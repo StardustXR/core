@@ -86,9 +86,8 @@ impl PanelItem {
 			0,
 		)
 		.ok_or(NodeError::InvalidPath)?;
-		let data = flexbuffers::singleton(keymap);
 		self.node
-			.send_remote_signal("keyboardActivateString", &data)
+			.send_remote_signal("keyboardActivateString", &keymap)
 	}
 	pub fn keyboard_deactivate(&self) -> Result<(), NodeError> {
 		self.node.send_remote_signal("keyboardDeactivate", &())

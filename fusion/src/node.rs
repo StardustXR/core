@@ -186,7 +186,7 @@ impl Node {
 		}
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.send_remote_signal("setEnabled", &flexbuffers::singleton(enabled))
+		self.send_remote_signal("setEnabled", &enabled)
 	}
 }
 

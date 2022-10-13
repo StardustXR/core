@@ -24,7 +24,7 @@ impl StartupSettings {
 
 	pub fn set_root(&self, root: &Spatial) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("setRoot", &flexbuffers::singleton(root.node.get_path()))
+			.send_remote_signal("setRoot", &root.node.get_path())
 	}
 
 	pub fn generate_desktop_startup_id(

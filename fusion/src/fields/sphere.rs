@@ -36,8 +36,7 @@ impl<'a> SphereField {
 	}
 
 	pub fn set_radius(&self, radius: f32) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("setRadius", &flexbuffers::singleton(radius))
+		self.node.send_remote_signal("setRadius", &radius)
 	}
 }
 impl Deref for SphereField {

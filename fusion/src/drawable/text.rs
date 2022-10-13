@@ -110,12 +110,10 @@ impl Text {
 	}
 
 	pub fn set_character_height(&self, height: f32) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("setCharacterHeight", &flexbuffers::singleton(height))
+		self.node.send_remote_signal("setCharacterHeight", &height)
 	}
 	pub fn set_text(&self, text: impl AsRef<str>) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("setText", &flexbuffers::singleton(text.as_ref()))
+		self.node.send_remote_signal("setText", &text.as_ref())
 	}
 }
 impl Deref for Text {

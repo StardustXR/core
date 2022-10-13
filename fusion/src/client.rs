@@ -84,10 +84,7 @@ impl Client {
 			client
 				.get_root()
 				.node
-				.send_remote_signal(
-					"applyDesktopStartupID",
-					&flexbuffers::singleton(desktop_startup_id.as_str()),
-				)
+				.send_remote_signal("applyDesktopStartupID", &desktop_startup_id)
 				.unwrap();
 		}
 
