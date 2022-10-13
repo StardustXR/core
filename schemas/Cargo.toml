@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stardust-xr-schemas"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Nova King <technobaboo@protonmail.me", "Philpax"]
 description = "Stardust XR core schemas, generated from flatbuffers automatically"
 license = "MIT"
@@ -11,12 +11,10 @@ homepage = "https://stardustxr.org"
 [dependencies]
 flatbuffers = "2.1.2"
 flexbuffers = "2.0.0"
-mint = "0.5.9"
-serde = "1.0.145"
+mint = {version = "0.5.9", features = ["serde"]}
+serde = {version = "1.0.145", features = ["derive"]}
 thiserror = "1.0.37"
 
 [dev-dependencies]
 manifest-dir-macros = "0.1.16"
-mint = {version = "0.5.9", features = ["serde"]}
-serde = {version = "1.0.145", features = ["derive"]}
 serde_repr = "0.1.9"
