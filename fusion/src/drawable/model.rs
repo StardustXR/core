@@ -1,12 +1,12 @@
 use crate::{
-	node::{GenNodeInfo, Node, NodeError},
+	node::{Node, NodeError},
 	resource::Resource,
 	spatial::Spatial,
 };
 use anyhow::Result;
 use color::Rgba;
 use flexbuffers::VectorBuilder;
-use stardust_xr::values::{Quat, Transform, Vec3};
+use stardust_xr::values::Transform;
 use std::ops::Deref;
 
 pub trait MaterialParameter {
@@ -41,27 +41,30 @@ impl<'a> Model {
 	pub fn create<R: Resource + 'a>(
 		spatial_parent: &'a Spatial,
 		resource: &'a R,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
-		scale: Option<Vec3>,
+		position: Option<mint::Vector3<f32>>,
+		rotation: Option<mint::Quaternion<f32>>,
+		scale: Option<mint::Vector3<f32>>,
 	) -> Result<Self, NodeError> {
+		let id = nanoid::nanoid!();
 		Ok(Model {
 			spatial: Spatial {
-				node: generate_node!(
-					GenNodeInfo {
-						client: spatial_parent.node.client.clone(),
-						parent_path: "/drawable/model",
-						interface_path: "/drawable",
-						interface_method: "createModel"
-					},
-					spatial_parent.node.get_path(),
-					Transform {
-						position,
-						rotation,
-						scale,
-					},
-					resource.parse().as_str()
-				),
+				node: Node::new(
+					spatial_parent.node.client.clone(),
+					"/drawable",
+					"createModel",
+					"/drawable/model",
+					&id.clone(),
+					(
+						id,
+						spatial_parent.node.get_path(),
+						Transform {
+							position,
+							rotation,
+							scale,
+						},
+						resource.parse().as_str(),
+					),
+				)?,
 			},
 		})
 	}

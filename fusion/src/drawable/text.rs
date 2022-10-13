@@ -1,12 +1,13 @@
 use crate::{
-	node::{GenNodeInfo, Node, NodeError},
+	node::{Node, NodeError},
 	resource::Resource,
 	spatial::Spatial,
 };
 use anyhow::Result;
 use color::rgba;
 use flagset::{flags, FlagSet};
-use stardust_xr::values::{Color, Quat, Transform, Vec2, Vec3};
+use mint::Vector2;
+use stardust_xr::values::Transform;
 use std::ops::Deref;
 
 flags! {
@@ -39,10 +40,10 @@ pub enum TextFit {
 
 pub struct TextStyle<R: Resource> {
 	pub character_height: f32,
-	pub color: Color,
+	pub color: color::Rgba,
 	pub font_resource: Option<R>,
 	pub text_align: FlagSet<Alignment>,
-	pub bounds: Vec2,
+	pub bounds: Vector2<f32>,
 	pub fit: TextFit,
 	pub bounds_align: FlagSet<Alignment>,
 }
@@ -54,7 +55,7 @@ impl<R: Resource> Default for TextStyle<R> {
 			color: rgba!(255, 255, 255, 255),
 			font_resource: None,
 			text_align: Alignment::TopLeft.into(),
-			bounds: Vec2::from([0f32, 0f32]),
+			bounds: Vector2::from([0f32, 0f32]),
 			fit: TextFit::Overflow,
 			bounds_align: Alignment::TopLeft.into(),
 		}
@@ -69,36 +70,39 @@ impl Text {
 	#[builder(entry = "builder")]
 	pub fn create<'a, R: Resource>(
 		spatial_parent: &'a Spatial,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
-		scale: Option<Vec3>,
+		position: Option<mint::Vector3<f32>>,
+		rotation: Option<mint::Quaternion<f32>>,
+		scale: Option<mint::Vector3<f32>>,
 		text_string: &'a str,
 		style: TextStyle<R>,
 	) -> Result<Self, NodeError> {
+		let id = nanoid::nanoid!();
 		Ok(Text {
 			spatial: Spatial {
-				node: generate_node!(
-					GenNodeInfo {
-						client: spatial_parent.node.client.clone(),
-						parent_path: "/drawable/text",
-						interface_path: "/drawable",
-						interface_method: "createText"
-					},
-					spatial_parent.node.get_path(),
-					Transform {
-						position,
-						rotation,
-						scale
-					},
-					text_string,
-					style.font_resource.map(|res| res.parse()),
-					style.character_height,
-					style.text_align.bits(),
-					style.bounds,
-					style.fit as u8,
-					style.bounds_align.bits(),
-					style.color
-				),
+				node: Node::new(
+					spatial_parent.node.client.clone(),
+					"/drawable",
+					"createText",
+					"/drawable/text",
+					&id.clone(),
+					(
+						id,
+						spatial_parent,
+						Transform {
+							position,
+							rotation,
+							scale,
+						},
+						text_string,
+						style.font_resource.map(|res| res.parse()),
+						style.character_height,
+						style.text_align.bits(),
+						style.bounds,
+						style.fit as u8,
+						style.bounds_align.bits(),
+						style.color,
+					),
+				)?,
 			},
 		})
 	}

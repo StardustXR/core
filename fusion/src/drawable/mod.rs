@@ -2,11 +2,11 @@ mod model;
 mod text;
 
 pub use model::*;
+use stardust_xr_schemas::flex::serialize;
 pub use text::*;
 
 use crate::{client::Client, node::NodeError};
 use anyhow::Result;
-use stardust_xr::flex::flexbuffer_from_vector_arguments;
 use std::path::Path;
 
 impl Client {
@@ -28,11 +28,7 @@ impl Client {
 		self.messenger.send_remote_signal(
 			"/drawable",
 			"setSkyFile",
-			&flexbuffer_from_vector_arguments(|vec| {
-				vec.push(file_str);
-				vec.push(tex);
-				vec.push(light);
-			}),
+			&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
 		);
 		Ok(())
 	}

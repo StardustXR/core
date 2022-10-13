@@ -1,13 +1,10 @@
 use crate::{
-	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
 };
 use anyhow::Result;
-use stardust_xr::{
-	flex::FlexBuffable,
-	values::{Quat, Transform, Vec3},
-};
+use mint::Vector3;
+use stardust_xr::values::Transform;
 use std::ops::Deref;
 
 use super::Field;
@@ -20,37 +17,39 @@ impl<'a> BoxField {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
-		size: Vec3,
+		position: Option<Vector3<f32>>,
+		rotation: Option<mint::Quaternion<f32>>,
+		size: Vector3<f32>,
 	) -> Result<Self, NodeError> {
+		let id = nanoid::nanoid!();
 		Ok(BoxField {
 			field: Field {
 				spatial: Spatial {
-					node: generate_node!(
-						GenNodeInfo {
-							client: spatial_parent.node.client.clone(),
-							parent_path: "/field",
-							interface_path: "/field",
-							interface_method: "createBoxField"
-						},
-						spatial_parent.node.get_path(),
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
-						size
-					),
+					node: Node::new(
+						spatial_parent.node.client.clone(),
+						"/field",
+						"createBoxField",
+						"/field",
+						&id.clone(),
+						(
+							id,
+							spatial_parent,
+							Transform {
+								position,
+								rotation,
+								scale: None,
+							},
+							size,
+						),
+					)?,
 				},
 			},
 		})
 	}
 
-	pub fn set_size(&self, size: impl Into<Vec3>) -> Result<(), NodeError> {
-		let size: Vec3 = size.into();
-		self.node
-			.send_remote_signal("setSize", &FlexBuffable::build_singleton(&size.into()))
+	pub fn set_size(&self, size: impl Into<Vector3<f32>>) -> Result<(), NodeError> {
+		let size: Vector3<f32> = size.into();
+		self.node.send_remote_signal("setSize", &size)
 	}
 }
 impl Deref for BoxField {
@@ -69,15 +68,12 @@ async fn fusion_box_field() {
 		.expect("Couldn't connect");
 	let box_field = BoxField::builder()
 		.spatial_parent(client.get_root())
-		.size(Vec3::from([1.0, 1.0, 1.0]))
+		.size(Vector3::from([1.0, 1.0, 1.0]))
 		.build()
 		.expect("Unable to make box field");
 	let distance = box_field
 		.field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
-		)
+		.distance(client.get_root(), Vector3::from([0_f32, 1_f32, 0_f32]))
 		.unwrap()
 		.await
 		.expect("Unable to get box field distance");

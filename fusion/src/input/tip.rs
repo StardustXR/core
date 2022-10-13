@@ -1,17 +1,16 @@
-use mint::RowMatrix4;
+use mint::{Quaternion, RowMatrix4, Vector3};
 use once_cell::sync::OnceCell;
-use stardust_xr::values::{Quat, Vec3};
 use std::fmt::Debug;
 
 #[derive(Clone)]
 pub struct Tip {
-	pub origin: Vec3,
-	pub orientation: Quat,
+	pub origin: Vector3<f32>,
+	pub orientation: Quaternion<f32>,
 	pub radius: f32,
 	transform: OnceCell<RowMatrix4<f32>>,
 }
 impl Tip {
-	pub(super) fn new(origin: Vec3, orientation: Quat, radius: f32) -> Self {
+	pub(super) fn new(origin: Vector3<f32>, orientation: Quaternion<f32>, radius: f32) -> Self {
 		Self {
 			origin,
 			orientation,
@@ -26,10 +25,10 @@ impl Tip {
 				.into()
 		})
 	}
-	pub fn origin(&self) -> Vec3 {
+	pub fn origin(&self) -> Vector3<f32> {
 		self.origin
 	}
-	pub fn orientation(&self) -> Quat {
+	pub fn orientation(&self) -> Quaternion<f32> {
 		self.orientation
 	}
 	pub fn radius(&self) -> f32 {

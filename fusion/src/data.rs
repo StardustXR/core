@@ -1,9 +1,8 @@
-use super::{
-	fields::Field,
-	node::{GenNodeInfo, Node, NodeError},
-	spatial::Spatial,
-};
-use stardust_xr::values::{Quat, Transform, Vec3};
+use stardust_xr::values::Transform;
+
+use crate::node::Node;
+
+use super::{fields::Field, node::NodeError, spatial::Spatial};
 
 pub struct PulseReceiver {
 	pub spatial: Spatial,
@@ -15,27 +14,30 @@ impl<'a> PulseReceiver {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
+		position: Option<mint::Vector3<f32>>,
+		rotation: Option<mint::Quaternion<f32>>,
 		field: &'a Field,
 	) -> Result<Self, NodeError> {
+		let id = nanoid::nanoid!();
 		Ok(PulseReceiver {
 			spatial: Spatial {
-				node: generate_node!(
-					GenNodeInfo {
-						client: spatial_parent.node.client.clone(),
-						parent_path: "/data/receiver",
-						interface_path: "/data",
-						interface_method: "createPulseReceiver"
-					},
-					spatial_parent.node.get_path(),
-					Transform {
-						position,
-						rotation,
-						scale: None,
-					},
-					field.spatial.node.get_path()
-				),
+				node: Node::new(
+					spatial_parent.node.client.clone(),
+					"/data",
+					"createPulseReceiver",
+					"/data/receiver",
+					&id.clone(),
+					(
+						id,
+						spatial_parent,
+						Transform {
+							position,
+							rotation,
+							scale: None,
+						},
+						&field.spatial,
+					),
+				)?,
 			},
 		})
 	}

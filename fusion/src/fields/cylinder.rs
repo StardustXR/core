@@ -1,14 +1,10 @@
 use super::Field;
 use crate::{
-	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
 };
 use anyhow::Result;
-use stardust_xr::{
-	flex::flexbuffer_from_vector_arguments,
-	values::{Quat, Transform, Vec3},
-};
+use stardust_xr::values::Transform;
 use std::ops::Deref;
 
 pub struct CylinderField {
@@ -19,43 +15,40 @@ impl<'a> CylinderField {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
+		position: Option<mint::Vector3<f32>>,
+		rotation: Option<mint::Quaternion<f32>>,
 		length: f32,
 		radius: f32,
 	) -> Result<Self, NodeError> {
+		let id = nanoid::nanoid!();
 		Ok(CylinderField {
 			field: Field {
 				spatial: Spatial {
-					node: generate_node!(
-						GenNodeInfo {
-							client: spatial_parent.node.client.clone(),
-							parent_path: "/field",
-							interface_path: "/field",
-							interface_method: "createCylinderField"
-						},
-						spatial_parent.node.get_path(),
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
-						length,
-						radius
-					),
+					node: Node::new(
+						spatial_parent.node.client.clone(),
+						"/field",
+						"createCylinderField",
+						"/field",
+						&id,
+						(
+							&id.clone(),
+							spatial_parent,
+							Transform {
+								position,
+								rotation,
+								scale: None,
+							},
+							length,
+							radius,
+						),
+					)?,
 				},
 			},
 		})
 	}
 
 	pub fn set_size(&self, length: f32, radius: f32) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"setSize",
-			&flexbuffer_from_vector_arguments(|vec| {
-				vec.push(length);
-				vec.push(radius);
-			}),
-		)
+		self.node.send_remote_signal("setSize", &(length, radius))
 	}
 }
 impl Deref for CylinderField {

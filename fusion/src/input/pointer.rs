@@ -1,18 +1,21 @@
 use glam::Mat4;
-use mint::RowMatrix4;
+use mint::{Quaternion, RowMatrix4, Vector3};
 use once_cell::sync::OnceCell;
-use stardust_xr::values::{Quat, Vec3};
 use std::fmt::Debug;
 
 #[derive(Clone)]
 pub struct Pointer {
-	origin: Vec3,
-	orientation: Quat,
-	deepest_point: Vec3,
+	origin: Vector3<f32>,
+	orientation: Quaternion<f32>,
+	deepest_point: Vector3<f32>,
 	transform: OnceCell<RowMatrix4<f32>>,
 }
 impl Pointer {
-	pub(super) fn new(origin: Vec3, orientation: Quat, deepest_point: Vec3) -> Self {
+	pub(super) fn new(
+		origin: Vector3<f32>,
+		orientation: Quaternion<f32>,
+		deepest_point: Vector3<f32>,
+	) -> Self {
 		Self {
 			origin,
 			orientation,
@@ -27,20 +30,20 @@ impl Pointer {
 				.into()
 		})
 	}
-	pub fn origin(&self) -> Vec3 {
+	pub fn origin(&self) -> Vector3<f32> {
 		self.origin
 	}
-	pub fn orientation(&self) -> Quat {
+	pub fn orientation(&self) -> Quaternion<f32> {
 		self.orientation
 	}
-	pub fn direction(&self) -> Vec3 {
+	pub fn direction(&self) -> Vector3<f32> {
 		let transform: Mat4 = self.transform().into();
 
 		transform
 			.transform_vector3(glam::vec3(0.0, 0.0, 1.0))
 			.into()
 	}
-	pub fn deepest_point(&self) -> Vec3 {
+	pub fn deepest_point(&self) -> Vector3<f32> {
 		self.deepest_point
 	}
 }

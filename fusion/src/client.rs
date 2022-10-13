@@ -3,8 +3,9 @@ use super::{scenegraph::Scenegraph, spatial::Spatial};
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
-use stardust_xr::flex::flexbuffer_from_vector_arguments;
+use serde::Deserialize;
 use stardust_xr::{client, messenger::Messenger};
+use stardust_xr_schemas::flex::{deserialize, serialize};
 use std::any::TypeId;
 use std::path::Path;
 use std::sync::{Arc, Weak};
@@ -12,7 +13,11 @@ use tokio::net::UnixStream;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 
-#[derive(Default)]
+#[derive(Deserialize)]
+struct LogicStepInfoInternal {
+	delta: f64,
+}
+#[derive(Debug, Default, Clone, Copy)]
 pub struct LogicStepInfo {
 	pub delta: f64,
 	pub elapsed: f64,
@@ -98,12 +103,11 @@ impl Client {
 				let client = client.clone();
 				move |data| {
 					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
-						let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-						let delta = flex_vec.index(0)?.get_f64()?;
+						let info_internal: LogicStepInfoInternal = deserialize(data)?;
 						let mut elapsed = client.elapsed_time.lock();
-						(*elapsed) += delta;
+						(*elapsed) += info_internal.delta;
 						let info = LogicStepInfo {
-							delta,
+							delta: info_internal.delta,
 							elapsed: *elapsed,
 						};
 						handler.lock().logic_step(info);
@@ -164,18 +168,14 @@ impl Client {
 	}
 
 	pub fn set_base_prefixes<T: AsRef<str>>(&self, prefixes: &[T]) {
-		let flexbuffer = flexbuffer_from_vector_arguments(|fbb| {
-			for prefix in prefixes {
-				let prefix = prefix.as_ref();
-				let path = Path::new(prefix);
-				if path.is_absolute() && path.exists() {
-					fbb.push(prefix);
-				}
-			}
-		});
+		let prefixes: Vec<&Path> = prefixes
+			.iter()
+			.map(|p| Path::new(p.as_ref()))
+			.filter(|p| p.is_absolute() && p.exists())
+			.collect();
 
 		self.messenger
-			.send_remote_signal("/", "setBasePrefixes", &flexbuffer);
+			.send_remote_signal("/", "setBasePrefixes", &serialize(prefixes).unwrap());
 	}
 
 	pub fn stop_loop(&self) {

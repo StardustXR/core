@@ -29,17 +29,8 @@ impl StartupSettings {
 	pub fn generate_desktop_startup_id(
 		&self,
 	) -> Result<impl Future<Output = anyhow::Result<String>>, NodeError> {
-		let future = self
-			.node
-			.execute_remote_method("generateDesktopStartupID", &[])?;
-
-		Ok(async move {
-			future.await.and_then(|data| {
-				Ok(flexbuffers::Reader::get_root(data.as_slice())?
-					.get_str()?
-					.to_string())
-			})
-		})
+		self.node
+			.execute_remote_method("generateDesktopStartupID", &())
 	}
 }
 

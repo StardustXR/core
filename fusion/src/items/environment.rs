@@ -2,11 +2,12 @@ use std::ops::Deref;
 use std::path::Path;
 use std::sync::Weak;
 
+use stardust_xr::values::Transform;
+
 use crate::client::Client;
-use crate::node::{GenNodeInfo, Node, NodeError, NodeType};
+use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
 use crate::{HandlerWrapper, WeakNodeRef, WeakWrapped};
-use stardust_xr::values::{Quat, Transform, Vec3};
 
 use super::{Item, ItemUI, ItemUIType};
 
@@ -19,8 +20,8 @@ impl<'a> EnvironmentItem {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vec3>,
-		rotation: Option<Quat>,
+		position: Option<mint::Vector3<f32>>,
+		rotation: Option<mint::Quaternion<f32>>,
 		file_path: &'a str,
 	) -> Result<Self, NodeError> {
 		let path = Path::new(file_path);
@@ -28,23 +29,26 @@ impl<'a> EnvironmentItem {
 			return Err(NodeError::InvalidPath);
 		}
 
+		let id = nanoid::nanoid!();
 		Ok(EnvironmentItem {
 			spatial: Spatial {
-				node: generate_node!(
-					GenNodeInfo {
-						client: spatial_parent.node.client.clone(),
-						parent_path: "/item/environment/item",
-						interface_path: "/item",
-						interface_method: "createEnvironmentItem"
-					},
-					spatial_parent.node.get_path(),
-					Transform {
-						position,
-						rotation,
-						scale: None,
-					},
-					file_path
-				),
+				node: Node::new(
+					spatial_parent.node.client.clone(),
+					"/item",
+					"createEnvironmentItem",
+					"/item/environment/item",
+					&id.clone(),
+					(
+						id,
+						spatial_parent,
+						Transform {
+							position,
+							rotation,
+							scale: None,
+						},
+						file_path,
+					),
+				)?,
 			},
 		})
 	}
@@ -89,7 +93,7 @@ impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
 	{
 		let item = EnvironmentItem {
 			spatial: Spatial {
-				node: Node::from_path(client, path).unwrap(),
+				node: Node::from_path(client, path.to_string()).unwrap(),
 			},
 		};
 		HandlerWrapper::new(item, |weak_wrapped, weak_node_ref, f| {

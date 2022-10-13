@@ -4,14 +4,11 @@ mod sphere;
 
 pub use cylinder::*;
 use futures::Future;
+use mint::Vector3;
 pub use r#box::*;
 pub use sphere::*;
 
-use anyhow::{anyhow, Result};
-use stardust_xr::{
-	flex, push_to_vec,
-	values::{parse_f32, parse_vec3, Vec3},
-};
+use anyhow::Result;
 use std::ops::Deref;
 
 use crate::{node::NodeError, spatial::Spatial};
@@ -23,58 +20,31 @@ impl Field {
 	pub fn distance(
 		&self,
 		space: &Spatial,
-		point: Vec3,
+		point: Vector3<f32>,
 	) -> Result<impl Future<Output = Result<f32>>, NodeError> {
-		let future = self.spatial.node.execute_remote_method(
-			"distance",
-			&flex::flexbuffer_from_vector_arguments(|vec_builder| {
-				push_to_vec!(vec_builder, space.node.get_path(), point);
-			}),
-		)?;
-		Ok(async move {
-			future.await.and_then(|data| {
-				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
-				parse_f32(root).ok_or_else(|| anyhow!("Parsing error"))
-			})
-		})
+		self.spatial
+			.node
+			.execute_remote_method("distance", &(space.node.get_path().to_string(), point))
 	}
 
 	pub fn normal(
 		&self,
 		space: &Spatial,
-		point: Vec3,
-	) -> Result<impl Future<Output = Result<Vec3>>, NodeError> {
-		let future = self.spatial.node.execute_remote_method(
-			"normal",
-			&flex::flexbuffer_from_vector_arguments(|vec_builder| {
-				push_to_vec!(vec_builder, space.node.get_path(), point);
-			}),
-		)?;
-		Ok(async move {
-			future.await.and_then(|data| {
-				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
-				parse_vec3(root).ok_or_else(|| anyhow!("Parsing error"))
-			})
-		})
+		point: Vector3<f32>,
+	) -> Result<impl Future<Output = Result<mint::Vector3<f32>>>, NodeError> {
+		self.spatial
+			.node
+			.execute_remote_method("normal", &(space.node.get_path().to_string(), point))
 	}
 
 	pub fn closest_point(
 		&self,
 		space: &Spatial,
-		point: Vec3,
-	) -> Result<impl Future<Output = Result<Vec3>>, NodeError> {
-		let future = self.spatial.node.execute_remote_method(
-			"closestPoint",
-			&flex::flexbuffer_from_vector_arguments(|vec_builder| {
-				push_to_vec!(vec_builder, space.node.get_path(), point);
-			}),
-		)?;
-		Ok(async move {
-			future.await.and_then(|data| {
-				let root = flexbuffers::Reader::get_root(data.as_slice()).unwrap();
-				parse_vec3(root).ok_or_else(|| anyhow!("Parsing error"))
-			})
-		})
+		point: Vector3<f32>,
+	) -> Result<impl Future<Output = Result<mint::Vector3<f32>>>, NodeError> {
+		self.spatial
+			.node
+			.execute_remote_method("closestPoint", &(space.node.get_path().to_string(), point))
 	}
 }
 impl Deref for Field {

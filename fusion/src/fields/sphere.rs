@@ -1,12 +1,10 @@
 use super::Field;
 use crate::{
-	node::GenNodeInfo,
 	node::{Node, NodeError},
 	spatial::Spatial,
 };
 use anyhow::Result;
 use mint::Vector3;
-use stardust_xr::values::Vec3;
 use std::ops::Deref;
 
 pub struct SphereField {
@@ -17,23 +15,26 @@ impl<'a> SphereField {
 	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vec3>,
+		position: Option<mint::Vector3<f32>>,
 		radius: f32,
 	) -> Result<Self, NodeError> {
+		let id = nanoid::nanoid!();
 		Ok(SphereField {
 			field: Field {
 				spatial: Spatial {
-					node: generate_node!(
-						GenNodeInfo {
-							client: spatial_parent.node.client.clone(),
-							parent_path: "/field",
-							interface_path: "/field",
-							interface_method: "createSphereField"
-						},
-						spatial_parent.node.get_path(),
-						position.unwrap_or(Vector3::from([0.0; 3])),
-						radius
-					),
+					node: Node::new(
+						spatial_parent.node.client.clone(),
+						"/field",
+						"createSphereField",
+						"/field",
+						&id.clone(),
+						(
+							id,
+							spatial_parent,
+							position.unwrap_or(Vector3::from([0.0; 3])),
+							radius,
+						),
+					)?,
 				},
 			},
 		})

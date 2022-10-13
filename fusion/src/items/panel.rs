@@ -1,6 +1,7 @@
 use std::{ops::Deref, sync::Weak};
 
 use mint::Vector2;
+use stardust_xr_schemas::flex::deserialize;
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 use crate::{
@@ -9,10 +10,6 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
-};
-use stardust_xr::{
-	flex::{self, flexbuffer_from_vector_arguments},
-	push_to_vec,
 };
 
 use super::{Item, ItemUI, ItemUIType};
@@ -43,14 +40,8 @@ impl PanelItem {
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"applySurfaceMaterial",
-			flex::flexbuffer_from_vector_arguments(|vec| {
-				vec.push(model.node.get_path());
-				vec.push(material_index);
-			})
-			.as_slice(),
-		)
+		self.node
+			.send_remote_signal("applySurfaceMaterial", &(&model.spatial, material_index))
 	}
 
 	pub fn apply_cursor_material(
@@ -59,39 +50,22 @@ impl PanelItem {
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"applyCursorMaterial",
-			flex::flexbuffer_from_vector_arguments(|vec| {
-				vec.push(model.node.get_path());
-				vec.push(material_index);
-			})
-			.as_slice(),
-		)
+		self.node
+			.send_remote_signal("applyCursorMaterial", &(&model.spatial, material_index))
 	}
 
 	pub fn pointer_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("pointerDeactivate", &[])
+		self.node.send_remote_signal("pointerDeactivate", &())
 	}
 
 	pub fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"pointerMotion",
-			&flexbuffer_from_vector_arguments(|vec| {
-				let position = position.into();
-				vec.push(position.x);
-				vec.push(position.y);
-			}),
-		)
+		self.node
+			.send_remote_signal("pointerMotion", &position.into())
 	}
 
 	pub fn pointer_button(&self, button: u32, state: u32) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"pointerButton",
-			&flexbuffer_from_vector_arguments(|vec| {
-				vec.push(button);
-				vec.push(state);
-			}),
-		)
+		self.node
+			.send_remote_signal("pointerButton", &(button, state))
 	}
 
 	pub fn pointer_scroll(
@@ -99,13 +73,8 @@ impl PanelItem {
 		scroll_distance: Vector2<f32>,
 		scroll_steps: Vector2<f32>,
 	) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"pointerScroll",
-			&flexbuffer_from_vector_arguments(|vec| {
-				push_to_vec!(vec, scroll_distance);
-				push_to_vec!(vec, scroll_steps);
-			}),
-		)
+		self.node
+			.send_remote_signal("pointerScroll", &(scroll_distance, scroll_steps))
 	}
 
 	pub fn keyboard_activate(&self, keymap: &str) -> Result<(), NodeError> {
@@ -121,25 +90,14 @@ impl PanelItem {
 			.send_remote_signal("keyboardActivateString", &data)
 	}
 	pub fn keyboard_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("keyboardDeactivate", &[])
+		self.node.send_remote_signal("keyboardDeactivate", &())
 	}
 	pub fn keyboard_key_state(&self, key: u32, state: bool) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"keyboardKeyState",
-			&flexbuffer_from_vector_arguments(|vec| {
-				vec.push(key);
-				vec.push(state as u32);
-			}),
-		)
+		self.node
+			.send_remote_signal("keyboardKeyState", &(key, state as u32))
 	}
 	pub fn resize(&self, width: u32, height: u32) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"resize",
-			&flexbuffer_from_vector_arguments(|vec| {
-				vec.push(width);
-				vec.push(height);
-			}),
-		)
+		self.node.send_remote_signal("resize", &(width, height))
 	}
 }
 impl Item for PanelItem {
@@ -211,7 +169,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 	{
 		let item = PanelItem {
 			spatial: Spatial {
-				node: Node::from_path(client, path).unwrap(),
+				node: Node::from_path(client, path.to_string()).unwrap(),
 			},
 		};
 
@@ -222,10 +180,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 					let handler = handler.clone();
 					move |data| {
 						if let Some(handler) = handler.upgrade() {
-							let flex_vec = flexbuffers::Reader::get_root(data)?.get_vector()?;
-							let x = flex_vec.idx(0).get_u64()? as u32;
-							let y = flex_vec.idx(1).get_u64()? as u32;
-							handler.lock().resize(Vector2::from([x, y]))
+							handler.lock().resize(deserialize(data)?)
 						}
 						Ok(())
 					}
