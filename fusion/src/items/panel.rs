@@ -158,25 +158,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 					let handler = handler.clone();
 					move |data| {
 						if let Some(handler) = handler.upgrade() {
-							let flex = flexbuffers::Reader::get_root(data)?;
-							let data: Option<PanelItemCursor> = if !flex.flexbuffer_type().is_null()
-							{
-								let flex_vec = flex.get_vector()?;
-								let size_vec = flex_vec.idx(0).get_vector()?;
-								let size_x = size_vec.idx(0).get_u64()? as u32;
-								let size_y = size_vec.idx(1).get_u64()? as u32;
-
-								let hotspot_vec = flex_vec.idx(1).get_vector()?;
-								let hotspot_x = hotspot_vec.idx(0).get_i64()? as i32;
-								let hotspot_y = hotspot_vec.idx(1).get_i64()? as i32;
-								Some(PanelItemCursor {
-									size: Vector2::from([size_x, size_y]),
-									hotspot: Vector2::from([hotspot_x, hotspot_y]),
-								})
-							} else {
-								None
-							};
-							handler.lock().set_cursor(data)
+							handler.lock().set_cursor(deserialize(data)?)
 						}
 						Ok(())
 					}
