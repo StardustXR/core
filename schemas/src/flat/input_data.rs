@@ -23,7 +23,7 @@ impl Datamap {
 	}
 }
 impl Datamap {
-	fn new(raw: Vec<u8>) -> Result<Self> {
+	pub fn new(raw: Vec<u8>) -> Result<Self> {
 		Ok(Datamap(DatamapInner::try_new(raw, |raw| {
 			flexbuffers::Reader::get_root(raw.as_slice())?.get_map()
 		})?))
