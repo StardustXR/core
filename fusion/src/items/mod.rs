@@ -75,8 +75,12 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 			+ 'static,
 	{
 		let item_ui = ItemUI::<Self::Item, T> {
-			node: Node::from_path(Arc::downgrade(client), Self::Item::ROOT_PATH.to_string())
-				.unwrap(),
+			node: Node::from_path(
+				Arc::downgrade(client),
+				Self::Item::ROOT_PATH.to_string(),
+				true,
+			)
+			.unwrap(),
 			items: Arc::new(Mutex::new(FxHashMap::default())),
 		};
 

@@ -73,11 +73,11 @@ impl Client {
 		});
 		let weak_client = Arc::downgrade(&client);
 		let _ = client.root.set(Arc::new(
-			Spatial::from_path(weak_client.clone(), "/").unwrap(),
+			Spatial::from_path(weak_client.clone(), "/", false).unwrap(),
 		));
 		let _ = client
 			.hmd
-			.set(Spatial::from_path(weak_client, "/hmd").unwrap());
+			.set(Spatial::from_path(weak_client, "/hmd", false).unwrap());
 
 		if let Ok(desktop_startup_id) = std::env::var("DESKTOP_STARTUP_ID") {
 			client

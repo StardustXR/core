@@ -30,6 +30,7 @@ impl<'a> CylinderField {
 						"/field",
 						"createCylinderField",
 						"/field",
+						true,
 						&id,
 						(
 							&id.clone(),

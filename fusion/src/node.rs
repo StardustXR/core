@@ -46,6 +46,7 @@ pub struct Node {
 	pub client: Weak<Client>,
 	pub(crate) local_signals: Mutex<FxHashMap<String, Arc<Signal>>>,
 	pub(crate) local_methods: Mutex<FxHashMap<String, Arc<Method>>>,
+	pub(crate) destroyable: bool,
 }
 
 impl Node {
@@ -54,6 +55,7 @@ impl Node {
 		interface_path: &'static str,
 		interface_method: &'static str,
 		parent_path: &'static str,
+		destroyable: bool,
 		id: &str,
 		data: S,
 	) -> Result<Arc<Self>, NodeError> {
@@ -63,7 +65,7 @@ impl Node {
 		}
 		parent_path += id;
 
-		let node = Node::from_path(client, parent_path)?;
+		let node = Node::from_path(client, parent_path, destroyable)?;
 
 		node.client
 			.upgrade()
@@ -85,7 +87,11 @@ impl Node {
 		self.path.as_str()
 	}
 
-	pub fn from_path(client: Weak<Client>, path: String) -> Result<Arc<Self>, NodeError> {
+	pub fn from_path(
+		client: Weak<Client>,
+		path: String,
+		destroyable: bool,
+	) -> Result<Arc<Self>, NodeError> {
 		if !path.starts_with('/') {
 			return Err(NodeError::InvalidPath);
 		}
@@ -95,6 +101,7 @@ impl Node {
 			client: client.clone(),
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
+			destroyable,
 		};
 		let node_ref = Arc::new(node);
 		client
@@ -107,6 +114,7 @@ impl Node {
 	pub fn generate_with_parent(
 		client: Weak<Client>,
 		parent: &str,
+		destroyable: bool,
 	) -> Result<(Arc<Self>, String), NodeError> {
 		let id = nanoid!(10);
 		let mut path = parent.to_string();
@@ -118,7 +126,7 @@ impl Node {
 		}
 		path.push_str(&id);
 
-		Node::from_path(client, path).map(|node| (node, id))
+		Node::from_path(client, path, destroyable).map(|node| (node, id))
 	}
 
 	pub fn send_local_signal(&self, signal_name: &str, data: &[u8]) -> Result<(), ScenegraphError> {
@@ -228,6 +236,8 @@ impl Debug for Node {
 
 impl Drop for Node {
 	fn drop(&mut self) {
-		let _ = self.send_remote_signal("destroy", &[0; 0]);
+		if self.destroyable {
+			let _ = self.send_remote_signal_raw("destroy", &[]);
+		}
 	}
 }

@@ -27,6 +27,7 @@ impl<'a> SphereField {
 						"/field",
 						"createSphereField",
 						"/field",
+						true,
 						&id.clone(),
 						(id, spatial_parent, position, radius),
 					)?,

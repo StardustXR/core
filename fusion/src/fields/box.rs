@@ -31,6 +31,7 @@ impl<'a> BoxField {
 						"/field",
 						"createBoxField",
 						"/field",
+						true,
 						&id.clone(),
 						(
 							id,

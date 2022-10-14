@@ -37,6 +37,7 @@ impl<'a> EnvironmentItem {
 					"/item",
 					"createEnvironmentItem",
 					"/item/environment/item",
+					true,
 					&id.clone(),
 					(
 						id,
@@ -87,7 +88,7 @@ impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
 	{
 		let item = EnvironmentItem {
 			spatial: Spatial {
-				node: Node::from_path(client, path.to_string()).unwrap(),
+				node: Node::from_path(client, path.to_string(), false).unwrap(),
 			},
 		};
 		HandlerWrapper::new(item, |weak_wrapped, weak_node_ref, f| {

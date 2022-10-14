@@ -34,6 +34,7 @@ impl Spatial {
 				"/spatial",
 				"createSpatial",
 				"/spatial/spatial",
+				true,
 				&id.clone(),
 				(
 					id,
@@ -49,9 +50,13 @@ impl Spatial {
 		})
 	}
 
-	pub(crate) fn from_path(client: Weak<Client>, path: impl ToString) -> Result<Self, NodeError> {
+	pub(crate) fn from_path(
+		client: Weak<Client>,
+		path: impl ToString,
+		destroyable: bool,
+	) -> Result<Self, NodeError> {
 		Ok(Spatial {
-			node: Node::from_path(client, path.to_string())?,
+			node: Node::from_path(client, path.to_string(), destroyable)?,
 		})
 	}
 

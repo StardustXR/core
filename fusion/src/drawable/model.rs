@@ -54,6 +54,7 @@ impl<'a> Model {
 					"/drawable",
 					"createModel",
 					"/drawable/model",
+					true,
 					&id.clone(),
 					(
 						id,

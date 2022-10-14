@@ -43,6 +43,7 @@ impl<'a> InputHandler {
 					"/input",
 					"createInputHandler",
 					"/input/handler",
+					true,
 					&id.clone(),
 					(
 						id,

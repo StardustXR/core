@@ -27,6 +27,7 @@ impl<'a> PulseReceiver {
 					"/data",
 					"createPulseReceiver",
 					"/data/receiver",
+					true,
 					&id.clone(),
 					(
 						id,

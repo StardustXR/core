@@ -134,7 +134,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 	{
 		let item = PanelItem {
 			spatial: Spatial {
-				node: Node::from_path(client, path.to_string()).unwrap(),
+				node: Node::from_path(client, path.to_string(), false).unwrap(),
 			},
 		};
 

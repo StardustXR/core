@@ -86,6 +86,7 @@ impl Text {
 					"/drawable",
 					"createText",
 					"/drawable/text",
+					true,
 					&id.clone(),
 					(
 						id,

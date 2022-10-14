@@ -11,7 +11,8 @@ pub struct StartupSettings {
 }
 impl StartupSettings {
 	pub fn create(client: &Arc<Client>) -> Result<Self, NodeError> {
-		let (node, id) = Node::generate_with_parent(Arc::downgrade(client), "/startup/settings")?;
+		let (node, id) =
+			Node::generate_with_parent(Arc::downgrade(client), "/startup/settings", true)?;
 		client.messenger.send_remote_signal(
 			"/startup",
 			"createStartupSettings",
