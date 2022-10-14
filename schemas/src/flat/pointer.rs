@@ -18,6 +18,15 @@ impl Pointer {
 			.into()
 	}
 }
+impl Default for Pointer {
+	fn default() -> Self {
+		Self {
+			origin: Vector3::from([0.0; 3]),
+			orientation: Quaternion::from([0.0, 0.0, 0.0, 1.0]),
+			deepest_point: Vector3::from([0.0; 3]),
+		}
+	}
+}
 
 impl From<PointerT> for Pointer {
 	fn from(pointer: PointerT) -> Self {

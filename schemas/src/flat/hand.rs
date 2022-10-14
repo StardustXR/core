@@ -2,6 +2,7 @@ use crate::generated::{
 	common::JointT,
 	input_hand::{FingerT, HandT, ThumbT},
 };
+use glam::Quat;
 use mint::{Quaternion, Vector3};
 
 #[derive(Debug, Clone, Copy)]
@@ -9,6 +10,15 @@ pub struct Joint {
 	pub position: Vector3<f32>,
 	pub rotation: Quaternion<f32>,
 	pub radius: f32,
+}
+impl Default for Joint {
+	fn default() -> Self {
+		Self {
+			position: Vector3::from([0.0; 3]),
+			rotation: Quaternion::from([0.0, 0.0, 0.0, 1.0]),
+			radius: Default::default(),
+		}
+	}
 }
 impl From<JointT> for Joint {
 	fn from(joint: JointT) -> Self {
@@ -29,7 +39,7 @@ impl From<Joint> for JointT {
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Finger {
 	pub tip: Joint,
 	pub distal: Joint,
@@ -60,7 +70,7 @@ impl From<Finger> for FingerT {
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Thumb {
 	pub tip: Joint,
 	pub distal: Joint,
@@ -88,7 +98,7 @@ impl From<Thumb> for ThumbT {
 	}
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Hand {
 	pub right: bool,
 	pub thumb: Thumb,
