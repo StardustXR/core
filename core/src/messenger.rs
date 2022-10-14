@@ -71,7 +71,6 @@ impl Messenger {
 		}
 	}
 
-	//let flex_root = flexbuffers::Reader::get_root(message.unwrap()).unwrap();
 	pub fn error<T: std::fmt::Display>(&self, object: &str, method: &str, err: T) {
 		let error = format!("{}", err);
 		self.send_call(0, None, object, method, Some(error.as_str()), None)
