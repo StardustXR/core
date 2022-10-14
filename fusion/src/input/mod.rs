@@ -1,5 +1,7 @@
 pub mod action;
 
+use std::sync::Arc;
+
 use super::{
 	fields::Field,
 	node::{Node, NodeError, NodeType},
@@ -61,7 +63,7 @@ impl<'a> InputHandler {
 				let contents = wrapped_init(weak_node_ref, input_handler);
 				input_handler.node.local_methods.lock().insert(
 					"input".to_string(),
-					Box::new({
+					Arc::new({
 						let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;
 						move |data| {
 							let capture = if let Some(handler) = weak_handler.upgrade() {

@@ -87,15 +87,9 @@ impl Client {
 				.unwrap();
 		}
 
-		client
-			.get_root()
-			.node
-			.send_remote_signal("subscribeLogicStep", &[0, 0])
-			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
-
 		client.get_root().node.local_signals.lock().insert(
 			"logicStep".to_owned(),
-			Box::new({
+			Arc::new({
 				let client = client.clone();
 				move |data| {
 					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
@@ -112,6 +106,12 @@ impl Client {
 				}
 			}),
 		);
+
+		client
+			.get_root()
+			.node
+			.send_remote_signal("subscribeLogicStep", &[0, 0])
+			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
 
 		Ok(client)
 	}

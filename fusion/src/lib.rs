@@ -85,7 +85,7 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 		let handler = self.weak_wrapped();
 		self.node.node().local_signals.lock().insert(
 			name.to_string(),
-			Box::new(move |data| {
+			Arc::new(move |data| {
 				if let Some(handler) = handler.upgrade() {
 					parse(handler, data)?
 				}

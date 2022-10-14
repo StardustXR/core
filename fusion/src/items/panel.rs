@@ -1,10 +1,4 @@
-use std::{ops::Deref, sync::Weak};
-
-use mint::Vector2;
-use serde::Deserialize;
-use stardust_xr::schemas::flex::deserialize;
-use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
-
+use super::{Item, ItemUI, ItemUIType};
 use crate::{
 	client::Client,
 	drawable::Model,
@@ -12,8 +6,14 @@ use crate::{
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
-
-use super::{Item, ItemUI, ItemUIType};
+use mint::Vector2;
+use serde::Deserialize;
+use stardust_xr::schemas::flex::deserialize;
+use std::{
+	ops::Deref,
+	sync::{Arc, Weak},
+};
+use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 pub trait PanelItemHandler: Send + Sync {
 	fn resize(&mut self, size: Vector2<u32>);
@@ -141,7 +141,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 		HandlerWrapper::new(item, |handler: WeakWrapped<T>, weak_node_ref, item| {
 			item.node.local_signals.lock().insert(
 				"resize".to_string(),
-				Box::new({
+				Arc::new({
 					let handler = handler.clone();
 					move |data| {
 						if let Some(handler) = handler.upgrade() {
@@ -154,7 +154,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 
 			item.node.local_signals.lock().insert(
 				"setCursor".to_string(),
-				Box::new({
+				Arc::new({
 					let handler = handler.clone();
 					move |data| {
 						if let Some(handler) = handler.upgrade() {

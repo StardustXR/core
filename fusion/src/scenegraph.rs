@@ -33,25 +33,19 @@ impl Scenegraph {
 	}
 
 	pub fn get_node(&self, path: &str) -> Weak<Node> {
-		self.nodes
-			.lock()
-			.get(path)
-			.as_deref()
-			.cloned()
-			.unwrap_or_default()
+		self.nodes.lock().get(path).cloned().unwrap_or_default()
 	}
 }
 
 impl scenegraph::Scenegraph for Scenegraph {
 	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
-		self.nodes
+		let node = self
+			.nodes
 			.lock()
 			.get(path)
-			.ok_or(ScenegraphError::NodeNotFound)?
-			.upgrade()
-			.ok_or(ScenegraphError::NodeNotFound)?
-			.send_local_signal(method, data)
-			.map_err(|_| ScenegraphError::SignalNotFound)
+			.and_then(Weak::upgrade)
+			.ok_or(ScenegraphError::NodeNotFound)?;
+		node.send_local_signal(method, data)
 	}
 	fn execute_method(
 		&self,
@@ -59,13 +53,12 @@ impl scenegraph::Scenegraph for Scenegraph {
 		method: &str,
 		data: &[u8],
 	) -> Result<Vec<u8>, ScenegraphError> {
-		self.nodes
+		let node = self
+			.nodes
 			.lock()
 			.get(path)
-			.ok_or(ScenegraphError::NodeNotFound)?
-			.upgrade()
-			.ok_or(ScenegraphError::NodeNotFound)?
-			.execute_local_method(method, data)
-			.map_err(|_| ScenegraphError::MethodNotFound)
+			.and_then(Weak::upgrade)
+			.ok_or(ScenegraphError::NodeNotFound)?;
+		node.execute_local_method(method, data)
 	}
 }

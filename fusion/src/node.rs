@@ -4,7 +4,10 @@ use nanoid::nanoid;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
-use stardust_xr::schemas::flex::{deserialize, serialize};
+use stardust_xr::{
+	scenegraph::ScenegraphError,
+	schemas::flex::{deserialize, serialize},
+};
 use std::{
 	fmt::Debug,
 	future::Future,
@@ -15,22 +18,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum NodeError {
-	#[error("server creation failed")]
-	ServerCreationFailed,
 	#[error("client has been dropped")]
 	ClientDropped,
-	#[error("messenger write failed")]
-	MessengerWrite,
 	#[error("invalid path")]
 	InvalidPath,
-	#[error("node doesn't exist")]
-	NodeNotFound,
-	#[error("method doesn't exist")]
-	MethodNotFound,
-	#[error("Signal failed")]
-	SignalFailed,
-	#[error("Method failed")]
-	MethodFailed,
 	#[error("Serialization failed")]
 	Serialization,
 	#[error("Desrialization failed")]
@@ -53,8 +44,8 @@ pub struct Node {
 	path: String,
 	trailing_slash_pos: usize,
 	pub client: Weak<Client>,
-	pub(crate) local_signals: Mutex<FxHashMap<String, Box<Signal>>>,
-	pub(crate) local_methods: Mutex<FxHashMap<String, Box<Method>>>,
+	pub(crate) local_signals: Mutex<FxHashMap<String, Arc<Signal>>>,
+	pub(crate) local_methods: Mutex<FxHashMap<String, Arc<Method>>>,
 }
 
 impl Node {
@@ -130,41 +121,51 @@ impl Node {
 		Node::from_path(client, path).map(|node| (node, id))
 	}
 
-	pub fn send_local_signal(&self, signal: &str, data: &[u8]) -> Result<(), NodeError> {
+	pub fn send_local_signal(&self, signal_name: &str, data: &[u8]) -> Result<(), ScenegraphError> {
 		let local_signals = self.local_signals.lock();
-		let signal = local_signals.get(signal).ok_or(NodeError::MethodNotFound)?;
-		signal(data).map_err(|_| NodeError::SignalFailed)
+		let signal = local_signals
+			.get(signal_name)
+			.ok_or(ScenegraphError::SignalNotFound)?
+			.clone();
+		signal(data).map_err(|e| ScenegraphError::SignalError { error: e })
 	}
-	pub fn execute_local_method(&self, method: &str, data: &[u8]) -> Result<Vec<u8>, NodeError> {
+	pub fn execute_local_method(
+		&self,
+		method_name: &str,
+		data: &[u8],
+	) -> Result<Vec<u8>, ScenegraphError> {
 		let local_methods = self.local_methods.lock();
-		let method = local_methods.get(method).ok_or(NodeError::MethodNotFound)?;
-		method(data).map_err(|_| NodeError::MethodFailed)
+		let method = local_methods
+			.get(method_name)
+			.ok_or(ScenegraphError::MethodNotFound)?
+			.clone();
+		method(data).map_err(|e| ScenegraphError::MethodError { error: e })
 	}
 	pub fn send_remote_signal<S: Serialize>(
 		&self,
-		method: &str,
+		signal_name: &str,
 		data: &S,
 	) -> Result<(), NodeError> {
 		self.send_remote_signal_raw(
-			method,
+			signal_name,
 			&serialize(data).map_err(|_| NodeError::Serialization)?,
 		)
 	}
-	pub fn send_remote_signal_raw(&self, method: &str, data: &[u8]) -> Result<(), NodeError> {
+	pub fn send_remote_signal_raw(&self, signal_name: &str, data: &[u8]) -> Result<(), NodeError> {
 		self.client
 			.upgrade()
 			.ok_or(NodeError::ClientDropped)?
 			.messenger
-			.send_remote_signal(self.path.as_str(), method, data);
+			.send_remote_signal(self.path.as_str(), signal_name, data);
 		Ok(())
 	}
 	pub fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
 		&self,
-		method: &str,
+		method_name: &str,
 		send_data: &S,
 	) -> Result<impl Future<Output = Result<D>>, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(method, &send_data)?;
+		let future = self.execute_remote_method_raw(method_name, &send_data)?;
 		Ok(async move {
 			future
 				.await
@@ -173,7 +174,7 @@ impl Node {
 	}
 	pub fn execute_remote_method_raw(
 		&self,
-		method: &str,
+		method_name: &str,
 		data: &[u8],
 	) -> Result<impl Future<Output = Result<Vec<u8>>>, NodeError> {
 		match self.client.upgrade() {
@@ -181,7 +182,7 @@ impl Node {
 			Some(client) => {
 				Ok(client
 					.messenger
-					.execute_remote_method(self.path.as_str(), method, data))
+					.execute_remote_method(self.path.as_str(), method_name, data))
 			}
 		}
 	}
