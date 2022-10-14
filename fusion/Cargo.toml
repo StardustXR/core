@@ -23,10 +23,9 @@ glam = { version = "0.21.3", features = ["mint"] }
 mint = "0.5.9"
 nanoid = "0.4.0"
 once_cell = "1.12.0"
-ouroboros = "0.15.4"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
-stardust-xr = {path = "../core", version = "0.4.1"}
+stardust-xr = {path = "../core", version = "0.5.0"}
 serde = "1.0.145"
 serde_repr = "0.1.9"
 slotmap = "1.0.6"

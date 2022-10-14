@@ -183,8 +183,7 @@ impl Client {
 impl Drop for Client {
 	fn drop(&mut self) {
 		self.stop_loop();
-		let _ = self
-			.messenger
+		self.messenger
 			.send_remote_signal("/", "disconnect", &[0_u8; 0]);
 	}
 }

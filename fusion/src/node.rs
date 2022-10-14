@@ -100,7 +100,7 @@ impl Node {
 		}
 		let node = Node {
 			trailing_slash_pos: path.rfind('/').ok_or(NodeError::InvalidPath)?,
-			path: path,
+			path,
 			client: client.clone(),
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
@@ -177,7 +177,7 @@ impl Node {
 		data: &[u8],
 	) -> Result<impl Future<Output = Result<Vec<u8>>>, NodeError> {
 		match self.client.upgrade() {
-			None => Err(NodeError::ClientDropped.into()),
+			None => Err(NodeError::ClientDropped),
 			Some(client) => {
 				Ok(client
 					.messenger

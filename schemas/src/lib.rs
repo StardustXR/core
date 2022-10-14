@@ -1,8 +1,9 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
+#![allow(clippy::derivable_impls)]
+#![allow(clippy::extra_unused_lifetimes)]
 mod generated;
-pub use generated::*;
+use generated::*;
 
-mod flat;
-pub use flat::*;
+pub mod flat;
 pub mod flex;

@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use parking_lot::Mutex;
 use slotmap::{DefaultKey, Key, KeyData, SlotMap};
-use stardust_xr_schemas::message::{root_as_message, Message, MessageArgs};
+use stardust_xr_schemas::flat::message::{root_as_message, Message, MessageArgs};
 use std::future::Future;
 use std::io::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -26,14 +26,14 @@ pub fn log_calls(
 			Ok(root) => format!("{}", root),
 			Err(_) => String::from_utf8_lossy(data).into_owned(),
 		});
-		let content = data.unwrap_or(
+		let content = data.unwrap_or_else(|| {
 			error
 				.map(|err| err.to_string())
-				.unwrap_or("Unknown".to_string()),
-		);
+				.unwrap_or_else(|| "Unknown".to_string())
+		});
 		println!(
 			"[{}][STARDUST]{}[{}:{}] {}",
-			chrono::Local::now().format("%+").to_string(),
+			chrono::Local::now().format("%+"),
 			match message_type {
 				0 => "[ERROR] ",
 				1 => "[SIGNAL]",

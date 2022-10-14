@@ -1,15 +1,4 @@
 pub mod action;
-mod data;
-mod pointer;
-mod tip;
-
-pub use action as action_handler;
-pub use data::*;
-pub use pointer::*;
-pub use stardust_xr::schemas::input_hand::HandT as Hand;
-use stardust_xr::values::Transform;
-pub use tip::*;
-// pub use hand::*;
 
 use super::{
 	fields::Field,
@@ -17,8 +6,9 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
-use stardust_xr::schemas::input::root_as_input_data;
-use std::convert::TryInto;
+pub use action as action_handler;
+pub use stardust_xr::schemas::flat::*;
+use stardust_xr::values::Transform;
 
 pub trait InputHandlerHandler: Send + Sync {
 	fn input(&mut self, input: InputData) -> bool;
@@ -75,9 +65,7 @@ impl<'a> InputHandler {
 						let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;
 						move |data| {
 							let capture = if let Some(handler) = weak_handler.upgrade() {
-								let input = root_as_input_data(data)?.unpack();
-
-								handler.lock().input(input.try_into()?)
+								handler.lock().input(InputData::deserialize(data)?)
 							} else {
 								false
 							};
