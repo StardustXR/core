@@ -1,13 +1,12 @@
 use super::node::Node;
-use core::hash::BuildHasherDefault;
-use dashmap::DashMap;
-use rustc_hash::FxHasher;
+use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
 use stardust_xr::{scenegraph, scenegraph::ScenegraphError};
 use std::sync::Weak;
 
 #[derive(Default)]
 pub struct Scenegraph {
-	nodes: DashMap<String, Weak<Node>, BuildHasherDefault<FxHasher>>,
+	nodes: Mutex<FxHashMap<String, Weak<Node>>>,
 }
 
 impl Scenegraph {
@@ -21,6 +20,7 @@ impl Scenegraph {
 			return;
 		}
 		self.nodes
+			.lock()
 			.insert(String::from(node_ref.unwrap().get_path()), node);
 	}
 
@@ -29,17 +29,23 @@ impl Scenegraph {
 		if node_ref.is_none() {
 			return;
 		}
-		self.nodes.remove(node_ref.unwrap().get_path());
+		self.nodes.lock().remove(node_ref.unwrap().get_path());
 	}
 
 	pub fn get_node(&self, path: &str) -> Weak<Node> {
-		self.nodes.get(path).as_deref().cloned().unwrap_or_default()
+		self.nodes
+			.lock()
+			.get(path)
+			.as_deref()
+			.cloned()
+			.unwrap_or_default()
 	}
 }
 
 impl scenegraph::Scenegraph for Scenegraph {
 	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
 		self.nodes
+			.lock()
 			.get(path)
 			.ok_or(ScenegraphError::NodeNotFound)?
 			.upgrade()
@@ -54,6 +60,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 		data: &[u8],
 	) -> Result<Vec<u8>, ScenegraphError> {
 		self.nodes
+			.lock()
 			.get(path)
 			.ok_or(ScenegraphError::NodeNotFound)?
 			.upgrade()

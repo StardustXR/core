@@ -1,6 +1,5 @@
 use super::client::Client;
 use anyhow::Result;
-use futures::Future;
 use nanoid::nanoid;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
@@ -8,6 +7,7 @@ use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::schemas::flex::{deserialize, serialize};
 use std::{
 	fmt::Debug,
+	future::Future,
 	sync::{Arc, Weak},
 	vec::Vec,
 };

@@ -3,13 +3,12 @@ mod cylinder;
 mod sphere;
 
 pub use cylinder::*;
-use futures::Future;
 use mint::Vector3;
 pub use r#box::*;
 pub use sphere::*;
 
 use anyhow::Result;
-use std::ops::Deref;
+use std::{future::Future, ops::Deref};
 
 use crate::{node::NodeError, spatial::Spatial};
 

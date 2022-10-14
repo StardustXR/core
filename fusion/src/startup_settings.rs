@@ -1,11 +1,9 @@
-use futures::Future;
-
 use crate::{
 	client::Client,
 	node::{Node, NodeError},
 	spatial::Spatial,
 };
-use std::sync::Arc;
+use std::{future::Future, sync::Arc};
 
 #[derive(Debug)]
 pub struct StartupSettings {

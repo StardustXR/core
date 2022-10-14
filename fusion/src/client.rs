@@ -1,7 +1,6 @@
 use super::HandlerWrapper;
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use stardust_xr::schemas::flex::{deserialize, serialize};
@@ -10,7 +9,7 @@ use std::any::TypeId;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use tokio::net::UnixStream;
-use tokio::sync::Notify;
+use tokio::sync::{Notify, OnceCell};
 use tokio::task::JoinHandle;
 
 #[derive(Deserialize)]

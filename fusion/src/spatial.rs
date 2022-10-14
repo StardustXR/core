@@ -3,12 +3,14 @@ use super::{
 	node::{Node, NodeError, NodeType},
 };
 use anyhow::Result;
-use futures::Future;
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
 use serde::{Serialize, Serializer};
 use stardust_xr::values::Transform;
-use std::sync::{Arc, Weak};
+use std::{
+	future::Future,
+	sync::{Arc, Weak},
+};
 
 #[derive(Debug)]
 pub struct Spatial {
