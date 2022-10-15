@@ -1,6 +1,5 @@
 pub mod action;
-
-use std::sync::Arc;
+mod tip;
 
 use super::{
 	fields::Field,
@@ -11,9 +10,24 @@ use super::{
 pub use action as action_handler;
 pub use stardust_xr::schemas::flat::*;
 use stardust_xr::values::Transform;
+use std::sync::Arc;
+pub use tip::TipInputMethod;
 
 pub trait InputHandlerHandler: Send + Sync {
 	fn input(&mut self, input: InputData) -> bool;
+}
+
+pub trait InputMethod {
+	fn node(&self) -> &Node;
+	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
+		self.node().send_remote_signal("setEnabled", &enabled)
+	}
+	fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
+		flexbuffers::Reader::get_root(datamap)
+			.and_then(|root| root.get_map())
+			.map_err(|_| NodeError::DatamapInvalid)?;
+		self.node().send_remote_signal_raw("setDatamap", datamap)
+	}
 }
 
 #[derive(Debug)]

@@ -19,3 +19,5 @@ Cargo.lock
 .vscode/
 
 schemas/target/
+
+*.blend1
