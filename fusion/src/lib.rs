@@ -14,11 +14,10 @@ pub mod scenegraph;
 pub mod spatial;
 pub mod startup_settings;
 
+use self::node::{Node, NodeType};
 use anyhow::Result;
 use parking_lot::{Mutex, MutexGuard};
 use std::sync::{Arc, Weak};
-
-use self::node::{Node, NodeType};
 
 pub type WeakWrapped<T> = Weak<Mutex<T>>;
 

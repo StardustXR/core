@@ -1,3 +1,6 @@
+mod zone;
+pub use zone::*;
+
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
@@ -92,7 +95,6 @@ impl Spatial {
 	) -> Result<(), NodeError> {
 		self.set_transform(relative_space, None, None, Some(scale.into()))
 	}
-
 	pub fn set_transform(
 		&self,
 		relative_space: Option<&Spatial>,
@@ -116,10 +118,13 @@ impl Spatial {
 	pub fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
 		self.node.send_remote_signal("setSpatialParent", parent)
 	}
-
 	pub fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
 		self.node
 			.send_remote_signal("setSpatialParentInPlace", parent)
+	}
+
+	pub fn set_zoneable(&self, zoneable: bool) -> Result<(), NodeError> {
+		self.node.send_remote_signal("setZoneable", &zoneable)
 	}
 }
 impl NodeType for Spatial {

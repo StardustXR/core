@@ -35,9 +35,7 @@ pub struct InputHandler {
 	pub spatial: Spatial,
 }
 
-#[buildstructor::buildstructor]
 impl<'a> InputHandler {
-	#[builder(entry = "builder")]
 	pub fn create<F, T>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
