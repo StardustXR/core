@@ -28,8 +28,8 @@ pub enum NodeError {
 	Deserialization,
 	#[error("Attempted to register to a singleton twice")]
 	OverrideSingleton,
-	#[error("Datamap is not a valid flexbuffer map at the root")]
-	DatamapInvalid,
+	#[error("Map is not a valid flexbuffer map at the root")]
+	MapInvalid,
 }
 
 pub trait NodeType: Sized {

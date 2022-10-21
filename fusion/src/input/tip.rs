@@ -27,7 +27,7 @@ impl<'a> TipInputMethod {
 		if let Some(datamap) = &datamap {
 			flexbuffers::Reader::get_root(datamap.as_slice())
 				.and_then(|root| root.get_map())
-				.map_err(|_| NodeError::DatamapInvalid)?;
+				.map_err(|_| NodeError::MapInvalid)?;
 		}
 		Ok(TipInputMethod {
 			spatial: Spatial {
