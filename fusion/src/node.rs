@@ -46,6 +46,7 @@ pub struct Node {
 	path: String,
 	trailing_slash_pos: usize,
 	pub client: Weak<Client>,
+	self_ref: Weak<Node>,
 	pub(crate) local_signals: Mutex<FxHashMap<String, Arc<Signal>>>,
 	pub(crate) local_methods: Mutex<FxHashMap<String, Arc<Method>>>,
 	pub(crate) destroyable: bool,
@@ -97,21 +98,23 @@ impl Node {
 		if !path.starts_with('/') {
 			return Err(NodeError::InvalidPath);
 		}
-		let node = Node {
-			trailing_slash_pos: path.rfind('/').ok_or(NodeError::InvalidPath)?,
+
+		let trailing_slash_pos = path.rfind('/').ok_or(NodeError::InvalidPath)?;
+		let node = Arc::new_cyclic(|self_ref| Node {
+			trailing_slash_pos,
 			path,
 			client: client.clone(),
+			self_ref: self_ref.clone(),
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
 			destroyable,
-		};
-		let node_ref = Arc::new(node);
+		});
 		client
 			.upgrade()
 			.ok_or(NodeError::ClientDropped)?
 			.scenegraph
-			.add_node(Arc::downgrade(&node_ref));
-		Ok(node_ref)
+			.add_node(Arc::downgrade(&node));
+		Ok(node)
 	}
 	pub fn generate_with_parent(
 		client: Weak<Client>,
@@ -240,6 +243,9 @@ impl Drop for Node {
 	fn drop(&mut self) {
 		if self.destroyable {
 			let _ = self.send_remote_signal_raw("destroy", &[]);
+		}
+		if let Some(client) = self.client.upgrade() {
+			client.scenegraph.remove_node(self.self_ref.clone());
 		}
 	}
 }
