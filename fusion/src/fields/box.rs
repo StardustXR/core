@@ -1,5 +1,5 @@
 use crate::{
-	node::{Node, NodeError},
+	node::{ClientOwned, Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -11,7 +11,7 @@ use super::Field;
 
 #[derive(Debug)]
 pub struct BoxField {
-	pub field: Field,
+	pub spatial: Spatial,
 }
 #[buildstructor::buildstructor]
 impl<'a> BoxField {
@@ -24,27 +24,25 @@ impl<'a> BoxField {
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(BoxField {
-			field: Field {
-				spatial: Spatial {
-					node: Node::new(
-						spatial_parent.node.client.clone(),
-						"/field",
-						"createBoxField",
-						"/field",
-						true,
-						&id.clone(),
-						(
-							id,
-							spatial_parent,
-							Transform {
-								position,
-								rotation,
-								scale: None,
-							},
-							size,
-						),
-					)?,
-				},
+			spatial: Spatial {
+				node: Node::new(
+					spatial_parent.node.client.clone(),
+					"/field",
+					"createBoxField",
+					"/field",
+					true,
+					&id.clone(),
+					(
+						id,
+						spatial_parent,
+						Transform {
+							position,
+							rotation,
+							scale: None,
+						},
+						size,
+					),
+				)?,
 			},
 		})
 	}
@@ -54,11 +52,18 @@ impl<'a> BoxField {
 		self.node.send_remote_signal("setSize", &size)
 	}
 }
+impl NodeType for BoxField {
+	fn node(&self) -> &Node {
+		self.spatial.node()
+	}
+}
+impl ClientOwned for BoxField {}
+impl Field for BoxField {}
 impl Deref for BoxField {
-	type Target = Field;
+	type Target = Spatial;
 
 	fn deref(&self) -> &Self::Target {
-		&self.field
+		&self.spatial
 	}
 }
 
@@ -74,7 +79,6 @@ async fn fusion_box_field() {
 		.build()
 		.expect("Unable to make box field");
 	let distance = box_field
-		.field
 		.distance(client.get_root(), Vector3::from([0_f32, 1_f32, 0_f32]))
 		.unwrap()
 		.await

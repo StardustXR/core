@@ -1,7 +1,7 @@
 use crate::{
-	fields::Field,
+	fields::{Field, UnknownField},
 	node::NodeError,
-	node::{Node, NodeType},
+	node::{ClientOwned, Node, NodeType},
 	spatial::Spatial,
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
@@ -13,7 +13,12 @@ use stardust_xr::{schemas::flex::deserialize, values::Transform};
 use std::sync::Arc;
 
 pub trait PulseSenderHandler: Send + Sync {
-	fn new_receiver(&mut self, receiver: &PulseReceiver, field: &Field, info: NewReceiverInfo);
+	fn new_receiver(
+		&mut self,
+		receiver: &PulseReceiver,
+		field: &UnknownField,
+		info: NewReceiverInfo,
+	);
 	fn drop_receiver(&mut self, uid: &str);
 }
 
@@ -28,7 +33,7 @@ pub struct NewReceiverInfo {
 #[derive(Debug)]
 pub struct PulseSender {
 	pub spatial: Spatial,
-	pub receivers: Mutex<FxHashMap<String, (PulseReceiver, Field)>>,
+	pub receivers: Mutex<FxHashMap<String, (PulseReceiver, UnknownField)>>,
 }
 impl<'a> PulseSender {
 	pub fn create<F, T>(
@@ -87,7 +92,7 @@ impl<'a> PulseSender {
 										false,
 									)?,
 								};
-								let field = Field {
+								let field = UnknownField {
 									spatial: Spatial::from_path(
 										sender.node().client.clone(),
 										&(sender.node().get_path().to_string()
@@ -166,11 +171,11 @@ pub struct PulseReceiver {
 	pub spatial: Spatial,
 }
 impl<'a> PulseReceiver {
-	pub fn create<F, T>(
+	pub fn create<F, Fi: Field + ClientOwned, T>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
-		field: &'a Field,
+		field: &'a Fi,
 		mask: Vec<u8>,
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Self, T>, NodeError>
@@ -200,7 +205,7 @@ impl<'a> PulseReceiver {
 							rotation,
 							scale: None,
 						},
-						&field.spatial,
+						&field.node(),
 						mask,
 					),
 				)?,
@@ -267,7 +272,12 @@ async fn fusion_pulses() {
 		node: WeakNodeRef<PulseSender>,
 	}
 	impl PulseSenderHandler for PulseSenderTest {
-		fn new_receiver(&mut self, receiver: &PulseReceiver, field: &Field, info: NewReceiverInfo) {
+		fn new_receiver(
+			&mut self,
+			receiver: &PulseReceiver,
+			field: &UnknownField,
+			info: NewReceiverInfo,
+		) {
 			println!(
 				"New pulse receiver {:?} with field {:?} and info {:?}",
 				receiver.node().get_path(),

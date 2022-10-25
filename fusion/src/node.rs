@@ -11,6 +11,7 @@ use stardust_xr::{
 use std::{
 	fmt::Debug,
 	future::Future,
+	pin::Pin,
 	sync::{Arc, Weak},
 	vec::Vec,
 };
@@ -38,6 +39,7 @@ pub trait NodeType: Sized {
 		self.node().client.upgrade()
 	}
 }
+pub trait ClientOwned: NodeType {}
 
 type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;
 type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
@@ -184,6 +186,19 @@ impl Node {
 				.await
 				.and_then(|data| -> anyhow::Result<D> { deserialize(&data).map_err(|e| e.into()) })
 		})
+	}
+	pub fn execute_remote_method_trait<S: Serialize, D: DeserializeOwned>(
+		&self,
+		method_name: &str,
+		send_data: &S,
+	) -> Result<Pin<Box<dyn Future<Output = Result<D>>>>, NodeError> {
+		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
+		let future = self.execute_remote_method_raw(method_name, &send_data)?;
+		Ok(Box::pin(async move {
+			future
+				.await
+				.and_then(|data| -> anyhow::Result<D> { deserialize(&data).map_err(|e| e.into()) })
+		}))
 	}
 	pub fn execute_remote_method_raw(
 		&self,

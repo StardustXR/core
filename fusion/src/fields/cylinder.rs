@@ -1,6 +1,6 @@
 use super::Field;
 use crate::{
-	node::{Node, NodeError},
+	node::{ClientOwned, Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -9,7 +9,7 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct CylinderField {
-	pub field: Field,
+	pub spatial: Spatial,
 }
 #[buildstructor::buildstructor]
 impl<'a> CylinderField {
@@ -23,28 +23,26 @@ impl<'a> CylinderField {
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(CylinderField {
-			field: Field {
-				spatial: Spatial {
-					node: Node::new(
-						spatial_parent.node.client.clone(),
-						"/field",
-						"createCylinderField",
-						"/field",
-						true,
-						&id,
-						(
-							&id.clone(),
-							spatial_parent,
-							Transform {
-								position,
-								rotation,
-								scale: None,
-							},
-							length,
-							radius,
-						),
-					)?,
-				},
+			spatial: Spatial {
+				node: Node::new(
+					spatial_parent.node.client.clone(),
+					"/field",
+					"createCylinderField",
+					"/field",
+					true,
+					&id,
+					(
+						&id.clone(),
+						spatial_parent,
+						Transform {
+							position,
+							rotation,
+							scale: None,
+						},
+						length,
+						radius,
+					),
+				)?,
 			},
 		})
 	}
@@ -53,11 +51,18 @@ impl<'a> CylinderField {
 		self.node.send_remote_signal("setSize", &(length, radius))
 	}
 }
+impl NodeType for CylinderField {
+	fn node(&self) -> &Node {
+		self.spatial.node()
+	}
+}
+impl ClientOwned for CylinderField {}
+impl Field for CylinderField {}
 impl Deref for CylinderField {
-	type Target = Field;
+	type Target = Spatial;
 
 	fn deref(&self) -> &Self::Target {
-		&self.field
+		&self.spatial
 	}
 }
 
@@ -75,7 +80,6 @@ async fn fusion_cylinder_field() {
 		.build()
 		.expect("Unable to make cylinder field");
 	let distance = cylinder_field
-		.field
 		.distance(
 			client.get_root(),
 			mint::Vector3::from([0_f32, 1_f32, 0_f32]),

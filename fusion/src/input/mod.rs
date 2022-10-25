@@ -36,11 +36,11 @@ pub struct InputHandler {
 }
 
 impl<'a> InputHandler {
-	pub fn create<F, T>(
+	pub fn create<F, Fi: Field, T>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
-		field: &'a Field,
+		field: &'a Fi,
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Self, T>, NodeError>
 	where
@@ -65,7 +65,7 @@ impl<'a> InputHandler {
 							rotation,
 							scale: None,
 						},
-						&field.spatial,
+						&field.node(),
 					),
 				)?,
 			},

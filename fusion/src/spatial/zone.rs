@@ -1,6 +1,6 @@
 use crate::{
 	fields::Field,
-	node::{Node, NodeError, NodeType},
+	node::{ClientOwned, Node, NodeError, NodeType},
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
 
@@ -24,11 +24,11 @@ pub struct Zone {
 }
 
 impl<'a> Zone {
-	pub fn create<F, T>(
+	pub fn create<F, Fi: Field + ClientOwned, T>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
-		field: &'a Field,
+		field: &'a Fi,
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Zone, T>, NodeError>
 	where
@@ -53,7 +53,7 @@ impl<'a> Zone {
 							rotation,
 							scale: None,
 						},
-						&field.spatial,
+						&field.node(),
 					),
 				)?,
 			},
