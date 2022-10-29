@@ -23,3 +23,6 @@ thiserror = "1.0.31"
 tokio = { version = "1", features = ["sync", "macros", "net", "io-util"] }
 xdg = "2.4.1"
 chrono = "0.4.22"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["sync", "macros", "rt"] }
