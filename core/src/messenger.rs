@@ -7,7 +7,6 @@ use std::io::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
-use tokio::runtime::Handle;
 use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::{mpsc, oneshot};
 
@@ -49,7 +48,6 @@ pub fn log_calls(
 }
 
 pub struct Messenger {
-	_async_rt: Handle,
 	read: AsyncMutex<OwnedReadHalf>,
 	write: AsyncMutex<OwnedWriteHalf>,
 	send_queue_tx: mpsc::UnboundedSender<Vec<u8>>,
@@ -58,11 +56,10 @@ pub struct Messenger {
 }
 
 impl Messenger {
-	pub fn new(async_rt: Handle, connection: UnixStream) -> Self {
+	pub fn new(connection: UnixStream) -> Self {
 		let (read, write) = connection.into_split();
 		let (send_queue_tx, send_queue_rx) = mpsc::unbounded_channel();
 		Self {
-			_async_rt: async_rt,
 			read: AsyncMutex::new(read),
 			write: AsyncMutex::new(write),
 			send_queue_tx,

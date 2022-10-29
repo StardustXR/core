@@ -60,7 +60,7 @@ impl Client {
 	pub async fn from_connection(connection: UnixStream) -> Result<Arc<Self>, std::io::Error> {
 		let client = Arc::new(Client {
 			scenegraph: Scenegraph::new(),
-			messenger: Messenger::new(tokio::runtime::Handle::current(), connection),
+			messenger: Messenger::new(connection),
 
 			stop_notifier: Default::default(),
 
