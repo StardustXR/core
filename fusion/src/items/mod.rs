@@ -125,11 +125,10 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 
 		item_ui
 			.node
-			.client
-			.upgrade()
-			.unwrap()
-			.messenger
-			.send_remote_signal("/item", Self::Item::REGISTER_UI_FN, &[]);
+			.client()?
+			.message_sender_handle
+			.signal("/item", Self::Item::REGISTER_UI_FN, &[])
+			.map_err(|e| NodeError::MessengerError { e })?;
 		Ok(item_ui)
 	}
 

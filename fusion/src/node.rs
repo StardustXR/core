@@ -5,6 +5,7 @@ use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::{
+	messenger::MessengerError,
 	scenegraph::ScenegraphError,
 	schemas::flex::{deserialize, serialize},
 };
@@ -21,6 +22,8 @@ use thiserror::Error;
 pub enum NodeError {
 	#[error("client has been dropped")]
 	ClientDropped,
+	#[error("Messenger error: {e}")]
+	MessengerError { e: MessengerError },
 	#[error("invalid path")]
 	InvalidPath,
 	#[error("Serialization failed")]
@@ -72,17 +75,20 @@ impl Node {
 
 		let node = Node::from_path(client, parent_path, destroyable)?;
 
-		node.client
-			.upgrade()
-			.ok_or(NodeError::ClientDropped)?
-			.messenger
-			.send_remote_signal(
+		node.client()?
+			.message_sender_handle
+			.signal(
 				interface_path,
 				interface_method,
 				&serialize(data).map_err(|_| NodeError::Serialization)?,
-			);
+			)
+			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(node)
+	}
+
+	pub fn client(&self) -> Result<Arc<Client>, NodeError> {
+		self.client.upgrade().ok_or(NodeError::ClientDropped)
 	}
 
 	pub fn get_name(&self) -> &str {
@@ -170,9 +176,9 @@ impl Node {
 		self.client
 			.upgrade()
 			.ok_or(NodeError::ClientDropped)?
-			.messenger
-			.send_remote_signal(self.path.as_str(), signal_name, data);
-		Ok(())
+			.message_sender_handle
+			.signal(self.path.as_str(), signal_name, data)
+			.map_err(|e| NodeError::MessengerError { e })
 	}
 	pub fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
 		&self,
@@ -205,14 +211,10 @@ impl Node {
 		method_name: &str,
 		data: &[u8],
 	) -> Result<impl Future<Output = Result<Vec<u8>>>, NodeError> {
-		match self.client.upgrade() {
-			None => Err(NodeError::ClientDropped),
-			Some(client) => {
-				Ok(client
-					.messenger
-					.execute_remote_method(self.path.as_str(), method_name, data))
-			}
-		}
+		self.client()?
+			.message_sender_handle
+			.method(self.path.as_str(), method_name, data)
+			.map_err(|e| NodeError::MessengerError { e })
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
 		self.send_remote_signal("setEnabled", &enabled)

@@ -3,8 +3,12 @@ use super::{scenegraph::Scenegraph, spatial::Spatial};
 use anyhow::Result;
 use parking_lot::Mutex;
 use serde::Deserialize;
+use stardust_xr::messenger;
 use stardust_xr::schemas::flex::{deserialize, serialize};
-use stardust_xr::{client, messenger::Messenger};
+use stardust_xr::{
+	client,
+	messenger::{MessageReceiver, MessageSender, MessageSenderHandle},
+};
 use std::any::TypeId;
 use std::path::Path;
 use std::sync::{Arc, Weak};
@@ -38,8 +42,8 @@ pub struct Root {
 }
 
 pub struct Client {
-	pub messenger: Messenger,
-	pub scenegraph: Scenegraph,
+	pub message_sender_handle: MessageSenderHandle,
+	pub scenegraph: Arc<Scenegraph>,
 
 	stop_notifier: Notify,
 
@@ -52,15 +56,18 @@ pub struct Client {
 }
 
 impl Client {
-	pub async fn connect() -> Result<Arc<Self>, std::io::Error> {
+	pub async fn connect() -> Result<(Arc<Self>, MessageSender, MessageReceiver), std::io::Error> {
 		let connection = client::connect().await?;
 		Client::from_connection(connection).await
 	}
 
-	pub async fn from_connection(connection: UnixStream) -> Result<Arc<Self>, std::io::Error> {
+	pub async fn from_connection(
+		connection: UnixStream,
+	) -> Result<(Arc<Self>, MessageSender, MessageReceiver), std::io::Error> {
+		let (message_tx, message_rx) = messenger::create(connection);
 		let client = Arc::new(Client {
-			scenegraph: Scenegraph::new(),
-			messenger: Messenger::new(connection),
+			scenegraph: Arc::new(Scenegraph::new()),
+			message_sender_handle: message_tx.handle(),
 
 			stop_notifier: Default::default(),
 
@@ -71,6 +78,11 @@ impl Client {
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: Mutex::new(Weak::<Mutex<LifeCycleHandlerDummy>>::new()),
 		});
+
+		Ok((client, message_tx, message_rx))
+	}
+
+	pub fn setup(client: &Arc<Client>) -> Result<(), std::io::Error> {
 		let weak_client = Arc::downgrade(&client);
 		let _ = client.root.set(Arc::new(
 			Spatial::from_path(weak_client.clone(), "/", false).unwrap(),
@@ -110,20 +122,21 @@ impl Client {
 		client
 			.get_root()
 			.node
-			.send_remote_signal("subscribeLogicStep", &[0, 0])
+			.send_remote_signal_raw("subscribeLogicStep", &[0; 0])
 			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
-
-		Ok(client)
+		Ok(())
 	}
 
 	pub async fn connect_with_async_loop() -> Result<(Arc<Self>, JoinHandle<()>), std::io::Error> {
-		let client = Client::connect().await?;
+		let (client, mut message_tx, mut message_rx) = Client::connect().await?;
 
 		let event_loop = tokio::task::spawn({
 			let client = client.clone();
+			let scenegraph = client.scenegraph.clone();
 			async move {
-				let dispatch_loop = async { while client.dispatch().await.is_ok() {} };
-				let flush_loop = async { while client.flush().await.is_ok() {} };
+				let dispatch_loop =
+					async move { while message_rx.dispatch(&*scenegraph).await.is_ok() {} };
+				let flush_loop = async move { while message_tx.flush().await.is_ok() {} };
 
 				tokio::select! {
 					_ = client.stop_notifier.notified() => (),
@@ -133,16 +146,9 @@ impl Client {
 				println!("Stopped the loop");
 			}
 		});
+		Client::setup(&client)?;
 
 		Ok((client, event_loop))
-	}
-
-	pub async fn dispatch(&self) -> Result<(), std::io::Error> {
-		self.messenger.dispatch(&self.scenegraph).await
-	}
-
-	pub async fn flush(&self) -> Result<(), std::io::Error> {
-		self.messenger.flush().await
 	}
 
 	pub fn get_root(&self) -> &Spatial {
@@ -170,8 +176,9 @@ impl Client {
 			.filter(|p| p.is_absolute() && p.exists())
 			.collect();
 
-		self.messenger
-			.send_remote_signal("/", "setBasePrefixes", &serialize(prefixes).unwrap());
+		self.message_sender_handle
+			.signal("/", "setBasePrefixes", &serialize(prefixes).unwrap())
+			.unwrap();
 	}
 
 	pub fn stop_loop(&self) {
@@ -182,8 +189,9 @@ impl Client {
 impl Drop for Client {
 	fn drop(&mut self) {
 		self.stop_loop();
-		self.messenger
-			.send_remote_signal("/", "disconnect", &[0_u8; 0]);
+		let _ = self
+			.message_sender_handle
+			.signal("/", "disconnect", &[0_u8; 0]);
 	}
 }
 

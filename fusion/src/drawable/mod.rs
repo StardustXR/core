@@ -25,12 +25,13 @@ impl Client {
 			return Err(NodeError::InvalidPath);
 		}
 		let file_str = file.as_ref().to_str().ok_or(NodeError::InvalidPath)?;
-		self.messenger.send_remote_signal(
-			"/drawable",
-			"setSkyFile",
-			&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
-		);
-		Ok(())
+		self.message_sender_handle
+			.signal(
+				"/drawable",
+				"setSkyFile",
+				&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
+			)
+			.map_err(|e| NodeError::MessengerError { e })
 	}
 }
 

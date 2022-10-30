@@ -13,11 +13,14 @@ impl StartupSettings {
 	pub fn create(client: &Arc<Client>) -> Result<Self, NodeError> {
 		let (node, id) =
 			Node::generate_with_parent(Arc::downgrade(client), "/startup/settings", true)?;
-		client.messenger.send_remote_signal(
-			"/startup",
-			"createStartupSettings",
-			&flexbuffers::singleton(id.as_str()),
-		);
+		client
+			.message_sender_handle
+			.signal(
+				"/startup",
+				"createStartupSettings",
+				&flexbuffers::singleton(id.as_str()),
+			)
+			.map_err(|e| NodeError::MessengerError { e })?;
 		Ok(StartupSettings { node })
 	}
 
