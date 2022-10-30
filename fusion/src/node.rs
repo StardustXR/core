@@ -47,6 +47,8 @@ pub trait ClientOwned: NodeType {}
 type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;
 type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
 
+pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O>>>;
+
 pub struct Node {
 	path: String,
 	trailing_slash_pos: usize,

@@ -7,20 +7,19 @@ use mint::Vector3;
 pub use r#box::*;
 pub use sphere::*;
 
-use anyhow::Result;
-use std::{future::Future, ops::Deref, pin::Pin};
-
 use crate::{
-	node::{Node, NodeError, NodeType},
+	node::{BoxedFuture, Node, NodeError, NodeType},
 	spatial::Spatial,
 };
+use anyhow::Result;
+use std::ops::Deref;
 
 pub trait Field: NodeType {
 	fn distance(
 		&self,
 		space: &Spatial,
 		point: Vector3<f32>,
-	) -> Result<Pin<Box<dyn Future<Output = Result<f32>>>>, NodeError> {
+	) -> Result<BoxedFuture<Result<f32>>, NodeError> {
 		self.node()
 			.execute_remote_method_trait("distance", &(space.node.get_path().to_string(), point))
 	}
@@ -29,7 +28,7 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: Vector3<f32>,
-	) -> Result<Pin<Box<dyn Future<Output = Result<mint::Vector3<f32>>>>>, NodeError> {
+	) -> Result<BoxedFuture<Result<mint::Vector3<f32>>>, NodeError> {
 		self.node()
 			.execute_remote_method_trait("normal", &(space.node.get_path().to_string(), point))
 	}
@@ -38,7 +37,7 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: Vector3<f32>,
-	) -> Result<Pin<Box<dyn Future<Output = Result<mint::Vector3<f32>>>>>, NodeError> {
+	) -> Result<BoxedFuture<Result<mint::Vector3<f32>>>, NodeError> {
 		self.node().execute_remote_method_trait(
 			"closestPoint",
 			&(space.node.get_path().to_string(), point),

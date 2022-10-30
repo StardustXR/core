@@ -138,7 +138,7 @@ impl<'a> Zone {
 			zone.node().local_signals.lock().insert(
 				"leave".to_string(),
 				Arc::new({
-					let weak_handler: WeakWrapped<dyn ZoneHandler> = weak_handler.clone();
+					let weak_handler: WeakWrapped<dyn ZoneHandler> = weak_handler;
 					let weak_node_ref = weak_node_ref.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;

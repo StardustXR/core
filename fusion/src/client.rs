@@ -83,7 +83,7 @@ impl Client {
 	}
 
 	pub fn setup(client: &Arc<Client>) -> Result<(), std::io::Error> {
-		let weak_client = Arc::downgrade(&client);
+		let weak_client = Arc::downgrade(client);
 		let _ = client.root.set(Arc::new(
 			Spatial::from_path(weak_client.clone(), "/", false).unwrap(),
 		));

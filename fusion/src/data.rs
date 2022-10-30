@@ -120,7 +120,7 @@ impl<'a> PulseSender {
 			sender.node().local_signals.lock().insert(
 				"dropReceiver".to_string(),
 				Arc::new({
-					let weak_handler: WeakWrapped<dyn PulseSenderHandler> = weak_handler.clone();
+					let weak_handler: WeakWrapped<dyn PulseSenderHandler> = weak_handler;
 					let weak_node_ref = weak_node_ref.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;
@@ -218,8 +218,7 @@ impl<'a> PulseReceiver {
 				receiver.node().local_signals.lock().insert(
 					"data".to_string(),
 					Arc::new({
-						let weak_handler: WeakWrapped<dyn PulseReceiverHandler> =
-							weak_handler.clone();
+						let weak_handler: WeakWrapped<dyn PulseReceiverHandler> = weak_handler;
 						#[derive(Deserialize)]
 						struct SendDataInfo<'a> {
 							uid: &'a str,
