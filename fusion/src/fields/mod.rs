@@ -32,6 +32,9 @@ impl RayMarchResult {
 			z: self.ray_origin.z + (self.ray_direction.z * self.deepest_point_distance),
 		}
 	}
+	pub fn hit(&self) -> bool {
+		self.min_distance <= 0.0
+	}
 }
 
 pub trait Field: NodeType {
