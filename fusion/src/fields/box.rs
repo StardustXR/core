@@ -28,7 +28,7 @@ impl<'a> BoxField {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/field",
-					"createBoxField",
+					"create_box_field",
 					"/field",
 					true,
 					&id.clone(),
@@ -49,7 +49,7 @@ impl<'a> BoxField {
 
 	pub fn set_size(&self, size: impl Into<Vector3<f32>>) -> Result<(), NodeError> {
 		let size: Vector3<f32> = size.into();
-		self.node.send_remote_signal("setSize", &size)
+		self.node.send_remote_signal("set_size", &size)
 	}
 }
 impl NodeType for BoxField {

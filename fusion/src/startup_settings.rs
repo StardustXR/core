@@ -17,7 +17,7 @@ impl StartupSettings {
 			.message_sender_handle
 			.signal(
 				"/startup",
-				"createStartupSettings",
+				"create_startup_settings",
 				&flexbuffers::singleton(id.as_str()),
 			)
 			.map_err(|e| NodeError::MessengerError { e })?;
@@ -26,14 +26,14 @@ impl StartupSettings {
 
 	pub fn set_root(&self, root: &Spatial) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("setRoot", &root.node.get_path())
+			.send_remote_signal("set_root", &root.node.get_path())
 	}
 
 	pub fn generate_desktop_startup_id(
 		&self,
 	) -> Result<impl Future<Output = anyhow::Result<String>>, NodeError> {
 		self.node
-			.execute_remote_method("generateDesktopStartupID", &())
+			.execute_remote_method("generate_desktop_startup_id", &())
 	}
 }
 

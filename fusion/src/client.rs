@@ -95,7 +95,7 @@ impl Client {
 			client
 				.get_root()
 				.node
-				.send_remote_signal("applyDesktopStartupID", &desktop_startup_id)
+				.send_remote_signal("apply_desktop_startup_id", &desktop_startup_id)
 				.unwrap();
 		}
 
@@ -122,7 +122,7 @@ impl Client {
 		client
 			.get_root()
 			.node
-			.send_remote_signal_raw("subscribeLogicStep", &[0; 0])
+			.send_remote_signal_raw("subscribe_logic_step", &[0; 0])
 			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
 		Ok(())
 	}

@@ -71,7 +71,7 @@ impl Spatial {
 		NodeError,
 	> {
 		self.node
-			.execute_remote_method("getTransform", relative_space)
+			.execute_remote_method("get_transform", relative_space)
 	}
 
 	pub fn set_position(
@@ -103,7 +103,7 @@ impl Spatial {
 		scale: Option<mint::Vector3<f32>>,
 	) -> Result<(), NodeError> {
 		self.node.send_remote_signal(
-			"setTransform",
+			"set_transform",
 			&(
 				relative_space,
 				Transform {
@@ -116,15 +116,15 @@ impl Spatial {
 	}
 
 	pub fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
-		self.node.send_remote_signal("setSpatialParent", parent)
+		self.node.send_remote_signal("set_spatial_parent", parent)
 	}
 	pub fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("setSpatialParentInPlace", parent)
+			.send_remote_signal("set_spatial_parent_in_place", parent)
 	}
 
 	pub fn set_zoneable(&self, zoneable: bool) -> Result<(), NodeError> {
-		self.node.send_remote_signal("setZoneable", &zoneable)
+		self.node.send_remote_signal("set_zoneable", &zoneable)
 	}
 }
 impl NodeType for Spatial {

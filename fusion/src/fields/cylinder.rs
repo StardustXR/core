@@ -27,7 +27,7 @@ impl<'a> CylinderField {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/field",
-					"createCylinderField",
+					"create_cylinder_field",
 					"/field",
 					true,
 					&id,
@@ -48,7 +48,7 @@ impl<'a> CylinderField {
 	}
 
 	pub fn set_size(&self, length: f32, radius: f32) -> Result<(), NodeError> {
-		self.node.send_remote_signal("setSize", &(length, radius))
+		self.node.send_remote_signal("set_size", &(length, radius))
 	}
 }
 impl NodeType for CylinderField {

@@ -219,7 +219,7 @@ impl Node {
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.send_remote_signal("setEnabled", &enabled)
+		self.send_remote_signal("set_enabled", &enabled)
 	}
 }
 

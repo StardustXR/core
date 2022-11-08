@@ -84,7 +84,7 @@ impl Text {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/drawable",
-					"createText",
+					"create_text",
 					"/drawable/text",
 					true,
 					&id.clone(),
@@ -116,10 +116,11 @@ impl Text {
 	}
 
 	pub fn set_character_height(&self, height: f32) -> Result<(), NodeError> {
-		self.node.send_remote_signal("setCharacterHeight", &height)
+		self.node
+			.send_remote_signal("set_character_height", &height)
 	}
 	pub fn set_text(&self, text: impl AsRef<str>) -> Result<(), NodeError> {
-		self.node.send_remote_signal("setText", &text.as_ref())
+		self.node.send_remote_signal("set_text", &text.as_ref())
 	}
 }
 impl Deref for Text {

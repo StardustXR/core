@@ -52,7 +52,7 @@ impl<'a> Model {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/drawable",
-					"createModel",
+					"create_model",
 					"/drawable/model",
 					true,
 					&id.clone(),

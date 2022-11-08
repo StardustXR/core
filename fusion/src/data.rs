@@ -56,7 +56,7 @@ impl<'a> PulseSender {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/data",
-					"createPulseSender",
+					"create_pulse_sender",
 					"/data/sender",
 					true,
 					&id.clone(),
@@ -147,7 +147,7 @@ impl<'a> PulseSender {
 			.map_err(|_| NodeError::MapInvalid)?;
 
 		self.node
-			.send_remote_signal("sendData", &(receiver.node().get_name(), data))
+			.send_remote_signal("send_data", &(receiver.node().get_name(), data))
 	}
 }
 impl NodeType for PulseSender {
@@ -193,7 +193,7 @@ impl<'a> PulseReceiver {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/data",
-					"createPulseReceiver",
+					"create_pulse_receiver",
 					"/data/receiver",
 					true,
 					&id.clone(),

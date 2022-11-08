@@ -34,7 +34,7 @@ impl<'a> TipInputMethod {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/input",
-					"createInputMethodTip",
+					"create_input_method_tip",
 					"/input/method/tip",
 					true,
 					&id.clone(),
@@ -55,7 +55,7 @@ impl<'a> TipInputMethod {
 	}
 
 	pub fn set_radius(&self, radius: f32) -> Result<(), NodeError> {
-		self.node.send_remote_signal("setRadius", &radius)
+		self.node.send_remote_signal("set_radius", &radius)
 	}
 }
 impl InputMethod for TipInputMethod {

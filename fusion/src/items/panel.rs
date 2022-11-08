@@ -42,7 +42,7 @@ impl PanelItem {
 		material_index: u32,
 	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("applySurfaceMaterial", &(&model.spatial, material_index))
+			.send_remote_signal("apply_surface_material", &(&model.spatial, material_index))
 	}
 
 	pub fn apply_cursor_material(
@@ -52,21 +52,21 @@ impl PanelItem {
 		material_index: u32,
 	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("applyCursorMaterial", &(&model.spatial, material_index))
+			.send_remote_signal("apply_cursor_material", &(&model.spatial, material_index))
 	}
 
 	pub fn pointer_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("pointerDeactivate", &())
+		self.node.send_remote_signal("pointer_deactivate", &())
 	}
 
 	pub fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointerMotion", &position.into())
+			.send_remote_signal("pointer_motion", &position.into())
 	}
 
 	pub fn pointer_button(&self, button: u32, state: u32) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointerButton", &(button, state))
+			.send_remote_signal("pointer_button", &(button, state))
 	}
 
 	pub fn pointer_scroll(
@@ -75,7 +75,7 @@ impl PanelItem {
 		scroll_steps: Vector2<f32>,
 	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointerScroll", &(scroll_distance, scroll_steps))
+			.send_remote_signal("pointer_scroll", &(scroll_distance, scroll_steps))
 	}
 
 	pub fn keyboard_activate(&self, keymap: &str) -> Result<(), NodeError> {
@@ -87,14 +87,14 @@ impl PanelItem {
 		)
 		.ok_or(NodeError::InvalidPath)?;
 		self.node
-			.send_remote_signal("keyboardActivateString", &keymap)
+			.send_remote_signal("keyboard_activate_string", &keymap)
 	}
 	pub fn keyboard_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("keyboardDeactivate", &())
+		self.node.send_remote_signal("keyboard_deactivate", &())
 	}
 	pub fn keyboard_key_state(&self, key: u32, state: bool) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("keyboardKeyState", &(key, state as u32))
+			.send_remote_signal("keyboard_key_state", &(key, state as u32))
 	}
 	pub fn resize(&self, width: u32, height: u32) -> Result<(), NodeError> {
 		self.node.send_remote_signal("resize", &(width, height))

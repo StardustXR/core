@@ -20,13 +20,13 @@ pub trait InputHandlerHandler: Send + Sync {
 pub trait InputMethod {
 	fn node(&self) -> &Node;
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.node().send_remote_signal("setEnabled", &enabled)
+		self.node().send_remote_signal("set_enabled", &enabled)
 	}
 	fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
 		flexbuffers::Reader::get_root(datamap)
 			.and_then(|root| root.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
-		self.node().send_remote_signal_raw("setDatamap", datamap)
+		self.node().send_remote_signal_raw("set_datamap", datamap)
 	}
 }
 
@@ -53,7 +53,7 @@ impl<'a> InputHandler {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/input",
-					"createInputHandler",
+					"create_input_handler",
 					"/input/handler",
 					true,
 					&id.clone(),
