@@ -28,7 +28,7 @@ impl Client {
 		self.message_sender_handle
 			.signal(
 				"/drawable",
-				"setSkyFile",
+				"set_sky_file",
 				&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
 			)
 			.map_err(|e| NodeError::MessengerError { e })

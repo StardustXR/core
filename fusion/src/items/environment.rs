@@ -62,7 +62,7 @@ impl NodeType for EnvironmentItem {
 impl Item for EnvironmentItem {
 	type ItemType = EnvironmentItem;
 	type InitData = String;
-	const REGISTER_UI_FN: &'static str = "registerEnvironmentItemUI";
+	const REGISTER_UI_FN: &'static str = "register_environment_item_ui";
 	const ROOT_PATH: &'static str = "/item/environment";
 
 	fn node(&self) -> &Node {

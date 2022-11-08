@@ -103,7 +103,7 @@ impl PanelItem {
 impl Item for PanelItem {
 	type ItemType = PanelItem;
 	type InitData = PanelItemInitData;
-	const REGISTER_UI_FN: &'static str = "registerPanelItemUI";
+	const REGISTER_UI_FN: &'static str = "register_panel_item_ui";
 	const ROOT_PATH: &'static str = "/item/panel";
 
 	fn node(&self) -> &Node {

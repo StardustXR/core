@@ -177,7 +177,7 @@ impl Client {
 			.collect();
 
 		self.message_sender_handle
-			.signal("/", "setBasePrefixes", &serialize(prefixes).unwrap())
+			.signal("/", "set_base_prefixes", &serialize(prefixes).unwrap())
 			.unwrap();
 	}
 
