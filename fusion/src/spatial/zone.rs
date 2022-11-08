@@ -41,7 +41,7 @@ impl<'a> Zone {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/spatial",
-					"createZone",
+					"create_zone",
 					"/spatial/zone",
 					true,
 					&id.clone(),

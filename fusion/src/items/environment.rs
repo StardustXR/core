@@ -35,7 +35,7 @@ impl<'a> EnvironmentItem {
 				node: Node::new(
 					spatial_parent.node.client.clone(),
 					"/item",
-					"createEnvironmentItem",
+					"create_environment_item",
 					"/item/environment/item",
 					true,
 					&id.clone(),

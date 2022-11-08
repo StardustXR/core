@@ -35,7 +35,7 @@ impl Spatial {
 			node: Node::new(
 				spatial_parent.node.client.clone(),
 				"/spatial",
-				"createSpatial",
+				"create_spatial",
 				"/spatial/spatial",
 				true,
 				&id.clone(),
