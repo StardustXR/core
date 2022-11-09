@@ -9,7 +9,7 @@ use super::{
 use parking_lot::{Mutex, MutexGuard};
 use rustc_hash::FxHashMap;
 use serde::de::DeserializeOwned;
-use stardust_xr::schemas::flex::deserialize;
+use stardust_xr::schemas::flex::{deserialize, serialize};
 use std::{
 	any::TypeId,
 	sync::{Arc, Weak},
@@ -18,8 +18,7 @@ use std::{
 pub trait Item: NodeType + Sized + Send + Sync {
 	type ItemType;
 	type InitData: DeserializeOwned + Send;
-	const REGISTER_UI_FN: &'static str;
-	const ROOT_PATH: &'static str;
+	const TYPE_NAME: &'static str;
 
 	fn node(&self) -> &Node;
 }
@@ -77,7 +76,7 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 		let item_ui = ItemUI::<Self::Item, T> {
 			node: Node::from_path(
 				Arc::downgrade(client),
-				Self::Item::ROOT_PATH.to_string(),
+				format!("/item/{}", Self::Item::TYPE_NAME),
 				true,
 			)
 			.unwrap(),
@@ -85,7 +84,7 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 		};
 
 		item_ui.node.local_signals.lock().insert(
-			"create".to_string(),
+			"create_item".to_string(),
 			Arc::new({
 				let client = Arc::downgrade(client);
 				let items = item_ui.items.clone();
@@ -97,7 +96,7 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 
 					let item = Self::from_path(
 						client.clone(),
-						&format!("{}/item/{}", Self::Item::ROOT_PATH, item_uid),
+						&format!("/item/{}/item/{}", Self::Item::TYPE_NAME, item_uid),
 						init_data,
 						item_ui_init.clone(),
 					);
@@ -107,7 +106,7 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 			}),
 		);
 		item_ui.node.local_signals.lock().insert(
-			"destroy".to_string(),
+			"destroy_item".to_string(),
 			Arc::new({
 				let items = item_ui.items.clone();
 				move |data| {
@@ -127,7 +126,11 @@ pub trait ItemUIType<T: Send + Sync + 'static>: Sized {
 			.node
 			.client()?
 			.message_sender_handle
-			.signal("/item", Self::Item::REGISTER_UI_FN, &[])
+			.signal(
+				"/item",
+				"register_item_ui",
+				&serialize([Self::Item::TYPE_NAME]).map_err(|_| NodeError::Serialization)?,
+			)
 			.map_err(|e| NodeError::MessengerError { e })?;
 		Ok(item_ui)
 	}
