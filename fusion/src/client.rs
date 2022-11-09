@@ -100,7 +100,7 @@ impl Client {
 		}
 
 		client.get_root().node.local_signals.lock().insert(
-			"logicStep".to_owned(),
+			"logic_step".to_owned(),
 			Arc::new({
 				let client = client.clone();
 				move |data| {

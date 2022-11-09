@@ -153,7 +153,7 @@ impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<Panel
 			);
 
 			item.node.local_signals.lock().insert(
-				"setCursor".to_string(),
+				"set_cursor".to_string(),
 				Arc::new({
 					let handler = handler.clone();
 					move |data| {

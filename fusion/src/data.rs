@@ -77,7 +77,7 @@ impl<'a> PulseSender {
 
 		let handler_wrapper = HandlerWrapper::new(sender, |weak_handler, weak_node_ref, sender| {
 			sender.node().local_signals.lock().insert(
-				"newReceiver".to_string(),
+				"new_receiver".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn PulseSenderHandler> = weak_handler.clone();
 					let weak_node_ref = weak_node_ref.clone();
@@ -118,7 +118,7 @@ impl<'a> PulseSender {
 				}),
 			);
 			sender.node().local_signals.lock().insert(
-				"dropReceiver".to_string(),
+				"drop_receiver".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn PulseSenderHandler> = weak_handler;
 					let weak_node_ref = weak_node_ref.clone();
