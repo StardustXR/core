@@ -56,7 +56,7 @@ pub struct ItemUI<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<
 	acceptors: Arc<Mutex<FxHashMap<String, ItemAcceptor<I, DummyHandler>>>>,
 }
 impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I, H> {
-	fn register<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
+	pub fn register<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
 	where
 		F: FnMut(I::InitData, WeakWrapped<H>, WeakNodeRef<I>, &I) -> H
 			+ Clone
@@ -219,8 +219,8 @@ pub struct ItemAcceptor<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send +
 	pub spatial: Spatial,
 	items: Arc<Mutex<FxHashMap<String, HandlerWrapper<I, H>>>>,
 }
-impl<'a, I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor<I, H> {
-	pub fn register<F, Fi: Field>(
+impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor<I, H> {
+	pub fn create<'a, F, Fi: Field>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
