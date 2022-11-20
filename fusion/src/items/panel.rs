@@ -1,4 +1,4 @@
-use super::{Item, ItemUI, ItemUIType};
+use super::{HandledItem, Item};
 use crate::{
 	client::Client,
 	drawable::Model,
@@ -100,36 +100,29 @@ impl PanelItem {
 		self.node.send_remote_signal("resize", &(width, height))
 	}
 }
-impl Item for PanelItem {
-	type ItemType = PanelItem;
-	type InitData = PanelItemInitData;
-	const TYPE_NAME: &'static str = "panel";
-
-	fn node(&self) -> &Node {
-		&self.spatial.node
-	}
-}
 impl NodeType for PanelItem {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
 }
-impl<T: PanelItemHandler + Send + Sync + 'static> ItemUIType<T> for ItemUI<PanelItem, T> {
-	type Item = PanelItem;
-
+impl Item for PanelItem {
+	type ItemType = PanelItem;
+	type InitData = PanelItemInitData;
+	const TYPE_NAME: &'static str = "panel";
+}
+impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 	fn from_path<F>(
 		client: Weak<Client>,
 		path: &str,
-		init_data: PanelItemInitData,
+		init_data: Self::InitData,
 		mut ui_init_fn: F,
-	) -> HandlerWrapper<PanelItem, T>
+	) -> HandlerWrapper<Self, T>
 	where
-		F: FnMut(PanelItemInitData, WeakWrapped<T>, WeakNodeRef<PanelItem>, &PanelItem) -> T
+		F: FnMut(Self::InitData, WeakWrapped<T>, WeakNodeRef<Self>, &Self) -> T
 			+ Clone
 			+ Send
 			+ Sync
 			+ 'static,
-		T: Send + Sync + 'static,
 	{
 		let item = PanelItem {
 			spatial: Spatial {
@@ -188,6 +181,22 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 			PanelItemUI
 		}
 	}
+	impl crate::items::ItemHandler<PanelItem> for PanelItemUI {
+		fn captured(&mut self, item: &PanelItem, acceptor_uid: &str) {
+			println!(
+				"Acceptor {} captured panel item {}",
+				acceptor_uid,
+				item.node().get_name()
+			);
+		}
+		fn released(&mut self, item: &PanelItem, acceptor_uid: &str) {
+			println!(
+				"Acceptor {} released panel item {}",
+				acceptor_uid,
+				item.node().get_name()
+			);
+		}
+	}
 	impl PanelItemHandler for PanelItemUI {
 		fn resize(&mut self, size: Vector2<u32>) {
 			println!("Got resize of {}, {}", size.x, size.y);
@@ -203,7 +212,7 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 		}
 	}
 
-	let _item_ui = ItemUI::<PanelItem, PanelItemUI>::register(
+	let _item_ui = crate::items::ItemUI::<PanelItem, PanelItemUI>::register(
 		&client,
 		|init_data, _weak_wrapped, _weak_node_ref, _item: &PanelItem| PanelItemUI::new(init_data),
 	)?;

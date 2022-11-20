@@ -9,7 +9,7 @@ use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
 use crate::{HandlerWrapper, WeakNodeRef, WeakWrapped};
 
-use super::{Item, ItemUI, ItemUIType};
+use super::{HandledItem, Item};
 
 pub struct EnvironmentItem {
 	pub spatial: Spatial,
@@ -63,22 +63,17 @@ impl Item for EnvironmentItem {
 	type ItemType = EnvironmentItem;
 	type InitData = String;
 	const TYPE_NAME: &'static str = "environment";
-
-	fn node(&self) -> &Node {
-		&self.spatial.node
-	}
 }
-impl<T: Send + Sync + 'static> ItemUIType<T> for ItemUI<EnvironmentItem, T> {
-	type Item = EnvironmentItem;
 
+impl<T: Send + Sync + 'static> HandledItem<T> for EnvironmentItem {
 	fn from_path<F>(
 		client: Weak<Client>,
 		path: &str,
-		init_data: String,
+		init_data: Self::InitData,
 		mut ui_init_fn: F,
-	) -> HandlerWrapper<EnvironmentItem, T>
+	) -> HandlerWrapper<Self, T>
 	where
-		F: FnMut(String, WeakWrapped<T>, WeakNodeRef<EnvironmentItem>, &EnvironmentItem) -> T
+		F: FnMut(Self::InitData, WeakWrapped<T>, WeakNodeRef<Self>, &Self) -> T
 			+ Clone
 			+ Send
 			+ Sync
@@ -131,13 +126,29 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 			EnvironmentUI { path, _item }
 		}
 	}
+	impl crate::items::ItemHandler<EnvironmentItem> for EnvironmentUI {
+		fn captured(&mut self, item: &EnvironmentItem, acceptor_uid: &str) {
+			println!(
+				"Acceptor {} captured environment item {}",
+				acceptor_uid,
+				item.uid()
+			);
+		}
+		fn released(&mut self, item: &EnvironmentItem, acceptor_uid: &str) {
+			println!(
+				"Acceptor {} released environment item {}",
+				acceptor_uid,
+				item.uid()
+			);
+		}
+	}
 	impl Drop for EnvironmentUI {
 		fn drop(&mut self) {
 			println!("Environment item with path {} destroyed", self.path)
 		}
 	}
 
-	let _item_ui = ItemUI::register(
+	let _item_ui = crate::items::ItemUI::register(
 		&client,
 		|init_data, _weak_wrapped, weak_node_ref, _item: &EnvironmentItem| {
 			EnvironmentUI::new(init_data, weak_node_ref)

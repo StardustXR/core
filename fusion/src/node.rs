@@ -60,11 +60,11 @@ pub struct Node {
 }
 
 impl Node {
-	pub(crate) fn new<S: Serialize>(
+	pub(crate) fn new<'a, S: Serialize>(
 		client: Weak<Client>,
-		interface_path: &'static str,
-		interface_method: &'static str,
-		parent_path: &'static str,
+		interface_path: &'a str,
+		interface_method: &'a str,
+		parent_path: &'a str,
 		destroyable: bool,
 		id: &str,
 		data: S,

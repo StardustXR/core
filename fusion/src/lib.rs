@@ -16,7 +16,10 @@ pub mod startup_settings;
 
 use self::node::{Node, NodeType};
 use anyhow::Result;
+use input::InputHandlerHandler;
+use items::panel::PanelItemHandler;
 use parking_lot::{Mutex, MutexGuard};
+use spatial::ZoneHandler;
 use std::sync::{Arc, Weak};
 
 pub type WeakWrapped<T> = Weak<Mutex<T>>;
@@ -39,6 +42,7 @@ impl<N: NodeType + Sized> Clone for WeakNodeRef<N> {
 	}
 }
 
+#[derive(Debug)]
 pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
 	node: Arc<N>,
 	wrapped: Arc<Mutex<T>>,
@@ -115,4 +119,31 @@ impl<N: NodeType, T: Send + Sync + 'static> NodeType for HandlerWrapper<N, T> {
 	fn node(&self) -> &Node {
 		self.node().node()
 	}
+}
+
+impl<N: NodeType, T: Send + Sync + 'static> Clone for HandlerWrapper<N, T> {
+	fn clone(&self) -> Self {
+		Self {
+			node: self.node.clone(),
+			wrapped: self.wrapped.clone(),
+		}
+	}
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DummyHandler;
+impl InputHandlerHandler for DummyHandler {
+	fn input(&mut self, _input: stardust_xr::schemas::flat::InputData) -> bool {
+		false
+	}
+}
+impl ZoneHandler for DummyHandler {
+	fn enter(&mut self, _zone: &spatial::Zone, _uid: &str, _spatial: &spatial::Spatial) {}
+	fn capture(&mut self, _zone: &spatial::Zone, _uid: &str, _spatial: &spatial::Spatial) {}
+	fn release(&mut self, _zone: &spatial::Zone, _uid: &str) {}
+	fn leave(&mut self, _zone: &spatial::Zone, _uid: &str) {}
+}
+impl PanelItemHandler for DummyHandler {
+	fn resize(&mut self, _size: mint::Vector2<u32>) {}
+	fn set_cursor(&mut self, _info: Option<items::panel::PanelItemCursor>) {}
 }
