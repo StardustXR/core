@@ -4,12 +4,11 @@ use std::sync::Weak;
 
 use stardust_xr::values::Transform;
 
+use super::{HandledItem, Item};
 use crate::client::Client;
 use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
 use crate::{HandlerWrapper, WeakNodeRef, WeakWrapped};
-
-use super::{HandledItem, Item};
 
 pub struct EnvironmentItem {
 	pub spatial: Spatial,
@@ -99,31 +98,29 @@ impl Deref for EnvironmentItem {
 }
 
 #[tokio::test]
-async fn fusion_environment_item() {
+async fn fusion_environment_ui() -> anyhow::Result<()> {
 	use manifest_dir_macros::file_relative_path;
-	let (client, _event_loop) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
+	let (client, event_loop) = Client::connect_with_async_loop().await?;
 
-	let _environment_item = EnvironmentItem::builder()
+	let environment_item = EnvironmentItem::builder()
 		.spatial_parent(client.get_root())
 		.file_path(file_relative_path!("res/fusion/sky.hdr"))
 		.build()
 		.unwrap();
-}
-
-#[tokio::test]
-async fn fusion_environment_ui() -> anyhow::Result<()> {
-	let (client, event_loop) = Client::connect_with_async_loop().await?;
 
 	struct EnvironmentUI {
 		path: String,
 		_item: WeakNodeRef<EnvironmentItem>,
+		acceptor: bool,
 	}
 	impl EnvironmentUI {
-		pub fn new(path: String, _item: WeakNodeRef<EnvironmentItem>) -> Self {
+		pub fn new(path: String, _item: WeakNodeRef<EnvironmentItem>, acceptor: bool) -> Self {
 			println!("Environment item with path {path} created");
-			EnvironmentUI { path, _item }
+			EnvironmentUI {
+				path,
+				_item,
+				acceptor,
+			}
 		}
 	}
 	impl crate::items::ItemHandler<EnvironmentItem> for EnvironmentUI {
@@ -133,6 +130,10 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 				acceptor_uid,
 				item.uid()
 			);
+			if self.acceptor {
+				println!("Got accepted sucessfully!");
+				item.release().unwrap();
+			}
 		}
 		fn released(&mut self, item: &EnvironmentItem, acceptor_uid: &str) {
 			println!(
@@ -140,6 +141,12 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 				acceptor_uid,
 				item.uid()
 			);
+			if self.acceptor {
+				println!("Got released sucessfully!");
+				if let Some(client) = item.client() {
+					client.stop_loop();
+				}
+			}
 		}
 	}
 	impl Drop for EnvironmentUI {
@@ -151,9 +158,25 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 	let _item_ui = crate::items::ItemUI::register(
 		&client,
 		|init_data, _weak_wrapped, weak_node_ref, _item: &EnvironmentItem| {
-			EnvironmentUI::new(init_data, weak_node_ref)
+			EnvironmentUI::new(init_data, weak_node_ref, false)
 		},
 	)?;
+
+	let item_acceptor_field =
+		crate::fields::SphereField::create(client.get_root(), None, 0.5).unwrap();
+	let item_acceptor = crate::items::ItemAcceptor::create(
+		client.get_root(),
+		None,
+		None,
+		&item_acceptor_field,
+		|init_data, _weak_wrapped, weak_node_ref, _item: &EnvironmentItem| {
+			EnvironmentUI::new(init_data, weak_node_ref, true)
+		},
+	)
+	.unwrap();
+	dbg!(item_acceptor.node());
+
+	item_acceptor.capture(&environment_item).unwrap();
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),

@@ -28,6 +28,10 @@ pub trait Item: NodeType + Send + Sync + 'static {
 	fn uid(&self) -> &str {
 		self.node().get_name()
 	}
+
+	fn release(&self) -> Result<(), NodeError> {
+		self.node().send_remote_signal("release", &())
+	}
 }
 pub trait HandledItem<H: Send + Sync + 'static>: Item {
 	fn from_path<F>(
@@ -241,7 +245,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor
 					spatial_parent.node().client.clone(),
 					"/item",
 					"create_item_acceptor",
-					&format!("/item/{}/acceptor/{}", I::TYPE_NAME, &id),
+					&format!("/item/{}/acceptor", I::TYPE_NAME),
 					true,
 					&id,
 					(
@@ -308,6 +312,11 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor
 
 	pub fn items(&self) -> MutexGuard<FxHashMap<String, HandlerWrapper<I, H>>> {
 		self.items.lock()
+	}
+
+	pub fn capture(&self, item: &I) -> Result<(), NodeError> {
+		self.node()
+			.send_remote_signal("capture", &item.node().get_path())
 	}
 }
 impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> NodeType
