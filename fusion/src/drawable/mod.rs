@@ -1,6 +1,8 @@
+mod lines;
 mod model;
 mod text;
 
+pub use lines::*;
 pub use model::*;
 use stardust_xr::schemas::flex::serialize;
 pub use text::*;
