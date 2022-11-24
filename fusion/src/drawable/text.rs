@@ -52,7 +52,7 @@ pub struct TextStyle<R: Resource> {
 impl<R: Resource> Default for TextStyle<R> {
 	fn default() -> Self {
 		TextStyle {
-			character_height: 1_f32,
+			character_height: 1.0,
 			color: rgba!(255, 255, 255, 255),
 			font_resource: None,
 			text_align: Alignment::TopLeft.into(),

@@ -66,22 +66,16 @@ async fn fusion_sphere_field() {
 		.build()
 		.expect("Unable to make sphere field");
 	let distance = sphere_field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
-		)
+		.distance(client.get_root(), mint::Vector3::from([0.0, 1.0, 0.0]))
 		.unwrap()
 		.await
 		.expect("Unable to get sphere field distance");
-	assert_eq!(distance, 0.5_f32);
+	assert_eq!(distance, 0.5);
 	sphere_field.set_radius(1.0).unwrap();
 	let distance = sphere_field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 2_f32, 0_f32]),
-		)
+		.distance(client.get_root(), mint::Vector3::from([0.0, 2.0, 0.0]))
 		.unwrap()
 		.await
 		.expect("Unable to get sphere field distance");
-	assert_eq!(distance, 1_f32);
+	assert_eq!(distance, 1.0);
 }

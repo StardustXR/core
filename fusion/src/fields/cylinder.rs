@@ -80,12 +80,9 @@ async fn fusion_cylinder_field() {
 		.build()
 		.expect("Unable to make cylinder field");
 	let distance = cylinder_field
-		.distance(
-			client.get_root(),
-			mint::Vector3::from([0_f32, 1_f32, 0_f32]),
-		)
+		.distance(client.get_root(), mint::Vector3::from([0.0, 1.0, 0.0]))
 		.unwrap()
 		.await
-		.expect("Unable to cylinder box field distance");
-	assert_eq!(distance, 0.5_f32);
+		.expect("Unable to get cylinder field distance");
+	assert_eq!(distance, 0.5);
 }

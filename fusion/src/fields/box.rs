@@ -79,9 +79,9 @@ async fn fusion_box_field() {
 		.build()
 		.expect("Unable to make box field");
 	let distance = box_field
-		.distance(client.get_root(), Vector3::from([0_f32, 1_f32, 0_f32]))
+		.distance(client.get_root(), Vector3::from([0.0, 1.0, 0.0]))
 		.unwrap()
 		.await
 		.expect("Unable to get box field distance");
-	assert_eq!(distance, 0.5_f32);
+	assert_eq!(distance, 0.5);
 }
