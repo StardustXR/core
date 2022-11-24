@@ -1,6 +1,7 @@
 mod r#box;
 mod cylinder;
 mod sphere;
+pub mod torus;
 
 pub use cylinder::*;
 use mint::Vector3;
