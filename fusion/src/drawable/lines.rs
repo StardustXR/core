@@ -119,11 +119,11 @@ async fn fusion_lines() {
 				y: 0.0,
 				z: 0.0,
 			},
-			thickness: 0.01,
+			thickness: 0.0025,
 			..Default::default()
 		},
 		LinePoint {
-			thickness: 0.01,
+			thickness: 0.0025,
 			..Default::default()
 		},
 		LinePoint {
@@ -132,7 +132,7 @@ async fn fusion_lines() {
 				y: 1.0,
 				z: 0.0,
 			},
-			thickness: 0.01,
+			thickness: 0.0025,
 			..Default::default()
 		},
 	];
