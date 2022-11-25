@@ -8,7 +8,8 @@ impl<T: Sized + Clone + Send + Sync + 'static> InputActionState for T {}
 pub type ActiveCondition<S> = fn(&InputData, state: &S) -> bool;
 
 pub trait InputAction<S: InputActionState> {
-	fn base(&mut self) -> &mut BaseInputAction<S>;
+	fn base(&self) -> &BaseInputAction<S>;
+	fn base_mut(&mut self) -> &mut BaseInputAction<S>;
 	fn type_erase(&mut self) -> &mut dyn InputAction<S>
 	where
 		Self: Sized,
@@ -74,7 +75,10 @@ impl<S: InputActionState> BaseInputAction<S> {
 }
 
 impl<S: InputActionState> InputAction<S> for BaseInputAction<S> {
-	fn base(&mut self) -> &mut BaseInputAction<S> {
+	fn base(&self) -> &BaseInputAction<S> {
+		self
+	}
+	fn base_mut(&mut self) -> &mut BaseInputAction<S> {
 		self
 	}
 }
@@ -125,7 +129,7 @@ impl<S: InputActionState> InputActionHandler<S> {
 					.iter_mut()
 					.find(|internal_action| **internal_action == *action.base())
 				{
-					internal_action.update(action.base());
+					internal_action.update(action.base_mut());
 				}
 				action.base().clone()
 			})
@@ -184,7 +188,10 @@ async fn fusion_input_action_handler() {
 		}
 	}
 	impl<S: InputActionState> InputAction<S> for FancyInputAction<S> {
-		fn base(&mut self) -> &mut BaseInputAction<S> {
+		fn base(&self) -> &BaseInputAction<S> {
+			&self.action
+		}
+		fn base_mut(&mut self) -> &mut BaseInputAction<S> {
 			&mut self.action
 		}
 	}
