@@ -4,7 +4,7 @@ use crate::{
 	spatial::Spatial,
 };
 use anyhow::Result;
-use color::rgba;
+use color::{rgba, Rgba};
 use flagset::{flags, FlagSet};
 use mint::Vector2;
 use stardust_xr::values::Transform;
@@ -41,7 +41,7 @@ pub enum TextFit {
 #[derive(Debug)]
 pub struct TextStyle<R: Resource> {
 	pub character_height: f32,
-	pub color: color::Rgba,
+	pub color: Rgba<f32>,
 	pub font_resource: Option<R>,
 	pub text_align: FlagSet<Alignment>,
 	pub bounds: Option<Vector2<f32>>,
@@ -53,7 +53,7 @@ impl<R: Resource> Default for TextStyle<R> {
 	fn default() -> Self {
 		TextStyle {
 			character_height: 1.0,
-			color: rgba!(255, 255, 255, 255),
+			color: rgba!(1.0, 1.0, 1.0, 1.0),
 			font_resource: None,
 			text_align: Alignment::TopLeft.into(),
 			bounds: None,
