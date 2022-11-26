@@ -3,7 +3,7 @@ use crate::{
 	spatial::Spatial,
 };
 use anyhow::Result;
-use color::rgba;
+use color::{rgba, Rgba};
 use mint::Vector3;
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 use stardust_xr::values::Transform;
@@ -17,7 +17,7 @@ pub trait ToLines {
 pub struct LinePoint {
 	pub point: Vector3<f32>,
 	pub thickness: f32,
-	pub color: color::Rgba,
+	pub color: Rgba<f32>,
 }
 impl Default for LinePoint {
 	fn default() -> Self {
@@ -28,7 +28,7 @@ impl Default for LinePoint {
 				z: 0.0,
 			},
 			thickness: 0.01,
-			color: rgba!(255, 255, 255, 255),
+			color: rgba!(1.0, 1.0, 1.0, 1.0),
 		}
 	}
 }
