@@ -150,7 +150,9 @@ impl<'a> PulseSender {
 			.send_remote_signal("send_data", &(receiver.node().get_name(), data))
 	}
 
-	pub fn receivers(&self) -> RwLockReadGuard<FxHashMap<String, (PulseReceiver, UnknownField)>> {
+	pub fn receivers<'r>(
+		&'r self,
+	) -> RwLockReadGuard<'r, FxHashMap<String, (PulseReceiver, UnknownField)>> {
 		self.receivers.read()
 	}
 }
