@@ -6,7 +6,7 @@ use crate::{
 	HandlerWrapper, WeakNodeRef, WeakWrapped,
 };
 use mint::{Quaternion, Vector3};
-use parking_lot::Mutex;
+use parking_lot::{RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
 use stardust_xr::{schemas::flex::deserialize, values::Transform};
@@ -22,18 +22,18 @@ pub trait PulseSenderHandler: Send + Sync {
 	fn drop_receiver(&mut self, uid: &str);
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NewReceiverInfo {
-	uid: String,
-	distance: f32,
-	position: Vector3<f32>,
-	rotation: Quaternion<f32>,
+	pub uid: String,
+	pub distance: f32,
+	pub position: Vector3<f32>,
+	pub rotation: Quaternion<f32>,
 }
 
 #[derive(Debug)]
 pub struct PulseSender {
 	pub spatial: Spatial,
-	pub receivers: Mutex<FxHashMap<String, (PulseReceiver, UnknownField)>>,
+	receivers: RwLock<FxHashMap<String, (PulseReceiver, UnknownField)>>,
 }
 impl<'a> PulseSender {
 	pub fn create<F, T>(
@@ -72,7 +72,7 @@ impl<'a> PulseSender {
 					),
 				)?,
 			},
-			receivers: Mutex::new(FxHashMap::default()),
+			receivers: RwLock::new(FxHashMap::default()),
 		};
 
 		let handler_wrapper = HandlerWrapper::new(sender, |weak_handler, weak_node_ref, sender| {
@@ -102,10 +102,10 @@ impl<'a> PulseSender {
 								};
 								sender
 									.receivers
-									.lock()
+									.write()
 									.insert(info.uid.clone(), (receiver, field));
 								if let Some(handler) = weak_handler.upgrade() {
-									let receivers = sender.receivers.lock();
+									let receivers = sender.receivers.read();
 									let (receiver, field) = receivers.get(&info.uid).unwrap();
 									handler.lock().new_receiver(receiver, field, info);
 									// handler.lock().enter(, spatial)
@@ -125,7 +125,7 @@ impl<'a> PulseSender {
 					move |data| {
 						let uid: &str = deserialize(data)?;
 						weak_node_ref.with_node(|sender| {
-							sender.receivers.lock().remove(uid);
+							sender.receivers.write().remove(uid);
 							if let Some(handler) = weak_handler.upgrade() {
 								handler.lock().drop_receiver(uid);
 							}
@@ -148,6 +148,10 @@ impl<'a> PulseSender {
 
 		self.node
 			.send_remote_signal("send_data", &(receiver.node().get_name(), data))
+	}
+
+	pub fn receivers(&self) -> RwLockReadGuard<FxHashMap<String, (PulseReceiver, UnknownField)>> {
+		self.receivers.read()
 	}
 }
 impl NodeType for PulseSender {
