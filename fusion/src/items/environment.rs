@@ -179,7 +179,8 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 	item_acceptor.capture(&environment_item).unwrap();
 
 	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
-		_ = event_loop => Ok(()),
+		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out"))?,
+		e = event_loop => e??,
 	}
+	Ok(())
 }

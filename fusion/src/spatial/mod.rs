@@ -157,6 +157,6 @@ async fn fusion_spatial() {
 	tokio::select! {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
-		_ = event_loop => (),
+		e = event_loop => e.unwrap().unwrap(),
 	};
 }

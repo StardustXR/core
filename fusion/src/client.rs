@@ -3,7 +3,7 @@ use super::{scenegraph::Scenegraph, spatial::Spatial};
 use anyhow::Result;
 use parking_lot::Mutex;
 use serde::Deserialize;
-use stardust_xr::messenger;
+use stardust_xr::messenger::{self, MessengerError};
 use stardust_xr::schemas::flex::{deserialize, serialize};
 use stardust_xr::{
 	client,
@@ -127,23 +127,38 @@ impl Client {
 		Ok(())
 	}
 
-	pub async fn connect_with_async_loop() -> Result<(Arc<Self>, JoinHandle<()>), std::io::Error> {
+	pub async fn connect_with_async_loop(
+	) -> Result<(Arc<Self>, JoinHandle<Result<(), MessengerError>>), std::io::Error> {
 		let (client, mut message_tx, mut message_rx) = Client::connect().await?;
 
 		let event_loop = tokio::task::spawn({
 			let client = client.clone();
 			let scenegraph = client.scenegraph.clone();
 			async move {
-				let dispatch_loop =
-					async move { while message_rx.dispatch(&*scenegraph).await.is_ok() {} };
-				let flush_loop = async move { while message_tx.flush().await.is_ok() {} };
+				let dispatch_loop = async move {
+					loop {
+						match message_rx.dispatch(&*scenegraph).await {
+							Ok(_) => continue,
+							Err(e) => break e,
+						}
+					}
+				};
+				let flush_loop = async move {
+					loop {
+						match message_tx.flush().await {
+							Ok(_) => continue,
+							Err(e) => break e,
+						}
+					}
+				};
 
-				tokio::select! {
-					_ = client.stop_notifier.notified() => (),
-					_ = dispatch_loop => (),
-					_ = flush_loop => (),
-				}
+				let result = tokio::select! {
+					_ = client.stop_notifier.notified() => Ok(()),
+					e = dispatch_loop => Err(e),
+					e = flush_loop => Err(e),
+				};
 				println!("Stopped the loop");
+				result
 			}
 		});
 		Client::setup(&client)?;
@@ -202,8 +217,8 @@ async fn fusion_client_connect() -> anyhow::Result<()> {
 	tokio::select! {
 		biased;
 		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => (),
-		_ = event_loop => (),
-	};
+		e = event_loop => e??,
+	}
 	drop(client);
 	Ok(())
 }

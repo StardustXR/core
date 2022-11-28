@@ -1,4 +1,3 @@
-use anyhow::Result;
 use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
 use stardust_xr_fusion::{
@@ -10,16 +9,17 @@ use stardust_xr_fusion::{
 use std::sync::Arc;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
-	let (client, event_loop) = Client::connect_with_async_loop().await?;
+async fn main() {
+	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
-	let _root = client.wrap_root(SpatialDemo::new(&client)?);
+	let _root = client.wrap_root(SpatialDemo::new(&client));
 
 	tokio::select! {
-		_ = tokio::signal::ctrl_c() => Ok(()),
-		_ = event_loop => Err(anyhow::anyhow!("Server crashed")),
-	}
+		biased;
+		_ = tokio::signal::ctrl_c() => (),
+		e = event_loop => e.unwrap().unwrap(),
+	};
 }
 
 struct SpatialDemo {
@@ -30,36 +30,41 @@ struct SpatialDemo {
 	ring_outer: Model,
 }
 impl SpatialDemo {
-	fn new(client: &Arc<Client>) -> Result<Self> {
+	fn new(client: &Arc<Client>) -> Self {
 		let _root = Spatial::builder()
 			.spatial_parent(client.get_root())
 			.zoneable(true)
-			.build()?;
+			.build()
+			.unwrap();
 
 		let gem = Model::builder()
 			.spatial_parent(&_root)
 			.resource(&NamespacedResource::new("fusion", "gyro_gem.glb"))
-			.build()?;
+			.build()
+			.unwrap();
 		let ring_inner = Model::builder()
 			.spatial_parent(&_root)
 			.resource(&NamespacedResource::new("fusion", "gyro_inside.glb"))
-			.build()?;
+			.build()
+			.unwrap();
 		let ring_middle = Model::builder()
 			.spatial_parent(&ring_inner)
 			.resource(&NamespacedResource::new("fusion", "gyro_middle.glb"))
-			.build()?;
+			.build()
+			.unwrap();
 		let ring_outer = Model::builder()
 			.spatial_parent(&ring_middle)
 			.resource(&NamespacedResource::new("fusion", "gyro_outside.glb"))
-			.build()?;
+			.build()
+			.unwrap();
 
-		Ok(SpatialDemo {
+		SpatialDemo {
 			_root,
 			gem,
 			ring_inner,
 			ring_middle,
 			ring_outer,
-		})
+		}
 	}
 }
 impl LifeCycleHandler for SpatialDemo {

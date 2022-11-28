@@ -218,7 +218,8 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 	)?;
 
 	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
-		_ = event_loop => Ok(()),
+		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out"))?,
+		e = event_loop => e??,
 	}
+	Ok(())
 }

@@ -249,6 +249,6 @@ async fn fusion_zone() {
 	tokio::select! {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
-		_ = event_loop => (),
+		e = event_loop => e.unwrap().unwrap(),
 	};
 }
