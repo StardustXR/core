@@ -152,13 +152,11 @@ impl Client {
 					}
 				};
 
-				let result = tokio::select! {
+				tokio::select! {
 					_ = client.stop_notifier.notified() => Ok(()),
 					e = dispatch_loop => Err(e),
 					e = flush_loop => Err(e),
-				};
-				println!("Stopped the loop");
-				result
+				}
 			}
 		});
 		Client::setup(&client)?;
