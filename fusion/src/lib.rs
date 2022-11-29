@@ -24,8 +24,6 @@ use parking_lot::{Mutex, MutexGuard};
 use spatial::ZoneHandler;
 use std::sync::{Arc, Weak};
 
-pub type WeakWrapped<T> = Weak<Mutex<T>>;
-
 #[derive(Debug)]
 pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
 	node: Arc<N>,
@@ -34,7 +32,7 @@ pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
 impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 	pub fn new<F>(node: N, wrapper_handler_init: F) -> Self
 	where
-		F: FnOnce(WeakWrapped<T>, &Arc<N>) -> T,
+		F: FnOnce(Weak<Mutex<T>>, &Arc<N>) -> T,
 	{
 		let node = Arc::new(node);
 		Self {
@@ -47,12 +45,12 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 		self.wrapped.lock()
 	}
 
-	pub fn node(&self) -> &N {
+	pub fn node(&self) -> &Arc<N> {
 		&self.node
 	}
 
-	pub fn weak_wrapped(&self) -> WeakWrapped<T> {
-		Arc::downgrade(&self.wrapped)
+	pub fn wrapped(&self) -> &Arc<Mutex<T>> {
+		&self.wrapped
 	}
 
 	pub(crate) fn add_handled_signal(
@@ -61,7 +59,7 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 		parse: fn(Arc<N>, Arc<Mutex<T>>, &[u8]) -> Result<()>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
-		let handler = self.weak_wrapped();
+		let handler = Arc::downgrade(&self.wrapped);
 		self.node.node().add_local_signal(name, move |data| {
 			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
 			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
@@ -75,7 +73,7 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 		parse: fn(Arc<N>, Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
-		let handler = self.weak_wrapped();
+		let handler = Arc::downgrade(&self.wrapped);
 		self.node.node().add_local_method(name, move |data| {
 			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
 			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };

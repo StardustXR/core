@@ -6,7 +6,7 @@ use crate::{fields::Field, spatial::Spatial, DummyHandler};
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
-	HandlerWrapper, WeakWrapped,
+	HandlerWrapper,
 };
 use anyhow::anyhow;
 use parking_lot::{Mutex, MutexGuard};
@@ -16,7 +16,10 @@ use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
 	values::Transform,
 };
-use std::{any::TypeId, sync::Arc};
+use std::{
+	any::TypeId,
+	sync::{Arc, Weak},
+};
 
 pub trait Item: NodeType + Send + Sync + 'static {
 	type ItemType;
@@ -39,7 +42,7 @@ pub trait HandledItem<H: Send + Sync + 'static>: Item {
 		ui_init_fn: F,
 	) -> HandlerWrapper<Self, H>
 	where
-		F: FnMut(Self::InitData, WeakWrapped<H>, &Arc<Self>) -> H + Clone + Send + Sync + 'static;
+		F: FnMut(Self::InitData, Weak<Mutex<H>>, &Arc<Self>) -> H + Clone + Send + Sync + 'static;
 }
 
 pub trait ItemHandler<I: Item>: Send + Sync + 'static {
@@ -56,7 +59,7 @@ pub struct ItemUI<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<
 impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I, H> {
 	pub fn register<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
 	where
-		F: FnMut(I::InitData, WeakWrapped<H>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
+		F: FnMut(I::InitData, Weak<Mutex<H>>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
 	{
 		if !client
 			.registered_item_uis
@@ -71,7 +74,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I,
 
 	fn new_item_ui<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
 	where
-		F: FnMut(I::InitData, WeakWrapped<H>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
+		F: FnMut(I::InitData, Weak<Mutex<H>>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
 	{
 		let item_ui = ItemUI::<I, H> {
 			node: Node::from_path(client, "/item", I::TYPE_NAME, true),
@@ -196,7 +199,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemAccep
 		item_acceptor_init: F,
 	) -> Result<ItemAcceptor<I, H>, NodeError>
 	where
-		F: FnMut(I::InitData, WeakWrapped<H>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
+		F: FnMut(I::InitData, Weak<Mutex<H>>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
 	{
 		let id = nanoid::nanoid!();
 		let item_acceptor = ItemAcceptor::<I, H> {

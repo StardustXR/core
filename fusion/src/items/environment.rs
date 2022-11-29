@@ -1,14 +1,15 @@
 use std::ops::Deref;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
+use parking_lot::Mutex;
 use stardust_xr::values::Transform;
 
 use super::{HandledItem, Item};
 use crate::client::Client;
 use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
-use crate::{HandlerWrapper, WeakWrapped};
+use crate::HandlerWrapper;
 
 pub struct EnvironmentItem {
 	pub spatial: Spatial,
@@ -73,7 +74,7 @@ impl<T: Send + Sync + 'static> HandledItem<T> for EnvironmentItem {
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<Self, T>
 	where
-		F: FnMut(Self::InitData, WeakWrapped<T>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
+		F: FnMut(Self::InitData, Weak<Mutex<T>>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
 		T: Send + Sync + 'static,
 	{
 		let item = EnvironmentItem {

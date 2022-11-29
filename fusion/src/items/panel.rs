@@ -4,13 +4,16 @@ use crate::{
 	drawable::Model,
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakWrapped,
+	HandlerWrapper,
 };
 use mint::Vector2;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use stardust_xr::schemas::flex::deserialize;
-use std::{ops::Deref, sync::Arc};
+use std::{
+	ops::Deref,
+	sync::{Arc, Weak},
+};
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 pub trait PanelItemHandler: Send + Sync {
@@ -139,7 +142,7 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<Self, T>
 	where
-		F: FnMut(Self::InitData, WeakWrapped<T>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
+		F: FnMut(Self::InitData, Weak<Mutex<T>>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
 	{
 		let item = PanelItem {
 			spatial: Spatial {
@@ -147,7 +150,7 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 			},
 		};
 
-		let handler_wrapper = HandlerWrapper::new(item, |handler: WeakWrapped<T>, item| {
+		let handler_wrapper = HandlerWrapper::new(item, |handler: Weak<Mutex<T>>, item| {
 			ui_init_fn(init_data, handler, item)
 		});
 		handler_wrapper
