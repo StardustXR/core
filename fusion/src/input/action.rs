@@ -166,7 +166,7 @@ async fn fusion_input_action_handler() {
 		.build()
 		.unwrap();
 	let input_action_test = InputActionHandlerTest {
-		input_handler: InputHandler::create(client.get_root(), None, None, &field, |_, _| {
+		input_handler: InputHandler::create(client.get_root(), None, None, &field, |_| {
 			InputActionHandler::new(0.05)
 		})
 		.unwrap(),

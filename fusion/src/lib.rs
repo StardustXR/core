@@ -16,31 +16,14 @@ pub mod startup_settings;
 
 use self::node::{Node, NodeType};
 use anyhow::Result;
+use client::LifeCycleHandler;
 use input::InputHandlerHandler;
-use items::panel::PanelItemHandler;
+use items::{panel::PanelItemHandler, Item, ItemHandler};
 use parking_lot::{Mutex, MutexGuard};
 use spatial::ZoneHandler;
 use std::sync::{Arc, Weak};
 
 pub type WeakWrapped<T> = Weak<Mutex<T>>;
-
-pub struct WeakNodeRef<N: NodeType + Sized>(pub(crate) Weak<N>);
-impl<N: NodeType + Sized> WeakNodeRef<N> {
-	pub fn empty() -> Self {
-		WeakNodeRef(Weak::new())
-	}
-	pub fn with_node<F, O>(&self, f: F) -> Option<O>
-	where
-		F: FnOnce(&N) -> O,
-	{
-		self.0.upgrade().as_deref().map(f)
-	}
-}
-impl<N: NodeType + Sized> Clone for WeakNodeRef<N> {
-	fn clone(&self) -> Self {
-		Self(self.0.clone())
-	}
-}
 
 #[derive(Debug)]
 pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
@@ -50,17 +33,11 @@ pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
 impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 	pub fn new<F>(node: N, wrapper_handler_init: F) -> Self
 	where
-		F: FnOnce(WeakWrapped<T>, WeakNodeRef<N>, &N) -> T,
+		F: FnOnce(WeakWrapped<T>, &Arc<N>) -> T,
 	{
 		let node = Arc::new(node);
 		Self {
-			wrapped: Arc::new_cyclic(|weak| {
-				Mutex::new(wrapper_handler_init(
-					weak.clone(),
-					WeakNodeRef(Arc::downgrade(&node)),
-					&node,
-				))
-			}),
+			wrapped: Arc::new_cyclic(|weak| Mutex::new(wrapper_handler_init(weak.clone(), &node))),
 			node,
 		}
 	}
@@ -71,9 +48,6 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 
 	pub fn node(&self) -> &N {
 		&self.node
-	}
-	pub fn weak_node_ref(&self) -> WeakNodeRef<N> {
-		WeakNodeRef(Arc::downgrade(&self.node))
 	}
 
 	pub fn weak_wrapped(&self) -> WeakWrapped<T> {
@@ -132,18 +106,25 @@ impl<N: NodeType, T: Send + Sync + 'static> Clone for HandlerWrapper<N, T> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct DummyHandler;
+impl LifeCycleHandler for DummyHandler {
+	fn logic_step(&mut self, _info: client::LogicStepInfo) {}
+}
 impl InputHandlerHandler for DummyHandler {
 	fn input(&mut self, _input: stardust_xr::schemas::flat::InputData) -> bool {
 		false
 	}
 }
-impl ZoneHandler for DummyHandler {
-	fn enter(&mut self, _zone: &spatial::Zone, _uid: &str, _spatial: &spatial::Spatial) {}
-	fn capture(&mut self, _zone: &spatial::Zone, _uid: &str, _spatial: &spatial::Spatial) {}
-	fn release(&mut self, _zone: &spatial::Zone, _uid: &str) {}
-	fn leave(&mut self, _zone: &spatial::Zone, _uid: &str) {}
+impl<I: Item> ItemHandler<I> for DummyHandler {
+	fn captured(&mut self, _item: &I, _acceptor_uid: &str) {}
+	fn released(&mut self, _item: &I, _acceptor_uid: &str) {}
 }
 impl PanelItemHandler for DummyHandler {
 	fn resize(&mut self, _size: mint::Vector2<u32>) {}
 	fn set_cursor(&mut self, _info: Option<items::panel::PanelItemCursor>) {}
+}
+impl ZoneHandler for DummyHandler {
+	fn enter(&mut self, _uid: &str, _spatial: &spatial::Spatial) {}
+	fn capture(&mut self, _uid: &str, _spatial: &spatial::Spatial) {}
+	fn release(&mut self, _uid: &str) {}
+	fn leave(&mut self, _uid: &str) {}
 }

@@ -5,7 +5,7 @@ use super::{
 	fields::Field,
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakNodeRef, WeakWrapped,
+	HandlerWrapper, WeakWrapped,
 };
 pub use action as action_handler;
 pub use stardust_xr::schemas::flat::*;
@@ -44,7 +44,7 @@ impl<'a> InputHandler {
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Self, T>, NodeError>
 	where
-		F: FnOnce(WeakNodeRef<InputHandler>, &InputHandler) -> T,
+		F: FnOnce(&Arc<InputHandler>) -> T,
 		T: InputHandlerHandler + 'static,
 	{
 		let id = nanoid::nanoid!();
@@ -71,25 +71,24 @@ impl<'a> InputHandler {
 			},
 		};
 
-		let handler_wrapper =
-			HandlerWrapper::new(handler, |weak_handler, weak_node_ref, input_handler| {
-				let contents = wrapped_init(weak_node_ref, input_handler);
-				input_handler.node.local_methods.lock().insert(
-					"input".to_string(),
-					Arc::new({
-						let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;
-						move |data| {
-							let capture = if let Some(handler) = weak_handler.upgrade() {
-								handler.lock().input(InputData::deserialize(data)?)
-							} else {
-								false
-							};
-							Ok(flexbuffers::singleton(capture))
-						}
-					}),
-				);
-				contents
-			});
+		let handler_wrapper = HandlerWrapper::new(handler, |weak_handler, node_ref| {
+			let contents = wrapped_init(node_ref);
+			node_ref.node.local_methods.lock().insert(
+				"input".to_string(),
+				Arc::new({
+					let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;
+					move |data| {
+						let capture = if let Some(handler) = weak_handler.upgrade() {
+							handler.lock().input(InputData::deserialize(data)?)
+						} else {
+							false
+						};
+						Ok(flexbuffers::singleton(capture))
+					}
+				}),
+			);
+			contents
+		});
 
 		// handler_wrapper.
 		Ok(handler_wrapper)
@@ -155,10 +154,8 @@ async fn fusion_input_handler() {
 	// 	.build()
 	// 	.await
 	// 	.unwrap();
-	let _input_handler = InputHandler::create(client.get_root(), None, None, &field, |_, _| {
-		InputHandlerTest
-	})
-	.unwrap();
+	let _input_handler =
+		InputHandler::create(client.get_root(), None, None, &field, |_| InputHandlerTest).unwrap();
 
 	tokio::select! {
 		biased;

@@ -3,7 +3,7 @@ use crate::{
 	node::NodeError,
 	node::{ClientOwned, Node, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakNodeRef, WeakWrapped,
+	HandlerWrapper, WeakWrapped,
 };
 use mint::{Quaternion, Vector3};
 use parking_lot::{RwLock, RwLockReadGuard};
@@ -44,7 +44,7 @@ impl<'a> PulseSender {
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<PulseSender, T>, NodeError>
 	where
-		F: FnOnce(WeakNodeRef<PulseSender>, &PulseSender) -> T,
+		F: FnOnce(&Arc<PulseSender>) -> T,
 		T: PulseSenderHandler + 'static,
 	{
 		flexbuffers::Reader::get_root(mask.as_slice())
@@ -75,45 +75,40 @@ impl<'a> PulseSender {
 			receivers: RwLock::new(FxHashMap::default()),
 		};
 
-		let handler_wrapper = HandlerWrapper::new(sender, |weak_handler, weak_node_ref, sender| {
+		let handler_wrapper = HandlerWrapper::new(sender, |weak_handler, sender| {
 			sender.node().local_signals.lock().insert(
 				"new_receiver".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn PulseSenderHandler> = weak_handler.clone();
-					let weak_node_ref = weak_node_ref.clone();
+					let node_ref = sender.clone();
 					move |data| {
 						let info: NewReceiverInfo = deserialize(data)?;
-						weak_node_ref
-							.with_node(|sender| -> anyhow::Result<()> {
-								let receiver = PulseReceiver {
-									spatial: Spatial::from_path(
-										sender.node().client.clone(),
-										&(sender.node().get_path().to_string() + "/" + &info.uid),
-										false,
-									)?,
-								};
-								let field = UnknownField {
-									spatial: Spatial::from_path(
-										sender.node().client.clone(),
-										&(sender.node().get_path().to_string()
-											+ "/" + &info.uid + "-field"),
-										false,
-									)?,
-								};
-								sender
-									.receivers
-									.write()
-									.insert(info.uid.clone(), (receiver, field));
-								if let Some(handler) = weak_handler.upgrade() {
-									let receivers = sender.receivers.read();
-									let (receiver, field) = receivers.get(&info.uid).unwrap();
-									handler.lock().new_receiver(receiver, field, info);
-									// handler.lock().enter(, spatial)
-								}
-								Ok(())
-							})
-							.transpose()
-							.map(|_| ())
+						let receiver = PulseReceiver {
+							spatial: Spatial::from_path(
+								node_ref.node().client.clone(),
+								&(node_ref.node().get_path().to_string() + "/" + &info.uid),
+								false,
+							)?,
+						};
+						let field = UnknownField {
+							spatial: Spatial::from_path(
+								node_ref.node().client.clone(),
+								&(node_ref.node().get_path().to_string()
+									+ "/" + &info.uid + "-field"),
+								false,
+							)?,
+						};
+						node_ref
+							.receivers
+							.write()
+							.insert(info.uid.clone(), (receiver, field));
+						if let Some(handler) = weak_handler.upgrade() {
+							let receivers = node_ref.receivers.read();
+							let (receiver, field) = receivers.get(&info.uid).unwrap();
+							handler.lock().new_receiver(receiver, field, info);
+							// handler.lock().enter(, spatial)
+						}
+						Ok(())
 					}
 				}),
 			);
@@ -121,20 +116,18 @@ impl<'a> PulseSender {
 				"drop_receiver".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn PulseSenderHandler> = weak_handler;
-					let weak_node_ref = weak_node_ref.clone();
+					let sender = sender.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;
-						weak_node_ref.with_node(|sender| {
-							sender.receivers.write().remove(uid);
-							if let Some(handler) = weak_handler.upgrade() {
-								handler.lock().drop_receiver(uid);
-							}
-						});
+						sender.receivers.write().remove(uid);
+						if let Some(handler) = weak_handler.upgrade() {
+							handler.lock().drop_receiver(uid);
+						}
 						Ok(())
 					}
 				}),
 			);
-			wrapped_init(weak_node_ref, sender)
+			wrapped_init(sender)
 		});
 
 		// handler_wrapper.
@@ -186,7 +179,7 @@ impl<'a> PulseReceiver {
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Self, T>, NodeError>
 	where
-		F: FnOnce(WeakNodeRef<PulseReceiver>, &PulseReceiver) -> T,
+		F: FnOnce(&Arc<PulseReceiver>) -> T,
 		T: PulseReceiverHandler + 'static,
 	{
 		flexbuffers::Reader::get_root(mask.as_slice())
@@ -218,34 +211,31 @@ impl<'a> PulseReceiver {
 			},
 		};
 
-		Ok(HandlerWrapper::new(
-			pulse_rx,
-			|weak_handler, weak_node_ref, receiver| {
-				receiver.node().local_signals.lock().insert(
-					"data".to_string(),
-					Arc::new({
-						let weak_handler: WeakWrapped<dyn PulseReceiverHandler> = weak_handler;
-						#[derive(Deserialize)]
-						struct SendDataInfo<'a> {
-							uid: &'a str,
-							data: Vec<u8>,
+		Ok(HandlerWrapper::new(pulse_rx, |weak_handler, node_ref| {
+			node_ref.node().local_signals.lock().insert(
+				"data".to_string(),
+				Arc::new({
+					let weak_handler: WeakWrapped<dyn PulseReceiverHandler> = weak_handler;
+					#[derive(Deserialize)]
+					struct SendDataInfo<'a> {
+						uid: &'a str,
+						data: Vec<u8>,
+					}
+					move |data| {
+						let info: SendDataInfo = deserialize(data)?;
+						let data_reader = flexbuffers::Reader::get_root(info.data.as_slice())
+							.and_then(|f| f.get_map())?;
+						if let Some(handler) = weak_handler.upgrade() {
+							handler
+								.lock()
+								.data(info.uid, info.data.as_slice(), data_reader);
 						}
-						move |data| {
-							let info: SendDataInfo = deserialize(data)?;
-							let data_reader = flexbuffers::Reader::get_root(info.data.as_slice())
-								.and_then(|f| f.get_map())?;
-							if let Some(handler) = weak_handler.upgrade() {
-								handler
-									.lock()
-									.data(info.uid, info.data.as_slice(), data_reader);
-							}
-							Ok(())
-						}
-					}),
-				);
-				wrapped_init(weak_node_ref, receiver)
-			},
-		))
+						Ok(())
+					}
+				}),
+			);
+			wrapped_init(node_ref)
+		}))
 	}
 }
 impl NodeType for PulseReceiver {
@@ -274,7 +264,7 @@ async fn fusion_pulses() {
 	}
 	struct PulseSenderTest {
 		data: Vec<u8>,
-		node: WeakNodeRef<PulseSender>,
+		node: Arc<PulseSender>,
 	}
 	impl PulseSenderHandler for PulseSenderTest {
 		fn new_receiver(
@@ -289,8 +279,7 @@ async fn fusion_pulses() {
 				field.node().get_path(),
 				info
 			);
-			self.node
-				.with_node(|sender| sender.send_data(receiver, &self.data));
+			self.node.send_data(receiver, &self.data).unwrap();
 		}
 		fn drop_receiver(&mut self, uid: &str) {
 			println!("Pulse receiver {} dropped", uid);
@@ -312,9 +301,9 @@ async fn fusion_pulses() {
 		None,
 		None,
 		mask.view().to_vec(),
-		|node, _| PulseSenderTest {
+		|node| PulseSenderTest {
 			data: mask.view().to_vec(),
-			node,
+			node: node.clone(),
 		},
 	)
 	.unwrap();
@@ -324,7 +313,7 @@ async fn fusion_pulses() {
 		None,
 		&field,
 		mask.take_buffer(),
-		|_, _| PulseReceiverTest(client.clone()),
+		|_| PulseReceiverTest(client.clone()),
 	)
 	.unwrap();
 

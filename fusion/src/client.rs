@@ -1,4 +1,5 @@
-use super::HandlerWrapper;
+use crate::DummyHandler;
+
 use super::{scenegraph::Scenegraph, spatial::Spatial};
 use anyhow::Result;
 use parking_lot::Mutex;
@@ -28,13 +29,6 @@ pub struct LogicStepInfo {
 
 pub trait LifeCycleHandler: Send + Sync + 'static {
 	fn logic_step(&mut self, _info: LogicStepInfo);
-}
-
-struct LifeCycleHandlerDummy;
-impl LifeCycleHandler for LifeCycleHandlerDummy {
-	fn logic_step(&mut self, info: LogicStepInfo) {
-		println!("Logic step delta is {}s", info.delta);
-	}
 }
 
 pub struct Root {
@@ -76,7 +70,7 @@ impl Client {
 			registered_item_uis: Mutex::new(Vec::new()),
 
 			elapsed_time: Mutex::new(0.0),
-			life_cycle_handler: Mutex::new(Weak::<Mutex<LifeCycleHandlerDummy>>::new()),
+			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),
 		});
 
 		Ok((client, message_tx, message_rx))
@@ -122,7 +116,7 @@ impl Client {
 		client
 			.get_root()
 			.node
-			.send_remote_signal_raw("subscribe_logic_step", &[0; 0])
+			.send_remote_signal_raw("subscribe_logic_step", &[])
 			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
 		Ok(())
 	}
@@ -171,15 +165,11 @@ impl Client {
 		self.hmd.get().as_ref().unwrap()
 	}
 
-	pub fn wrap_root<T: LifeCycleHandler>(&self, wrapped: T) -> HandlerWrapper<Spatial, T> {
-		let wrapper = HandlerWrapper::new(
-			Spatial {
-				node: self.root.get().unwrap().node.clone(),
-			},
-			move |_, _, _| wrapped,
-		);
-		*self.life_cycle_handler.lock() = wrapper.weak_wrapped();
-		wrapper
+	pub fn wrap_root<T: LifeCycleHandler>(&self, wrapped: T) -> Arc<Mutex<T>> {
+		let wrapped = Arc::new(Mutex::new(wrapped));
+		*self.life_cycle_handler.lock() =
+			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn LifeCycleHandler>>));
+		wrapped
 	}
 
 	pub fn set_base_prefixes<T: AsRef<str>>(&self, prefixes: &[T]) {
@@ -209,26 +199,32 @@ impl Drop for Client {
 }
 
 #[tokio::test]
-async fn fusion_client_connect() -> anyhow::Result<()> {
-	let (client, event_loop) = Client::connect_with_async_loop().await?;
+async fn fusion_client_connect() {
+	let (_client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
 	tokio::select! {
 		biased;
 		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => (),
-		e = event_loop => e??,
+		e = event_loop => e.unwrap().unwrap(),
 	}
-	drop(client);
-	Ok(())
 }
 
 #[tokio::test]
-async fn fusion_client_life_cycle() -> anyhow::Result<()> {
-	let (client, event_loop) = Client::connect_with_async_loop().await?;
+async fn fusion_client_life_cycle() {
+	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
-	let _wrapper = client.wrap_root(LifeCycleHandlerDummy);
+	struct LifeCycleHandlerDummy(Arc<Client>);
+	impl LifeCycleHandler for LifeCycleHandlerDummy {
+		fn logic_step(&mut self, _info: LogicStepInfo) {
+			self.0.stop_loop();
+		}
+	}
+
+	let _wrapper = client.wrap_root(LifeCycleHandlerDummy(client.clone()));
 
 	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out")),
-		_ = event_loop => Ok(()),
-	}
+		biased;
+		_ = tokio::time::sleep(core::time::Duration::from_secs(5)) => panic!("Timed Out"),
+		e = event_loop => e.unwrap().unwrap(),
+	};
 }

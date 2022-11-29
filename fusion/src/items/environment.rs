@@ -1,6 +1,6 @@
 use std::ops::Deref;
 use std::path::Path;
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 
 use stardust_xr::values::Transform;
 
@@ -8,7 +8,7 @@ use super::{HandledItem, Item};
 use crate::client::Client;
 use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
-use crate::{HandlerWrapper, WeakNodeRef, WeakWrapped};
+use crate::{HandlerWrapper, WeakWrapped};
 
 pub struct EnvironmentItem {
 	pub spatial: Spatial,
@@ -72,11 +72,7 @@ impl<T: Send + Sync + 'static> HandledItem<T> for EnvironmentItem {
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<Self, T>
 	where
-		F: FnMut(Self::InitData, WeakWrapped<T>, WeakNodeRef<Self>, &Self) -> T
-			+ Clone
-			+ Send
-			+ Sync
-			+ 'static,
+		F: FnMut(Self::InitData, WeakWrapped<T>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
 		T: Send + Sync + 'static,
 	{
 		let item = EnvironmentItem {
@@ -84,8 +80,8 @@ impl<T: Send + Sync + 'static> HandledItem<T> for EnvironmentItem {
 				node: Node::from_path(client, path.to_string(), false).unwrap(),
 			},
 		};
-		HandlerWrapper::new(item, |weak_wrapped, weak_node_ref, f| {
-			ui_init_fn(init_data, weak_wrapped, weak_node_ref, f)
+		HandlerWrapper::new(item, |weak_wrapped, node_ref| {
+			ui_init_fn(init_data, weak_wrapped, node_ref)
 		})
 	}
 }
@@ -107,14 +103,15 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 		.file_path(file_relative_path!("res/fusion/sky.hdr"))
 		.build()
 		.unwrap();
+	dbg!(environment_item.node());
 
 	struct EnvironmentUI {
 		path: String,
-		_item: WeakNodeRef<EnvironmentItem>,
+		_item: Arc<EnvironmentItem>,
 		acceptor: bool,
 	}
 	impl EnvironmentUI {
-		pub fn new(path: String, _item: WeakNodeRef<EnvironmentItem>, acceptor: bool) -> Self {
+		pub fn new(path: String, _item: Arc<EnvironmentItem>, acceptor: bool) -> Self {
 			println!("Environment item with path {path} created");
 			EnvironmentUI {
 				path,
@@ -157,8 +154,8 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 
 	let _item_ui = crate::items::ItemUI::register(
 		&client,
-		|init_data, _weak_wrapped, weak_node_ref, _item: &EnvironmentItem| {
-			EnvironmentUI::new(init_data, weak_node_ref, false)
+		|init_data, _weak_wrapped, item: &Arc<EnvironmentItem>| {
+			EnvironmentUI::new(init_data, item.clone(), false)
 		},
 	)?;
 
@@ -169,8 +166,8 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 		None,
 		None,
 		&item_acceptor_field,
-		|init_data, _weak_wrapped, weak_node_ref, _item: &EnvironmentItem| {
-			EnvironmentUI::new(init_data, weak_node_ref, true)
+		|init_data, _weak_wrapped, item: &Arc<EnvironmentItem>| {
+			EnvironmentUI::new(init_data, item.clone(), true)
 		},
 	)
 	.unwrap();

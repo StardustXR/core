@@ -1,7 +1,7 @@
 use crate::{
 	fields::Field,
 	node::{ClientOwned, Node, NodeError, NodeType},
-	HandlerWrapper, WeakNodeRef, WeakWrapped,
+	HandlerWrapper, WeakWrapped,
 };
 
 use super::Spatial;
@@ -11,10 +11,10 @@ use stardust_xr::{schemas::flex::deserialize, values::Transform};
 use std::sync::Arc;
 
 pub trait ZoneHandler: Send + Sync {
-	fn enter(&mut self, zone: &Zone, uid: &str, spatial: &Spatial);
-	fn capture(&mut self, zone: &Zone, uid: &str, spatial: &Spatial);
-	fn release(&mut self, zone: &Zone, uid: &str);
-	fn leave(&mut self, zone: &Zone, uid: &str);
+	fn enter(&mut self, uid: &str, spatial: &Spatial);
+	fn capture(&mut self, uid: &str, spatial: &Spatial);
+	fn release(&mut self, uid: &str);
+	fn leave(&mut self, uid: &str);
 }
 
 #[derive(Debug)]
@@ -32,7 +32,7 @@ impl<'a> Zone {
 		wrapped_init: F,
 	) -> Result<HandlerWrapper<Zone, T>, NodeError>
 	where
-		F: FnOnce(WeakNodeRef<Zone>, &Zone) -> T,
+		F: FnOnce(&Arc<Zone>) -> T,
 		T: ZoneHandler + 'static,
 	{
 		let id = nanoid::nanoid!();
@@ -60,102 +60,78 @@ impl<'a> Zone {
 			captured: Mutex::new(FxHashMap::default()),
 		};
 
-		let handler_wrapper = HandlerWrapper::new(zone, |weak_handler, weak_node_ref, zone| {
-			zone.node().local_signals.lock().insert(
+		let handler_wrapper = HandlerWrapper::new(zone, |weak_handler, node_ref| {
+			node_ref.node().local_signals.lock().insert(
 				"enter".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn ZoneHandler> = weak_handler.clone();
-					let weak_node_ref = weak_node_ref.clone();
+					let node_ref = node_ref.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;
 						if let Some(handler) = weak_handler.upgrade() {
-							weak_node_ref
-								.with_node(|zone| -> anyhow::Result<()> {
-									let spatial = Spatial::from_path(
-										zone.node().client.clone(),
-										&(zone.node().get_path().to_string() + "/" + uid),
-										false,
-									)?;
-									handler.lock().enter(zone, uid, &spatial);
-									Ok(())
-								})
-								.transpose()?;
+							let spatial = Spatial::from_path(
+								node_ref.node().client.clone(),
+								&(node_ref.node().get_path().to_string() + "/" + uid),
+								false,
+							)?;
+							handler.lock().enter(uid, &spatial);
 							// handler.lock().enter(, spatial)
 						}
 						Ok(())
 					}
 				}),
 			);
-			zone.node().local_signals.lock().insert(
+			node_ref.node().local_signals.lock().insert(
 				"capture".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn ZoneHandler> = weak_handler.clone();
-					let weak_node_ref = weak_node_ref.clone();
+					let node_ref = node_ref.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;
 						if let Some(handler) = weak_handler.upgrade() {
-							weak_node_ref
-								.with_node(|zone| -> anyhow::Result<()> {
-									let spatial = Spatial::from_path(
-										zone.node().client.clone(),
-										&(zone.node().get_path().to_string() + "/" + uid),
-										false,
-									)?;
-									zone.captured.lock().insert(uid.to_string(), spatial);
-									let captured = zone.captured.lock();
-									let spatial = captured.get(uid).unwrap();
-									handler.lock().capture(zone, uid, spatial);
-									Ok(())
-								})
-								.transpose()?;
-							// handler.lock().enter(, spatial)
+							let spatial = Spatial::from_path(
+								node_ref.node().client.clone(),
+								&(node_ref.node().get_path().to_string() + "/" + uid),
+								false,
+							)?;
+							node_ref.captured.lock().insert(uid.to_string(), spatial);
+							let captured = node_ref.captured.lock();
+							let spatial = captured.get(uid).unwrap();
+							handler.lock().capture(uid, spatial);
 						}
 						Ok(())
 					}
 				}),
 			);
-			zone.node().local_signals.lock().insert(
+			node_ref.node().local_signals.lock().insert(
 				"release".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn ZoneHandler> = weak_handler.clone();
-					let weak_node_ref = weak_node_ref.clone();
+					let node_ref = node_ref.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;
 						if let Some(handler) = weak_handler.upgrade() {
-							weak_node_ref
-								.with_node(|zone| -> anyhow::Result<()> {
-									zone.captured.lock().remove(uid);
-									handler.lock().release(zone, uid);
-									Ok(())
-								})
-								.transpose()?;
-							// handler.lock().enter(, spatial)
+							node_ref.captured.lock().remove(uid);
+							handler.lock().release(uid);
 						}
 						Ok(())
 					}
 				}),
 			);
-			zone.node().local_signals.lock().insert(
+			node_ref.node().local_signals.lock().insert(
 				"leave".to_string(),
 				Arc::new({
 					let weak_handler: WeakWrapped<dyn ZoneHandler> = weak_handler;
-					let weak_node_ref = weak_node_ref.clone();
 					move |data| {
 						let uid: &str = deserialize(data)?;
 						if let Some(handler) = weak_handler.upgrade() {
-							weak_node_ref
-								.with_node(|zone| -> anyhow::Result<()> {
-									handler.lock().leave(zone, uid);
-									Ok(())
-								})
-								.transpose()?;
-							// handler.lock().enter(, spatial)
+							handler.lock().leave(uid);
 						}
 						Ok(())
 					}
 				}),
 			);
-			wrapped_init(weak_node_ref, zone)
+			wrapped_init(node_ref)
 		});
 
 		// handler_wrapper.
@@ -225,24 +201,28 @@ async fn fusion_zone() {
 		}
 	}
 
-	struct ZoneTest;
+	struct ZoneTest(Arc<Zone>);
 	impl ZoneHandler for ZoneTest {
-		fn enter(&mut self, zone: &Zone, uid: &str, _spatial: &Spatial) {
+		fn enter(&mut self, uid: &str, _spatial: &Spatial) {
 			println!("Spatial {} entered zone", uid);
-			zone.capture(uid).unwrap();
+			self.0.capture(uid).unwrap();
 		}
-		fn capture(&mut self, _zone: &Zone, uid: &str, _spatial: &Spatial) {
+		fn capture(&mut self, uid: &str, _spatial: &Spatial) {
 			println!("Spatial {} was captured", uid);
 		}
-		fn release(&mut self, _zone: &Zone, uid: &str) {
+		fn release(&mut self, uid: &str) {
 			println!("Spatial {} was released", uid);
 		}
-		fn leave(&mut self, _zone: &Zone, uid: &str) {
+		fn leave(&mut self, uid: &str) {
 			println!("Spatial {} left zone", uid);
 		}
 	}
-	let demo =
-		LifeCycle(Zone::create(client.get_root(), None, None, &field, |_, _| ZoneTest).unwrap());
+	let demo = LifeCycle(
+		Zone::create(client.get_root(), None, None, &field, |zone| {
+			ZoneTest(zone.clone())
+		})
+		.unwrap(),
+	);
 
 	let _handler = client.wrap_root(demo);
 

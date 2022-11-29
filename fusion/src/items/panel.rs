@@ -4,7 +4,7 @@ use crate::{
 	drawable::Model,
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakNodeRef, WeakWrapped,
+	HandlerWrapper, WeakWrapped,
 };
 use mint::Vector2;
 use serde::Deserialize;
@@ -118,11 +118,7 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<Self, T>
 	where
-		F: FnMut(Self::InitData, WeakWrapped<T>, WeakNodeRef<Self>, &Self) -> T
-			+ Clone
-			+ Send
-			+ Sync
-			+ 'static,
+		F: FnMut(Self::InitData, WeakWrapped<T>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
 	{
 		let item = PanelItem {
 			spatial: Spatial {
@@ -130,8 +126,8 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 			},
 		};
 
-		HandlerWrapper::new(item, |handler: WeakWrapped<T>, weak_node_ref, item| {
-			item.node.local_signals.lock().insert(
+		HandlerWrapper::new(item, |handler: WeakWrapped<T>, item| {
+			item.node().local_signals.lock().insert(
 				"resize".to_string(),
 				Arc::new({
 					let handler = handler.clone();
@@ -144,7 +140,7 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 				}),
 			);
 
-			item.node.local_signals.lock().insert(
+			item.node().local_signals.lock().insert(
 				"set_cursor".to_string(),
 				Arc::new({
 					let handler = handler.clone();
@@ -156,7 +152,7 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 					}
 				}),
 			);
-			ui_init_fn(init_data, handler, weak_node_ref, item)
+			ui_init_fn(init_data, handler, item)
 		})
 	}
 }
@@ -214,7 +210,7 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 
 	let _item_ui = crate::items::ItemUI::<PanelItem, PanelItemUI>::register(
 		&client,
-		|init_data, _weak_wrapped, _weak_node_ref, _item: &PanelItem| PanelItemUI::new(init_data),
+		|init_data, _weak_wrapped, _node_ref| PanelItemUI::new(init_data),
 	)?;
 
 	tokio::select! {

@@ -6,7 +6,7 @@ use crate::{fields::Field, spatial::Spatial, DummyHandler};
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
-	HandlerWrapper, WeakNodeRef, WeakWrapped,
+	HandlerWrapper, WeakWrapped,
 };
 use parking_lot::{Mutex, MutexGuard};
 use rustc_hash::FxHashMap;
@@ -41,11 +41,7 @@ pub trait HandledItem<H: Send + Sync + 'static>: Item {
 		ui_init_fn: F,
 	) -> HandlerWrapper<Self, H>
 	where
-		F: FnMut(Self::InitData, WeakWrapped<H>, WeakNodeRef<Self>, &Self) -> H
-			+ Clone
-			+ Send
-			+ Sync
-			+ 'static;
+		F: FnMut(Self::InitData, WeakWrapped<H>, &Arc<Self>) -> H + Clone + Send + Sync + 'static;
 }
 
 pub trait ItemHandler<I: Item>: Send + Sync + 'static {
@@ -62,11 +58,7 @@ pub struct ItemUI<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<
 impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I, H> {
 	pub fn register<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
 	where
-		F: FnMut(I::InitData, WeakWrapped<H>, WeakNodeRef<I>, &I) -> H
-			+ Clone
-			+ Send
-			+ Sync
-			+ 'static,
+		F: FnMut(I::InitData, WeakWrapped<H>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
 	{
 		if !client
 			.registered_item_uis
@@ -81,11 +73,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I,
 
 	fn new_item_ui<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
 	where
-		F: FnMut(I::InitData, WeakWrapped<H>, WeakNodeRef<I>, &I) -> H
-			+ Clone
-			+ Send
-			+ Sync
-			+ 'static,
+		F: FnMut(I::InitData, WeakWrapped<H>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
 	{
 		let item_ui = ItemUI::<I, H> {
 			node: Node::from_path(
@@ -219,11 +207,11 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> Drop for 
 	}
 }
 
-pub struct ItemAcceptor<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync + 'static> {
+pub struct ItemAcceptor<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> {
 	pub spatial: Spatial,
 	items: Arc<Mutex<FxHashMap<String, HandlerWrapper<I, H>>>>,
 }
-impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor<I, H> {
+impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemAcceptor<I, H> {
 	pub fn create<'a, F, Fi: Field>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
@@ -232,11 +220,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor
 		item_acceptor_init: F,
 	) -> Result<ItemAcceptor<I, H>, NodeError>
 	where
-		F: FnMut(I::InitData, WeakWrapped<H>, WeakNodeRef<I>, &I) -> H
-			+ Clone
-			+ Send
-			+ Sync
-			+ 'static,
+		F: FnMut(I::InitData, WeakWrapped<H>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
 	{
 		let id = nanoid::nanoid!();
 		let item_acceptor = ItemAcceptor::<I, H> {
@@ -268,17 +252,21 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor
 			"capture".to_string(),
 			Arc::new({
 				let client = spatial_parent.node().client.clone();
+				let node = spatial_parent.node.clone();
 				let items = item_acceptor.items.clone();
 				move |data| {
-					let (item_acceptord, init_data): (String, I::InitData) = deserialize(data)?;
+					let (item_uid, init_data): (&str, I::InitData) = deserialize(data)?;
 
 					let item = I::from_path(
 						client.clone(),
-						&format!("/item/{}/item/{}", I::TYPE_NAME, item_acceptord),
+						&format!("/item/{}/item/{}", I::TYPE_NAME, item_uid),
 						init_data,
 						item_acceptor_init.clone(),
 					);
-					items.lock().insert(item_acceptord, item);
+					let mut items = items.lock();
+					items.insert(item_uid.to_string(), item);
+					let Some(item) = items.get(item_uid) else { return Ok(()) };
+					item.wrapped.lock().captured(&item.node, node.get_name());
 					Ok(())
 				}
 			}),
@@ -287,9 +275,11 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor
 			"release".to_string(),
 			Arc::new({
 				let items = item_acceptor.items.clone();
+				let node = spatial_parent.node.clone();
 				move |data| {
 					let name: &str = deserialize(data)?;
-					items.lock().remove(name);
+					let Some(item) = items.lock().remove(name) else { return Ok(()) };
+					item.wrapped.lock().captured(&item.node, node.get_name());
 					Ok(())
 				}
 			}),
@@ -319,7 +309,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> ItemAcceptor
 			.send_remote_signal("capture", &item.node().get_path())
 	}
 }
-impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: Send + Sync> NodeType
+impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> NodeType
 	for ItemAcceptor<I, H>
 {
 	fn node(&self) -> &Node {
