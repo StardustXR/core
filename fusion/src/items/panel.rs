@@ -7,12 +7,10 @@ use crate::{
 	HandlerWrapper, WeakWrapped,
 };
 use mint::Vector2;
+use parking_lot::Mutex;
 use serde::Deserialize;
 use stardust_xr::schemas::flex::deserialize;
-use std::{
-	ops::Deref,
-	sync::{Arc, Weak},
-};
+use std::{ops::Deref, sync::Arc};
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 pub trait PanelItemHandler: Send + Sync {
@@ -41,8 +39,10 @@ impl PanelItem {
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("apply_surface_material", &(&model.spatial, material_index))
+		self.node.send_remote_signal(
+			"apply_surface_material",
+			&(model.spatial.node().get_path()?, material_index),
+		)
 	}
 
 	pub fn apply_cursor_material(
@@ -51,8 +51,10 @@ impl PanelItem {
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("apply_cursor_material", &(&model.spatial, material_index))
+		self.node.send_remote_signal(
+			"apply_cursor_material",
+			&(model.spatial.node().get_path()?, material_index),
+		)
 	}
 
 	pub fn pointer_deactivate(&self) -> Result<(), NodeError> {
@@ -99,6 +101,24 @@ impl PanelItem {
 	pub fn resize(&self, width: u32, height: u32) -> Result<(), NodeError> {
 		self.node.send_remote_signal("resize", &(width, height))
 	}
+
+	fn handle_resize<T: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<T>>,
+		data: &[u8],
+	) -> anyhow::Result<()> {
+		handler.lock().resize(deserialize(data)?);
+		Ok(())
+	}
+
+	fn handle_set_cursor<T: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<T>>,
+		data: &[u8],
+	) -> anyhow::Result<()> {
+		handler.lock().set_cursor(deserialize(data)?);
+		Ok(())
+	}
 }
 impl NodeType for PanelItem {
 	fn node(&self) -> &Node {
@@ -112,8 +132,9 @@ impl Item for PanelItem {
 }
 impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 	fn from_path<F>(
-		client: Weak<Client>,
-		path: &str,
+		client: &Arc<Client>,
+		parent_path: impl ToString,
+		name: impl ToString,
 		init_data: Self::InitData,
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<Self, T>
@@ -122,38 +143,21 @@ impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
 	{
 		let item = PanelItem {
 			spatial: Spatial {
-				node: Node::from_path(client, path.to_string(), false).unwrap(),
+				node: Node::from_path(client, parent_path, name, false),
 			},
 		};
 
-		HandlerWrapper::new(item, |handler: WeakWrapped<T>, item| {
-			item.node().local_signals.lock().insert(
-				"resize".to_string(),
-				Arc::new({
-					let handler = handler.clone();
-					move |data| {
-						if let Some(handler) = handler.upgrade() {
-							handler.lock().resize(deserialize(data)?)
-						}
-						Ok(())
-					}
-				}),
-			);
-
-			item.node().local_signals.lock().insert(
-				"set_cursor".to_string(),
-				Arc::new({
-					let handler = handler.clone();
-					move |data| {
-						if let Some(handler) = handler.upgrade() {
-							handler.lock().set_cursor(deserialize(data)?)
-						}
-						Ok(())
-					}
-				}),
-			);
+		let handler_wrapper = HandlerWrapper::new(item, |handler: WeakWrapped<T>, item| {
 			ui_init_fn(init_data, handler, item)
-		})
+		});
+		handler_wrapper
+			.add_handled_signal("resize", Self::handle_resize)
+			.unwrap();
+		handler_wrapper
+			.add_handled_signal("set_cursor", Self::handle_set_cursor)
+			.unwrap();
+
+		handler_wrapper
 	}
 }
 impl Deref for PanelItem {
@@ -182,14 +186,14 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 			println!(
 				"Acceptor {} captured panel item {}",
 				acceptor_uid,
-				item.node().get_name()
+				item.node().get_name().unwrap()
 			);
 		}
 		fn released(&mut self, item: &PanelItem, acceptor_uid: &str) {
 			println!(
 				"Acceptor {} released panel item {}",
 				acceptor_uid,
-				item.node().get_name()
+				item.node().get_name().unwrap()
 			);
 		}
 	}

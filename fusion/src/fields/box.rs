@@ -26,7 +26,7 @@ impl<'a> BoxField {
 		Ok(BoxField {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/field",
 					"create_box_field",
 					"/field",
@@ -34,7 +34,7 @@ impl<'a> BoxField {
 					&id.clone(),
 					(
 						id,
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,

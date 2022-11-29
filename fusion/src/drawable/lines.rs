@@ -64,7 +64,7 @@ impl Lines {
 		Ok(Lines {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/drawable",
 					"create_lines",
 					"/drawable/lines",
@@ -72,7 +72,7 @@ impl Lines {
 					&id.clone(),
 					(
 						id,
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,

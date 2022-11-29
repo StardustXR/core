@@ -8,16 +8,12 @@ use super::{
 use anyhow::Result;
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
-use serde::{Serialize, Serializer};
 use stardust_xr::values::Transform;
-use std::{
-	future::Future,
-	sync::{Arc, Weak},
-};
+use std::{future::Future, sync::Arc};
 
 #[derive(Debug)]
 pub struct Spatial {
-	pub(crate) node: Arc<Node>,
+	pub(crate) node: Node,
 }
 #[buildstructor::buildstructor]
 impl Spatial {
@@ -33,7 +29,7 @@ impl Spatial {
 		let id = nanoid!();
 		Ok(Spatial {
 			node: Node::new(
-				spatial_parent.node.client.clone(),
+				&spatial_parent.node().client()?,
 				"/spatial",
 				"create_spatial",
 				"/spatial/spatial",
@@ -41,7 +37,7 @@ impl Spatial {
 				&id.clone(),
 				(
 					id,
-					spatial_parent,
+					spatial_parent.node().get_path()?,
 					Transform {
 						position,
 						rotation,
@@ -54,13 +50,14 @@ impl Spatial {
 	}
 
 	pub(crate) fn from_path(
-		client: Weak<Client>,
-		path: impl ToString,
+		client: &Arc<Client>,
+		parent: impl ToString,
+		name: impl ToString,
 		destroyable: bool,
-	) -> Result<Self, NodeError> {
-		Ok(Spatial {
-			node: Node::from_path(client, path.to_string(), destroyable)?,
-		})
+	) -> Self {
+		Spatial {
+			node: Node::from_path(client, parent, name, destroyable),
+		}
 	}
 
 	pub fn get_translation_rotation_scale(
@@ -71,7 +68,7 @@ impl Spatial {
 		NodeError,
 	> {
 		self.node
-			.execute_remote_method("get_transform", relative_space)
+			.execute_remote_method("get_transform", &relative_space.node().get_path()?)
 	}
 
 	pub fn set_position(
@@ -102,6 +99,10 @@ impl Spatial {
 		rotation: Option<mint::Quaternion<f32>>,
 		scale: Option<mint::Vector3<f32>>,
 	) -> Result<(), NodeError> {
+		let relative_space = match relative_space {
+			Some(space) => Some(space.node().get_path()?),
+			None => None,
+		};
 		self.node.send_remote_signal(
 			"set_transform",
 			&(
@@ -116,11 +117,12 @@ impl Spatial {
 	}
 
 	pub fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
-		self.node.send_remote_signal("set_spatial_parent", parent)
+		self.node
+			.send_remote_signal("set_spatial_parent", &parent.node().get_path()?)
 	}
 	pub fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("set_spatial_parent_in_place", parent)
+			.send_remote_signal("set_spatial_parent_in_place", &parent.node().get_path()?)
 	}
 
 	pub fn set_zoneable(&self, zoneable: bool) -> Result<(), NodeError> {
@@ -130,14 +132,6 @@ impl Spatial {
 impl NodeType for Spatial {
 	fn node(&self) -> &Node {
 		&self.node
-	}
-}
-impl Serialize for Spatial {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where
-		S: Serializer,
-	{
-		self.node.get_path().serialize(serializer)
 	}
 }
 

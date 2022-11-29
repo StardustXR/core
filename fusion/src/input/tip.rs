@@ -1,5 +1,5 @@
 use crate::{
-	node::{Node, NodeError},
+	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -32,7 +32,7 @@ impl<'a> TipInputMethod {
 		Ok(TipInputMethod {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/input",
 					"create_input_method_tip",
 					"/input/method/tip",
@@ -40,7 +40,7 @@ impl<'a> TipInputMethod {
 					&id.clone(),
 					(
 						id,
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,

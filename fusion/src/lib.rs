@@ -15,10 +15,11 @@ pub mod spatial;
 pub mod startup_settings;
 
 use self::node::{Node, NodeType};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use client::LifeCycleHandler;
 use input::InputHandlerHandler;
 use items::{panel::PanelItemHandler, Item, ItemHandler};
+use node::NodeError;
 use parking_lot::{Mutex, MutexGuard};
 use spatial::ZoneHandler;
 use std::sync::{Arc, Weak};
@@ -57,36 +58,30 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 	pub(crate) fn add_handled_signal(
 		&self,
 		name: &str,
-		parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<()>,
-	) {
+		parse: fn(Arc<N>, Arc<Mutex<T>>, &[u8]) -> Result<()>,
+	) -> Result<(), NodeError> {
+		let node = Arc::downgrade(&self.node);
 		let handler = self.weak_wrapped();
-		self.node.node().local_signals.lock().insert(
-			name.to_string(),
-			Arc::new(move |data| {
-				if let Some(handler) = handler.upgrade() {
-					parse(handler, data)?
-				}
-				Ok(())
-			}),
-		);
+		self.node.node().add_local_signal(name, move |data| {
+			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
+			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
+			parse(node, handler, data)
+		})
 	}
 	// #[allow(clippy::type_complexity)]
-	// pub(crate) fn add_handled_method(
-	// 	&self,
-	// 	name: &str,
-	// 	parse: fn(Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
-	// ) {
-	// 	let handler = wrapper.weak_inner();
-	// 	self.node.local_methods.insert(
-	// 		name.to_string(),
-	// 		Box::new(move |data| {
-	// 			let handler = handler
-	// 				.upgrade()
-	// 				.ok_or_else(|| anyhow::anyhow!("No handler for this method"))?;
-	// 			parse(handler, data)
-	// 		}),
-	// 	);
-	// }
+	pub(crate) fn add_handled_method(
+		&self,
+		name: &str,
+		parse: fn(Arc<N>, Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
+	) -> Result<(), NodeError> {
+		let node = Arc::downgrade(&self.node);
+		let handler = self.weak_wrapped();
+		self.node.node().add_local_method(name, move |data| {
+			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
+			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
+			parse(node, handler, data)
+		})
+	}
 }
 
 impl<N: NodeType, T: Send + Sync + 'static> NodeType for HandlerWrapper<N, T> {

@@ -44,10 +44,8 @@ pub trait Field: NodeType {
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
 	) -> Result<BoxedFuture<Result<f32>>, NodeError> {
-		self.node().execute_remote_method_trait(
-			"distance",
-			&(space.node.get_path().to_string(), point.into()),
-		)
+		self.node()
+			.execute_remote_method_trait("distance", &(space.node().get_path()?, point.into()))
 	}
 
 	fn normal(
@@ -55,10 +53,8 @@ pub trait Field: NodeType {
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
 	) -> Result<BoxedFuture<Result<mint::Vector3<f32>>>, NodeError> {
-		self.node().execute_remote_method_trait(
-			"normal",
-			&(space.node.get_path().to_string(), point.into()),
-		)
+		self.node()
+			.execute_remote_method_trait("normal", &(space.node().get_path()?, point.into()))
 	}
 
 	fn closest_point(
@@ -66,10 +62,8 @@ pub trait Field: NodeType {
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
 	) -> Result<BoxedFuture<Result<mint::Vector3<f32>>>, NodeError> {
-		self.node().execute_remote_method_trait(
-			"closestPoint",
-			&(space.node.get_path().to_string(), point.into()),
-		)
+		self.node()
+			.execute_remote_method_trait("closestPoint", &(space.node().get_path()?, point.into()))
 	}
 
 	fn ray_march(
@@ -90,7 +84,7 @@ pub trait Field: NodeType {
 
 		let future = self.node().execute_remote_method_trait(
 			"closestPoint",
-			&(space.node.get_path().to_string(), ray_origin, ray_direction),
+			&(space.node().get_path()?, ray_origin, ray_direction),
 		)?;
 
 		Ok(Box::pin(async move {

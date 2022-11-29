@@ -25,7 +25,7 @@ impl<'a> TorusField {
 		Ok(TorusField {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/field",
 					"create_torus_field",
 					"/field",
@@ -33,7 +33,7 @@ impl<'a> TorusField {
 					&id,
 					(
 						&id.clone(),
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,

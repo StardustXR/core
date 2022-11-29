@@ -1,12 +1,10 @@
 use super::client::Client;
 use anyhow::Result;
-use nanoid::nanoid;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::{
 	messenger::MessengerError,
-	scenegraph::ScenegraphError,
 	schemas::flex::{deserialize, serialize},
 };
 use std::{
@@ -24,6 +22,8 @@ pub enum NodeError {
 	ClientDropped,
 	#[error("Messenger error: {e}")]
 	MessengerError { e: MessengerError },
+	#[error("Node does not exist anymore")]
+	DoesNotExist,
 	#[error("invalid path")]
 	InvalidPath,
 	#[error("Serialization failed")]
@@ -36,10 +36,10 @@ pub enum NodeError {
 	MapInvalid,
 }
 
-pub trait NodeType: Sized {
+pub trait NodeType: Send + Sync + Sized + 'static {
 	fn node(&self) -> &Node;
-	fn client(&self) -> Option<Arc<Client>> {
-		self.node().client.upgrade()
+	fn client(&self) -> Result<Arc<Client>, NodeError> {
+		self.node().client()
 	}
 }
 pub trait ClientOwned: NodeType {}
@@ -49,35 +49,58 @@ type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
 
 pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O>>>;
 
-pub struct Node {
-	path: String,
-	trailing_slash_pos: usize,
+pub struct NodeInternals {
 	pub client: Weak<Client>,
-	self_ref: Weak<Node>,
+	self_ref: Weak<NodeInternals>,
+	parent: String,
+	name: String,
 	pub(crate) local_signals: Mutex<FxHashMap<String, Arc<Signal>>>,
 	pub(crate) local_methods: Mutex<FxHashMap<String, Arc<Method>>>,
 	pub(crate) destroyable: bool,
 }
+impl NodeInternals {
+	pub(crate) fn path(&self) -> String {
+		self.parent.clone() + "/" + &self.name
+	}
+}
+impl Serialize for NodeInternals {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		self.path().serialize(serializer)
+	}
+}
 
+impl Drop for NodeInternals {
+	fn drop(&mut self) {
+		if let Some(client) = self.client.upgrade() {
+			let path = self.path();
+			if self.destroyable {
+				let _ = client.message_sender_handle.signal(&path, "destroy", &[]);
+			}
+			client.scenegraph.remove_node(&path);
+		}
+	}
+}
+
+pub enum Node {
+	Owned(Arc<NodeInternals>),
+	Aliased(Weak<NodeInternals>),
+}
 impl Node {
 	pub(crate) fn new<'a, S: Serialize>(
-		client: Weak<Client>,
+		client: &Arc<Client>,
 		interface_path: &'a str,
 		interface_method: &'a str,
 		parent_path: &'a str,
 		destroyable: bool,
 		id: &str,
 		data: S,
-	) -> Result<Arc<Self>, NodeError> {
-		let mut parent_path = parent_path.to_string();
-		if !parent_path.ends_with('/') {
-			parent_path += "/";
-		}
-		parent_path += id;
+	) -> Result<Node, NodeError> {
+		let node = Node::from_path(client, parent_path, id, destroyable);
 
-		let node = Node::from_path(client, parent_path, destroyable)?;
-
-		node.client()?
+		client
 			.message_sender_handle
 			.signal(
 				interface_path,
@@ -88,82 +111,92 @@ impl Node {
 
 		Ok(node)
 	}
-
-	pub fn client(&self) -> Result<Arc<Client>, NodeError> {
-		self.client.upgrade().ok_or(NodeError::ClientDropped)
-	}
-
-	pub fn get_name(&self) -> &str {
-		&self.path[self.trailing_slash_pos + 1..]
-	}
-	pub fn get_path(&self) -> &str {
-		self.path.as_str()
-	}
-
 	pub fn from_path(
-		client: Weak<Client>,
-		path: String,
+		client: &Arc<Client>,
+		parent: impl ToString,
+		name: impl ToString,
 		destroyable: bool,
-	) -> Result<Arc<Self>, NodeError> {
-		if !path.starts_with('/') {
-			return Err(NodeError::InvalidPath);
-		}
-
-		let trailing_slash_pos = path.rfind('/').ok_or(NodeError::InvalidPath)?;
-		let node = Arc::new_cyclic(|self_ref| Node {
-			trailing_slash_pos,
-			path,
-			client: client.clone(),
+	) -> Node {
+		let node = Arc::new_cyclic(|self_ref| NodeInternals {
+			client: Arc::downgrade(client),
 			self_ref: self_ref.clone(),
+			parent: parent.to_string(),
+			name: name.to_string(),
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
 			destroyable,
 		});
-		client
+		client.scenegraph.add_node(&node);
+		Node::Owned(node)
+	}
+
+	pub(crate) fn aliased(&self) -> Node {
+		match self {
+			Node::Owned(internals) => Node::Aliased(Arc::downgrade(internals)),
+			Node::Aliased(internals) => Node::Aliased(internals.clone()),
+		}
+	}
+
+	pub fn add_local_signal<F>(&self, name: impl ToString, signal: F) -> Result<(), NodeError>
+	where
+		F: Fn(&[u8]) -> Result<()> + Send + Sync + 'static,
+	{
+		self.internals()?
+			.local_signals
+			.lock()
+			.insert(name.to_string(), Arc::new(signal));
+		Ok(())
+	}
+
+	pub fn add_local_method<F>(&self, name: impl ToString, method: F) -> Result<(), NodeError>
+	where
+		F: Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static,
+	{
+		self.internals()?
+			.local_methods
+			.lock()
+			.insert(name.to_string(), Arc::new(method));
+		Ok(())
+	}
+
+	pub(crate) fn internals(&self) -> Result<Arc<NodeInternals>, NodeError> {
+		match self {
+			Node::Owned(node) => Ok(node.clone()),
+			Node::Aliased(node) => node.upgrade().ok_or(NodeError::DoesNotExist),
+		}
+	}
+
+	pub fn client(&self) -> Result<Arc<Client>, NodeError> {
+		self.internals()?
+			.client
 			.upgrade()
-			.ok_or(NodeError::ClientDropped)?
-			.scenegraph
-			.add_node(Arc::downgrade(&node));
-		Ok(node)
-	}
-	pub fn generate_with_parent(
-		client: Weak<Client>,
-		parent: &str,
-		destroyable: bool,
-	) -> Result<(Arc<Self>, String), NodeError> {
-		let id = nanoid!(10);
-		let mut path = parent.to_string();
-		if !path.starts_with('/') {
-			return Err(NodeError::InvalidPath);
-		}
-		if !path.ends_with('/') {
-			path.push('/');
-		}
-		path.push_str(&id);
-
-		Node::from_path(client, path, destroyable).map(|node| (node, id))
+			.ok_or(NodeError::ClientDropped)
 	}
 
-	pub fn send_local_signal(&self, signal_name: &str, data: &[u8]) -> Result<(), ScenegraphError> {
-		let local_signals = self.local_signals.lock();
-		let signal = local_signals
-			.get(signal_name)
-			.ok_or(ScenegraphError::SignalNotFound)?
-			.clone();
-		signal(data).map_err(|e| ScenegraphError::SignalError { error: e })
+	pub fn get_name(&self) -> Result<String, NodeError> {
+		Ok(self.internals()?.parent.to_string())
 	}
-	pub fn execute_local_method(
-		&self,
-		method_name: &str,
-		data: &[u8],
-	) -> Result<Vec<u8>, ScenegraphError> {
-		let local_methods = self.local_methods.lock();
-		let method = local_methods
-			.get(method_name)
-			.ok_or(ScenegraphError::MethodNotFound)?
-			.clone();
-		method(data).map_err(|e| ScenegraphError::MethodError { error: e })
+	pub fn get_path(&self) -> Result<String, NodeError> {
+		Ok(self.internals()?.path())
 	}
+	// pub fn generate_with_parent(
+	// 	client: Weak<Client>,
+	// 	parent: &str,
+	// 	destroyable: bool,
+	// ) -> Result<(Arc<Self>, String), NodeError> {
+	// 	let id = nanoid!(10);
+	// 	let mut path = parent.to_string();
+	// 	if !path.starts_with('/') {
+	// 		return Err(NodeError::InvalidPath);
+	// 	}
+	// 	if !path.ends_with('/') {
+	// 		path.push('/');
+	// 	}
+	// 	path.push_str(&id);
+
+	// 	Node::from_path(client, path, destroyable).map(|node| (node, id))
+	// }
+
 	pub fn send_remote_signal<S: Serialize>(
 		&self,
 		signal_name: &str,
@@ -175,11 +208,9 @@ impl Node {
 		)
 	}
 	pub fn send_remote_signal_raw(&self, signal_name: &str, data: &[u8]) -> Result<(), NodeError> {
-		self.client
-			.upgrade()
-			.ok_or(NodeError::ClientDropped)?
+		self.client()?
 			.message_sender_handle
-			.signal(self.path.as_str(), signal_name, data)
+			.signal(&self.get_path()?, signal_name, data)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	pub fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
@@ -215,7 +246,7 @@ impl Node {
 	) -> Result<impl Future<Output = Result<Vec<u8>>>, NodeError> {
 		self.client()?
 			.message_sender_handle
-			.method(self.path.as_str(), method_name, data)
+			.method(&self.get_path()?, method_name, data)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
@@ -223,48 +254,34 @@ impl Node {
 	}
 }
 
-impl Serialize for Node {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where
-		S: Serializer,
-	{
-		self.get_path().serialize(serializer)
-	}
-}
-
 impl Debug for Node {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("Node")
-			.field("path", &self.path)
-			.field(
-				"local_signals",
-				&self
-					.local_signals
-					.lock()
-					.iter()
-					.map(|(key, _)| key)
-					.collect::<Vec<_>>(),
-			)
-			.field(
-				"local_methods",
-				&self
-					.local_methods
-					.lock()
-					.iter()
-					.map(|(key, _)| key)
-					.collect::<Vec<_>>(),
-			)
-			.finish()
-	}
-}
+		let mut dbg = f.debug_struct("Node");
 
-impl Drop for Node {
-	fn drop(&mut self) {
-		if self.destroyable {
-			let _ = self.send_remote_signal_raw("destroy", &[]);
+		if let Ok(internals) = self.internals() {
+			dbg.field("path", &internals.path())
+				.field(
+					"local_signals",
+					&internals
+						.local_signals
+						.lock()
+						.iter()
+						.map(|(key, _)| key)
+						.collect::<Vec<_>>(),
+				)
+				.field(
+					"local_methods",
+					&internals
+						.local_methods
+						.lock()
+						.iter()
+						.map(|(key, _)| key)
+						.collect::<Vec<_>>(),
+				);
+		} else {
+			dbg.field("node", &"broken");
 		}
-		if let Some(client) = self.client.upgrade() {
-			client.scenegraph.remove_node(self.self_ref.clone());
-		}
+
+		dbg.finish()
 	}
 }

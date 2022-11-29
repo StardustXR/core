@@ -1,5 +1,5 @@
 use crate::{
-	node::{Node, NodeError},
+	node::{Node, NodeError, NodeType},
 	resource::Resource,
 	spatial::Spatial,
 };
@@ -82,7 +82,7 @@ impl Text {
 		Ok(Text {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/drawable",
 					"create_text",
 					"/drawable/text",
@@ -90,7 +90,7 @@ impl Text {
 					&id.clone(),
 					(
 						id,
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,

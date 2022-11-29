@@ -25,7 +25,7 @@ impl<'a> CylinderField {
 		Ok(CylinderField {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/field",
 					"create_cylinder_field",
 					"/field",
@@ -33,7 +33,7 @@ impl<'a> CylinderField {
 					&id,
 					(
 						&id.clone(),
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,

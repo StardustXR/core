@@ -1,3 +1,5 @@
+use nanoid::nanoid;
+
 use crate::{
 	client::Client,
 	node::{Node, NodeError},
@@ -7,26 +9,27 @@ use std::{future::Future, sync::Arc};
 
 #[derive(Debug)]
 pub struct StartupSettings {
-	pub(crate) node: Arc<Node>,
+	pub(crate) node: Node,
 }
 impl StartupSettings {
 	pub fn create(client: &Arc<Client>) -> Result<Self, NodeError> {
-		let (node, id) =
-			Node::generate_with_parent(Arc::downgrade(client), "/startup/settings", true)?;
-		client
-			.message_sender_handle
-			.signal(
+		let id = nanoid!();
+		Ok(StartupSettings {
+			node: Node::new(
+				client,
 				"/startup",
 				"create_startup_settings",
-				&flexbuffers::singleton(id.as_str()),
-			)
-			.map_err(|e| NodeError::MessengerError { e })?;
-		Ok(StartupSettings { node })
+				"/startup/settings",
+				true,
+				&id.clone(),
+				id,
+			)?,
+		})
 	}
 
 	pub fn set_root(&self, root: &Spatial) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("set_root", &root.node.get_path())
+			.send_remote_signal("set_root", &root.node.get_path()?)
 	}
 
 	pub fn generate_desktop_startup_id(

@@ -1,6 +1,6 @@
 use std::ops::Deref;
 use std::path::Path;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 use stardust_xr::values::Transform;
 
@@ -32,7 +32,7 @@ impl<'a> EnvironmentItem {
 		Ok(EnvironmentItem {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/item",
 					"create_environment_item",
 					"/item/environment/item",
@@ -40,7 +40,7 @@ impl<'a> EnvironmentItem {
 					&id.clone(),
 					(
 						id,
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,
@@ -66,8 +66,9 @@ impl Item for EnvironmentItem {
 
 impl<T: Send + Sync + 'static> HandledItem<T> for EnvironmentItem {
 	fn from_path<F>(
-		client: Weak<Client>,
-		path: &str,
+		client: &Arc<Client>,
+		parent_path: impl ToString,
+		name: impl ToString,
 		init_data: Self::InitData,
 		mut ui_init_fn: F,
 	) -> HandlerWrapper<Self, T>
@@ -77,7 +78,7 @@ impl<T: Send + Sync + 'static> HandledItem<T> for EnvironmentItem {
 	{
 		let item = EnvironmentItem {
 			spatial: Spatial {
-				node: Node::from_path(client, path.to_string(), false).unwrap(),
+				node: Node::from_path(client, parent_path, name, false),
 			},
 		};
 		HandlerWrapper::new(item, |weak_wrapped, node_ref| {
@@ -125,7 +126,7 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 			println!(
 				"Acceptor {} captured environment item {}",
 				acceptor_uid,
-				item.uid()
+				item.uid().unwrap()
 			);
 			if self.acceptor {
 				println!("Got accepted sucessfully!");
@@ -136,11 +137,11 @@ async fn fusion_environment_ui() -> anyhow::Result<()> {
 			println!(
 				"Acceptor {} released environment item {}",
 				acceptor_uid,
-				item.uid()
+				item.uid().unwrap()
 			);
 			if self.acceptor {
 				println!("Got released sucessfully!");
-				if let Some(client) = item.client() {
+				if let Ok(client) = item.client() {
 					client.stop_loop();
 				}
 			}

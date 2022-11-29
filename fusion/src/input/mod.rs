@@ -5,11 +5,12 @@ use super::{
 	fields::Field,
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
-	HandlerWrapper, WeakWrapped,
+	HandlerWrapper,
 };
 pub use action as action_handler;
+use parking_lot::Mutex;
 pub use stardust_xr::schemas::flat::*;
-use stardust_xr::values::Transform;
+use stardust_xr::{schemas::flex::serialize, values::Transform};
 use std::sync::Arc;
 pub use tip::TipInputMethod;
 
@@ -51,7 +52,7 @@ impl<'a> InputHandler {
 		let handler = InputHandler {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/input",
 					"create_input_handler",
 					"/input/handler",
@@ -59,39 +60,33 @@ impl<'a> InputHandler {
 					&id.clone(),
 					(
 						id,
-						spatial_parent,
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,
 							scale: None,
 						},
-						&field.node(),
+						field.node().get_path()?,
 					),
 				)?,
 			},
 		};
 
-		let handler_wrapper = HandlerWrapper::new(handler, |weak_handler, node_ref| {
-			let contents = wrapped_init(node_ref);
-			node_ref.node.local_methods.lock().insert(
-				"input".to_string(),
-				Arc::new({
-					let weak_handler: WeakWrapped<dyn InputHandlerHandler> = weak_handler;
-					move |data| {
-						let capture = if let Some(handler) = weak_handler.upgrade() {
-							handler.lock().input(InputData::deserialize(data)?)
-						} else {
-							false
-						};
-						Ok(flexbuffers::singleton(capture))
-					}
-				}),
-			);
-			contents
-		});
+		let handler_wrapper =
+			HandlerWrapper::new(handler, |_weak_handler, node_ref| wrapped_init(node_ref));
+		handler_wrapper.add_handled_method("input", Self::handle_input)?;
 
 		// handler_wrapper.
 		Ok(handler_wrapper)
+	}
+
+	fn handle_input<T: InputHandlerHandler>(
+		_zone: Arc<InputHandler>,
+		handler: Arc<Mutex<T>>,
+		data: &[u8],
+	) -> anyhow::Result<Vec<u8>> {
+		let capture = handler.lock().input(InputData::deserialize(data)?);
+		Ok(serialize(capture)?)
 	}
 }
 impl NodeType for InputHandler {

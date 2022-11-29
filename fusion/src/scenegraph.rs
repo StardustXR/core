@@ -1,12 +1,12 @@
-use super::node::Node;
+use crate::node::NodeInternals;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use stardust_xr::{scenegraph, scenegraph::ScenegraphError};
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 
 #[derive(Default)]
 pub struct Scenegraph {
-	nodes: Mutex<FxHashMap<String, Weak<Node>>>,
+	nodes: Mutex<FxHashMap<String, Weak<NodeInternals>>>,
 }
 
 impl Scenegraph {
@@ -14,27 +14,19 @@ impl Scenegraph {
 		Default::default()
 	}
 
-	pub fn add_node(&self, node: Weak<Node>) {
-		let node_ref = node.upgrade();
-		if node_ref.is_none() {
-			return;
-		}
+	pub fn add_node(&self, node_internals: &Arc<NodeInternals>) {
 		self.nodes
 			.lock()
-			.insert(String::from(node_ref.unwrap().get_path()), node);
+			.insert(node_internals.path(), Arc::downgrade(&node_internals));
 	}
 
-	pub fn remove_node(&self, node: Weak<Node>) {
-		let node_ref = node.upgrade();
-		if node_ref.is_none() {
-			return;
-		}
-		self.nodes.lock().remove(node_ref.unwrap().get_path());
+	pub fn remove_node(&self, node_path: &str) {
+		self.nodes.lock().remove(node_path);
 	}
 
-	pub fn get_node(&self, path: &str) -> Weak<Node> {
-		self.nodes.lock().get(path).cloned().unwrap_or_default()
-	}
+	// pub fn get_node(&self, path: &str) -> Option<Node> {
+	// 	self.nodes.lock().get(path).cloned().unwrap_or_default()
+	// }
 }
 
 impl scenegraph::Scenegraph for Scenegraph {
@@ -45,7 +37,12 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(path)
 			.and_then(Weak::upgrade)
 			.ok_or(ScenegraphError::NodeNotFound)?;
-		node.send_local_signal(method, data)
+		let local_signals = node.local_signals.lock();
+		let signal = local_signals
+			.get(method)
+			.ok_or(ScenegraphError::SignalNotFound)?
+			.clone();
+		signal(data).map_err(|e| ScenegraphError::SignalError { error: e })
 	}
 	fn execute_method(
 		&self,
@@ -59,6 +56,11 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(path)
 			.and_then(Weak::upgrade)
 			.ok_or(ScenegraphError::NodeNotFound)?;
-		node.execute_local_method(method, data)
+		let local_methods = node.local_methods.lock();
+		let method = local_methods
+			.get(method)
+			.ok_or(ScenegraphError::MethodNotFound)?
+			.clone();
+		method(data).map_err(|e| ScenegraphError::MethodError { error: e })
 	}
 }

@@ -77,13 +77,10 @@ impl Client {
 	}
 
 	pub fn setup(client: &Arc<Client>) -> Result<(), std::io::Error> {
-		let weak_client = Arc::downgrade(client);
-		let _ = client.root.set(Arc::new(
-			Spatial::from_path(weak_client.clone(), "/", false).unwrap(),
-		));
 		let _ = client
-			.hmd
-			.set(Spatial::from_path(weak_client, "/hmd", false).unwrap());
+			.root
+			.set(Arc::new(Spatial::from_path(client, "", "", false)));
+		let _ = client.hmd.set(Spatial::from_path(client, "", "hmd", false));
 
 		if let Ok(desktop_startup_id) = std::env::var("DESKTOP_STARTUP_ID") {
 			client
@@ -93,9 +90,10 @@ impl Client {
 				.unwrap();
 		}
 
-		client.get_root().node.local_signals.lock().insert(
-			"logic_step".to_owned(),
-			Arc::new({
+		client
+			.get_root()
+			.node
+			.add_local_signal("logic_step", {
 				let client = client.clone();
 				move |data| {
 					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
@@ -110,8 +108,8 @@ impl Client {
 					}
 					Ok(())
 				}
-			}),
-		);
+			})
+			.unwrap();
 
 		client
 			.get_root()

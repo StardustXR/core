@@ -22,13 +22,13 @@ impl<'a> SphereField {
 		Ok(SphereField {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/field",
 					"create_sphere_field",
 					"/field",
 					true,
 					&id.clone(),
-					(id, spatial_parent, position, radius),
+					(id, spatial_parent.node().get_path()?, position, radius),
 				)?,
 			},
 		})

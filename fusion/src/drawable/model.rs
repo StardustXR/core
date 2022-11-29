@@ -1,5 +1,5 @@
 use crate::{
-	node::{Node, NodeError},
+	node::{Node, NodeError, NodeType},
 	resource::Resource,
 	spatial::Spatial,
 };
@@ -50,7 +50,7 @@ impl<'a> Model {
 		Ok(Model {
 			spatial: Spatial {
 				node: Node::new(
-					spatial_parent.node.client.clone(),
+					&spatial_parent.node.client()?,
 					"/drawable",
 					"create_model",
 					"/drawable/model",
@@ -58,7 +58,7 @@ impl<'a> Model {
 					&id.clone(),
 					(
 						id,
-						spatial_parent.node.get_path(),
+						spatial_parent.node().get_path()?,
 						Transform {
 							position,
 							rotation,
