@@ -72,35 +72,27 @@ impl<'a> PulseSender {
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> Result<()> {
-		let (info, receiver, field) = sender.new_receiver(data)?;
-		handler.lock().new_receiver(info, receiver, field);
-		Ok(())
-	}
-	fn new_receiver(&self, data: &[u8]) -> Result<(NewReceiverInfo, PulseReceiver, UnknownField)> {
-		let client = self.client()?;
+		let client = sender.client()?;
 		let info: NewReceiverInfo = deserialize(data)?;
 		let receiver_stored = PulseReceiver {
-			spatial: Spatial::from_path(&client, self.node().get_path()?, &info.uid, false),
+			spatial: Spatial::from_path(&client, sender.node().get_path()?, &info.uid, false),
 		};
-		let receiver = PulseReceiver {
-			spatial: receiver_stored.spatial.alias(),
-		};
+		let receiver = receiver_stored.alias();
 		let field_stored = UnknownField {
 			spatial: Spatial::from_path(
 				&client,
-				self.node().get_path()?,
+				sender.node().get_path()?,
 				info.uid.clone() + "-field",
 				false,
 			),
 		};
-		let field = UnknownField {
-			spatial: field_stored.spatial.alias(),
-		};
-		self.receivers
+		let field = field_stored.alias();
+		sender
+			.receivers
 			.write()
 			.insert(info.uid.clone(), (receiver_stored, field_stored));
-
-		Ok((info, receiver, field))
+		handler.lock().new_receiver(info, receiver, field);
+		Ok(())
 	}
 
 	fn handle_drop_receiver<H: PulseSenderHandler>(
@@ -120,7 +112,7 @@ impl<'a> PulseSender {
 			.map_err(|_| NodeError::MapInvalid)?;
 
 		self.node
-			.send_remote_signal("send_data", &(receiver.node().get_name()?, data))
+			.send_remote_signal("send_data", &(receiver.node().get_path()?, data))
 	}
 
 	pub fn receivers(&self) -> RwLockReadGuard<FxHashMap<String, (PulseReceiver, UnknownField)>> {
@@ -307,8 +299,7 @@ async fn fusion_pulses() {
 			.unwrap();
 
 	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
+		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => panic!("Timed Out"),
 		e = event_loop => e.unwrap().unwrap(),
-	};
+	}
 }
