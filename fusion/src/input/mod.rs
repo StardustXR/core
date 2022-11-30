@@ -1,6 +1,8 @@
 pub mod action;
 mod tip;
 
+use crate::node::HandledNodeType;
+
 use super::{
 	fields::Field,
 	node::{Node, NodeError, NodeType},
@@ -37,19 +39,14 @@ pub struct InputHandler {
 }
 
 impl<'a> InputHandler {
-	pub fn create<F, Fi: Field, T>(
+	pub fn create<Fi: Field>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
 		field: &'a Fi,
-		wrapped_init: F,
-	) -> Result<HandlerWrapper<Self, T>, NodeError>
-	where
-		F: FnOnce(&Arc<InputHandler>) -> T,
-		T: InputHandlerHandler + 'static,
-	{
+	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
-		let handler = InputHandler {
+		Ok(InputHandler {
 			spatial: Spatial {
 				node: Node::new(
 					&spatial_parent.node.client()?,
@@ -70,19 +67,21 @@ impl<'a> InputHandler {
 					),
 				)?,
 			},
-		};
+		})
+	}
 
-		let handler_wrapper =
-			HandlerWrapper::new(handler, |_weak_handler, node_ref| wrapped_init(node_ref));
+	pub fn wrap<H: InputHandlerHandler>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new(self, handler);
 		handler_wrapper.add_handled_method("input", Self::handle_input)?;
-
-		// handler_wrapper.
 		Ok(handler_wrapper)
 	}
 
-	fn handle_input<T: InputHandlerHandler>(
+	fn handle_input<H: InputHandlerHandler>(
 		_zone: Arc<InputHandler>,
-		handler: Arc<Mutex<T>>,
+		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> anyhow::Result<Vec<u8>> {
 		let capture = handler.lock().input(InputData::deserialize(data)?);
@@ -93,7 +92,14 @@ impl NodeType for InputHandler {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
+
+	fn alias(&self) -> Self {
+		InputHandler {
+			spatial: self.spatial.alias(),
+		}
+	}
 }
+impl HandledNodeType for InputHandler {}
 impl std::ops::Deref for InputHandler {
 	type Target = Spatial;
 
@@ -149,8 +155,10 @@ async fn fusion_input_handler() {
 	// 	.build()
 	// 	.await
 	// 	.unwrap();
-	let _input_handler =
-		InputHandler::create(client.get_root(), None, None, &field, |_| InputHandlerTest).unwrap();
+	let _input_handler = InputHandler::create(client.get_root(), None, None, &field)
+		.unwrap()
+		.wrap(InputHandlerTest)
+		.unwrap();
 
 	tokio::select! {
 		biased;

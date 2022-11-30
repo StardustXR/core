@@ -1,8 +1,8 @@
-use super::{HandledItem, Item};
+use super::Item;
 use crate::{
 	client::Client,
 	drawable::Model,
-	node::{Node, NodeError, NodeType},
+	node::{HandledNodeType, Node, NodeError, NodeType},
 	spatial::Spatial,
 	HandlerWrapper,
 };
@@ -10,10 +10,7 @@ use mint::Vector2;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use stardust_xr::schemas::flex::deserialize;
-use std::{
-	ops::Deref,
-	sync::{Arc, Weak},
-};
+use std::{ops::Deref, sync::Arc};
 use xkbcommon::xkb::{self, Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 pub trait PanelItemHandler: Send + Sync {
@@ -105,62 +102,75 @@ impl PanelItem {
 		self.node.send_remote_signal("resize", &(width, height))
 	}
 
-	fn handle_resize<T: PanelItemHandler>(
+	fn handle_resize<H: PanelItemHandler>(
 		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<T>>,
+		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> anyhow::Result<()> {
 		handler.lock().resize(deserialize(data)?);
 		Ok(())
 	}
 
-	fn handle_set_cursor<T: PanelItemHandler>(
+	fn handle_set_cursor<H: PanelItemHandler>(
 		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<T>>,
+		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> anyhow::Result<()> {
 		handler.lock().set_cursor(deserialize(data)?);
 		Ok(())
 	}
-}
-impl NodeType for PanelItem {
-	fn node(&self) -> &Node {
-		&self.spatial.node
-	}
-}
-impl Item for PanelItem {
-	type ItemType = PanelItem;
-	type InitData = PanelItemInitData;
-	const TYPE_NAME: &'static str = "panel";
-}
-impl<T: PanelItemHandler + 'static> HandledItem<T> for PanelItem {
-	fn from_path<F>(
-		client: &Arc<Client>,
-		parent_path: impl ToString,
-		name: impl ToString,
-		init_data: Self::InitData,
-		mut ui_init_fn: F,
-	) -> HandlerWrapper<Self, T>
-	where
-		F: FnMut(Self::InitData, Weak<Mutex<T>>, &Arc<Self>) -> T + Clone + Send + Sync + 'static,
-	{
-		let item = PanelItem {
-			spatial: Spatial {
-				node: Node::from_path(client, parent_path, name, false),
-			},
-		};
 
-		let handler_wrapper = HandlerWrapper::new(item, |handler: Weak<Mutex<T>>, item| {
-			ui_init_fn(init_data, handler, item)
-		});
+	pub fn wrap<H: PanelItemHandler>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new(self, handler);
 		handler_wrapper
 			.add_handled_signal("resize", Self::handle_resize)
 			.unwrap();
 		handler_wrapper
 			.add_handled_signal("set_cursor", Self::handle_set_cursor)
 			.unwrap();
+		Ok(handler_wrapper)
+	}
+}
+impl NodeType for PanelItem {
+	fn node(&self) -> &Node {
+		&self.spatial.node
+	}
 
-		handler_wrapper
+	fn alias(&self) -> Self {
+		PanelItem {
+			spatial: self.spatial.alias(),
+		}
+	}
+}
+impl HandledNodeType for PanelItem {}
+impl Item for PanelItem {
+	type ItemType = PanelItem;
+	type InitData = PanelItemInitData;
+	const TYPE_NAME: &'static str = "panel";
+
+	fn from_path(
+		client: &Arc<Client>,
+		parent_path: impl ToString,
+		name: impl ToString,
+		_init_data: &PanelItemInitData,
+	) -> Self {
+		// let handler_wrapper = HandlerWrapper::new(item, |handler: Weak<Mutex<T>>, item| {
+		// 	ui_init_fn(init_data, handler, item)
+		// });
+		// handler_wrapper
+		// 	.add_handled_signal("resize", Self::handle_resize)
+		// 	.unwrap();
+		// handler_wrapper
+		// 	.add_handled_signal("set_cursor", Self::handle_set_cursor)
+		// 	.unwrap();
+		PanelItem {
+			spatial: Spatial {
+				node: Node::from_path(client, parent_path, name, false),
+			},
+		}
 	}
 }
 impl Deref for PanelItem {
@@ -172,32 +182,41 @@ impl Deref for PanelItem {
 }
 
 #[tokio::test]
-async fn fusion_panel_ui() -> anyhow::Result<()> {
+async fn fusion_panel_ui() {
 	use manifest_dir_macros::directory_relative_path;
-	let (client, event_loop) = Client::connect_with_async_loop().await?;
+	use rustc_hash::FxHashMap;
+	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
-	struct PanelItemUI;
-	impl PanelItemUI {
-		fn new(init_data: PanelItemInitData) -> Self {
-			println!("Panel item created with {:?}", init_data);
-			PanelItemUI
+	struct PanelItemManager(FxHashMap<String, HandlerWrapper<PanelItem, PanelItemUI>>);
+	impl crate::items::ItemUIHandler<PanelItem> for PanelItemManager {
+		fn created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
+			self.0.insert(
+				uid.to_string(),
+				item.wrap(PanelItemUI::new(init_data)).unwrap(),
+			);
 		}
-	}
-	impl crate::items::ItemHandler<PanelItem> for PanelItemUI {
-		fn captured(&mut self, item: &PanelItem, acceptor_uid: &str) {
+		fn captured(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
 			println!(
 				"Acceptor {} captured panel item {}",
 				acceptor_uid,
 				item.node().get_name().unwrap()
 			);
 		}
-		fn released(&mut self, item: &PanelItem, acceptor_uid: &str) {
+		fn released(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
 			println!(
 				"Acceptor {} released panel item {}",
 				acceptor_uid,
 				item.node().get_name().unwrap()
 			);
+		}
+		fn destroyed(&mut self, _uid: &str) {}
+	}
+	struct PanelItemUI;
+	impl PanelItemUI {
+		fn new(init_data: PanelItemInitData) -> Self {
+			println!("Panel item created with {:?}", init_data);
+			PanelItemUI
 		}
 	}
 	impl PanelItemHandler for PanelItemUI {
@@ -215,14 +234,13 @@ async fn fusion_panel_ui() -> anyhow::Result<()> {
 		}
 	}
 
-	let _item_ui = crate::items::ItemUI::<PanelItem, PanelItemUI>::register(
-		&client,
-		|init_data, _weak_wrapped, _node_ref| PanelItemUI::new(init_data),
-	)?;
+	let _item_ui = crate::items::ItemUI::<PanelItem>::register(&client)
+		.unwrap()
+		.wrap(PanelItemManager(FxHashMap::default()))
+		.unwrap();
 
 	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => Err(anyhow::anyhow!("Timed Out"))?,
-		e = event_loop => e??,
+		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => panic!("Timed Out"),
+		e = event_loop => e.unwrap().unwrap(),
 	}
-	Ok(())
 }

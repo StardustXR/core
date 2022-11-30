@@ -107,7 +107,13 @@ pub struct UnknownField {
 }
 impl NodeType for UnknownField {
 	fn node(&self) -> &Node {
-		self.spatial.node()
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		UnknownField {
+			spatial: self.spatial.alias(),
+		}
 	}
 }
 impl Field for UnknownField {}

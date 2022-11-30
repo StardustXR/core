@@ -54,7 +54,13 @@ impl<'a> BoxField {
 }
 impl NodeType for BoxField {
 	fn node(&self) -> &Node {
-		self.spatial.node()
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		BoxField {
+			spatial: self.spatial.alias(),
+		}
 	}
 }
 impl ClientOwned for BoxField {}

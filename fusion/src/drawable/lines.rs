@@ -97,6 +97,12 @@ impl NodeType for Lines {
 	fn node(&self) -> &Node {
 		&self.spatial.node()
 	}
+
+	fn alias(&self) -> Self {
+		Lines {
+			spatial: self.spatial.alias(),
+		}
+	}
 }
 impl Deref for Lines {
 	type Target = Spatial;

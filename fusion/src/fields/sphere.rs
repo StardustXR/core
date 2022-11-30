@@ -40,7 +40,13 @@ impl<'a> SphereField {
 }
 impl NodeType for SphereField {
 	fn node(&self) -> &Node {
-		self.spatial.node()
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		SphereField {
+			spatial: self.spatial.alias(),
+		}
 	}
 }
 impl ClientOwned for SphereField {}

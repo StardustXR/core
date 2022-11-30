@@ -71,6 +71,17 @@ impl<'a> Model {
 		})
 	}
 }
+impl NodeType for Model {
+	fn node(&self) -> &Node {
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		Model {
+			spatial: self.spatial.alias(),
+		}
+	}
+}
 impl Deref for Model {
 	type Target = Spatial;
 

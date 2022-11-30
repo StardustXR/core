@@ -54,7 +54,13 @@ impl<'a> TorusField {
 }
 impl NodeType for TorusField {
 	fn node(&self) -> &Node {
-		self.spatial.node()
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		TorusField {
+			spatial: self.spatial.alias(),
+		}
 	}
 }
 impl ClientOwned for TorusField {}

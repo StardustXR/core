@@ -1,25 +1,20 @@
 pub mod environment;
 pub mod panel;
 
-use crate::{fields::Field, spatial::Spatial, DummyHandler};
-
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
-	HandlerWrapper,
 };
-use anyhow::anyhow;
-use parking_lot::{Mutex, MutexGuard};
+use crate::{fields::Field, node::HandledNodeType, spatial::Spatial, HandlerWrapper};
+use anyhow::{anyhow, Result};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use serde::de::DeserializeOwned;
 use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
 	values::Transform,
 };
-use std::{
-	any::TypeId,
-	sync::{Arc, Weak},
-};
+use std::{any::TypeId, sync::Arc};
 
 pub trait Item: NodeType + Send + Sync + 'static {
 	type ItemType;
@@ -32,117 +27,60 @@ pub trait Item: NodeType + Send + Sync + 'static {
 	fn release(&self) -> Result<(), NodeError> {
 		self.node().send_remote_signal("release", &())
 	}
-}
-pub trait HandledItem<H: Send + Sync + 'static>: Item {
-	fn from_path<F>(
+	fn from_path(
 		client: &Arc<Client>,
 		parent_path: impl ToString,
 		name: impl ToString,
-		init_data: Self::InitData,
-		ui_init_fn: F,
-	) -> HandlerWrapper<Self, H>
-	where
-		F: FnMut(Self::InitData, Weak<Mutex<H>>, &Arc<Self>) -> H + Clone + Send + Sync + 'static;
+		init_data: &Self::InitData,
+	) -> Self;
 }
 
-pub trait ItemHandler<I: Item>: Send + Sync + 'static {
-	fn captured(&mut self, item: &I, acceptor_uid: &str);
-	fn released(&mut self, item: &I, acceptor_uid: &str);
+pub trait ItemUIHandler<I: Item>: Send + Sync + 'static {
+	fn created(&mut self, uid: &str, item: I, init_data: I::InitData);
+	fn captured(&mut self, uid: &str, acceptor_uid: &str, item: I);
+	fn released(&mut self, uid: &str, acceptor_uid: &str, item: I);
+	fn destroyed(&mut self, uid: &str);
 }
 
-pub struct ItemUI<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> {
+pub struct ItemUI<I: Item> {
 	node: Node,
-	items: Arc<Mutex<FxHashMap<String, HandlerWrapper<I, H>>>>,
-	captured_items: Arc<Mutex<FxHashMap<String, HandlerWrapper<I, H>>>>,
-	acceptors: Arc<Mutex<FxHashMap<String, ItemAcceptor<I, DummyHandler>>>>,
+	items: Arc<RwLock<FxHashMap<String, I>>>,
+	captured_items: Arc<RwLock<FxHashMap<String, I>>>,
+	acceptors: Arc<RwLock<FxHashMap<String, ItemAcceptor<I>>>>,
 }
-impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I, H> {
-	pub fn register<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
-	where
-		F: FnMut(I::InitData, Weak<Mutex<H>>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
-	{
+impl<I: Item> ItemUI<I> {
+	pub fn register(client: &Arc<Client>) -> Result<ItemUI<I>, NodeError> {
 		if !client
 			.registered_item_uis
 			.lock()
 			.contains(&TypeId::of::<I>())
 		{
-			Self::new_item_ui(client, item_ui_init)
+			Self::new_item_ui(client)
 		} else {
 			Err(NodeError::OverrideSingleton)
 		}
 	}
 
-	fn new_item_ui<F>(client: &Arc<Client>, item_ui_init: F) -> Result<ItemUI<I, H>, NodeError>
-	where
-		F: FnMut(I::InitData, Weak<Mutex<H>>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
-	{
-		let item_ui = ItemUI::<I, H> {
+	fn new_item_ui(client: &Arc<Client>) -> Result<ItemUI<I>, NodeError> {
+		let item_ui = ItemUI::<I> {
 			node: Node::from_path(client, "/item", I::TYPE_NAME, true),
-			items: Arc::new(Mutex::new(FxHashMap::default())),
-			captured_items: Arc::new(Mutex::new(FxHashMap::default())),
-			acceptors: Arc::new(Mutex::new(FxHashMap::default())),
+			items: Arc::new(RwLock::new(FxHashMap::default())),
+			captured_items: Arc::new(RwLock::new(FxHashMap::default())),
+			acceptors: Arc::new(RwLock::new(FxHashMap::default())),
 		};
 
-		item_ui.node.add_local_signal("create_item", {
-			let client = Arc::downgrade(client);
-			let items = item_ui.items.clone();
-			move |data| {
-				let (item_uid, init_data): (String, I::InitData) = deserialize(data)?;
-
-				let item = I::from_path(
-					&client.upgrade().ok_or_else(|| anyhow!("Client dropped"))?,
-					format!("/item/{}/item", I::TYPE_NAME),
-					&item_uid,
-					init_data,
-					item_ui_init.clone(),
-				);
-				items.lock().insert(item_uid, item);
-				Ok(())
-			}
-		})?;
-		item_ui.node.add_local_signal("capture_item", {
-			let items = item_ui.items.clone();
-			let captured_items = item_ui.captured_items.clone();
-			move |data| {
-				let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
-				let items = items.lock();
-				let Some(item) = items.get(item_uid) else { return Ok(()) };
-				item.wrapped.lock().captured(&item.node, acceptor_uid);
-				captured_items
-					.lock()
-					.insert(item_uid.to_string(), item.clone());
-				Ok(())
-			}
-		})?;
-		item_ui.node.add_local_signal("release_item", {
-			let captured_items = item_ui.captured_items.clone();
-			move |data| {
-				let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
-				let Some(item) = captured_items.lock().remove(item_uid) else { return Ok(()) };
-				item.wrapped.lock().captured(&item.node, acceptor_uid);
-				Ok(())
-			}
-		})?;
-		item_ui.node.add_local_signal("destroy_item", {
-			let items = item_ui.items.clone();
-			move |data| {
-				let name: &str = deserialize(data)?;
-				items.lock().remove(name);
-				Ok(())
-			}
-		})?;
 		item_ui.node.add_local_signal("create_acceptor", {
 			let client = Arc::downgrade(client);
 			let acceptors = item_ui.acceptors.clone();
 			move |data| {
 				let acceptor_uid: String = deserialize(data)?;
 
-				let acceptor = ItemAcceptor::<I, DummyHandler>::from_path(
+				let acceptor = ItemAcceptor::<I>::from_path(
 					&client.upgrade().ok_or_else(|| anyhow!("Client dropped"))?,
 					format!("/item/{}/acceptor", I::TYPE_NAME),
 					&acceptor_uid,
 				);
-				acceptors.lock().insert(acceptor_uid, acceptor);
+				acceptors.write().insert(acceptor_uid, acceptor);
 				Ok(())
 			}
 		})?;
@@ -150,7 +88,7 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I,
 			let acceptors = item_ui.acceptors.clone();
 			move |data| {
 				let name: &str = deserialize(data)?;
-				acceptors.lock().remove(name);
+				acceptors.write().remove(name);
 				Ok(())
 			}
 		})?;
@@ -170,11 +108,94 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemUI<I,
 		Ok(item_ui)
 	}
 
-	pub fn items(&self) -> MutexGuard<FxHashMap<String, HandlerWrapper<I, H>>> {
-		self.items.lock()
+	pub fn wrap<H: ItemUIHandler<I>>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new(self, handler);
+		handler_wrapper.add_handled_signal("create_item", Self::handle_create_item)?;
+		handler_wrapper.add_handled_signal("capture_item", Self::handle_capture_item)?;
+		handler_wrapper.add_handled_signal("release_item", Self::handle_release_item)?;
+		handler_wrapper.add_handled_signal("destroy_item", Self::handle_destroy_item)?;
+		Ok(handler_wrapper)
+	}
+
+	fn handle_create_item<H: ItemUIHandler<I>>(
+		ui: Arc<ItemUI<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let (uid, init_data): (&str, I::InitData) = deserialize(data)?;
+
+		let item = I::from_path(
+			&ui.client()?,
+			format!("/item/{}/item", I::TYPE_NAME),
+			&uid,
+			&init_data,
+		);
+		let item_aliased = item.alias();
+		ui.items.write().insert(uid.to_string(), item);
+		handler.lock().created(uid, item_aliased, init_data);
+		Ok(())
+	}
+	fn handle_capture_item<H: ItemUIHandler<I>>(
+		ui: Arc<ItemUI<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
+		let items = ui.items.read();
+		let Some(item) = items.get(item_uid) else { return Ok(()) };
+		ui.captured_items
+			.write()
+			.insert(item_uid.to_string(), item.alias());
+		handler
+			.lock()
+			.captured(item_uid, acceptor_uid, item.alias());
+		Ok(())
+	}
+	fn handle_release_item<H: ItemUIHandler<I>>(
+		ui: Arc<ItemUI<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
+		let Some(item) = ui.captured_items.write().remove(item_uid) else { return Ok(()) };
+		handler.lock().released(item_uid, acceptor_uid, item);
+		Ok(())
+	}
+	fn handle_destroy_item<H: ItemUIHandler<I>>(
+		ui: Arc<ItemUI<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let uid: &str = deserialize(data)?;
+		ui.items.write().remove(uid);
+		handler.lock().destroyed(uid);
+		Ok(())
+	}
+
+	pub fn items(&self) -> RwLockReadGuard<FxHashMap<String, I>> {
+		self.items.read()
 	}
 }
-impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> Drop for ItemUI<I, H> {
+impl<I: Item> NodeType for ItemUI<I> {
+	fn node(&self) -> &Node {
+		&self.node
+	}
+
+	fn alias(&self) -> Self {
+		ItemUI {
+			node: self.node.alias(),
+			items: self.items.clone(),
+			captured_items: self.captured_items.clone(),
+			acceptors: self.acceptors.clone(),
+		}
+	}
+}
+impl<I: Item> HandledNodeType for ItemUI<I> {}
+
+impl<I: Item> Drop for ItemUI<I> {
 	fn drop(&mut self) {
 		let type_id = TypeId::of::<I>();
 		if let Ok(client) = self.node.client() {
@@ -186,23 +207,24 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> Drop for 
 	}
 }
 
-pub struct ItemAcceptor<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> {
-	pub spatial: Spatial,
-	items: Arc<Mutex<FxHashMap<String, HandlerWrapper<I, H>>>>,
+pub trait ItemAcceptorHandler<I: Item>: Send + Sync + 'static {
+	fn captured(&mut self, uid: &str, item: I, init_data: I::InitData);
+	fn released(&mut self, uid: &str);
 }
-impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemAcceptor<I, H> {
-	pub fn create<'a, F, Fi: Field>(
+
+pub struct ItemAcceptor<I: Item> {
+	pub spatial: Spatial,
+	items: Arc<RwLock<FxHashMap<String, I>>>,
+}
+impl<I: Item> ItemAcceptor<I> {
+	pub fn create<'a, Fi: Field>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
 		field: &'a Fi,
-		item_acceptor_init: F,
-	) -> Result<ItemAcceptor<I, H>, NodeError>
-	where
-		F: FnMut(I::InitData, Weak<Mutex<H>>, &Arc<I>) -> H + Clone + Send + Sync + 'static,
-	{
+	) -> Result<ItemAcceptor<I>, NodeError> {
 		let id = nanoid::nanoid!();
-		let item_acceptor = ItemAcceptor::<I, H> {
+		let item_acceptor = ItemAcceptor::<I> {
 			spatial: Spatial {
 				node: Node::new(
 					&spatial_parent.node.client()?,
@@ -224,12 +246,11 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemAccep
 					),
 				)?,
 			},
-			items: Arc::new(Mutex::new(FxHashMap::default())),
+			items: Arc::new(RwLock::new(FxHashMap::default())),
 		};
 
 		item_acceptor.node().add_local_signal("capture", {
 			let client = Arc::downgrade(&spatial_parent.node().client()?);
-			let uid = item_acceptor.node().get_name()?.to_string();
 			let items = item_acceptor.items.clone();
 			move |data| {
 				let (item_uid, init_data): (&str, I::InitData) = deserialize(data)?;
@@ -238,23 +259,17 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemAccep
 					&client.upgrade().ok_or_else(|| anyhow!("Client dropped"))?,
 					&format!("/item/{}/item", I::TYPE_NAME),
 					item_uid,
-					init_data,
-					item_acceptor_init.clone(),
+					&init_data,
 				);
-				let mut items = items.lock();
-				items.insert(item_uid.to_string(), item);
-				let Some(item) = items.get(item_uid) else { return Ok(()) };
-				item.wrapped.lock().captured(&item.node, &uid);
+				items.write().insert(item_uid.to_string(), item);
 				Ok(())
 			}
 		})?;
 		item_acceptor.node().add_local_signal("release", {
 			let items = item_acceptor.items.clone();
-			let uid = item_acceptor.node().get_name()?.to_string();
 			move |data| {
 				let name: &str = deserialize(data)?;
-				let Some(item) = items.lock().remove(name) else { return Ok(()) };
-				item.wrapped.lock().captured(&item.node, &uid);
+				items.write().remove(name);
 				Ok(())
 			}
 		})?;
@@ -266,28 +281,69 @@ impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> ItemAccep
 		client: &Arc<Client>,
 		parent: impl ToString,
 		name: impl ToString,
-	) -> ItemAcceptor<I, DummyHandler> {
+	) -> ItemAcceptor<I> {
 		ItemAcceptor {
 			spatial: Spatial {
 				node: Node::from_path(client, parent, name, false),
 			},
-			items: Arc::new(Mutex::new(FxHashMap::default())),
+			items: Arc::new(RwLock::new(FxHashMap::default())),
 		}
 	}
 
-	pub fn items(&self) -> MutexGuard<FxHashMap<String, HandlerWrapper<I, H>>> {
-		self.items.lock()
+	pub fn items(&self) -> RwLockReadGuard<FxHashMap<String, I>> {
+		self.items.read()
 	}
 
 	pub fn capture(&self, item: &I) -> Result<(), NodeError> {
 		self.node()
 			.send_remote_signal("capture", &item.node().get_path()?)
 	}
+
+	pub fn wrap<H: ItemAcceptorHandler<I>>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new(self, handler);
+		handler_wrapper.add_handled_signal("capture", Self::handle_capture_item)?;
+		handler_wrapper.add_handled_signal("release", Self::handle_release_item)?;
+		Ok(handler_wrapper)
+	}
+
+	fn handle_capture_item<H: ItemAcceptorHandler<I>>(
+		acceptor: Arc<ItemAcceptor<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let (item_uid, init_data): (&str, I::InitData) = deserialize(data)?;
+		let items = acceptor.items.read();
+		let Some(item) = items.get(item_uid) else { return Ok(()) };
+		acceptor
+			.items
+			.write()
+			.insert(item_uid.to_string(), item.alias());
+		handler.lock().captured(item_uid, item.alias(), init_data);
+		Ok(())
+	}
+	fn handle_release_item<H: ItemAcceptorHandler<I>>(
+		acceptor: Arc<ItemAcceptor<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let uid: &str = deserialize(data)?;
+		acceptor.items.write().remove(uid);
+		handler.lock().released(uid);
+		Ok(())
+	}
 }
-impl<I: HandledItem<H> + HandledItem<DummyHandler>, H: ItemHandler<I>> NodeType
-	for ItemAcceptor<I, H>
-{
+impl<I: Item> NodeType for ItemAcceptor<I> {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
+	fn alias(&self) -> Self {
+		ItemAcceptor {
+			spatial: self.spatial.alias(),
+			items: self.items.clone(),
+		}
+	}
 }
+impl<I: Item> HandledNodeType for ItemAcceptor<I> {}

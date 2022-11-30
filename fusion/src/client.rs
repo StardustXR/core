@@ -163,14 +163,14 @@ impl Client {
 		self.hmd.get().as_ref().unwrap()
 	}
 
-	pub fn wrap_root<T: LifeCycleHandler>(&self, wrapped: T) -> Arc<Mutex<T>> {
+	pub fn wrap_root<H: LifeCycleHandler>(&self, wrapped: H) -> Arc<Mutex<H>> {
 		let wrapped = Arc::new(Mutex::new(wrapped));
 		*self.life_cycle_handler.lock() =
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn LifeCycleHandler>>));
 		wrapped
 	}
 
-	pub fn set_base_prefixes<T: AsRef<str>>(&self, prefixes: &[T]) {
+	pub fn set_base_prefixes<H: AsRef<str>>(&self, prefixes: &[H]) {
 		let prefixes: Vec<&Path> = prefixes
 			.iter()
 			.map(|p| Path::new(p.as_ref()))

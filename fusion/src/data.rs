@@ -1,7 +1,7 @@
 use crate::{
 	fields::{Field, UnknownField},
-	node::NodeError,
 	node::{ClientOwned, Node, NodeType},
+	node::{HandledNodeType, NodeError},
 	spatial::Spatial,
 	HandlerWrapper,
 };
@@ -14,12 +14,7 @@ use stardust_xr::{schemas::flex::deserialize, values::Transform};
 use std::sync::Arc;
 
 pub trait PulseSenderHandler: Send + Sync {
-	fn new_receiver(
-		&mut self,
-		receiver: &PulseReceiver,
-		field: &UnknownField,
-		info: NewReceiverInfo,
-	);
+	fn new_receiver(&mut self, info: NewReceiverInfo, receiver: PulseReceiver, field: UnknownField);
 	fn drop_receiver(&mut self, uid: &str);
 }
 
@@ -34,25 +29,20 @@ pub struct NewReceiverInfo {
 #[derive(Debug)]
 pub struct PulseSender {
 	pub spatial: Spatial,
-	receivers: RwLock<FxHashMap<String, (PulseReceiver, UnknownField)>>,
+	receivers: Arc<RwLock<FxHashMap<String, (PulseReceiver, UnknownField)>>>,
 }
 impl<'a> PulseSender {
-	pub fn create<F, T>(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
 		mask: Vec<u8>,
-		wrapped_init: F,
-	) -> Result<HandlerWrapper<PulseSender, T>, NodeError>
-	where
-		F: FnOnce(&Arc<PulseSender>) -> T,
-		T: PulseSenderHandler + 'static,
-	{
+	) -> Result<PulseSender, NodeError> {
 		flexbuffers::Reader::get_root(mask.as_slice())
 			.and_then(|f| f.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 		let id = nanoid::nanoid!();
-		let sender = PulseSender {
+		Ok(PulseSender {
 			spatial: Spatial {
 				node: Node::new(
 					&spatial_parent.node.client()?,
@@ -73,50 +63,49 @@ impl<'a> PulseSender {
 					),
 				)?,
 			},
-			receivers: RwLock::new(FxHashMap::default()),
-		};
-
-		let handler_wrapper =
-			HandlerWrapper::new(sender, |_weak_handler, sender| wrapped_init(sender));
-		handler_wrapper.add_handled_signal("drop_receiver", Self::handle_drop_receiver)?;
-		handler_wrapper.add_handled_signal("new_receiver", Self::handle_new_receiver)?;
-
-		// handler_wrapper.
-		Ok(handler_wrapper)
+			receivers: Arc::new(RwLock::new(FxHashMap::default())),
+		})
 	}
 
-	fn handle_new_receiver<T: PulseSenderHandler>(
+	fn handle_new_receiver<H: PulseSenderHandler>(
 		sender: Arc<PulseSender>,
-		handler: Arc<Mutex<T>>,
+		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> Result<()> {
-		let client = sender.client()?;
+		let (info, receiver, field) = sender.new_receiver(data)?;
+		handler.lock().new_receiver(info, receiver, field);
+		Ok(())
+	}
+	fn new_receiver(&self, data: &[u8]) -> Result<(NewReceiverInfo, PulseReceiver, UnknownField)> {
+		let client = self.client()?;
 		let info: NewReceiverInfo = deserialize(data)?;
-		let receiver = PulseReceiver {
-			spatial: Spatial::from_path(&client, sender.node().get_path()?, &info.uid, false),
+		let receiver_stored = PulseReceiver {
+			spatial: Spatial::from_path(&client, self.node().get_path()?, &info.uid, false),
 		};
-		let field = UnknownField {
+		let receiver = PulseReceiver {
+			spatial: receiver_stored.spatial.alias(),
+		};
+		let field_stored = UnknownField {
 			spatial: Spatial::from_path(
 				&client,
-				sender.node().get_path()?,
+				self.node().get_path()?,
 				info.uid.clone() + "-field",
 				false,
 			),
 		};
-		sender
-			.receivers
+		let field = UnknownField {
+			spatial: field_stored.spatial.alias(),
+		};
+		self.receivers
 			.write()
-			.insert(info.uid.clone(), (receiver, field));
+			.insert(info.uid.clone(), (receiver_stored, field_stored));
 
-		let receivers = sender.receivers.read();
-		let (receiver, field) = receivers.get(&info.uid).unwrap();
-		handler.lock().new_receiver(receiver, field, info);
-		Ok(())
+		Ok((info, receiver, field))
 	}
 
-	fn handle_drop_receiver<T: PulseSenderHandler>(
+	fn handle_drop_receiver<H: PulseSenderHandler>(
 		sender: Arc<PulseSender>,
-		handler: Arc<Mutex<T>>,
+		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
@@ -134,17 +123,33 @@ impl<'a> PulseSender {
 			.send_remote_signal("send_data", &(receiver.node().get_name()?, data))
 	}
 
-	pub fn receivers<'r>(
-		&'r self,
-	) -> RwLockReadGuard<'r, FxHashMap<String, (PulseReceiver, UnknownField)>> {
+	pub fn receivers(&self) -> RwLockReadGuard<FxHashMap<String, (PulseReceiver, UnknownField)>> {
 		self.receivers.read()
+	}
+
+	pub fn wrap<H: PulseSenderHandler>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new(self, handler);
+		handler_wrapper.add_handled_signal("new_receiver", Self::handle_new_receiver)?;
+		handler_wrapper.add_handled_signal("drop_receiver", Self::handle_drop_receiver)?;
+		Ok(handler_wrapper)
 	}
 }
 impl NodeType for PulseSender {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
+
+	fn alias(&self) -> Self {
+		PulseSender {
+			spatial: self.spatial.alias(),
+			receivers: self.receivers.clone(),
+		}
+	}
 }
+impl HandledNodeType for PulseSender {}
 impl std::ops::Deref for PulseSender {
 	type Target = Spatial;
 
@@ -161,24 +166,19 @@ pub struct PulseReceiver {
 	pub spatial: Spatial,
 }
 impl<'a> PulseReceiver {
-	pub fn create<F, Fi: Field + ClientOwned, T>(
+	pub fn create<Fi: Field + ClientOwned>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
 		rotation: Option<mint::Quaternion<f32>>,
 		field: &'a Fi,
 		mask: Vec<u8>,
-		wrapped_init: F,
-	) -> Result<HandlerWrapper<Self, T>, NodeError>
-	where
-		F: FnOnce(&Arc<PulseReceiver>) -> T,
-		T: PulseReceiverHandler + 'static,
-	{
+	) -> Result<Self, NodeError> {
 		flexbuffers::Reader::get_root(mask.as_slice())
 			.and_then(|f| f.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 
 		let id = nanoid::nanoid!();
-		let pulse_rx = PulseReceiver {
+		Ok(PulseReceiver {
 			spatial: Spatial {
 				node: Node::new(
 					&spatial_parent.node.client()?,
@@ -200,10 +200,14 @@ impl<'a> PulseReceiver {
 					),
 				)?,
 			},
-		};
+		})
+	}
 
-		let handler_wrapper =
-			HandlerWrapper::new(pulse_rx, |_weak_handler, node_ref| wrapped_init(node_ref));
+	pub fn wrap<H: PulseReceiverHandler>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new(self, handler);
 
 		handler_wrapper.add_handled_signal("data", move |_receiver, handler, data| {
 			#[derive(Deserialize)]
@@ -227,7 +231,14 @@ impl NodeType for PulseReceiver {
 	fn node(&self) -> &Node {
 		self.spatial.node()
 	}
+
+	fn alias(&self) -> Self {
+		PulseReceiver {
+			spatial: self.spatial.alias(),
+		}
+	}
 }
+impl HandledNodeType for PulseReceiver {}
 
 #[tokio::test]
 async fn fusion_pulses() {
@@ -249,14 +260,14 @@ async fn fusion_pulses() {
 	}
 	struct PulseSenderTest {
 		data: Vec<u8>,
-		node: Arc<PulseSender>,
+		node: PulseSender,
 	}
 	impl PulseSenderHandler for PulseSenderTest {
 		fn new_receiver(
 			&mut self,
-			receiver: &PulseReceiver,
-			field: &UnknownField,
 			info: NewReceiverInfo,
+			receiver: PulseReceiver,
+			field: UnknownField,
 		) {
 			println!(
 				"New pulse receiver {:?} with field {:?} and info {:?}",
@@ -264,7 +275,7 @@ async fn fusion_pulses() {
 				field.node().get_path(),
 				info
 			);
-			self.node.send_data(receiver, &self.data).unwrap();
+			self.node.send_data(&receiver, &self.data).unwrap();
 		}
 		fn drop_receiver(&mut self, uid: &str) {
 			println!("Pulse receiver {} dropped", uid);
@@ -281,26 +292,19 @@ async fn fusion_pulses() {
 	let mut map = mask.start_map();
 	map.push("test", true);
 	map.end_map();
-	let _pulse_sender = PulseSender::create(
-		client.get_root(),
-		None,
-		None,
-		mask.view().to_vec(),
-		|node| PulseSenderTest {
-			data: mask.view().to_vec(),
-			node: node.clone(),
-		},
-	)
-	.unwrap();
-	let _pulse_receiver = PulseReceiver::create(
-		client.get_root(),
-		None,
-		None,
-		&field,
-		mask.take_buffer(),
-		|_| PulseReceiverTest(client.clone()),
-	)
-	.unwrap();
+
+	let pulse_sender =
+		PulseSender::create(client.get_root(), None, None, mask.view().to_vec()).unwrap();
+	let pulse_sender_handler = PulseSenderTest {
+		data: mask.view().to_vec(),
+		node: pulse_sender.alias(),
+	};
+	let _pulse_sender_handler = pulse_sender.wrap(pulse_sender_handler).unwrap();
+	let _pulse_receiver =
+		PulseReceiver::create(client.get_root(), None, None, &field, mask.take_buffer())
+			.unwrap()
+			.wrap(PulseReceiverTest(client.clone()))
+			.unwrap();
 
 	tokio::select! {
 		biased;

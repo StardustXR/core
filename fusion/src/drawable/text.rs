@@ -123,6 +123,17 @@ impl Text {
 		self.node.send_remote_signal("set_text", &text.as_ref())
 	}
 }
+impl NodeType for Text {
+	fn node(&self) -> &Node {
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		Text {
+			spatial: self.spatial.alias(),
+		}
+	}
+}
 impl Deref for Text {
 	type Target = Spatial;
 

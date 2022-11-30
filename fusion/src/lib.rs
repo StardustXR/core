@@ -14,49 +14,43 @@ pub mod scenegraph;
 pub mod spatial;
 pub mod startup_settings;
 
-use self::node::{Node, NodeType};
+use self::node::HandledNodeType;
 use anyhow::{anyhow, Result};
 use client::LifeCycleHandler;
 use input::InputHandlerHandler;
-use items::{panel::PanelItemHandler, Item, ItemHandler};
+use items::panel::PanelItemHandler;
 use node::NodeError;
 use parking_lot::{Mutex, MutexGuard};
 use spatial::ZoneHandler;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 #[derive(Debug)]
-pub struct HandlerWrapper<N: NodeType, T: Send + Sync + 'static> {
+pub struct HandlerWrapper<N: HandledNodeType, H: Send + Sync + 'static> {
 	node: Arc<N>,
-	wrapped: Arc<Mutex<T>>,
+	wrapped: Arc<Mutex<H>>,
 }
-impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
-	pub fn new<F>(node: N, wrapper_handler_init: F) -> Self
-	where
-		F: FnOnce(Weak<Mutex<T>>, &Arc<N>) -> T,
-	{
-		let node = Arc::new(node);
+impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
+	pub(crate) fn new(node: N, handler: H) -> Self {
 		Self {
-			wrapped: Arc::new_cyclic(|weak| Mutex::new(wrapper_handler_init(weak.clone(), &node))),
-			node,
+			wrapped: Arc::new(Mutex::new(handler)),
+			node: Arc::new(node),
 		}
-	}
-
-	pub fn lock_inner(&self) -> MutexGuard<T> {
-		self.wrapped.lock()
 	}
 
 	pub fn node(&self) -> &Arc<N> {
 		&self.node
 	}
-
-	pub fn wrapped(&self) -> &Arc<Mutex<T>> {
+	pub fn lock_wrapped(&self) -> MutexGuard<H> {
+		self.wrapped.lock()
+	}
+	pub fn wrapped(&self) -> &Arc<Mutex<H>> {
 		&self.wrapped
 	}
 
 	pub(crate) fn add_handled_signal(
 		&self,
 		name: &str,
-		parse: fn(Arc<N>, Arc<Mutex<T>>, &[u8]) -> Result<()>,
+		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8]) -> Result<()>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
@@ -70,7 +64,7 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 	pub(crate) fn add_handled_method(
 		&self,
 		name: &str,
-		parse: fn(Arc<N>, Arc<Mutex<T>>, &[u8]) -> Result<Vec<u8>>,
+		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8]) -> Result<Vec<u8>>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
@@ -79,21 +73,6 @@ impl<N: NodeType, T: Send + Sync + 'static> HandlerWrapper<N, T> {
 			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
 			parse(node, handler, data)
 		})
-	}
-}
-
-impl<N: NodeType, T: Send + Sync + 'static> NodeType for HandlerWrapper<N, T> {
-	fn node(&self) -> &Node {
-		self.node().node()
-	}
-}
-
-impl<N: NodeType, T: Send + Sync + 'static> Clone for HandlerWrapper<N, T> {
-	fn clone(&self) -> Self {
-		Self {
-			node: self.node.clone(),
-			wrapped: self.wrapped.clone(),
-		}
 	}
 }
 
@@ -107,17 +86,13 @@ impl InputHandlerHandler for DummyHandler {
 		false
 	}
 }
-impl<I: Item> ItemHandler<I> for DummyHandler {
-	fn captured(&mut self, _item: &I, _acceptor_uid: &str) {}
-	fn released(&mut self, _item: &I, _acceptor_uid: &str) {}
-}
 impl PanelItemHandler for DummyHandler {
 	fn resize(&mut self, _size: mint::Vector2<u32>) {}
 	fn set_cursor(&mut self, _info: Option<items::panel::PanelItemCursor>) {}
 }
 impl ZoneHandler for DummyHandler {
-	fn enter(&mut self, _uid: &str, _spatial: &spatial::Spatial) {}
-	fn capture(&mut self, _uid: &str, _spatial: &spatial::Spatial) {}
+	fn enter(&mut self, _uid: &str, _spatial: spatial::Spatial) {}
+	fn capture(&mut self, _uid: &str, _spatial: spatial::Spatial) {}
 	fn release(&mut self, _uid: &str) {}
 	fn leave(&mut self, _uid: &str) {}
 }

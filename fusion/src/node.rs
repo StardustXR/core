@@ -41,7 +41,9 @@ pub trait NodeType: Send + Sync + Sized + 'static {
 	fn client(&self) -> Result<Arc<Client>, NodeError> {
 		self.node().client()
 	}
+	fn alias(&self) -> Self;
 }
+pub trait HandledNodeType: NodeType {}
 pub trait ClientOwned: NodeType {}
 
 type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;
@@ -128,13 +130,6 @@ impl Node {
 		});
 		client.scenegraph.add_node(&node);
 		Node::Owned(node)
-	}
-
-	pub(crate) fn aliased(&self) -> Node {
-		match self {
-			Node::Owned(internals) => Node::Aliased(Arc::downgrade(internals)),
-			Node::Aliased(internals) => Node::Aliased(internals.clone()),
-		}
 	}
 
 	pub fn add_local_signal<F>(&self, name: impl ToString, signal: F) -> Result<(), NodeError>
@@ -251,6 +246,18 @@ impl Node {
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
 		self.send_remote_signal("set_enabled", &enabled)
+	}
+}
+impl NodeType for Node {
+	fn node(&self) -> &Node {
+		self
+	}
+
+	fn alias(&self) -> Self {
+		match self {
+			Node::Owned(internals) => Node::Aliased(Arc::downgrade(internals)),
+			Node::Aliased(internals) => Node::Aliased(internals.clone()),
+		}
 	}
 }
 

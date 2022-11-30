@@ -18,7 +18,6 @@ pub struct Spatial {
 #[buildstructor::buildstructor]
 impl Spatial {
 	#[builder(entry = "builder")]
-	#[allow(clippy::needless_lifetimes)] // Actually needed, buildstructor needs it
 	pub fn create<'a>(
 		spatial_parent: &'a Spatial,
 		position: Option<mint::Vector3<f32>>,
@@ -132,6 +131,11 @@ impl Spatial {
 impl NodeType for Spatial {
 	fn node(&self) -> &Node {
 		&self.node
+	}
+	fn alias(&self) -> Spatial {
+		Spatial {
+			node: self.node.alias(),
+		}
 	}
 }
 

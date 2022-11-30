@@ -53,7 +53,13 @@ impl<'a> CylinderField {
 }
 impl NodeType for CylinderField {
 	fn node(&self) -> &Node {
-		self.spatial.node()
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		CylinderField {
+			spatial: self.spatial.alias(),
+		}
 	}
 }
 impl ClientOwned for CylinderField {}

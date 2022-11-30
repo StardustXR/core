@@ -166,10 +166,10 @@ async fn fusion_input_action_handler() {
 		.build()
 		.unwrap();
 	let input_action_test = InputActionHandlerTest {
-		input_handler: InputHandler::create(client.get_root(), None, None, &field, |_| {
-			InputActionHandler::new(0.05)
-		})
-		.unwrap(),
+		input_handler: InputHandler::create(client.get_root(), None, None, &field)
+			.unwrap()
+			.wrap(InputActionHandler::new(0.05))
+			.unwrap(),
 		hover_action: BaseInputAction::new(false, |input_data, max_distance| {
 			dbg!(input_data);
 			input_data.distance < *max_distance
@@ -199,7 +199,7 @@ async fn fusion_input_action_handler() {
 	impl crate::client::LifeCycleHandler for InputActionHandlerTest {
 		fn logic_step(&mut self, info: crate::client::LogicStepInfo) {
 			println!("Life cycle step {}s", info.elapsed);
-			self.input_handler.lock_inner().update_actions(
+			self.input_handler.lock_wrapped().update_actions(
 				[
 					self.hover_action.type_erase(),
 					self.fancy_action.type_erase(),
