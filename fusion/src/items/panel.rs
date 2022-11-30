@@ -190,27 +190,34 @@ async fn fusion_panel_ui() {
 
 	struct PanelItemManager(FxHashMap<String, HandlerWrapper<PanelItem, PanelItemUI>>);
 	impl crate::items::ItemUIHandler<PanelItem> for PanelItemManager {
-		fn created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
+		fn item_created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
 			self.0.insert(
 				uid.to_string(),
 				item.wrap(PanelItemUI::new(init_data)).unwrap(),
 			);
 		}
-		fn captured(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
+		fn item_captured(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
 			println!(
 				"Acceptor {} captured panel item {}",
 				acceptor_uid,
 				item.node().get_name().unwrap()
 			);
 		}
-		fn released(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
+		fn item_released(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
 			println!(
 				"Acceptor {} released panel item {}",
 				acceptor_uid,
 				item.node().get_name().unwrap()
 			);
 		}
-		fn destroyed(&mut self, _uid: &str) {}
+		fn item_destroyed(&mut self, _uid: &str) {}
+		fn acceptor_created(
+			&mut self,
+			_uid: &str,
+			_acceptorr: crate::items::ItemAcceptor<PanelItem>,
+		) {
+		}
+		fn acceptor_destroyed(&mut self, _uid: &str) {}
 	}
 	struct PanelItemUI;
 	impl PanelItemUI {

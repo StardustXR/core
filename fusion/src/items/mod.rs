@@ -36,10 +36,12 @@ pub trait Item: NodeType + Send + Sync + 'static {
 }
 
 pub trait ItemUIHandler<I: Item>: Send + Sync + 'static {
-	fn created(&mut self, uid: &str, item: I, init_data: I::InitData);
-	fn captured(&mut self, uid: &str, acceptor_uid: &str, item: I);
-	fn released(&mut self, uid: &str, acceptor_uid: &str, item: I);
-	fn destroyed(&mut self, uid: &str);
+	fn item_created(&mut self, uid: &str, item: I, init_data: I::InitData);
+	fn item_captured(&mut self, uid: &str, acceptor_uid: &str, item: I);
+	fn item_released(&mut self, uid: &str, acceptor_uid: &str, item: I);
+	fn item_destroyed(&mut self, uid: &str);
+	fn acceptor_created(&mut self, uid: &str, acceptor: ItemAcceptor<I>);
+	fn acceptor_destroyed(&mut self, uid: &str);
 }
 
 pub struct ItemUI<I: Item> {
@@ -135,7 +137,7 @@ impl<I: Item> ItemUI<I> {
 		);
 		let item_aliased = item.alias();
 		ui.items.write().insert(uid.to_string(), item);
-		handler.lock().created(uid, item_aliased, init_data);
+		handler.lock().item_created(uid, item_aliased, init_data);
 		Ok(())
 	}
 	fn handle_capture_item<H: ItemUIHandler<I>>(
@@ -151,7 +153,7 @@ impl<I: Item> ItemUI<I> {
 			.insert(item_uid.to_string(), item.alias());
 		handler
 			.lock()
-			.captured(item_uid, acceptor_uid, item.alias());
+			.item_captured(item_uid, acceptor_uid, item.alias());
 		Ok(())
 	}
 	fn handle_release_item<H: ItemUIHandler<I>>(
@@ -161,7 +163,7 @@ impl<I: Item> ItemUI<I> {
 	) -> Result<()> {
 		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
 		let Some(item) = ui.captured_items.write().remove(item_uid) else { return Ok(()) };
-		handler.lock().released(item_uid, acceptor_uid, item);
+		handler.lock().item_released(item_uid, acceptor_uid, item);
 		Ok(())
 	}
 	fn handle_destroy_item<H: ItemUIHandler<I>>(
@@ -171,7 +173,35 @@ impl<I: Item> ItemUI<I> {
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		ui.items.write().remove(uid);
-		handler.lock().destroyed(uid);
+		handler.lock().item_destroyed(uid);
+		Ok(())
+	}
+
+	fn handle_create_acceptor<H: ItemUIHandler<I>>(
+		ui: Arc<ItemUI<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let uid: &str = deserialize(data)?;
+
+		let acceptor: ItemAcceptor<I> = ItemAcceptor::from_path(
+			&ui.client()?,
+			format!("/item/{}/acceptor", I::TYPE_NAME),
+			&uid,
+		);
+		let acceptor_aliased = acceptor.alias();
+		ui.acceptors.write().insert(uid.to_string(), acceptor);
+		handler.lock().acceptor_created(uid, acceptor_aliased);
+		Ok(())
+	}
+	fn handle_destroy_acceptor<H: ItemUIHandler<I>>(
+		ui: Arc<ItemUI<I>>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> Result<()> {
+		let uid: &str = deserialize(data)?;
+		ui.acceptors.write().remove(uid);
+		handler.lock().acceptor_destroyed(uid);
 		Ok(())
 	}
 
@@ -314,14 +344,16 @@ impl<I: Item> ItemAcceptor<I> {
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> Result<()> {
-		let (item_uid, init_data): (&str, I::InitData) = deserialize(data)?;
-		let items = acceptor.items.read();
-		let Some(item) = items.get(item_uid) else { return Ok(()) };
-		acceptor
-			.items
-			.write()
-			.insert(item_uid.to_string(), item.alias());
-		handler.lock().captured(item_uid, item.alias(), init_data);
+		let (uid, init_data): (&str, I::InitData) = deserialize(data)?;
+		let item = I::from_path(
+			&acceptor.client()?,
+			&acceptor.node().get_path()?,
+			uid,
+			&init_data,
+		);
+		let item_aliased = item.alias();
+		acceptor.items.write().insert(uid.to_string(), item);
+		handler.lock().captured(uid, item_aliased, init_data);
 		Ok(())
 	}
 	fn handle_release_item<H: ItemAcceptorHandler<I>>(
