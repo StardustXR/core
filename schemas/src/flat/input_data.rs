@@ -2,7 +2,6 @@ use crate::generated::{
 	self,
 	input::{InputDataRawT, InputDataT},
 };
-use anyhow::{anyhow, bail, Result};
 use ouroboros::self_referencing;
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 
@@ -23,7 +22,7 @@ impl Datamap {
 	}
 }
 impl Datamap {
-	pub fn new(raw: Vec<u8>) -> Result<Self> {
+	pub fn new(raw: Vec<u8>) -> Result<Self, flexbuffers::ReaderError> {
 		Ok(Datamap(DatamapInner::try_new(raw, |raw| {
 			flexbuffers::Reader::get_root(raw.as_slice())?.get_map()
 		})?))
@@ -69,18 +68,21 @@ pub struct InputData {
 	pub datamap: Datamap,
 }
 impl InputData {
-	pub fn deserialize(data: &[u8]) -> Result<InputData> {
-		let input = generated::input::root_as_input_data(data)?.unpack();
+	pub fn deserialize(data: &[u8]) -> Result<InputData, String> {
+		let input = generated::input::root_as_input_data(data)
+			.map_err(|_| "Input data is invalid".to_string())?
+			.unpack();
+		let datamap = input.datamap.ok_or_else(|| "No datamap!".to_string())?;
 		Ok(InputData {
 			uid: input.uid,
 			input: match input.input {
 				InputDataRawT::Pointer(pointer) => InputDataType::Pointer((*pointer).into()),
 				InputDataRawT::Hand(hand) => InputDataType::Hand(Box::new((*hand).into())),
 				InputDataRawT::Tip(tip) => InputDataType::Tip((*tip).into()),
-				_ => bail!("Invalid input type"),
+				_ => return Err("Invalid input type".to_string()),
 			},
 			distance: input.distance,
-			datamap: Datamap::new(input.datamap.ok_or_else(|| anyhow!("No datamap!"))?)?,
+			datamap: Datamap::new(datamap).map_err(|e| e.to_string())?,
 		})
 	}
 	pub fn serialize(&self) -> Vec<u8> {

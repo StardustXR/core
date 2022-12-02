@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub use stardust_xr as core;
+
 pub mod resource;
 #[macro_use]
 pub mod node;

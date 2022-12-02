@@ -1,7 +1,9 @@
 use crate::scenegraph;
 use anyhow::anyhow;
 use rustc_hash::FxHashMap;
+use stardust_xr_schemas::flat::flatbuffers;
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
+use stardust_xr_schemas::flex::flexbuffers;
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;

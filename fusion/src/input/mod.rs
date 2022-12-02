@@ -10,6 +10,7 @@ use super::{
 	HandlerWrapper,
 };
 pub use action as action_handler;
+use anyhow::anyhow;
 use parking_lot::Mutex;
 pub use stardust_xr::schemas::flat::*;
 use stardust_xr::{schemas::flex::serialize, values::Transform};
@@ -84,7 +85,9 @@ impl<'a> InputHandler {
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> anyhow::Result<Vec<u8>> {
-		let capture = handler.lock().input(InputData::deserialize(data)?);
+		let capture = handler
+			.lock()
+			.input(InputData::deserialize(data).map_err(|e| anyhow!(e))?);
 		Ok(serialize(capture)?)
 	}
 }

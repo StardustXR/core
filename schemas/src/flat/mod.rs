@@ -1,3 +1,5 @@
+pub use flatbuffers;
+
 mod common;
 pub use common::*;
 mod hand;

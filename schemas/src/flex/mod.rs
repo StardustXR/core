@@ -1,3 +1,5 @@
+pub use flexbuffers;
+
 mod deserialize;
 mod serialize;
 
