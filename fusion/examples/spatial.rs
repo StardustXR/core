@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+	tracing_subscriber::fmt::init();
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 	client.set_base_prefixes(&[directory_relative_path!("res")]);
 

@@ -12,6 +12,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
+use tracing::debug;
 
 #[derive(Error, Debug)]
 pub enum MessengerError {
@@ -23,41 +24,6 @@ pub enum MessengerError {
 	IOError { e: std::io::Error },
 	#[error("Invalid flatbuffer")]
 	InvalidFlatbuffer,
-}
-
-pub fn log_calls(
-	message_type: u8,
-	node: &str,
-	method: &str,
-	data: Option<&[u8]>,
-	error: Option<&str>,
-) {
-	// let formatted_call = format!("[STARDUST]{}", format());
-	if std::env::var_os("STARDUST_LOG_CALLS").is_some() {
-		let data = data.map(|data| match flexbuffers::Reader::get_root(data) {
-			Ok(root) => format!("{}", root),
-			Err(_) => String::from_utf8_lossy(data).into_owned(),
-		});
-		let content = data.unwrap_or_else(|| {
-			error
-				.map(|err| err.to_string())
-				.unwrap_or_else(|| "Unknown".to_string())
-		});
-		println!(
-			"[{}][STARDUST]{}[{}:{}] {}",
-			chrono::Local::now().format("%+"),
-			match message_type {
-				0 => "[ERROR] ",
-				1 => "[SIGNAL]",
-				2 => "[METHOD]",
-				3 => "[RETURN]",
-				_ => "[INVALID]",
-			},
-			node,
-			method,
-			content
-		)
-	}
 }
 
 pub struct Message {
@@ -220,7 +186,29 @@ fn serialize_call(
 	err: Option<&str>,
 	data: Option<&[u8]>,
 ) -> Message {
-	log_calls(call_type, path, method, data, err);
+	debug!(
+		call_type = match call_type {
+			0 => "error",
+			1 => "signal",
+			2 => "method call",
+			3 => "method return",
+			_ => "unknown",
+		},
+		id,
+		path,
+		method,
+		err,
+		content = data
+			.map(|data| match flexbuffers::Reader::get_root(data) {
+				Ok(root) => format!("{}", root),
+				Err(_) => String::from_utf8_lossy(data).into_owned(),
+			})
+			.unwrap_or_else(|| {
+				err.map(|err| err.to_string())
+					.unwrap_or_else(|| "Unknown".to_string())
+			})
+	);
+
 	let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 	let flex_path = fbb.create_string(path);
 	let flex_method = fbb.create_string(method);
@@ -246,24 +234,29 @@ fn serialize_call(
 
 pub struct MessageSender {
 	write: OwnedWriteHalf,
-	handle_tx: mpsc::UnboundedSender<Message>,
-	handle_rx: mpsc::UnboundedReceiver<Message>,
+	handle: MessageSenderHandle,
+	message_rx: mpsc::UnboundedReceiver<Message>,
 	pending_future_tx: PendingFutureSender,
 	max_message_id: Arc<AtomicU64>,
 }
 impl MessageSender {
 	fn new(write: OwnedWriteHalf, pending_future_tx: PendingFutureSender) -> Self {
-		let (handle_tx, handle_rx) = mpsc::unbounded_channel();
+		let (message_tx, message_rx) = mpsc::unbounded_channel();
+		let max_message_id = Arc::new(AtomicU64::new(0));
 		MessageSender {
 			write,
-			handle_tx,
-			handle_rx,
+			handle: MessageSenderHandle {
+				message_tx,
+				pending_future_tx: pending_future_tx.clone(),
+				max_message_id: max_message_id.clone(),
+			},
+			message_rx,
 			pending_future_tx,
-			max_message_id: Arc::new(AtomicU64::new(0)),
+			max_message_id,
 		}
 	}
 	pub async fn flush(&mut self) -> Result<(), MessengerError> {
-		while let Some(message) = self.handle_rx.recv().await {
+		while let Some(message) = self.message_rx.recv().await {
 			self.send(&message.into_data()).await?;
 		}
 		Ok(())
@@ -280,11 +273,7 @@ impl MessageSender {
 			.map_err(|e| MessengerError::IOError { e })
 	}
 	pub fn handle(&self) -> MessageSenderHandle {
-		MessageSenderHandle {
-			message_tx: self.handle_tx.clone(),
-			pending_future_tx: self.pending_future_tx.clone(),
-			max_message_id: self.max_message_id.clone(),
-		}
+		self.handle.clone()
 	}
 
 	pub async fn error<E: std::fmt::Display>(
@@ -323,6 +312,7 @@ impl MessageSender {
 	}
 }
 
+#[derive(Clone)]
 pub struct MessageSenderHandle {
 	message_tx: mpsc::UnboundedSender<Message>,
 	pending_future_tx: PendingFutureSender,
