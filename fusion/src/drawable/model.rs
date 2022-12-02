@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 use color::Rgba;
 use flexbuffers::VectorBuilder;
-use stardust_xr::values::Transform;
+use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
 use std::ops::Deref;
 
 pub trait MaterialParameter {

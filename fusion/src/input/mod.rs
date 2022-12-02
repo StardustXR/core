@@ -13,7 +13,10 @@ pub use action as action_handler;
 use anyhow::anyhow;
 use parking_lot::Mutex;
 pub use stardust_xr::schemas::flat::*;
-use stardust_xr::{schemas::flex::serialize, values::Transform};
+use stardust_xr::{
+	schemas::flex::{flexbuffers, serialize},
+	values::Transform,
+};
 use std::sync::Arc;
 pub use tip::TipInputMethod;
 

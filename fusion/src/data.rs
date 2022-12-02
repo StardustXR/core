@@ -10,7 +10,10 @@ use mint::{Quaternion, Vector3};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
-use stardust_xr::{schemas::flex::deserialize, values::Transform};
+use stardust_xr::{
+	schemas::flex::{deserialize, flexbuffers},
+	values::Transform,
+};
 use std::sync::Arc;
 
 pub trait PulseSenderHandler: Send + Sync {

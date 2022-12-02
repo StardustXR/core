@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use mint::{Quaternion, Vector3};
-use stardust_xr::values::Transform;
+use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
 use std::ops::Deref;
 
 use super::InputMethod;

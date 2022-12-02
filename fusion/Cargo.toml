@@ -13,7 +13,6 @@ anyhow = "1.0.57"
 buildstructor = "0.5.0"
 color-rs = "0.7.1"
 flagset = "0.4.3"
-flexbuffers = "2.0.0"
 glam = { version = "0.22.0", features = ["mint"] }
 mint = "0.5.9"
 nanoid = "0.4.0"
