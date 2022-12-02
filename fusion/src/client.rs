@@ -1,3 +1,4 @@
+use crate::node::NodeError;
 use crate::DummyHandler;
 
 use super::{scenegraph::Scenegraph, spatial::Spatial};
@@ -13,6 +14,7 @@ use stardust_xr::{
 use std::any::TypeId;
 use std::path::Path;
 use std::sync::{Arc, Weak};
+use thiserror::Error;
 use tokio::net::UnixStream;
 use tokio::sync::{Notify, OnceCell};
 use tokio::task::JoinHandle;
@@ -35,6 +37,14 @@ pub struct Root {
 	pub spatial: Spatial,
 }
 
+#[derive(Error, Debug)]
+pub enum ClientError {
+	#[error("Could not connect to the stardust server")]
+	ConnectionFailure,
+	#[error("Node error: {e}")]
+	NodeError { e: NodeError },
+}
+
 pub struct Client {
 	pub message_sender_handle: MessageSenderHandle,
 	pub scenegraph: Arc<Scenegraph>,
@@ -50,14 +60,14 @@ pub struct Client {
 }
 
 impl Client {
-	pub async fn connect() -> Result<(Arc<Self>, MessageSender, MessageReceiver), std::io::Error> {
-		let connection = client::connect().await?;
-		Client::from_connection(connection).await
+	pub async fn connect() -> Result<(Arc<Self>, MessageSender, MessageReceiver), ClientError> {
+		let connection = client::connect()
+			.await
+			.map_err(|_| ClientError::ConnectionFailure)?;
+		Ok(Client::from_connection(connection))
 	}
 
-	pub async fn from_connection(
-		connection: UnixStream,
-	) -> Result<(Arc<Self>, MessageSender, MessageReceiver), std::io::Error> {
+	pub fn from_connection(connection: UnixStream) -> (Arc<Self>, MessageSender, MessageReceiver) {
 		let (message_tx, message_rx) = messenger::create(connection);
 		let client = Arc::new(Client {
 			scenegraph: Arc::new(Scenegraph::new()),
@@ -73,10 +83,10 @@ impl Client {
 			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),
 		});
 
-		Ok((client, message_tx, message_rx))
+		(client, message_tx, message_rx)
 	}
 
-	pub fn setup(client: &Arc<Client>) -> Result<(), std::io::Error> {
+	pub fn setup(client: &Arc<Client>) -> Result<(), ClientError> {
 		let _ = client
 			.root
 			.set(Arc::new(Spatial::from_path(client, "", "", false)));
@@ -115,12 +125,12 @@ impl Client {
 			.get_root()
 			.node
 			.send_remote_signal_raw("subscribe_logic_step", &[])
-			.map_err(|_| std::io::Error::from(std::io::ErrorKind::NotConnected))?;
+			.map_err(|e| ClientError::NodeError { e })?;
 		Ok(())
 	}
 
 	pub async fn connect_with_async_loop(
-	) -> Result<(Arc<Self>, JoinHandle<Result<(), MessengerError>>), std::io::Error> {
+	) -> Result<(Arc<Self>, JoinHandle<Result<(), MessengerError>>), ClientError> {
 		let (client, mut message_tx, mut message_rx) = Client::connect().await?;
 
 		let event_loop = tokio::task::spawn({
