@@ -42,7 +42,9 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(method)
 			.ok_or(ScenegraphError::SignalNotFound)?
 			.clone();
-		signal(data).map_err(|e| ScenegraphError::SignalError { error: e })
+		signal(data).map_err(|e| ScenegraphError::SignalError {
+			error: e.to_string(),
+		})
 	}
 	fn execute_method(
 		&self,
@@ -61,6 +63,8 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(method)
 			.ok_or(ScenegraphError::MethodNotFound)?
 			.clone();
-		method(data).map_err(|e| ScenegraphError::MethodError { error: e })
+		method(data).map_err(|e| ScenegraphError::MethodError {
+			error: e.to_string(),
+		})
 	}
 }

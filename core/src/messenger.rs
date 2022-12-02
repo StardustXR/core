@@ -1,5 +1,5 @@
 use crate::scenegraph;
-use anyhow::anyhow;
+// use anyhow::anyhow;
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers;
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
@@ -69,7 +69,7 @@ impl Message {
 	}
 }
 
-type PendingFuture = oneshot::Sender<anyhow::Result<Vec<u8>>>;
+type PendingFuture = oneshot::Sender<Result<Vec<u8>, String>>;
 type PendingFutureSender = mpsc::UnboundedSender<(u64, PendingFuture)>;
 type PendingFutureReceiver = mpsc::UnboundedReceiver<(u64, PendingFuture)>;
 pub struct MessageReceiver {
@@ -138,10 +138,7 @@ impl MessageReceiver {
 						);
 					}
 					Some(future) => {
-						let _ = future.send(Err(anyhow!(message
-							.error()
-							.unwrap_or("unknown")
-							.to_string())));
+						let _ = future.send(Err(message.error().unwrap_or("unknown").to_string()));
 					}
 				}
 			}
@@ -191,7 +188,7 @@ impl MessageReceiver {
 						self.send_handle.error(
 							message.object().unwrap(),
 							message.method().unwrap(),
-							anyhow!("Method return without method call"),
+							"Method return without method call".to_string(),
 						)?;
 					}
 					Some(future) => {
@@ -313,7 +310,7 @@ impl MessageSender {
 		node_path: &str,
 		method: &str,
 		data: &[u8],
-	) -> Result<anyhow::Result<Vec<u8>>, MessengerError> {
+	) -> Result<Result<Vec<u8>, String>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let id = self.max_message_id.load(Ordering::Relaxed);
 		self.pending_future_tx
@@ -353,7 +350,7 @@ impl MessageSenderHandle {
 		node_path: &str,
 		method: &str,
 		data: &[u8],
-	) -> Result<impl Future<Output = anyhow::Result<Vec<u8>>>, MessengerError> {
+	) -> Result<impl Future<Output = Result<Vec<u8>, String>>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let id = self.max_message_id.load(Ordering::Relaxed);
 		self.pending_future_tx
@@ -361,7 +358,7 @@ impl MessageSenderHandle {
 			.map_err(|_| MessengerError::ReceiverDropped)?;
 		self.send(serialize_method_call(id, node_path, method, data))?;
 		self.max_message_id.store(id + 1, Ordering::Relaxed);
-		Ok(async move { rx.await? })
+		Ok(async move { rx.await.map_err(|e| e.to_string())? })
 	}
 
 	fn send(&self, message: Message) -> Result<(), MessengerError> {

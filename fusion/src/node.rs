@@ -5,7 +5,7 @@ use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::{
 	messenger::MessengerError,
-	schemas::flex::{deserialize, serialize},
+	schemas::flex::{deserialize, flexbuffers::DeserializationError, serialize},
 };
 use std::{
 	fmt::Debug,
@@ -28,8 +28,10 @@ pub enum NodeError {
 	InvalidPath,
 	#[error("Serialization failed")]
 	Serialization,
-	#[error("Desrialization failed")]
-	Deserialization,
+	#[error("Deserialization failed with an error: {e}")]
+	Deserialization { e: DeserializationError },
+	#[error("Server returned an error: {e}")]
+	ReturnedError { e: String },
 	#[error("Attempted to register to a singleton twice")]
 	OverrideSingleton,
 	#[error("Map is not a valid flexbuffer map at the root")]
@@ -212,37 +214,40 @@ impl Node {
 		&self,
 		method_name: &str,
 		send_data: &S,
-	) -> Result<impl Future<Output = Result<D>>, NodeError> {
+	) -> Result<impl Future<Output = Result<D, NodeError>>, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
 		let future = self.execute_remote_method_raw(method_name, &send_data)?;
 		Ok(async move {
 			future
 				.await
-				.and_then(|data| -> anyhow::Result<D> { deserialize(&data).map_err(|e| e.into()) })
+				.and_then(|data| deserialize(&data).map_err(|e| NodeError::Deserialization { e }))
 		})
 	}
 	pub fn execute_remote_method_trait<S: Serialize, D: DeserializeOwned>(
 		&self,
 		method_name: &str,
 		send_data: &S,
-	) -> Result<Pin<Box<dyn Future<Output = Result<D>>>>, NodeError> {
+	) -> Result<Pin<Box<dyn Future<Output = Result<D, NodeError>>>>, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
 		let future = self.execute_remote_method_raw(method_name, &send_data)?;
 		Ok(Box::pin(async move {
 			future
 				.await
-				.and_then(|data| -> anyhow::Result<D> { deserialize(&data).map_err(|e| e.into()) })
+				.and_then(|data| deserialize(&data).map_err(|e| NodeError::Deserialization { e }))
 		}))
 	}
 	pub fn execute_remote_method_raw(
 		&self,
 		method_name: &str,
 		data: &[u8],
-	) -> Result<impl Future<Output = Result<Vec<u8>>>, NodeError> {
-		self.client()?
+	) -> Result<impl Future<Output = Result<Vec<u8>, NodeError>>, NodeError> {
+		let future = self
+			.client()?
 			.message_sender_handle
 			.method(&self.get_path()?, method_name, data)
-			.map_err(|e| NodeError::MessengerError { e })
+			.map_err(|e| NodeError::MessengerError { e })?;
+
+		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
 	}
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
 		self.send_remote_signal("set_enabled", &enabled)

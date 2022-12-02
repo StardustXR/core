@@ -43,7 +43,7 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<f32>>, NodeError> {
+	) -> Result<BoxedFuture<Result<f32, NodeError>>, NodeError> {
 		self.node()
 			.execute_remote_method_trait("distance", &(space.node().get_path()?, point.into()))
 	}
@@ -52,7 +52,7 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<mint::Vector3<f32>>>, NodeError> {
+	) -> Result<BoxedFuture<Result<Vector3<f32>, NodeError>>, NodeError> {
 		self.node()
 			.execute_remote_method_trait("normal", &(space.node().get_path()?, point.into()))
 	}
@@ -61,7 +61,7 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<mint::Vector3<f32>>>, NodeError> {
+	) -> Result<BoxedFuture<Result<Vector3<f32>, NodeError>>, NodeError> {
 		self.node()
 			.execute_remote_method_trait("closestPoint", &(space.node().get_path()?, point.into()))
 	}
@@ -71,7 +71,7 @@ pub trait Field: NodeType {
 		space: &Spatial,
 		ray_origin: impl Into<Vector3<f32>>,
 		ray_direction: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<RayMarchResult>>, NodeError> {
+	) -> Result<BoxedFuture<Result<RayMarchResult, NodeError>>, NodeError> {
 		let ray_origin = ray_origin.into();
 		let ray_direction = ray_direction.into();
 		#[derive(Debug, Deserialize)]

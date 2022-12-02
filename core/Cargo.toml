@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stardust-xr"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "Base library for the Stardust XR display server"
 license = "MIT"
@@ -9,7 +9,7 @@ repository = "https://github.com/StardustXR/stardust-xr/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
-anyhow = "1.0.57"
+# anyhow = "1.0.57"
 cluFlock = "1.2.7"
 color-rs = "0.7.1"
 mint = {version = "0.5.9", features = ["serde"]}

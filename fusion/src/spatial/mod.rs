@@ -5,7 +5,6 @@ use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
 };
-use anyhow::Result;
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
 use stardust_xr::values::Transform;
@@ -63,7 +62,7 @@ impl Spatial {
 		&self,
 		relative_space: &Spatial,
 	) -> Result<
-		impl Future<Output = Result<(Vector3<f32>, Quaternion<f32>, Vector3<f32>)>>,
+		impl Future<Output = Result<(Vector3<f32>, Quaternion<f32>, Vector3<f32>), NodeError>>,
 		NodeError,
 	> {
 		self.node

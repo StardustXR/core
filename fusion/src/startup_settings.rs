@@ -34,7 +34,7 @@ impl StartupSettings {
 
 	pub fn generate_desktop_startup_id(
 		&self,
-	) -> Result<impl Future<Output = anyhow::Result<String>>, NodeError> {
+	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
 		self.node
 			.execute_remote_method("generate_desktop_startup_id", &())
 	}
