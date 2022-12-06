@@ -40,22 +40,22 @@ impl SpatialDemo {
 
 		let gem = Model::builder()
 			.spatial_parent(&_root)
-			.resource(&NamespacedResource::new("fusion", "gyro_gem.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_gem"))
 			.build()
 			.unwrap();
 		let ring_inner = Model::builder()
 			.spatial_parent(&_root)
-			.resource(&NamespacedResource::new("fusion", "gyro_inside.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_inside"))
 			.build()
 			.unwrap();
 		let ring_middle = Model::builder()
 			.spatial_parent(&ring_inner)
-			.resource(&NamespacedResource::new("fusion", "gyro_middle.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_middle"))
 			.build()
 			.unwrap();
 		let ring_outer = Model::builder()
 			.spatial_parent(&ring_middle)
-			.resource(&NamespacedResource::new("fusion", "gyro_outside.glb"))
+			.resource(&NamespacedResource::new("fusion", "gyro_outside"))
 			.build()
 			.unwrap();
 

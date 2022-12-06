@@ -179,8 +179,7 @@ async fn fusion_zone() {
 	let _model = crate::drawable::Model::builder()
 		.spatial_parent(&model_parent)
 		.resource(&crate::resource::NamespacedResource::new(
-			"fusion",
-			"gyro_gem.glb",
+			"fusion", "gyro_gem",
 		))
 		.build()
 		.unwrap();

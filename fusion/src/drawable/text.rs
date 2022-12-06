@@ -149,7 +149,7 @@ async fn fusion_text() -> Result<()> {
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let mut style: TextStyle<NamespacedResource> = TextStyle::default();
-	style.font_resource = Some(NamespacedResource::new("fusion", "common_case.ttf"));
+	style.font_resource = Some(NamespacedResource::new("fusion", "common_case"));
 
 	let text = Text::builder()
 		.spatial_parent(client.get_root())

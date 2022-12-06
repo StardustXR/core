@@ -98,8 +98,7 @@ async fn fusion_model() -> Result<()> {
 	let _model = Model::builder()
 		.spatial_parent(client.get_root())
 		.resource(&crate::resource::NamespacedResource::new(
-			"fusion",
-			"gyro_gem.glb",
+			"fusion", "gyro_gem",
 		))
 		.build()?;
 
