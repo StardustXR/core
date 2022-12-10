@@ -92,14 +92,6 @@ impl Client {
 			.set(Arc::new(Spatial::from_path(client, "", "", false)));
 		let _ = client.hmd.set(Spatial::from_path(client, "", "hmd", false));
 
-		if let Ok(desktop_startup_id) = std::env::var("DESKTOP_STARTUP_ID") {
-			client
-				.get_root()
-				.node
-				.send_remote_signal("apply_desktop_startup_id", &desktop_startup_id)
-				.unwrap();
-		}
-
 		client
 			.get_root()
 			.node
