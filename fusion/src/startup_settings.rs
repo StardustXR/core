@@ -2,6 +2,7 @@ use nanoid::nanoid;
 
 use crate::{
 	client::Client,
+	items::{Item, ItemAcceptor},
 	node::{Node, NodeError},
 	spatial::Spatial,
 };
@@ -32,11 +33,19 @@ impl StartupSettings {
 			.send_remote_signal("set_root", &root.node.get_path()?)
 	}
 
-	pub fn generate_desktop_startup_id(
+	pub fn add_automatic_acceptor<I: Item>(
+		&self,
+		acceptor: &ItemAcceptor<I>,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("add_automatic_acceptor", &acceptor.spatial.node.get_path()?)
+	}
+
+	pub fn generate_startup_token(
 		&self,
 	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
 		self.node
-			.execute_remote_method("generate_desktop_startup_id", &())
+			.execute_remote_method("generate_startup_token", &())
 	}
 }
 
@@ -51,7 +60,7 @@ async fn fusion_startup_settings() {
 	println!(
 		"{}",
 		startup_settings
-			.generate_desktop_startup_id()
+			.generate_startup_token()
 			.unwrap()
 			.await
 			.unwrap()
