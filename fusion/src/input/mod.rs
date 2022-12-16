@@ -1,29 +1,54 @@
+//! Spatial input using the Spatial Universal Interaction System (SUIS).
+//!
+//! Input methods are nodes that represent a 3D pointer, hand, or tip (single point of interaction, like a controller).
+//! They contain a datamap which is a flexbuffer map with non-spatial data like button/trackpad/grip.
+//!
+//! Input handlers are nodes that represent an object that can react to spatial input.
+//! They have a field attached that is important data for the SUIS to determine what should get input.
+//! On input (`InputHandlerHandler::input`) the input data's spatial components is relative to the input handler itself.
+//! The return value for `InputHandlerHandler::input` is `true` if you want to capture the input method.
+//! Capturing an input method is useful to indicate that only that handler should get its input.
+//! For example when grabbing you don't want your hand to press buttons if you're grabbing the object through them.
+//! Input handlers should account for the occasional case where their field is closer than an input handler that captured a method by filtering out interactions that are triggered the same frame the input method first becomes visible.
+//! Capturing an input method may be delayed a frame or 2.
+//!
+//! Every frame, the server will do this for each input method:
+//! - Sort the input handlers by the distance from the input method to their fields (often absolute value for onion skinning)
+//! - Send out input events (`InputHandlerHandler::input`) in order of distance until an input handler has captured the method.
+//! - The logic_step event is sent (`LifeCycle::logic_step`).
+//!
+//! To make this all easier, the `action` module exists, check it out.
+
 pub mod action;
 mod tip;
 
-use crate::node::HandledNodeType;
+pub use action as action_handler;
+pub use stardust_xr::schemas::flat::*;
+pub use tip::TipInputMethod;
 
 use super::{
 	fields::Field,
-	node::{Node, NodeError, NodeType},
+	node::{HandledNodeType, Node, NodeError, NodeType},
 	spatial::Spatial,
 	HandlerWrapper,
 };
-pub use action as action_handler;
 use anyhow::anyhow;
 use parking_lot::Mutex;
-pub use stardust_xr::schemas::flat::*;
 use stardust_xr::{
 	schemas::flex::{flexbuffers, serialize},
 	values::Transform,
 };
-use std::sync::Arc;
-pub use tip::TipInputMethod;
+use std::{ops::Deref, sync::Arc};
 
+/// Handle raw input events.
 pub trait InputHandlerHandler: Send + Sync {
+	/// An input method has sent an input event on this frame.
+	///
+	/// Return "true" to capture the input method or "false" to not.
 	fn input(&mut self, input: InputData) -> bool;
 }
 
+/// Node representing a spatial input device.
 pub trait InputMethod {
 	fn node(&self) -> &Node;
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
@@ -37,16 +62,18 @@ pub trait InputMethod {
 	}
 }
 
+/// Node that can receive spatial input.
 #[derive(Debug)]
 pub struct InputHandler {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-
 impl<'a> InputHandler {
+	/// Create an input handler given a field, this will become inactive if the field is dropped.
+	///
+	/// Keep in mind the handler and its field are different spatials, they can move independently.
 	pub fn create<Fi: Field>(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
+		transform: Transform,
 		field: &'a Fi,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
@@ -62,11 +89,7 @@ impl<'a> InputHandler {
 					(
 						id,
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
+						transform,
 						field.node().get_path()?,
 					),
 				)?,
@@ -74,6 +97,8 @@ impl<'a> InputHandler {
 		})
 	}
 
+	/// Wrap this node and an `InputHandlerHandler` in a `HandlerWrapper`. This is necessary to get any input events.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap<H: InputHandlerHandler>(
 		self,
 		handler: H,
@@ -106,7 +131,7 @@ impl NodeType for InputHandler {
 	}
 }
 impl HandledNodeType for InputHandler {}
-impl std::ops::Deref for InputHandler {
+impl Deref for InputHandler {
 	type Target = Spatial;
 
 	fn deref(&self) -> &Self::Target {
@@ -121,11 +146,9 @@ async fn fusion_input_handler() {
 		.await
 		.expect("Couldn't connect");
 
-	let field = super::fields::SphereField::builder()
-		.spatial_parent(client.get_root())
-		.radius(0.1)
-		.build()
-		.unwrap();
+	let field =
+		super::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
+			.unwrap();
 
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
@@ -161,7 +184,7 @@ async fn fusion_input_handler() {
 	// 	.build()
 	// 	.await
 	// 	.unwrap();
-	let _input_handler = InputHandler::create(client.get_root(), None, None, &field)
+	let _input_handler = InputHandler::create(client.get_root(), Transform::default(), &field)
 		.unwrap()
 		.wrap(InputHandlerTest)
 		.unwrap();

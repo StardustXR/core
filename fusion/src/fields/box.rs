@@ -1,5 +1,6 @@
+use super::Field;
 use crate::{
-	node::{ClientOwned, Node, NodeError, NodeType},
+	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -7,19 +8,14 @@ use mint::Vector3;
 use stardust_xr::values::Transform;
 use std::ops::Deref;
 
-use super::Field;
-
 #[derive(Debug)]
 pub struct BoxField {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
 impl<'a> BoxField {
-	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
+		transform: Transform,
 		size: Vector3<f32>,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
@@ -32,16 +28,7 @@ impl<'a> BoxField {
 					"/field",
 					true,
 					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
-						size,
-					),
+					(id, spatial_parent.node().get_path()?, transform, size),
 				)?,
 			},
 		})
@@ -63,7 +50,6 @@ impl NodeType for BoxField {
 		}
 	}
 }
-impl ClientOwned for BoxField {}
 impl Field for BoxField {}
 impl Deref for BoxField {
 	type Target = Spatial;
@@ -79,11 +65,12 @@ async fn fusion_box_field() {
 	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	let box_field = BoxField::builder()
-		.spatial_parent(client.get_root())
-		.size(Vector3::from([1.0, 1.0, 1.0]))
-		.build()
-		.expect("Unable to make box field");
+	let box_field = BoxField::create(
+		client.get_root(),
+		Transform::default(),
+		Vector3::from([1.0; 3]),
+	)
+	.expect("Unable to make box field");
 	let distance = box_field
 		.distance(client.get_root(), Vector3::from([0.0, 1.0, 0.0]))
 		.unwrap()

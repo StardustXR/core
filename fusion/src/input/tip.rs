@@ -1,25 +1,21 @@
+use super::InputMethod;
 use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
-use mint::{Quaternion, Vector3};
 use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
 use std::ops::Deref;
 
-use super::InputMethod;
-
+/// Virtual spatial input device representing a tool device with a single point of interaction (pen tip, controller tip, etc.)
 #[derive(Debug)]
 pub struct TipInputMethod {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
 impl<'a> TipInputMethod {
-	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<Vector3<f32>>,
-		rotation: Option<Quaternion<f32>>,
+		transform: Transform,
 		radius: f32,
 		datamap: Option<Vec<u8>>,
 	) -> Result<Self, NodeError> {
@@ -41,11 +37,7 @@ impl<'a> TipInputMethod {
 					(
 						id,
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
+						transform,
 						radius,
 						datamap,
 					),
@@ -54,6 +46,7 @@ impl<'a> TipInputMethod {
 		})
 	}
 
+	/// Set the radius of influence for the tip.
 	pub fn set_radius(&self, radius: f32) -> Result<(), NodeError> {
 		self.node.send_remote_signal("set_radius", &radius)
 	}
@@ -84,21 +77,25 @@ async fn fusion_tip_input_method() {
 
 	let mut fbb = flexbuffers::Builder::default();
 	fbb.start_map();
-	let tip = TipInputMethod::builder()
-		.spatial_parent(client.get_root())
-		.radius(0.05)
-		.datamap(fbb.take_buffer())
-		.build()
-		.unwrap();
+	let tip = TipInputMethod::create(
+		client.get_root(),
+		Transform::default(),
+		0.5,
+		Some(fbb.take_buffer()),
+	)
+	.unwrap();
 
 	fn summon_model(parent: &Spatial, rotation: glam::Quat) -> Model {
-		Model::builder()
-			.spatial_parent(parent)
-			.resource(&NamespacedResource::new("fusion", "cursor_spike"))
-			.rotation(rotation)
-			.scale(mint::Vector3::from([0.1; 3]))
-			.build()
-			.unwrap()
+		Model::create(
+			parent,
+			&NamespacedResource::new("fusion", "cursor_spike"),
+			Transform {
+				rotation: rotation.into(),
+				scale: mint::Vector3::from([0.1; 3]),
+				..Default::default()
+			},
+		)
+		.unwrap()
 	}
 
 	struct Cursor {

@@ -1,6 +1,7 @@
 use crate::input_tip::TipT;
 use mint::{Quaternion, Vector3};
 
+/// An input method that represents a single point of interaction, like the tip of a pen or a controller.
 #[derive(Debug, Clone, Copy)]
 pub struct Tip {
 	pub origin: Vector3<f32>,

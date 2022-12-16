@@ -1,6 +1,6 @@
 use super::Field;
 use crate::{
-	node::{ClientOwned, Node, NodeError, NodeType},
+	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -9,15 +9,12 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct TorusField {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
 impl<'a> TorusField {
-	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
+		transform: Transform,
 		radius_a: f32,
 		radius_b: f32,
 	) -> Result<Self, NodeError> {
@@ -34,11 +31,7 @@ impl<'a> TorusField {
 					(
 						&id.clone(),
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
+						transform,
 						radius_a,
 						radius_b,
 					),
@@ -63,7 +56,6 @@ impl NodeType for TorusField {
 		}
 	}
 }
-impl ClientOwned for TorusField {}
 impl Field for TorusField {}
 impl Deref for TorusField {
 	type Target = Spatial;
@@ -80,11 +72,7 @@ async fn fusion_torus_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let cylinder_field = TorusField::builder()
-		.spatial_parent(client.get_root())
-		.radius_a(1.0)
-		.radius_b(0.5)
-		.build()
+	let cylinder_field = TorusField::create(client.get_root(), Transform::default(), 1.0, 0.5)
 		.expect("Unable to make torus field");
 	let distance = cylinder_field
 		.distance(client.get_root(), mint::Vector3::from([1.0, 1.0, 0.0]))

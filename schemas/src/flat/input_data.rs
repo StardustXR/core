@@ -5,27 +5,22 @@ use crate::generated::{
 use ouroboros::self_referencing;
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 
-#[derive(Debug, Clone)]
-pub enum InputDataType {
-	Pointer(super::pointer::Pointer),
-	Hand(Box<super::hand::Hand>),
-	Tip(super::tip::Tip),
-}
-
+/// A map that contains non-spatial data associated with the input in flexbuffers format.
 pub struct Datamap(DatamapInner);
 impl Datamap {
+	/// Create a new datamap from a serialized flexbuffer map.
+	pub fn new(raw: Vec<u8>) -> Result<Self, flexbuffers::ReaderError> {
+		Ok(Datamap(DatamapInner::try_new(raw, |raw| {
+			flexbuffers::Reader::get_root(raw.as_slice())?.get_map()
+		})?))
+	}
+
+	/// Get a temporary reference to the map data inside.
 	pub fn with_data<F, O>(&self, f: F) -> O
 	where
 		F: FnOnce(&flexbuffers::MapReader<&[u8]>) -> O,
 	{
 		self.0.with_reader(f)
-	}
-}
-impl Datamap {
-	pub fn new(raw: Vec<u8>) -> Result<Self, flexbuffers::ReaderError> {
-		Ok(Datamap(DatamapInner::try_new(raw, |raw| {
-			flexbuffers::Reader::get_root(raw.as_slice())?.get_map()
-		})?))
 	}
 }
 impl Debug for Datamap {
@@ -60,11 +55,16 @@ impl Clone for Datamap {
 	}
 }
 
+/// Input data object struct.
 #[derive(Debug, Clone)]
 pub struct InputData {
+	/// Used to uniquely identify the input method so state can be tracked across input events.
 	pub uid: String,
+	/// All vectors and quaternions are relative to the input handler if deserialized.
 	pub input: InputDataType,
+	/// Closest distance from the input handler to the field.
 	pub distance: f32,
+	/// Non-spatial data in a map.
 	pub datamap: Datamap,
 }
 impl InputData {
@@ -115,3 +115,10 @@ impl PartialEq for InputData {
 	}
 }
 impl Eq for InputData {}
+
+#[derive(Debug, Clone)]
+pub enum InputDataType {
+	Pointer(super::pointer::Pointer),
+	Hand(Box<super::hand::Hand>),
+	Tip(super::tip::Tip),
+}

@@ -1,5 +1,6 @@
+//! Symmetrical messenger for both client and server.
+
 use crate::scenegraph;
-// use anyhow::anyhow;
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers;
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
@@ -14,22 +15,28 @@ use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
 use tracing::debug;
 
+/// Error for all messenger-related failures.
 #[derive(Error, Debug)]
 pub enum MessengerError {
+	/// The MessageReceiver has been dropped with pending futures
 	#[error("Receiver has been dropped")]
 	ReceiverDropped,
-	#[error("Message type is out of bounds")]
-	MessageTypeOutOfBounds,
 	#[error("IO Error: {e}")]
 	IOError { e: std::io::Error },
+	/// The incoming message is corrupted
 	#[error("Invalid flatbuffer")]
 	InvalidFlatbuffer,
+	/// The message type u8 is greater than method return (3)
+	#[error("Message type is out of bounds")]
+	MessageTypeOutOfBounds,
 }
 
+/// Wrapper for messages after being serialized, for type safety.
 pub struct Message {
 	data: Vec<u8>,
 }
 impl Message {
+	/// Get the data inside to send over the socket.
 	pub fn into_data(self) -> Vec<u8> {
 		self.data
 	}
@@ -38,6 +45,8 @@ impl Message {
 type PendingFuture = oneshot::Sender<Result<Vec<u8>, String>>;
 type PendingFutureSender = mpsc::UnboundedSender<(u64, PendingFuture)>;
 type PendingFutureReceiver = mpsc::UnboundedReceiver<(u64, PendingFuture)>;
+
+/// Receiving half of the messenger.
 pub struct MessageReceiver {
 	read: OwnedReadHalf,
 	pending_futures: FxHashMap<u64, PendingFuture>,
@@ -57,11 +66,13 @@ impl MessageReceiver {
 			send_handle,
 		}
 	}
+	/// Take all the pending futures in the queue from method calls and store them for when the other side sends a method return.
 	pub fn update_pending_futures(&mut self) {
 		while let Ok((id, future)) = self.pending_future_rx.try_recv() {
 			let _ = self.pending_futures.insert(id, future);
 		}
 	}
+	/// Await a message from the socket, parse it, and handle it.
 	pub async fn dispatch<S: scenegraph::Scenegraph>(
 		&mut self,
 		scenegraph: &S,
@@ -168,13 +179,16 @@ impl MessageReceiver {
 	}
 }
 
+/// Generate an error message from arguments.
 pub fn serialize_error<T: std::fmt::Display>(object: &str, method: &str, err: T) -> Message {
 	let error = format!("{}", err);
 	serialize_call(0, None, object, method, Some(error.as_str()), None)
 }
+/// Generate a signal message from arguments.
 pub fn serialize_signal_call(object: &str, method: &str, data: &[u8]) -> Message {
 	serialize_call(1, None, object, method, None, Some(data))
 }
+/// Generate a method message from arguments.
 pub fn serialize_method_call(id: u64, object: &str, method: &str, data: &[u8]) -> Message {
 	serialize_call(2, Some(id), object, method, None, Some(data))
 }
@@ -232,6 +246,7 @@ fn serialize_call(
 	}
 }
 
+/// Sender half of the messenger
 pub struct MessageSender {
 	write: OwnedWriteHalf,
 	handle: MessageSenderHandle,
@@ -255,45 +270,52 @@ impl MessageSender {
 			max_message_id,
 		}
 	}
+	/// Send all the queued messages from the handles
 	pub async fn flush(&mut self) -> Result<(), MessengerError> {
 		while let Some(message) = self.message_rx.recv().await {
-			self.send(&message.into_data()).await?;
+			self.send(message).await?;
 		}
 		Ok(())
 	}
-	pub async fn send(&mut self, message: &[u8]) -> Result<(), MessengerError> {
+	/// Send a message and await until sent.
+	pub async fn send(&mut self, message: Message) -> Result<(), MessengerError> {
+		let message = message.into_data();
 		let message_length = message.len() as u32;
 		self.write
 			.write_all(&message_length.to_ne_bytes())
 			.await
 			.map_err(|e| MessengerError::IOError { e })?;
 		self.write
-			.write_all(message)
+			.write_all(&message)
 			.await
 			.map_err(|e| MessengerError::IOError { e })
 	}
+	/// Get a handle to send messages from anywhere.
 	pub fn handle(&self) -> MessageSenderHandle {
 		self.handle.clone()
 	}
 
+	/// Send an error immediately, await until sent.
 	pub async fn error<E: std::fmt::Display>(
 		&mut self,
 		node_path: &str,
 		method_name: &str,
 		err: E,
 	) -> Result<(), MessengerError> {
-		self.send(&serialize_error(node_path, method_name, err).into_data())
+		self.send(serialize_error(node_path, method_name, err))
 			.await
 	}
+	/// Send a signal immediately, await until sent.
 	pub async fn signal(
 		&mut self,
 		node_path: &str,
 		signal_name: &str,
 		data: &[u8],
 	) -> Result<(), MessengerError> {
-		self.send(&serialize_signal_call(node_path, signal_name, data).into_data())
+		self.send(serialize_signal_call(node_path, signal_name, data))
 			.await
 	}
+	/// Call a method immediately, await until other side sends back a response or the message fails to send.
 	pub async fn method(
 		&mut self,
 		node_path: &str,
@@ -305,13 +327,14 @@ impl MessageSender {
 		self.pending_future_tx
 			.send((id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
-		self.send(&serialize_method_call(id, node_path, method, data).into_data())
+		self.send(serialize_method_call(id, node_path, method, data))
 			.await?;
 		self.max_message_id.store(id + 1, Ordering::Relaxed);
 		rx.await.map_err(|_| MessengerError::ReceiverDropped)
 	}
 }
 
+/// Handle to the message sender, so you can synchronously send messages from anywhere without blocking.
 #[derive(Clone)]
 pub struct MessageSenderHandle {
 	message_tx: mpsc::UnboundedSender<Message>,
@@ -319,6 +342,7 @@ pub struct MessageSenderHandle {
 	max_message_id: Arc<AtomicU64>,
 }
 impl MessageSenderHandle {
+	/// Queue up an error to be sent.
 	pub fn error<E: std::fmt::Display>(
 		&self,
 		node_path: &str,
@@ -327,6 +351,7 @@ impl MessageSenderHandle {
 	) -> Result<(), MessengerError> {
 		self.send(serialize_error(node_path, method_name, err))
 	}
+	/// Queue up a signal to be sent.
 	pub fn signal(
 		&self,
 		node_path: &str,
@@ -335,6 +360,7 @@ impl MessageSenderHandle {
 	) -> Result<(), MessengerError> {
 		self.send(serialize_signal_call(node_path, signal_name, data))
 	}
+	/// Queue up a method to be sent and get back a future for when a response is returned.
 	pub fn method(
 		&self,
 		node_path: &str,
@@ -358,6 +384,7 @@ impl MessageSenderHandle {
 	}
 }
 
+/// Create 2 messenger halves from a connection to a stardust client or server.
 pub fn create(connection: UnixStream) -> (MessageSender, MessageReceiver) {
 	let (read, write) = connection.into_split();
 	let (pending_future_tx, pending_future_rx) = mpsc::unbounded_channel();

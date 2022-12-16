@@ -39,14 +39,19 @@ pub enum TextFit {
 }
 
 #[derive(Debug)]
+pub struct Bounds {
+	pub bounds: Vector2<f32>,
+	pub fit: TextFit,
+	pub bounds_align: FlagSet<Alignment>,
+}
+
+#[derive(Debug)]
 pub struct TextStyle<R: Resource> {
 	pub character_height: f32,
 	pub color: Rgba<f32>,
 	pub font_resource: Option<R>,
 	pub text_align: FlagSet<Alignment>,
-	pub bounds: Option<Vector2<f32>>,
-	pub fit: TextFit,
-	pub bounds_align: FlagSet<Alignment>,
+	pub bounds: Option<Bounds>,
 }
 
 impl<R: Resource> Default for TextStyle<R> {
@@ -57,24 +62,19 @@ impl<R: Resource> Default for TextStyle<R> {
 			font_resource: None,
 			text_align: Alignment::TopLeft.into(),
 			bounds: None,
-			fit: TextFit::Overflow,
-			bounds_align: Alignment::TopLeft.into(),
 		}
 	}
 }
 
+/// 2D text in 3D space.
 #[derive(Debug)]
 pub struct Text {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
 impl Text {
-	#[builder(entry = "builder")]
 	pub fn create<'a, R: Resource>(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
-		scale: Option<mint::Vector3<f32>>,
+		transform: Transform,
 		text_string: &'a str,
 		style: TextStyle<R>,
 	) -> Result<Self, NodeError> {
@@ -91,18 +91,23 @@ impl Text {
 					(
 						id,
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale,
-						},
+						transform,
 						text_string,
 						style.font_resource.map(|res| res.parse()),
 						style.character_height,
 						style.text_align.bits(),
-						style.bounds,
-						style.fit as u32,
-						style.bounds_align.bits(),
+						style.bounds.as_ref().map(|b| b.bounds),
+						style
+							.bounds
+							.as_ref()
+							.map(|b| b.fit)
+							.unwrap_or(TextFit::Overflow) as u32,
+						style
+							.bounds
+							.as_ref()
+							.map(|b| b.bounds_align)
+							.unwrap_or(Alignment::TopLeft.into())
+							.bits(),
 						[
 							style.color.c.r,
 							style.color.c.g,
@@ -115,6 +120,7 @@ impl Text {
 		})
 	}
 
+	/// "global" height in meters, regardless of scale.
 	pub fn set_character_height(&self, height: f32) -> Result<(), NodeError> {
 		self.node
 			.send_remote_signal("set_character_height", &height)
@@ -148,15 +154,11 @@ async fn fusion_text() -> Result<()> {
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let mut style: TextStyle<NamespacedResource> = TextStyle::default();
-	style.font_resource = Some(NamespacedResource::new("fusion", "common_case"));
-
-	let text = Text::builder()
-		.spatial_parent(client.get_root())
-		.text_string("Test Text")
-		.style(style)
-		.build()?;
-
+	let style: TextStyle<NamespacedResource> = TextStyle {
+		font_resource: Some(NamespacedResource::new("fusion", "common_case")),
+		..Default::default()
+	};
+	let text = Text::create(client.get_root(), Transform::default(), "Test Text", style)?;
 	text.set_character_height(0.05)?;
 	text.set_text("Test Text: Changed")?;
 

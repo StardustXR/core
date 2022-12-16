@@ -4,24 +4,23 @@ use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
 use stardust_xr::values::Transform;
 use std::ops::Deref;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+/// Item that contains the path to an equirectangular `.hdr` file.
 pub struct EnvironmentItem {
 	spatial: Spatial,
-	pub path: String,
+	pub path: PathBuf,
 }
 
-#[buildstructor::buildstructor]
 impl<'a> EnvironmentItem {
-	#[builder(entry = "builder")]
-	pub fn create(
+	/// Create a new environment item from a file path.
+	pub fn create<P: AsRef<Path>>(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
-		file_path: &'a str,
+		transform: Transform,
+		file_path: P,
 	) -> Result<Self, NodeError> {
-		let path = Path::new(file_path);
+		let path = file_path.as_ref();
 		if path.is_relative() || !path.exists() {
 			return Err(NodeError::InvalidPath);
 		}
@@ -36,19 +35,10 @@ impl<'a> EnvironmentItem {
 					"/item/environment/item",
 					true,
 					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
-						file_path,
-					),
+					(id, spatial_parent.node().get_path()?, transform, path),
 				)?,
 			},
-			path: file_path.to_string(),
+			path: path.to_path_buf(),
 		})
 	}
 }
@@ -66,14 +56,14 @@ impl NodeType for EnvironmentItem {
 }
 impl Item for EnvironmentItem {
 	type ItemType = EnvironmentItem;
-	type InitData = String;
+	type InitData = PathBuf;
 	const TYPE_NAME: &'static str = "environment";
 
 	fn from_path(
 		client: &Arc<Client>,
 		parent_path: impl ToString,
 		name: impl ToString,
-		init_data: &String,
+		init_data: &PathBuf,
 	) -> Self {
 		EnvironmentItem {
 			spatial: Spatial {
@@ -97,16 +87,20 @@ async fn fusion_environment_ui() {
 	use manifest_dir_macros::file_relative_path;
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
-	let environment_item = EnvironmentItem::builder()
-		.spatial_parent(client.get_root())
-		.file_path(file_relative_path!("res/fusion/sky.hdr"))
-		.build()
-		.unwrap();
+	let environment_item = EnvironmentItem::create(
+		client.get_root(),
+		Transform::default(),
+		file_relative_path!("res/fusion/sky.hdr"),
+	)
+	.unwrap();
 
 	struct EnvironmentUIManager(Arc<Client>);
 	impl crate::items::ItemUIHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn item_created(&mut self, uid: &str, _item: EnvironmentItem, path: String) {
-			println!("Environment item {uid} created with path {path}");
+		fn item_created(&mut self, uid: &str, _item: EnvironmentItem, path: PathBuf) {
+			println!(
+				"Environment item {uid} created with path {}",
+				path.display()
+			);
 		}
 		fn item_captured(&mut self, uid: &str, acceptor_uid: &str, _item: EnvironmentItem) {
 			println!("Capturing environment item {uid} in acceptor {acceptor_uid}");
@@ -124,8 +118,11 @@ async fn fusion_environment_ui() {
 		fn acceptor_destroyed(&mut self, _uid: &str) {}
 	}
 	impl crate::items::ItemAcceptorHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn captured(&mut self, uid: &str, item: EnvironmentItem, path: String) {
-			println!("Item {uid} accepted sucessfully with path {path}!");
+		fn captured(&mut self, uid: &str, item: EnvironmentItem, path: PathBuf) {
+			println!(
+				"Item {uid} accepted sucessfully with path {}!",
+				path.display()
+			);
 			item.release().unwrap();
 		}
 		fn released(&mut self, uid: &str) {
@@ -140,12 +137,16 @@ async fn fusion_environment_ui() {
 		.unwrap();
 
 	let item_acceptor_field =
-		crate::fields::SphereField::create(client.get_root(), None, 0.5).unwrap();
-	let item_acceptor =
-		crate::items::ItemAcceptor::create(client.get_root(), None, None, &item_acceptor_field)
-			.unwrap()
-			.wrap(EnvironmentUIManager(client.clone()))
+		crate::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.5)
 			.unwrap();
+	let item_acceptor = crate::items::ItemAcceptor::create(
+		client.get_root(),
+		Transform::default(),
+		&item_acceptor_field,
+	)
+	.unwrap()
+	.wrap(EnvironmentUIManager(client.clone()))
+	.unwrap();
 
 	item_acceptor.node().capture(&environment_item).unwrap();
 

@@ -9,14 +9,14 @@ use serde::{ser::SerializeStruct, Serialize, Serializer};
 use stardust_xr::values::Transform;
 use std::ops::Deref;
 
-pub trait ToLines {
-	fn to_lines(&self) -> Vec<LinePoint>;
-}
-
+/// A single point on a line.
 #[derive(Debug, Clone, Copy)]
 pub struct LinePoint {
+	/// Relative to the `Lines`' transform.
 	pub point: Vector3<f32>,
+	/// Objective thickness in meters, ignores the scale of the Lines node.
 	pub thickness: f32,
+	/// This will be blended with other line points using vertex colors (sRGB RGBA gradient).
 	pub color: Rgba<f32>,
 }
 impl Default for LinePoint {
@@ -45,18 +45,54 @@ impl Serialize for LinePoint {
 	}
 }
 
+/// A single continuous polyline.
+///
+/// # Example
+/// ```
+/// let points = vec![
+/// 	LinePoint {
+/// 		point: Vector3 {
+/// 			x: 1.0,
+/// 			y: 0.0,
+/// 			z: 0.0,
+/// 		},
+/// 		thickness: 0.0025,
+/// 		..Default::default()
+/// 	},
+/// 	LinePoint {
+/// 		thickness: 0.0025,
+/// 		..Default::default()
+/// 	},
+/// 	LinePoint {
+/// 		point: Vector3 {
+/// 			x: 0.0,
+/// 			y: 1.0,
+/// 			z: 0.0,
+/// 		},
+/// 		thickness: 0.0025,
+/// 		..Default::default()
+/// 	},
+/// ];
+/// let _lines = Lines::builder()
+/// 	.spatial_parent(client.get_root())
+/// 	.points(&points)
+/// 	.cyclic(true)
+/// 	.build()
+/// 	.unwrap();
+/// ```
 #[derive(Debug)]
 pub struct Lines {
 	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
+// #[buildstructor::buildstructor]
 impl Lines {
-	#[builder(entry = "builder")]
+	/// Create a new Lines node.
+	///
+	/// Cyclic means the start and end points are connected together.
+	// #[builder(entry = "builder")]
 	pub fn create<'a>(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
-		scale: Option<mint::Vector3<f32>>,
+		transform: Transform,
 		points: &'a [LinePoint],
 		cyclic: bool,
 	) -> Result<Self, NodeError> {
@@ -73,11 +109,7 @@ impl Lines {
 					(
 						id,
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale,
-						},
+						transform,
 						points,
 						cyclic,
 					),
@@ -89,6 +121,7 @@ impl Lines {
 	pub fn update_points(&self, points: &[LinePoint]) -> Result<(), NodeError> {
 		self.node().send_remote_signal("set_points", &points)
 	}
+	/// Cyclic means the start and end points are connected together.
 	pub fn set_cyclic(&self, cyclic: bool) -> Result<(), NodeError> {
 		self.node().send_remote_signal("set_cyclic", &cyclic)
 	}
@@ -142,12 +175,7 @@ async fn fusion_lines() {
 			..Default::default()
 		},
 	];
-	let _lines = Lines::builder()
-		.spatial_parent(client.get_root())
-		.points(&points)
-		.cyclic(true)
-		.build()
-		.unwrap();
+	let _lines = Lines::create(client.get_root(), Transform::default(), &points, true).unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 }

@@ -4,47 +4,54 @@ use crate::{
 	spatial::Spatial,
 };
 use anyhow::Result;
-use color::Rgba;
-use flexbuffers::VectorBuilder;
-use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
+use stardust_xr::values::Transform;
 use std::ops::Deref;
 
-pub trait MaterialParameter {
-	fn push_flex(&self, vec: &mut VectorBuilder);
-}
-impl MaterialParameter for f32 {
-	fn push_flex(&self, vec: &mut VectorBuilder) {
-		vec.push(*self);
-	}
-}
-impl MaterialParameter for f64 {
-	fn push_flex(&self, vec: &mut VectorBuilder) {
-		vec.push(*self);
-	}
-}
-impl MaterialParameter for Rgba {
-	fn push_flex(&self, vec: &mut VectorBuilder) {
-		let mut color_vec = vec.start_vector();
-		color_vec.push(self.c.r);
-		color_vec.push(self.c.g);
-		color_vec.push(self.c.b);
-		color_vec.push(self.a);
-	}
-}
+// pub trait MaterialParameter {
+// 	fn push_flex(&self, vec: &mut VectorBuilder);
+// }
+// impl MaterialParameter for f32 {
+// 	fn push_flex(&self, vec: &mut VectorBuilder) {
+// 		vec.push(*self);
+// 	}
+// }
+// impl MaterialParameter for f64 {
+// 	fn push_flex(&self, vec: &mut VectorBuilder) {
+// 		vec.push(*self);
+// 	}
+// }
+// impl MaterialParameter for Rgba {
+// 	fn push_flex(&self, vec: &mut VectorBuilder) {
+// 		let mut color_vec = vec.start_vector();
+// 		color_vec.push(self.c.r);
+// 		color_vec.push(self.c.g);
+// 		color_vec.push(self.c.b);
+// 		color_vec.push(self.a);
+// 	}
+// }
 
+/// A 3D model in the GLTF format.
+///
+/// # Example
+/// ```
+/// let gyro_gem_resource = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
+/// let _model = Model::builder()
+/// 	.spatial_parent(client.get_root())
+/// 	.resource(&gyro_gem_resource)
+/// 	.build().unwrap();
+/// ```
 #[derive(Debug)]
 pub struct Model {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
+// #[buildstructor::buildstructor]
 impl<'a> Model {
-	#[builder(entry = "builder")]
+	/// Create a model node. GLTF and GLB are supported.
+	// #[builder(entry = "builder")]
 	pub fn create<R: Resource + 'a>(
 		spatial_parent: &'a Spatial,
 		resource: &'a R,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
-		scale: Option<mint::Vector3<f32>>,
+		transform: Transform,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(Model {
@@ -59,11 +66,7 @@ impl<'a> Model {
 					(
 						id,
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale,
-						},
+						transform,
 						resource.parse().as_str(),
 					),
 				)?,
@@ -95,12 +98,8 @@ async fn fusion_model() -> Result<()> {
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let _model = Model::builder()
-		.spatial_parent(client.get_root())
-		.resource(&crate::resource::NamespacedResource::new(
-			"fusion", "gyro_gem",
-		))
-		.build()?;
+	let gyro_gem_resource = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
+	let _model = Model::create(client.get_root(), &gyro_gem_resource, Transform::default())?;
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 	Ok(())

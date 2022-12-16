@@ -1,15 +1,19 @@
-use crate::node::NodeError;
-use crate::DummyHandler;
+//! Your connection to the Stardust server and other essentials.
 
-use super::{scenegraph::Scenegraph, spatial::Spatial};
+use crate::node::NodeError;
+use crate::node::NodeInternals;
+use crate::spatial::Spatial;
 use anyhow::Result;
 use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
-use stardust_xr::messenger::{self, MessengerError};
-use stardust_xr::schemas::flex::{deserialize, serialize};
+use stardust_xr::scenegraph;
+use stardust_xr::scenegraph::ScenegraphError;
 use stardust_xr::{
 	client,
+	messenger::{self, MessengerError},
 	messenger::{MessageReceiver, MessageSender, MessageSenderHandle},
+	schemas::flex::{deserialize, serialize},
 };
 use std::any::TypeId;
 use std::path::Path;
@@ -19,22 +23,94 @@ use tokio::net::UnixStream;
 use tokio::sync::{Notify, OnceCell};
 use tokio::task::JoinHandle;
 
+/// Scenegraph full of aliases to nodes, needed so the `Messenger` can send messages to nodes.
+#[derive(Default)]
+pub struct Scenegraph {
+	nodes: Mutex<FxHashMap<String, Weak<NodeInternals>>>,
+}
+
+impl Scenegraph {
+	pub fn new() -> Self {
+		Default::default()
+	}
+
+	pub fn add_node(&self, node_internals: &Arc<NodeInternals>) {
+		self.nodes
+			.lock()
+			.insert(node_internals.path(), Arc::downgrade(&node_internals));
+	}
+
+	pub fn remove_node(&self, node_path: &str) {
+		self.nodes.lock().remove(node_path);
+	}
+
+	// pub fn get_node(&self, path: &str) -> Option<Node> {
+	// 	self.nodes.lock().get(path).cloned().unwrap_or_default()
+	// }
+}
+
+impl scenegraph::Scenegraph for Scenegraph {
+	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
+		let node = self
+			.nodes
+			.lock()
+			.get(path)
+			.and_then(Weak::upgrade)
+			.ok_or(ScenegraphError::NodeNotFound)?;
+		let local_signals = node.local_signals.lock();
+		let signal = local_signals
+			.get(method)
+			.ok_or(ScenegraphError::SignalNotFound)?
+			.clone();
+		signal(data).map_err(|e| ScenegraphError::SignalError {
+			error: e.to_string(),
+		})
+	}
+	fn execute_method(
+		&self,
+		path: &str,
+		method: &str,
+		data: &[u8],
+	) -> Result<Vec<u8>, ScenegraphError> {
+		let node = self
+			.nodes
+			.lock()
+			.get(path)
+			.and_then(Weak::upgrade)
+			.ok_or(ScenegraphError::NodeNotFound)?;
+		let local_methods = node.local_methods.lock();
+		let method = local_methods
+			.get(method)
+			.ok_or(ScenegraphError::MethodNotFound)?
+			.clone();
+		method(data).map_err(|e| ScenegraphError::MethodError {
+			error: e.to_string(),
+		})
+	}
+}
+
+struct DummyHandler;
+impl LifeCycleHandler for DummyHandler {
+	fn logic_step(&mut self, _info: LogicStepInfo) {}
+}
+
 #[derive(Deserialize)]
 struct LogicStepInfoInternal {
 	delta: f64,
 }
+/// Information on the frame.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct LogicStepInfo {
+	/// The time between this frame and last frame's display time, in seconds.
 	pub delta: f64,
+	/// The total time in seconds the client has been connected to the server.
 	pub elapsed: f64,
 }
 
+/// Handle the life cycle of the client.
 pub trait LifeCycleHandler: Send + Sync + 'static {
+	/// Runs every frame with information about the current frame, for animations and motion and a consistent update.
 	fn logic_step(&mut self, _info: LogicStepInfo);
-}
-
-pub struct Root {
-	pub spatial: Spatial,
 }
 
 #[derive(Error, Debug)]
@@ -45,8 +121,11 @@ pub enum ClientError {
 	NodeError { e: NodeError },
 }
 
+/// Your connection to the Stardust server.
 pub struct Client {
+	/// A handle to the messenger, allows you to send messages to nodes on the server.
 	pub message_sender_handle: MessageSenderHandle,
+	/// A reference to the scenegraph.
 	pub scenegraph: Arc<Scenegraph>,
 
 	stop_notifier: Notify,
@@ -60,6 +139,7 @@ pub struct Client {
 }
 
 impl Client {
+	/// Try to connect to the server, return messenger halves for manually setting up the event loop.
 	pub async fn connect() -> Result<(Arc<Self>, MessageSender, MessageReceiver), ClientError> {
 		let connection = client::connect()
 			.await
@@ -67,6 +147,7 @@ impl Client {
 		Ok(Client::from_connection(connection))
 	}
 
+	/// Create a client and messenger halves from an established tokio async `UnixStream` for manually setting up the event loop.
 	pub fn from_connection(connection: UnixStream) -> (Arc<Self>, MessageSender, MessageReceiver) {
 		let (message_tx, message_rx) = messenger::create(connection);
 		let client = Arc::new(Client {
@@ -86,6 +167,7 @@ impl Client {
 		(client, message_tx, message_rx)
 	}
 
+	/// Set up the client's root, HMD, and dummy handler when manually setting up the event loop.
 	pub fn setup(client: &Arc<Client>) -> Result<(), ClientError> {
 		let _ = client
 			.root
@@ -121,6 +203,7 @@ impl Client {
 		Ok(())
 	}
 
+	/// Automatically set up the client with an async loop. This option is generally what you'll want to use.
 	pub async fn connect_with_async_loop(
 	) -> Result<(Arc<Self>, JoinHandle<Result<(), MessengerError>>), ClientError> {
 		let (client, mut message_tx, mut message_rx) = Client::connect().await?;
@@ -158,13 +241,17 @@ impl Client {
 		Ok((client, event_loop))
 	}
 
+	/// Get a reference to the client's root node, a spatial that exists where the client was spawned.
 	pub fn get_root(&self) -> &Spatial {
 		self.root.get().as_ref().unwrap()
 	}
+	/// Get a reference to the head mounted display's spatial.
 	pub fn get_hmd(&self) -> &Spatial {
 		self.hmd.get().as_ref().unwrap()
 	}
 
+	/// Wrap the root in a handler and return an `Arc` to the handler.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap_root<H: LifeCycleHandler>(&self, wrapped: H) -> Arc<Mutex<H>> {
 		let wrapped = Arc::new(Mutex::new(wrapped));
 		*self.life_cycle_handler.lock() =
@@ -172,7 +259,8 @@ impl Client {
 		wrapped
 	}
 
-	pub fn set_base_prefixes<H: AsRef<str>>(&self, prefixes: &[H]) {
+	/// Set the prefixes for any `NamespacedResource`s.
+	pub fn set_base_prefixes<H: AsRef<Path>>(&self, prefixes: &[H]) {
 		let prefixes: Vec<&Path> = prefixes
 			.iter()
 			.map(|p| Path::new(p.as_ref()))
@@ -184,11 +272,11 @@ impl Client {
 			.unwrap();
 	}
 
+	/// Stop the event loop if created with async loop. Equivalent to a graceful disconnect.
 	pub fn stop_loop(&self) {
 		self.stop_notifier.notify_one();
 	}
 }
-
 impl Drop for Client {
 	fn drop(&mut self) {
 		self.stop_loop();

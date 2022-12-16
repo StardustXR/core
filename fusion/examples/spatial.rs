@@ -1,5 +1,6 @@
 use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
+use stardust_xr::values::Transform;
 use stardust_xr_fusion::{
 	client::{Client, LifeCycleHandler, LogicStepInfo},
 	drawable::Model,
@@ -32,32 +33,32 @@ struct SpatialDemo {
 }
 impl SpatialDemo {
 	fn new(client: &Arc<Client>) -> Self {
-		let _root = Spatial::builder()
-			.spatial_parent(client.get_root())
-			.zoneable(true)
-			.build()
-			.unwrap();
+		let _root = Spatial::create(client.get_root(), Transform::default(), true).unwrap();
 
-		let gem = Model::builder()
-			.spatial_parent(&_root)
-			.resource(&NamespacedResource::new("fusion", "gyro_gem"))
-			.build()
-			.unwrap();
-		let ring_inner = Model::builder()
-			.spatial_parent(&_root)
-			.resource(&NamespacedResource::new("fusion", "gyro_inside"))
-			.build()
-			.unwrap();
-		let ring_middle = Model::builder()
-			.spatial_parent(&ring_inner)
-			.resource(&NamespacedResource::new("fusion", "gyro_middle"))
-			.build()
-			.unwrap();
-		let ring_outer = Model::builder()
-			.spatial_parent(&ring_middle)
-			.resource(&NamespacedResource::new("fusion", "gyro_outside"))
-			.build()
-			.unwrap();
+		let gem = Model::create(
+			&_root,
+			&NamespacedResource::new("fusion", "gyro_gem"),
+			Transform::default(),
+		)
+		.unwrap();
+		let ring_inner = Model::create(
+			&_root,
+			&NamespacedResource::new("fusion", "gyro_inside"),
+			Transform::default(),
+		)
+		.unwrap();
+		let ring_middle = Model::create(
+			&ring_inner,
+			&NamespacedResource::new("fusion", "gyro_middle"),
+			Transform::default(),
+		)
+		.unwrap();
+		let ring_outer = Model::create(
+			&ring_middle,
+			&NamespacedResource::new("fusion", "gyro_outside"),
+			Transform::default(),
+		)
+		.unwrap();
 
 		SpatialDemo {
 			_root,

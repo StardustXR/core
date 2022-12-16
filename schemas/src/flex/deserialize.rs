@@ -7,6 +7,11 @@ use serde::{
 };
 use std::fmt::Display;
 
+/// Deserialize given flexbuffers data into whatever format.
+/// This is different than the regular flexbuffers deserialization
+/// because it strips the names off of struct fields,
+/// instead putting the values into vectors with the same
+/// order to save space and speed up deserialization.
 pub fn deserialize<'a, T: Deserialize<'a>>(data: &'a [u8]) -> Result<T, DeserializationError> {
 	let root = flexbuffers::Reader::get_root(data)?;
 	let deserializer = FlexbuffersDeserializer(root);

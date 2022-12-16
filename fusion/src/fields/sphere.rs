@@ -1,6 +1,6 @@
 use super::Field;
 use crate::{
-	node::{ClientOwned, Node, NodeError, NodeType},
+	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -8,14 +8,12 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct SphereField {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
 impl<'a> SphereField {
-	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
+		position: mint::Vector3<f32>,
 		radius: f32,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
@@ -49,7 +47,6 @@ impl NodeType for SphereField {
 		}
 	}
 }
-impl ClientOwned for SphereField {}
 impl Field for SphereField {}
 impl Deref for SphereField {
 	type Target = Spatial;
@@ -66,10 +63,7 @@ async fn fusion_sphere_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let sphere_field = SphereField::builder()
-		.spatial_parent(client.get_root())
-		.radius(0.5)
-		.build()
+	let sphere_field = SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.5)
 		.expect("Unable to make sphere field");
 	let distance = sphere_field
 		.distance(client.get_root(), mint::Vector3::from([0.0, 1.0, 0.0]))

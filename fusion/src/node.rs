@@ -1,3 +1,5 @@
+//! The base of all objects in Stardust.
+
 use super::client::Client;
 use anyhow::Result;
 use parking_lot::Mutex;
@@ -30,23 +32,32 @@ pub enum NodeError {
 	Serialization,
 	#[error("Deserialization failed with an error: {e}")]
 	Deserialization { e: DeserializationError },
+	/// The server returned an error on a method return.
 	#[error("Server returned an error: {e}")]
 	ReturnedError { e: String },
 	#[error("Attempted to register to a singleton twice")]
 	OverrideSingleton,
+	/// The given data is not a valid flexbuffer map.
 	#[error("Map is not a valid flexbuffer map at the root")]
 	MapInvalid,
 }
 
+/// Common methods all nodes share, to make them easier to use.
 pub trait NodeType: Send + Sync + Sized + 'static {
+	/// Get a reference to the node.
 	fn node(&self) -> &Node;
+	/// Try to get the client
 	fn client(&self) -> Result<Arc<Client>, NodeError> {
 		self.node().client()
 	}
+	/// Create an alias of this node.
+	/// Not the same as node scenegraph aliases,
+	/// they are useful instead for getting a weak handle to a node.
+	/// If the original node is destroyed, then any messages to the server will fail instantly with `NodeError::DoesNotExist`.
 	fn alias(&self) -> Self;
 }
+/// A trait to ensure this node type could be put in a `HandlerWrapper`.
 pub trait HandledNodeType: NodeType {}
-pub trait ClientOwned: NodeType {}
 
 type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;
 type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
@@ -54,7 +65,7 @@ type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
 pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O>>>;
 
 pub struct NodeInternals {
-	pub client: Weak<Client>,
+	client: Weak<Client>,
 	self_ref: Weak<NodeInternals>,
 	parent: String,
 	name: String,
@@ -88,6 +99,7 @@ impl Drop for NodeInternals {
 	}
 }
 
+/// An object in the client's scenegraph on the server. Almost all calls to a node are IPC calls and so have several microseconds of delay, be aware.
 pub enum Node {
 	Owned(Arc<NodeInternals>),
 	Aliased(Weak<NodeInternals>),
@@ -115,6 +127,7 @@ impl Node {
 
 		Ok(node)
 	}
+	/// Create a node from path, this is only needed when fusion does not have a proper node struct.
 	pub fn from_path(
 		client: &Arc<Client>,
 		parent: impl ToString,
@@ -134,6 +147,7 @@ impl Node {
 		Node::Owned(node)
 	}
 
+	/// Add a signal to the node so that the server can send a message to it. Not needed unless implementing functionality Fusion does not already have.
 	pub fn add_local_signal<F>(&self, name: impl ToString, signal: F) -> Result<(), NodeError>
 	where
 		F: Fn(&[u8]) -> Result<()> + Send + Sync + 'static,
@@ -145,6 +159,7 @@ impl Node {
 		Ok(())
 	}
 
+	/// Add a signal to the node so that the server can send a message to it and get a response back. Not needed unless implementing functionality Fusion does not already have.
 	pub fn add_local_method<F>(&self, name: impl ToString, method: F) -> Result<(), NodeError>
 	where
 		F: Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static,
@@ -163,6 +178,7 @@ impl Node {
 		}
 	}
 
+	/// Try to get the client from the node, it's a result because that makes it work a lot better with `?` in internal functions.
 	pub fn client(&self) -> Result<Arc<Client>, NodeError> {
 		self.internals()?
 			.client
@@ -173,27 +189,12 @@ impl Node {
 	pub fn get_name(&self) -> Result<String, NodeError> {
 		Ok(self.internals()?.parent.to_string())
 	}
+	/// Get the entire path of the node including the name.
 	pub fn get_path(&self) -> Result<String, NodeError> {
 		Ok(self.internals()?.path())
 	}
-	// pub fn generate_with_parent(
-	// 	client: Weak<Client>,
-	// 	parent: &str,
-	// 	destroyable: bool,
-	// ) -> Result<(Arc<Self>, String), NodeError> {
-	// 	let id = nanoid!(10);
-	// 	let mut path = parent.to_string();
-	// 	if !path.starts_with('/') {
-	// 		return Err(NodeError::InvalidPath);
-	// 	}
-	// 	if !path.ends_with('/') {
-	// 		path.push('/');
-	// 	}
-	// 	path.push_str(&id);
 
-	// 	Node::from_path(client, path, destroyable).map(|node| (node, id))
-	// }
-
+	/// Send a signal to the node on the server. Not needed unless implementing functionality Fusion does not already have.
 	pub fn send_remote_signal<S: Serialize>(
 		&self,
 		signal_name: &str,
@@ -204,12 +205,14 @@ impl Node {
 			&serialize(data).map_err(|_| NodeError::Serialization)?,
 		)
 	}
+	/// Send a signal to the node on the server with raw data (like when sending flatbuffers over). Not needed unless implementing functionality Fusion does not already have.
 	pub fn send_remote_signal_raw(&self, signal_name: &str, data: &[u8]) -> Result<(), NodeError> {
 		self.client()?
 			.message_sender_handle
 			.signal(&self.get_path()?, signal_name, data)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
+	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
 	pub fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
 		&self,
 		method_name: &str,
@@ -223,6 +226,7 @@ impl Node {
 				.and_then(|data| deserialize(&data).map_err(|e| NodeError::Deserialization { e }))
 		})
 	}
+	/// Execute a method on the node on the server. This will return a trait safe future, pinned and boxed. Not needed unless implementing functionality Fusion does not already have.
 	pub fn execute_remote_method_trait<S: Serialize, D: DeserializeOwned>(
 		&self,
 		method_name: &str,
@@ -236,6 +240,7 @@ impl Node {
 				.and_then(|data| deserialize(&data).map_err(|e| NodeError::Deserialization { e }))
 		}))
 	}
+	/// Execute a method on the node on the server with raw data (like when sending over flatbuffers). Not needed unless implementing functionality Fusion does not already have.
 	pub fn execute_remote_method_raw(
 		&self,
 		method_name: &str,

@@ -1,3 +1,21 @@
+//! A library for Stardust XR clients to use with abstractions over the client, nodes, and event loop.
+//!
+//! # Example
+//! ```
+//!use stardust_xr_fusion::client::Client;
+//!
+//!#[tokio::main(flavor="current_thread")]
+//!async fn main() {
+//!	let (_client, event_loop) = Client::connect_with_async_loop().await.unwrap();
+//!
+//!	tokio::select! {
+//!		biased;
+//!		_ = tokio::signal::ctrl_c() => (),
+//!		e = event_loop => e.unwrap().unwrap(),
+//!	}
+//!}
+//! ```
+
 #![allow(dead_code)]
 
 pub use stardust_xr as core;
@@ -12,20 +30,35 @@ pub mod drawable;
 pub mod fields;
 pub mod input;
 pub mod items;
-pub mod scenegraph;
 pub mod spatial;
 pub mod startup_settings;
 
 use self::node::HandledNodeType;
 use anyhow::{anyhow, Result};
-use client::LifeCycleHandler;
-use input::InputHandlerHandler;
-use items::panel::PanelItemHandler;
 use node::NodeError;
 use parking_lot::{Mutex, MutexGuard};
-use spatial::ZoneHandler;
 use std::sync::Arc;
 
+/// A wrapper around a node and a handler struct implementing the node's handler trait.
+/// Necessary because the methods on the handler may be called at any time and bundling the 2 together makes it harder to screw up.
+/// Can't be created directly, nodes that could use handlers have a `wrap()` method on them that consumes them and a handler and returns a `HandlerWrapper`.
+///
+/// # Example
+/// ```
+/// use stardust_xr_fusion::{HandlerWrapper, field::SphereField, zone::{Zone, ZoneHandler}};
+///
+/// struct ZoneHandlerTest;
+/// impl ZoneHandler for ZoneHandlerTest {
+/// 	fn enter(&mut self, uid: &str, spatial: Spatial) {}
+/// 	fn capture(&mut self, uid: &str, spatial: Spatial) {}
+/// 	fn release(&mut self, uid: &str) {}
+/// 	fn leave(&mut self, uid: &str) {}
+/// }
+///
+/// let sphere_field = SphereField::builder().spatial_parent(client.get_root()).radius(0.5).build().unwrap();
+/// let zone = Zone::builder().spatial_parent(client.get_root()).field(&sphere_field).build().unwrap();
+/// let zone_wrapped = zone.wrap(ZoneHandlerTest);
+/// ```
 #[derive(Debug)]
 pub struct HandlerWrapper<N: HandledNodeType, H: Send + Sync + 'static> {
 	node: Arc<N>,
@@ -39,12 +72,21 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 		}
 	}
 
+	/// Get a reference to the node inside
 	pub fn node(&self) -> &Arc<N> {
 		&self.node
 	}
+	/// Convenience function to get the handler inside.
+	///
+	/// # Safety
+	/// Since this is a mutex, it can deadlock.
 	pub fn lock_wrapped(&self) -> MutexGuard<H> {
 		self.wrapped.lock()
 	}
+	/// Get an `Arc<Mutex<_>>` of the handled type for portability.
+	///
+	/// # Safety
+	/// Since this is a mutex, it can deadlock.
 	pub fn wrapped(&self) -> &Arc<Mutex<H>> {
 		&self.wrapped
 	}
@@ -76,25 +118,4 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 			parse(node, handler, data)
 		})
 	}
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct DummyHandler;
-impl LifeCycleHandler for DummyHandler {
-	fn logic_step(&mut self, _info: client::LogicStepInfo) {}
-}
-impl InputHandlerHandler for DummyHandler {
-	fn input(&mut self, _input: stardust_xr::schemas::flat::InputData) -> bool {
-		false
-	}
-}
-impl PanelItemHandler for DummyHandler {
-	fn resize(&mut self, _size: mint::Vector2<u32>) {}
-	fn set_cursor(&mut self, _info: Option<items::panel::PanelItemCursor>) {}
-}
-impl ZoneHandler for DummyHandler {
-	fn enter(&mut self, _uid: &str, _spatial: spatial::Spatial) {}
-	fn capture(&mut self, _uid: &str, _spatial: spatial::Spatial) {}
-	fn release(&mut self, _uid: &str) {}
-	fn leave(&mut self, _uid: &str) {}
 }

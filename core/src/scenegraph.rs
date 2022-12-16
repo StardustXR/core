@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// Error for all scenegraph-related things.
 #[derive(Error, Debug)]
 pub enum ScenegraphError {
 	#[error("Node not found")]
@@ -16,6 +17,7 @@ pub enum ScenegraphError {
 	MethodError { error: String },
 }
 
+/// Handles node signals and method calls for the messenger.
 pub trait Scenegraph {
 	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
 		self.execute_method(path, method, data).map(|_| ())

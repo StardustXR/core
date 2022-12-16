@@ -149,6 +149,7 @@ impl<S: InputActionState> InputHandlerHandler for InputActionHandler<S> {
 #[tokio::test]
 async fn fusion_input_action_handler() {
 	use crate::{client::Client, fields::SphereField, input::InputHandler};
+	use stardust_xr::values::Transform;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
@@ -160,13 +161,9 @@ async fn fusion_input_action_handler() {
 		fancy_action: FancyInputAction<f32>,
 	}
 
-	let field = SphereField::builder()
-		.spatial_parent(client.get_root())
-		.radius(0.1)
-		.build()
-		.unwrap();
+	let field = SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1).unwrap();
 	let input_action_test = InputActionHandlerTest {
-		input_handler: InputHandler::create(client.get_root(), None, None, &field)
+		input_handler: InputHandler::create(client.get_root(), Transform::default(), &field)
 			.unwrap()
 			.wrap(InputActionHandler::new(0.05))
 			.unwrap(),

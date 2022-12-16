@@ -1,7 +1,26 @@
+//! Module containing pulse senders/receivers, the way to send non-spatial data through 3D space.
+//!
+//! Uses include:
+//! - Keyboard (virtual or physical) events
+//! - Controller inputs
+//! - Hardware mouse/trackball events (when mapping it to 3D space and back is impractical)
+//! - Actions such as copy/paste, duplicate, etc.
+//! - Quit requests
+//!
+//! Pulse senders and receivers both have a mask, a set of keys and values (using flexbuffers maps) that are used to filter specific protocols of information.
+//!
+//! Pulse senders can see all the pulse receivers that match their mask (contain at least the same keys/values).
+//! Each receiver has its own UID to identify it for "connecting" the sender to it visually or such.
+//! Pulse senders can send any message that matches the receiver's mask (contain at least the same keys/values).
+//!
+//! Pulse receivers have an attached field that can be used to make pulse senders aware of their bounds better, such as a panel with a box field and a pulse receiver for keyboard input.
+//! The position/rotation of pulse receivers should be the exact point a visual indicator of connection would connect to, and the forward direction should be away from the body it's part of design-wise.
+//! Pulse receivers cannot see the pulse senders, but any time data is sent to them they get the UID of the sender to allow keymap switching or such.
+
 use crate::{
 	fields::{Field, UnknownField},
-	node::{ClientOwned, Node, NodeType},
 	node::{HandledNodeType, NodeError},
+	node::{Node, NodeType},
 	spatial::Spatial,
 	HandlerWrapper,
 };
@@ -14,8 +33,9 @@ use stardust_xr::{
 	schemas::flex::{deserialize, flexbuffers},
 	values::Transform,
 };
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
+/// Trait for handling when pulse receivers matching the sender's mask are created/destroyed on the server.
 pub trait PulseSenderHandler: Send + Sync {
 	fn new_receiver(&mut self, info: NewReceiverInfo, receiver: PulseReceiver, field: UnknownField);
 	fn drop_receiver(&mut self, uid: &str);
@@ -29,19 +49,63 @@ pub struct NewReceiverInfo {
 	pub rotation: Quaternion<f32>,
 }
 
+/// Node to send non-spatial data through 3D space.
+///
+/// # Example
+/// ```
+/// struct PulseSenderTest {
+/// 	data: Vec<u8>,
+/// 	node: PulseSender,
+/// }
+/// impl PulseSenderHandler for PulseSenderTest {
+/// 	fn new_receiver(
+/// 		&mut self,
+/// 		info: NewReceiverInfo,
+/// 		receiver: PulseReceiver,
+/// 		field: UnknownField,
+/// 	) {
+/// 		println!(
+/// 			"New pulse receiver {:?} with field {:?} and info {:?}",
+/// 			receiver.node().get_path(),
+/// 			field.node().get_path(),
+/// 			info
+/// 		);
+/// 		self.node.send_data(&receiver, &self.data).unwrap();
+/// 	}
+/// 	fn drop_receiver(&mut self, uid: &str) {
+/// 		println!("Pulse receiver {} dropped", uid);
+/// 	}
+/// }
+///
+/// let mask = {
+/// 	let mut fbb = flexbuffers::Builder::default();
+/// 	let mut map = fbb.start_map();
+/// 	map.push("test", true);
+/// 	map.end_map();
+/// 	fbb.take_buffer()
+/// };
+///
+/// let pulse_sender =
+/// 	PulseSender::create(client.get_root(), None, None, &mask).unwrap();
+/// let pulse_sender_handler = PulseSenderTest {
+/// 	data: mask,
+/// 	node: pulse_sender.alias(),
+/// };
+/// let _pulse_sender_handler = pulse_sender.wrap(pulse_sender_handler).unwrap();
+/// ```
 #[derive(Debug)]
 pub struct PulseSender {
-	pub spatial: Spatial,
+	spatial: Spatial,
 	receivers: Arc<RwLock<FxHashMap<String, (PulseReceiver, UnknownField)>>>,
 }
-impl<'a> PulseSender {
+impl PulseSender {
+	/// Create a pulse receiver node. The mask must be a flexbuffers serialized map at its root.
 	pub fn create(
-		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
-		mask: Vec<u8>,
+		spatial_parent: &Spatial,
+		transform: Transform,
+		mask: &[u8],
 	) -> Result<PulseSender, NodeError> {
-		flexbuffers::Reader::get_root(mask.as_slice())
+		flexbuffers::Reader::get_root(mask)
 			.and_then(|f| f.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 		let id = nanoid::nanoid!();
@@ -54,16 +118,7 @@ impl<'a> PulseSender {
 					"/data/sender",
 					true,
 					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
-						mask,
-					),
+					(id, spatial_parent.node().get_path()?, transform, mask),
 				)?,
 			},
 			receivers: Arc::new(RwLock::new(FxHashMap::default())),
@@ -109,6 +164,9 @@ impl<'a> PulseSender {
 		Ok(())
 	}
 
+	/// Send data to the receiver.
+	/// This message must be a flexbuffers serialized map with all the keys/values from the receiver's mask present.
+	/// You can use `stardust_xr_fusion::core::schemas::flex::flexbuffers::FlexbufferSerializer` with the flexbuffers crate feature `serialize_human_readable` to serialize structs into maps.
 	pub fn send_data(&self, receiver: &PulseReceiver, data: &[u8]) -> Result<(), NodeError> {
 		flexbuffers::Reader::get_root(data)
 			.and_then(|f| f.get_map())
@@ -118,10 +176,13 @@ impl<'a> PulseSender {
 			.send_remote_signal("send_data", &(receiver.node().get_path()?, data))
 	}
 
+	/// Get a read only guard to the receivers list. This can be used instead of the handler if you want.
 	pub fn receivers(&self) -> RwLockReadGuard<FxHashMap<String, (PulseReceiver, UnknownField)>> {
 		self.receivers.read()
 	}
 
+	/// Wrap this node and a pulse sender handler struct into a `HandlerWrapper` struct. You can use `PulseSender::receivers()` instead.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap<H: PulseSenderHandler>(
 		self,
 		handler: H,
@@ -153,22 +214,63 @@ impl std::ops::Deref for PulseSender {
 	}
 }
 
+/// Trait for handling when data is sent to this pulse receiver.
 pub trait PulseReceiverHandler: Send + Sync {
+	/// `data` and `data_reader` point to the same data, so feel free to use one or the other.
 	fn data(&mut self, uid: &str, data: &[u8], data_reader: flexbuffers::MapReader<&[u8]>);
 }
+
+/// Node to receive non-spatial data through 3D space.
+///
+/// # Example
+/// ```
+/// use stardust_xr_fusion::data::PulseReceiverHandler;
+/// struct PulseReceiverTest;
+/// impl PulseReceiverHandler for PulseReceiverTest {
+/// 	fn data(&mut self, uid: &str, data: &[u8], _data_reader: flexbuffers::MapReader<&[u8]>) {
+/// 		println!(
+/// 			"Pulse sender {} sent {}",
+/// 			uid,
+/// 			flexbuffers::Reader::get_root(data).unwrap()
+/// 		);
+/// 	}
+/// }
+///
+/// let mask = {
+/// 	let mut fbb = flexbuffers::Builder::default();
+/// 	let mut map = fbb.start_map();
+/// 	map.push("test", true);
+/// 	map.end_map();
+/// 	fbb.take_buffer()
+/// };
+///
+/// use stardust_xr_fusion::fields::SphereField;
+/// let field = SphereField::builder()
+/// 	.spatial_parent(client.get_root())
+/// 	.radius(0.1)
+/// 	.build()
+/// 	.unwrap();
+///
+/// use stardust_xr_fusion::data::PulseReceiver;
+/// let _pulse_receiver =
+/// 	PulseReceiver::create(client.get_root(), None, None, &field, &mask)
+/// 		.unwrap()
+/// 		.wrap(PulseReceiverTest)
+/// 		.unwrap();
+/// ```
 #[derive(Debug)]
 pub struct PulseReceiver {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-impl<'a> PulseReceiver {
-	pub fn create<Fi: Field + ClientOwned>(
-		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
-		field: &'a Fi,
-		mask: Vec<u8>,
+impl PulseReceiver {
+	/// Create a pulse receiver node. The field will remain intact even if its node is dropped.
+	pub fn create<Fi: Field>(
+		spatial_parent: &Spatial,
+		transform: Transform,
+		field: &Fi,
+		mask: &[u8],
 	) -> Result<Self, NodeError> {
-		flexbuffers::Reader::get_root(mask.as_slice())
+		flexbuffers::Reader::get_root(mask)
 			.and_then(|f| f.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 
@@ -185,11 +287,7 @@ impl<'a> PulseReceiver {
 					(
 						id,
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
+						transform,
 						&field.node().get_path()?,
 						mask,
 					),
@@ -198,6 +296,8 @@ impl<'a> PulseReceiver {
 		})
 	}
 
+	/// Wrap this struct and a handler into a `HandlerWrapper` if possible.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap<H: PulseReceiverHandler>(
 		self,
 		handler: H,
@@ -234,6 +334,13 @@ impl NodeType for PulseReceiver {
 	}
 }
 impl HandledNodeType for PulseReceiver {}
+impl Deref for PulseReceiver {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
+	}
+}
 
 #[tokio::test]
 async fn fusion_pulses() {
@@ -277,26 +384,25 @@ async fn fusion_pulses() {
 		}
 	}
 
-	let field = super::fields::SphereField::builder()
-		.spatial_parent(client.get_root())
-		.radius(0.1)
-		.build()
+	let field = super::fields::SphereField::create(client.get_root(), Vector3::from([0.0; 3]), 0.1)
 		.unwrap();
 
-	let mut mask = flexbuffers::Builder::default();
-	let mut map = mask.start_map();
-	map.push("test", true);
-	map.end_map();
+	let mask = {
+		let mut fbb = flexbuffers::Builder::default();
+		let mut map = fbb.start_map();
+		map.push("test", true);
+		map.end_map();
+		fbb.take_buffer()
+	};
 
-	let pulse_sender =
-		PulseSender::create(client.get_root(), None, None, mask.view().to_vec()).unwrap();
+	let pulse_sender = PulseSender::create(client.get_root(), Transform::default(), &mask).unwrap();
 	let pulse_sender_handler = PulseSenderTest {
-		data: mask.view().to_vec(),
+		data: mask.clone(),
 		node: pulse_sender.alias(),
 	};
 	let _pulse_sender_handler = pulse_sender.wrap(pulse_sender_handler).unwrap();
 	let _pulse_receiver =
-		PulseReceiver::create(client.get_root(), None, None, &field, mask.take_buffer())
+		PulseReceiver::create(client.get_root(), Transform::default(), &field, &mask)
 			.unwrap()
 			.wrap(PulseReceiverTest(client.clone()))
 			.unwrap();

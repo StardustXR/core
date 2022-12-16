@@ -98,6 +98,7 @@ impl From<Thumb> for ThumbT {
 	}
 }
 
+/// Standard OpenXR hand.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Hand {
 	pub right: bool,

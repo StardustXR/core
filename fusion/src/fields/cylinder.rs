@@ -1,6 +1,6 @@
 use super::Field;
 use crate::{
-	node::{ClientOwned, Node, NodeError, NodeType},
+	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -9,15 +9,12 @@ use std::ops::Deref;
 
 #[derive(Debug)]
 pub struct CylinderField {
-	pub spatial: Spatial,
+	spatial: Spatial,
 }
-#[buildstructor::buildstructor]
 impl<'a> CylinderField {
-	#[builder(entry = "builder")]
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: Option<mint::Vector3<f32>>,
-		rotation: Option<mint::Quaternion<f32>>,
+		transform: Transform,
 		length: f32,
 		radius: f32,
 	) -> Result<Self, NodeError> {
@@ -34,11 +31,7 @@ impl<'a> CylinderField {
 					(
 						&id.clone(),
 						spatial_parent.node().get_path()?,
-						Transform {
-							position,
-							rotation,
-							scale: None,
-						},
+						transform,
 						length,
 						radius,
 					),
@@ -62,7 +55,6 @@ impl NodeType for CylinderField {
 		}
 	}
 }
-impl ClientOwned for CylinderField {}
 impl Field for CylinderField {}
 impl Deref for CylinderField {
 	type Target = Spatial;
@@ -79,11 +71,7 @@ async fn fusion_cylinder_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let cylinder_field = CylinderField::builder()
-		.spatial_parent(client.get_root())
-		.length(1.0)
-		.radius(0.5)
-		.build()
+	let cylinder_field = CylinderField::create(client.get_root(), Transform::default(), 1.0, 0.5)
 		.expect("Unable to make cylinder field");
 	let distance = cylinder_field
 		.distance(client.get_root(), mint::Vector3::from([0.0, 1.0, 0.0]))

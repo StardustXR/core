@@ -12,17 +12,19 @@ pub enum FlexSerializeError {
 	#[error("Map key is not a string!")]
 	MapKeyNotString,
 	#[error("custom")]
-	Custom(String),
+	Serde(String),
 }
 impl serde::ser::Error for FlexSerializeError {
 	fn custom<T>(msg: T) -> Self
 	where
 		T: Display,
 	{
-		FlexSerializeError::Custom(msg.to_string())
+		FlexSerializeError::Serde(msg.to_string())
 	}
 }
 
+/// Serialize the given data into flexbuffers, stripping struct field names off
+/// and putting structs into vectors to save space and computation.
 pub fn serialize<S: Serialize>(to_serialize: S) -> Result<Vec<u8>, FlexSerializeError> {
 	let mut fbb = flexbuffers::Builder::default();
 	let fs = FlexSerializer { fbb: &mut fbb };

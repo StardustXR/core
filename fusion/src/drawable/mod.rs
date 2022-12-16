@@ -1,3 +1,5 @@
+//! Anything the user can see such as lines, models and text.
+
 mod lines;
 mod model;
 mod text;
@@ -11,30 +13,37 @@ use crate::{client::Client, node::NodeError};
 use anyhow::Result;
 use std::path::Path;
 
-impl Client {
-	pub fn set_sky_tex(&self, file: &impl AsRef<Path>) -> Result<(), NodeError> {
-		self.set_sky(file, true, false)
-	}
-	pub fn set_sky_light(&self, file: &impl AsRef<Path>) -> Result<(), NodeError> {
-		self.set_sky(file, false, true)
-	}
-	pub fn set_sky_tex_light(&self, file: &impl AsRef<Path>) -> Result<(), NodeError> {
-		self.set_sky(file, true, true)
-	}
+/// Set only the sky texture to this equirectangular `.hdr` file.
+pub fn set_sky_tex(client: &Client, file: &impl AsRef<Path>) -> Result<(), NodeError> {
+	set_sky(client, file, true, false)
+}
+/// Set only the sky lighting to this equirectangular `.hdr` file.
+pub fn set_sky_light(client: &Client, file: &impl AsRef<Path>) -> Result<(), NodeError> {
+	set_sky(client, file, false, true)
+}
+/// Set the sky texture and lighting to this equirectangular `.hdr` file.
+pub fn set_sky_tex_light(client: &Client, file: &impl AsRef<Path>) -> Result<(), NodeError> {
+	set_sky(client, file, true, true)
+}
 
-	fn set_sky(&self, file: &impl AsRef<Path>, tex: bool, light: bool) -> Result<(), NodeError> {
-		if !file.as_ref().exists() {
-			return Err(NodeError::InvalidPath);
-		}
-		let file_str = file.as_ref().to_str().ok_or(NodeError::InvalidPath)?;
-		self.message_sender_handle
-			.signal(
-				"/drawable",
-				"set_sky_file",
-				&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
-			)
-			.map_err(|e| NodeError::MessengerError { e })
+fn set_sky(
+	client: &Client,
+	file: &impl AsRef<Path>,
+	tex: bool,
+	light: bool,
+) -> Result<(), NodeError> {
+	if !file.as_ref().exists() {
+		return Err(NodeError::InvalidPath);
 	}
+	let file_str = file.as_ref().to_str().ok_or(NodeError::InvalidPath)?;
+	client
+		.message_sender_handle
+		.signal(
+			"/drawable",
+			"set_sky_file",
+			&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
+		)
+		.map_err(|e| NodeError::MessengerError { e })
 }
 
 #[tokio::test]
@@ -46,9 +55,9 @@ async fn fusion_sky() {
 		"res/fusion/sky.hdr"
 	));
 
-	client.set_sky_tex(&sky_path).unwrap();
-	client.set_sky_light(&sky_path).unwrap();
-	client.set_sky_tex_light(&sky_path).unwrap();
+	set_sky_tex(&client, &sky_path).unwrap();
+	set_sky_light(&client, &sky_path).unwrap();
+	set_sky_tex_light(&client, &sky_path).unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(5)).await;
 }
