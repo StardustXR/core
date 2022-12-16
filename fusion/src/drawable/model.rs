@@ -50,8 +50,8 @@ impl<'a> Model {
 	// #[builder(entry = "builder")]
 	pub fn create<R: Resource + 'a>(
 		spatial_parent: &'a Spatial,
-		resource: &'a R,
 		transform: Transform,
+		resource: &'a R,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(Model {
@@ -99,7 +99,7 @@ async fn fusion_model() -> Result<()> {
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let gyro_gem_resource = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
-	let _model = Model::create(client.get_root(), &gyro_gem_resource, Transform::default())?;
+	let _model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource)?;
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 	Ok(())

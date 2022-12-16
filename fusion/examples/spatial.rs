@@ -37,26 +37,26 @@ impl SpatialDemo {
 
 		let gem = Model::create(
 			&_root,
-			&NamespacedResource::new("fusion", "gyro_gem"),
 			Transform::default(),
+			&NamespacedResource::new("fusion", "gyro_gem"),
 		)
 		.unwrap();
 		let ring_inner = Model::create(
 			&_root,
-			&NamespacedResource::new("fusion", "gyro_inside"),
 			Transform::default(),
+			&NamespacedResource::new("fusion", "gyro_inside"),
 		)
 		.unwrap();
 		let ring_middle = Model::create(
 			&ring_inner,
-			&NamespacedResource::new("fusion", "gyro_middle"),
 			Transform::default(),
+			&NamespacedResource::new("fusion", "gyro_middle"),
 		)
 		.unwrap();
 		let ring_outer = Model::create(
 			&ring_middle,
-			&NamespacedResource::new("fusion", "gyro_outside"),
 			Transform::default(),
+			&NamespacedResource::new("fusion", "gyro_outside"),
 		)
 		.unwrap();
 

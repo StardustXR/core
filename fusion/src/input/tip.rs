@@ -88,12 +88,12 @@ async fn fusion_tip_input_method() {
 	fn summon_model(parent: &Spatial, rotation: glam::Quat) -> Model {
 		Model::create(
 			parent,
-			&NamespacedResource::new("fusion", "cursor_spike"),
 			Transform {
 				rotation: rotation.into(),
 				scale: mint::Vector3::from([0.1; 3]),
 				..Default::default()
 			},
+			&NamespacedResource::new("fusion", "cursor_spike"),
 		)
 		.unwrap()
 	}

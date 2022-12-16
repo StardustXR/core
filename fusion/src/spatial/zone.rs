@@ -183,7 +183,7 @@ async fn fusion_zone() {
 
 	let gyro_gem = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
 	let _model =
-		crate::drawable::Model::create(&model_parent, &gyro_gem, Transform::default()).unwrap();
+		crate::drawable::Model::create(&model_parent, Transform::default(), &gyro_gem).unwrap();
 
 	let field =
 		crate::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
