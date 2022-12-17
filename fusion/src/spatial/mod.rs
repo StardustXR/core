@@ -26,7 +26,9 @@ use nanoid::nanoid;
 use stardust_xr::values::Transform;
 use std::{future::Future, sync::Arc};
 
-/// The node that gives everything a sense of space.
+/// A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+///
+/// Equivalent to a Transform in Unity, Spatial in Godot, etc.
 #[derive(Debug)]
 pub struct Spatial {
 	pub(crate) node: Node,
@@ -81,13 +83,7 @@ impl Spatial {
 		relative_space: Option<&Spatial>,
 		position: impl Into<mint::Vector3<f32>>,
 	) -> Result<(), NodeError> {
-		self.set_transform(
-			relative_space,
-			Transform {
-				position: position.into(),
-				..Default::default()
-			},
-		)
+		self.set_transform(relative_space, Transform::from_position(position))
 	}
 	/// Set the rotation of this spatial relative to another node, or `None` for relative to its parent node.
 	pub fn set_rotation(
@@ -95,13 +91,7 @@ impl Spatial {
 		relative_space: Option<&Spatial>,
 		rotation: impl Into<mint::Quaternion<f32>>,
 	) -> Result<(), NodeError> {
-		self.set_transform(
-			relative_space,
-			Transform {
-				rotation: rotation.into(),
-				..Default::default()
-			},
-		)
+		self.set_transform(relative_space, Transform::from_rotation(rotation))
 	}
 	/// Set the scale of this spatial relative to another node, or `None` for relative to its parent node.
 	pub fn set_scale(
@@ -109,13 +99,7 @@ impl Spatial {
 		relative_space: Option<&Spatial>,
 		scale: impl Into<mint::Vector3<f32>>,
 	) -> Result<(), NodeError> {
-		self.set_transform(
-			relative_space,
-			Transform {
-				scale: scale.into(),
-				..Default::default()
-			},
-		)
+		self.set_transform(relative_space, Transform::from_scale(scale))
 	}
 	/// Set the transform of this spatial relative to another node, or `None` for relative to its parent node.
 	pub fn set_transform(

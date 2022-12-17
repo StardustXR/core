@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stardust-xr-fusion"
-version = "0.28.0"
+version = "0.28.1"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "High level client library for the Stardust XR display server"
 license = "MIT"
@@ -18,7 +18,7 @@ mint = "0.5.9"
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
-stardust-xr = {path = "../core", version = "0.9.0"}
+stardust-xr = {path = "../core", version = "0.10.0"}
 serde = "1.0.145"
 serde_repr = "0.1.9"
 thiserror = "1.0.31"
