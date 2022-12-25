@@ -9,6 +9,7 @@ use crate::{
 use mint::Vector2;
 use parking_lot::Mutex;
 use serde::Deserialize;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use stardust_xr::schemas::flex::deserialize;
 use std::{ops::Deref, sync::Arc};
 pub use xkbcommon::xkb;
@@ -17,7 +18,7 @@ use xkbcommon::xkb::{Keymap, KEYMAP_FORMAT_TEXT_V1};
 /// Handler for the `panel` item.
 pub trait PanelItemHandler: Send + Sync {
 	/// The toplevel surface is being resized to `size` (in pixels).
-	fn resize(&mut self, size: Vector2<u32>);
+	fn commit_toplevel(&mut self, state: Option<PanelItemToplevel>);
 
 	/// The cursor is being changed.
 	///
@@ -26,18 +27,79 @@ pub trait PanelItemHandler: Send + Sync {
 }
 
 /// An updated cursor.
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PanelItemCursor {
 	/// Size of the cursor in pixels.
 	pub size: Vector2<u32>,
 	/// Hotspot position in pixels. This is the point relative to the top left where the cursor matches the 2D pointer.
 	pub hotspot: Vector2<i32>,
 }
+/// The state of the panel item's toplevel.
+#[derive(Debug, Clone, Deserialize)]
+pub struct PanelItemToplevel {
+	/// Equivalent to the window title.
+	pub title: String,
+	/// Application identifier, see https://standards.freedesktop.org/desktop-entry-spec/
+	pub app_id: String,
+	/// Current size in pixels
+	pub size: Vector2<u32>,
+	/// Recommended maximum size in pixels
+	pub max_size: Vector2<u32>,
+	/// Recommended minimum size in pixels
+	pub min_size: Vector2<u32>,
+	/// Array of states
+	pub states: Vec<PanelItemState>,
+}
+/// The states the toplevel can be in.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
+pub enum PanelItemState {
+	/// The surface is maximized.
+	///
+	/// The window geometry specified in the configure event must be obeyed by the client.
+	/// The client should draw without shadow or other decoration outside of the window geometry.
+	Maximized = 1,
+	/// The surface is fullscreen.
+	///
+	/// The window geometry specified in the configure event is a maximum; the client cannot resize beyond it.
+	/// For a surface to cover the whole fullscreened area, the geometry dimensions must be obeyed by the client.
+	Fullscreen = 2,
+	/// The surface is being resized.
+	///
+	/// The window geometry specified in the configure event is a maximum; the client cannot resize beyond it.
+	/// Clients that have aspect ratio or cell sizing configuration can use a smaller size, however.
+	Resizing = 3,
+	/// Client window decorations should be painted as if the window is active.
+	///
+	/// This does not mean that the window actually has keyboard or pointer focus.
+	Activated = 4,
+	/// The window is currently in a tiled layout and the left edge is considered to be adjacent to another part of the tiling grid.
+	TiledLeft = 5,
+	/// The window is currently in a tiled layout and the right edge is considered to be adjacent to another part of the tiling grid.
+	TiledRight = 6,
+	/// The window is currently in a tiled layout and the top edge is considered to be adjacent to another part of the tiling grid.
+	TiledTop = 7,
+	/// The window is currently in a tiled layout and the bottom edge is considered to be adjacent to another part of the tiling grid.
+	TiledBottom = 8,
+}
+/// A capability the panel item UI has.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
+pub enum PanelItemCapability {
+	/// Wayland clients can tell this stardust client to open a context menu for window management options.
+	WindowMenu = 1,
+	/// Maximize is supported, no shadows and the panel item UI controls the size of the window entirely.
+	Maximize = 2,
+	/// Fullscreen is supported, no shadows or title bar and the panel item UI controls the size of the window entirely.
+	Fullscreen = 3,
+	/// Minimize is supported, this just makes the button send the panel item handler an event when it's clicked.
+	Minimize = 4,
+}
 /// The init data for the panel item.
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PanelItemInitData {
 	/// Size of the toplevel surface in pixels.
-	pub size: Vector2<u32>,
+	pub toplevel: Option<PanelItemToplevel>,
 	/// The cursor, if applicable.
 	pub cursor: Option<PanelItemCursor>,
 }
@@ -52,13 +114,13 @@ impl PanelItem {
 	///
 	/// This material is unlit with the [Simula text shader](https://github.com/SimulaVR/Simula/blob/master/addons/godot-haskell-plugin/TextShader.tres) ported on the server.
 	/// The material index is global across the whole model for now, just play around with it a bit.
-	pub fn apply_surface_material(
+	pub fn apply_toplevel_material(
 		&self,
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
 		self.node.send_remote_signal(
-			"apply_surface_material",
+			"apply_toplevel_material",
 			&(model.node().get_path()?, material_index),
 		)
 	}
@@ -136,16 +198,22 @@ impl PanelItem {
 	/// Request a resize of the surface (in pixels).
 	///
 	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
-	pub fn resize(&self, width: u32, height: u32) -> Result<(), NodeError> {
-		self.node.send_remote_signal("resize", &(width, height))
+	pub fn configure_toplevel(
+		&self,
+		size: Option<Vector2<u32>>,
+		states: &[PanelItemState],
+		bounds: Option<Vector2<u32>>,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("configure_toplevel", &(size, states, bounds))
 	}
 
-	fn handle_resize<H: PanelItemHandler>(
+	fn handle_commit_toplevel<H: PanelItemHandler>(
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 	) -> anyhow::Result<()> {
-		handler.lock().resize(deserialize(data)?);
+		handler.lock().commit_toplevel(deserialize(data)?);
 		Ok(())
 	}
 	fn handle_set_cursor<H: PanelItemHandler>(
@@ -165,7 +233,7 @@ impl PanelItem {
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
 		let handler_wrapper = HandlerWrapper::new(self, handler);
 		handler_wrapper
-			.add_handled_signal("resize", Self::handle_resize)
+			.add_handled_signal("commit_toplevel", Self::handle_commit_toplevel)
 			.unwrap();
 		handler_wrapper
 			.add_handled_signal("set_cursor", Self::handle_set_cursor)
@@ -230,6 +298,12 @@ async fn fusion_panel_ui() {
 	struct PanelItemManager(FxHashMap<String, HandlerWrapper<PanelItem, PanelItemUI>>);
 	impl crate::items::ItemUIHandler<PanelItem> for PanelItemManager {
 		fn item_created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
+			item.configure_toplevel(
+				Some(Vector2::from([1000; 2])),
+				&[PanelItemState::Activated],
+				Some(Vector2::from([500; 2])),
+			)
+			.unwrap();
 			self.0.insert(
 				uid.to_string(),
 				item.wrap(PanelItemUI::new(init_data)).unwrap(),
@@ -249,14 +323,6 @@ async fn fusion_panel_ui() {
 				item.node().get_name().unwrap()
 			);
 		}
-		fn item_destroyed(&mut self, _uid: &str) {}
-		fn acceptor_created(
-			&mut self,
-			_uid: &str,
-			_acceptorr: crate::items::ItemAcceptor<PanelItem>,
-		) {
-		}
-		fn acceptor_destroyed(&mut self, _uid: &str) {}
 	}
 	struct PanelItemUI;
 	impl PanelItemUI {
@@ -266,12 +332,12 @@ async fn fusion_panel_ui() {
 		}
 	}
 	impl PanelItemHandler for PanelItemUI {
-		fn resize(&mut self, size: Vector2<u32>) {
-			println!("Got resize of {}, {}", size.x, size.y);
+		fn commit_toplevel(&mut self, toplevel_state: Option<PanelItemToplevel>) {
+			dbg!(toplevel_state);
 		}
 
-		fn set_cursor(&mut self, info: Option<PanelItemCursor>) {
-			println!("Set cursor with info {:?}", info);
+		fn set_cursor(&mut self, cursor_info: Option<PanelItemCursor>) {
+			dbg!(cursor_info);
 		}
 	}
 	impl Drop for PanelItemUI {
@@ -286,7 +352,7 @@ async fn fusion_panel_ui() {
 		.unwrap();
 
 	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => panic!("Timed Out"),
+		_ = tokio::time::sleep(core::time::Duration::from_secs(60)) => panic!("Timed Out"),
 		e = event_loop => e.unwrap().unwrap(),
 	}
 }

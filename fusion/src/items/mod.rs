@@ -60,19 +60,20 @@ pub trait Item: NodeType + Send + Sync + 'static {
 }
 
 /// Handler for the ItemUI item.
+#[allow(unused_variables)]
 pub trait ItemUIHandler<I: Item>: Send + Sync + 'static {
 	/// A new item of the `I` type has been created with the given init data and `uid`. `item` is an aliased node to the real item.
-	fn item_created(&mut self, uid: &str, item: I, init_data: I::InitData);
+	fn item_created(&mut self, uid: &str, item: I, init_data: I::InitData) {}
 	/// The item with `uid` has been captured by the item acceptor. `item` is an aliased node to the real item.
-	fn item_captured(&mut self, uid: &str, acceptor_uid: &str, item: I);
+	fn item_captured(&mut self, uid: &str, acceptor_uid: &str, item: I) {}
 	/// The item with `uid` has been released by the item acceptor. `item` is an aliased node to the real item.
-	fn item_released(&mut self, uid: &str, acceptor_uid: &str, item: I);
+	fn item_released(&mut self, uid: &str, acceptor_uid: &str, item: I) {}
 	/// The item with `uid` has been destroyed.
-	fn item_destroyed(&mut self, uid: &str);
+	fn item_destroyed(&mut self, uid: &str) {}
 	/// The item acceptor with `uid` has been created. `acceptor` is an aliased node to the acceptor.
-	fn acceptor_created(&mut self, uid: &str, acceptor: ItemAcceptor<I>);
+	fn acceptor_created(&mut self, uid: &str, acceptor: ItemAcceptor<I>) {}
 	/// The item acceptor with `uid` has been destroyed.
-	fn acceptor_destroyed(&mut self, uid: &str);
+	fn acceptor_destroyed(&mut self, uid: &str) {}
 }
 
 /// Node to get all items and acceptors to make a UI around the items.
@@ -280,11 +281,12 @@ impl<I: Item> Drop for ItemUI<I> {
 }
 
 /// Handler for the ItemAcceptor node.
+#[allow(unused_variables)]
 pub trait ItemAcceptorHandler<I: Item>: Send + Sync + 'static {
 	/// Item `item` with unique ID `uid` has been captured into this acceptor with `init_data`.
-	fn captured(&mut self, uid: &str, item: I, init_data: I::InitData);
+	fn captured(&mut self, uid: &str, item: I, init_data: I::InitData) {}
 	/// Item with unique ID `uid` has been released from this acceptor.
-	fn released(&mut self, uid: &str);
+	fn released(&mut self, uid: &str) {}
 }
 
 /// Node that can borrow items for a bit (capturing).
