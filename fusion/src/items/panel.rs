@@ -38,15 +38,15 @@ pub struct PanelItemCursor {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PanelItemToplevel {
 	/// Equivalent to the window title.
-	pub title: String,
+	pub title: Option<String>,
 	/// Application identifier, see https://standards.freedesktop.org/desktop-entry-spec/
-	pub app_id: String,
+	pub app_id: Option<String>,
 	/// Current size in pixels
 	pub size: Vector2<u32>,
 	/// Recommended maximum size in pixels
-	pub max_size: Vector2<u32>,
+	pub max_size: Option<Vector2<u32>>,
 	/// Recommended minimum size in pixels
-	pub min_size: Vector2<u32>,
+	pub min_size: Option<Vector2<u32>>,
 	/// Array of states
 	pub states: Vec<PanelItemState>,
 }
