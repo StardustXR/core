@@ -21,8 +21,7 @@
 mod environment;
 pub use environment::*;
 
-mod panel;
-pub use panel::*;
+pub mod panel;
 
 use super::{
 	client::Client,

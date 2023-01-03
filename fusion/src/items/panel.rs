@@ -16,19 +16,28 @@ pub use xkbcommon::xkb;
 use xkbcommon::xkb::{Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 /// Handler for the `panel` item.
+#[allow(unused_variables)]
 pub trait PanelItemHandler: Send + Sync {
-	/// The toplevel surface is being resized to `size` (in pixels).
-	fn commit_toplevel(&mut self, state: Option<PanelItemToplevel>);
+	/// The toplevel surface's state has just been updated to `state`.
+	fn commit_toplevel(&mut self, state: Option<ToplevelInfo>);
+
+	/// The toplevel surface recommends that you set the state to this.
+	///
+	/// You don't have to though.
+	fn recommend_toplevel_state(&mut self, state: RequestedState) {}
+
+	/// The toplevel surface requests that you show a menu to control the window, like if you right clicked the client side decorations.
+	fn show_window_menu(&mut self) {}
 
 	/// The cursor is being changed.
 	///
 	/// The cursor's material will automatically update, you just need to hide/show the cursor and account for the new size/hotspot.
-	fn set_cursor(&mut self, info: Option<PanelItemCursor>);
+	fn set_cursor(&mut self, info: Option<CursorInfo>) {}
 }
 
 /// An updated cursor.
 #[derive(Debug, Clone, Deserialize)]
-pub struct PanelItemCursor {
+pub struct CursorInfo {
 	/// Size of the cursor in pixels.
 	pub size: Vector2<u32>,
 	/// Hotspot position in pixels. This is the point relative to the top left where the cursor matches the 2D pointer.
@@ -36,7 +45,7 @@ pub struct PanelItemCursor {
 }
 /// The state of the panel item's toplevel.
 #[derive(Debug, Clone, Deserialize)]
-pub struct PanelItemToplevel {
+pub struct ToplevelInfo {
 	/// Equivalent to the window title.
 	pub title: Option<String>,
 	/// Application identifier, see https://standards.freedesktop.org/desktop-entry-spec/
@@ -48,12 +57,36 @@ pub struct PanelItemToplevel {
 	/// Recommended minimum size in pixels
 	pub min_size: Option<Vector2<u32>>,
 	/// Array of states
-	pub states: Vec<PanelItemState>,
+	pub states: Vec<State>,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type", content = "content")]
+pub enum RequestedState {
+	Maximize(bool),
+	Fullscreen(bool),
+	Minimize,
+	Move,
+	Resize(Edge),
+}
+#[derive(Debug, Clone, Deserialize_repr)]
+#[repr(u32)]
+pub enum Edge {
+	None = 0,
+	Top = 1,
+	Bottom = 2,
+	Left = 4,
+	TopLeft = 5,
+	BottomLeft = 6,
+	Right = 8,
+	TopRight = 9,
+	BottomRight = 10,
+}
+
 /// The states the toplevel can be in.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
-pub enum PanelItemState {
+pub enum State {
 	/// The surface is maximized.
 	///
 	/// The window geometry specified in the configure event must be obeyed by the client.
@@ -85,7 +118,7 @@ pub enum PanelItemState {
 /// A capability the panel item UI has.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
-pub enum PanelItemCapability {
+pub enum Capability {
 	/// Wayland clients can tell this stardust client to open a context menu for window management options.
 	WindowMenu = 1,
 	/// Maximize is supported, no shadows and the panel item UI controls the size of the window entirely.
@@ -99,9 +132,9 @@ pub enum PanelItemCapability {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PanelItemInitData {
 	/// Size of the toplevel surface in pixels.
-	pub toplevel: Option<PanelItemToplevel>,
+	pub toplevel: Option<ToplevelInfo>,
 	/// The cursor, if applicable.
-	pub cursor: Option<PanelItemCursor>,
+	pub cursor: Option<CursorInfo>,
 }
 
 /// An item that represents a toplevel wayland surface (base window) and all its popups (context menus, modals, etc.).
@@ -131,7 +164,6 @@ impl PanelItem {
 	/// The material index is global across the whole model for now, just play around with it a bit.
 	pub fn apply_cursor_material(
 		&self,
-		_cursor: &PanelItemCursor,
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
@@ -201,7 +233,7 @@ impl PanelItem {
 	pub fn configure_toplevel(
 		&self,
 		size: Option<Vector2<u32>>,
-		states: &[PanelItemState],
+		states: &[State],
 		bounds: Option<Vector2<u32>>,
 	) -> Result<(), NodeError> {
 		self.node
@@ -214,6 +246,14 @@ impl PanelItem {
 		data: &[u8],
 	) -> anyhow::Result<()> {
 		handler.lock().commit_toplevel(deserialize(data)?);
+		Ok(())
+	}
+	fn handle_recommend_toplevel_state<H: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> anyhow::Result<()> {
+		handler.lock().recommend_toplevel_state(deserialize(data)?);
 		Ok(())
 	}
 	fn handle_set_cursor<H: PanelItemHandler>(
@@ -234,6 +274,12 @@ impl PanelItem {
 		let handler_wrapper = HandlerWrapper::new(self, handler);
 		handler_wrapper
 			.add_handled_signal("commit_toplevel", Self::handle_commit_toplevel)
+			.unwrap();
+		handler_wrapper
+			.add_handled_signal(
+				"recommend_toplevel_state",
+				Self::handle_recommend_toplevel_state,
+			)
 			.unwrap();
 		handler_wrapper
 			.add_handled_signal("set_cursor", Self::handle_set_cursor)
@@ -300,7 +346,7 @@ async fn fusion_panel_ui() {
 		fn item_created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
 			item.configure_toplevel(
 				Some(Vector2::from([1000; 2])),
-				&[PanelItemState::Activated],
+				&[State::Activated],
 				Some(Vector2::from([500; 2])),
 			)
 			.unwrap();
@@ -332,11 +378,16 @@ async fn fusion_panel_ui() {
 		}
 	}
 	impl PanelItemHandler for PanelItemUI {
-		fn commit_toplevel(&mut self, toplevel_state: Option<PanelItemToplevel>) {
+		fn commit_toplevel(&mut self, toplevel_state: Option<ToplevelInfo>) {
 			dbg!(toplevel_state);
 		}
-
-		fn set_cursor(&mut self, cursor_info: Option<PanelItemCursor>) {
+		fn recommend_toplevel_state(&mut self, state: RequestedState) {
+			dbg!(state);
+		}
+		fn show_window_menu(&mut self) {
+			println!("Show window menu");
+		}
+		fn set_cursor(&mut self, cursor_info: Option<CursorInfo>) {
 			dbg!(cursor_info);
 		}
 	}
