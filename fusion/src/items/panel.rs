@@ -84,7 +84,7 @@ pub enum Edge {
 }
 
 /// The states the toplevel can be in.
-#[repr(u8)]
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
 pub enum State {
 	/// The surface is maximized.
@@ -158,6 +158,27 @@ impl PanelItem {
 		)
 	}
 
+	/// Request a resize of the surface (in pixels).
+	///
+	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
+	pub fn set_toplevel_capabilities(&self, capabilities: &[Capability]) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("set_toplevel_capabilities", &capabilities)
+	}
+
+	/// Request a resize of the surface (in pixels).
+	///
+	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
+	pub fn configure_toplevel(
+		&self,
+		size: Option<Vector2<u32>>,
+		states: &[State],
+		bounds: Option<Vector2<u32>>,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("configure_toplevel", &(size, states, bounds))
+	}
+
 	/// Apply the cursor's visuals as a material to a model.
 	///
 	/// This material is unlit with the [Simula text shader](https://github.com/SimulaVR/Simula/blob/master/addons/godot-haskell-plugin/TextShader.tres) ported on the server.
@@ -225,19 +246,6 @@ impl PanelItem {
 	/// Deactivate the keyboard.
 	pub fn keyboard_deactivate(&self) -> Result<(), NodeError> {
 		self.node.send_remote_signal("keyboard_deactivate", &())
-	}
-
-	/// Request a resize of the surface (in pixels).
-	///
-	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
-	pub fn configure_toplevel(
-		&self,
-		size: Option<Vector2<u32>>,
-		states: &[State],
-		bounds: Option<Vector2<u32>>,
-	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("configure_toplevel", &(size, states, bounds))
 	}
 
 	fn handle_commit_toplevel<H: PanelItemHandler>(
