@@ -89,7 +89,6 @@ impl Lines {
 	/// Create a new Lines node.
 	///
 	/// Cyclic means the start and end points are connected together.
-	// #[builder(entry = "builder")]
 	pub fn create<'a>(
 		spatial_parent: &'a Spatial,
 		transform: Transform,
