@@ -20,7 +20,6 @@
 
 pub use stardust_xr as core;
 
-pub mod resource;
 #[macro_use]
 pub mod node;
 
@@ -83,7 +82,7 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 	pub fn lock_wrapped(&self) -> MutexGuard<H> {
 		self.wrapped.lock()
 	}
-	/// Get an `Arc<Mutex<_>>` of the handled type for portability.
+	/// Get an `Arc<Mutex<_>>` of the handleNamespacedResourced type for portability.
 	///
 	/// # Safety
 	/// Since this is a mutex, it can deadlock.

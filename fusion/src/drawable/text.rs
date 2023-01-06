@@ -1,6 +1,6 @@
+use super::ResourceID;
 use crate::{
 	node::{Node, NodeError, NodeType},
-	resource::Resource,
 	spatial::Spatial,
 };
 use anyhow::Result;
@@ -46,15 +46,15 @@ pub struct Bounds {
 }
 
 #[derive(Debug)]
-pub struct TextStyle<R: Resource> {
+pub struct TextStyle {
 	pub character_height: f32,
 	pub color: Rgba<f32>,
-	pub font_resource: Option<R>,
+	pub font_resource: Option<ResourceID>,
 	pub text_align: FlagSet<Alignment>,
 	pub bounds: Option<Bounds>,
 }
 
-impl<R: Resource> Default for TextStyle<R> {
+impl Default for TextStyle {
 	fn default() -> Self {
 		TextStyle {
 			character_height: 1.0,
@@ -72,11 +72,11 @@ pub struct Text {
 	spatial: Spatial,
 }
 impl Text {
-	pub fn create<'a, R: Resource>(
-		spatial_parent: &'a Spatial,
+	pub fn create(
+		spatial_parent: &Spatial,
 		transform: Transform,
-		text_string: &'a str,
-		style: TextStyle<R>,
+		text_string: &str,
+		style: TextStyle,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(Text {
@@ -150,12 +150,11 @@ impl Deref for Text {
 
 #[tokio::test]
 async fn fusion_text() -> Result<()> {
-	use crate::resource::NamespacedResource;
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let style: TextStyle<NamespacedResource> = TextStyle {
-		font_resource: Some(NamespacedResource::new("fusion", "common_case")),
+	let style: TextStyle = TextStyle {
+		font_resource: Some(ResourceID::new_namespaced("fusion", "common_case")),
 		..Default::default()
 	};
 	let text = Text::create(client.get_root(), Transform::default(), "Test Text", style)?;

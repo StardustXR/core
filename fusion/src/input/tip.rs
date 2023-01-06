@@ -68,7 +68,6 @@ impl Deref for TipInputMethod {
 async fn fusion_tip_input_method() {
 	use crate::client::{Client, LogicStepInfo};
 	use crate::drawable::Model;
-	use crate::resource::NamespacedResource;
 
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
@@ -89,7 +88,7 @@ async fn fusion_tip_input_method() {
 		Model::create(
 			parent,
 			Transform::from_rotation_scale(rotation, mint::Vector3::from([0.1; 3])),
-			&NamespacedResource::new("fusion", "cursor_spike"),
+			&crate::drawable::ResourceID::new_namespaced("fusion", "cursor_spike"),
 		)
 		.unwrap()
 	}

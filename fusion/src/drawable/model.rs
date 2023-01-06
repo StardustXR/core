@@ -1,13 +1,13 @@
+use super::ResourceID;
 use crate::{
 	node::{Node, NodeError, NodeType},
-	resource::Resource,
 	spatial::Spatial,
 };
 use anyhow::Result;
 use mint::{ColumnMatrix4, Vector2, Vector3, Vector4};
 use serde::Serialize;
 use stardust_xr::values::Transform;
-use std::{ops::Deref, path::PathBuf};
+use std::ops::Deref;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "t", content = "c")]
@@ -27,7 +27,7 @@ pub enum MaterialParameter {
 	UInt3(Vector3<u32>),
 	UInt4(Vector4<u32>),
 	Matrix(ColumnMatrix4<f32>),
-	Texture(PathBuf),
+	Texture(ResourceID),
 }
 
 /// A 3D model in the GLTF format.
@@ -47,10 +47,10 @@ pub struct Model {
 // #[buildstructor::buildstructor]
 impl<'a> Model {
 	/// Create a model node. GLTF and GLB are supported.
-	pub fn create<R: Resource + 'a>(
+	pub fn create(
 		spatial_parent: &'a Spatial,
 		transform: Transform,
-		resource: &'a R,
+		resource: &ResourceID,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(Model {
@@ -62,12 +62,7 @@ impl<'a> Model {
 					"/drawable/model",
 					true,
 					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						transform,
-						resource.parse().as_str(),
-					),
+					(id, spatial_parent.node().get_path()?, transform, resource),
 				)?,
 			},
 		})
@@ -108,7 +103,7 @@ async fn fusion_model() -> Result<()> {
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let gyro_gem_resource = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
+	let gyro_gem_resource = ResourceID::new_namespaced("fusion", "gyro_gem");
 	let model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource)?;
 	model.set_material_parameter(0, "color", MaterialParameter::Color([0.0, 1.0, 0.5, 0.75]))?;
 

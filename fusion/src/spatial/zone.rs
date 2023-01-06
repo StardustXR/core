@@ -181,7 +181,7 @@ async fn fusion_zone() {
 
 	let model_parent = Spatial::create(client.get_root(), Transform::default(), true).unwrap();
 
-	let gyro_gem = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
+	let gyro_gem = crate::drawable::ResourceID::new_namespaced("fusion", "gyro_gem");
 	let _model =
 		crate::drawable::Model::create(&model_parent, Transform::default(), &gyro_gem).unwrap();
 

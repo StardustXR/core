@@ -3,8 +3,7 @@ use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::Transform;
 use stardust_xr_fusion::{
 	client::{Client, LifeCycleHandler, LogicStepInfo},
-	drawable::Model,
-	resource::NamespacedResource,
+	drawable::{MaterialParameter, Model, ResourceID},
 	spatial::Spatial,
 };
 use std::sync::Arc;
@@ -38,25 +37,25 @@ impl SpatialDemo {
 		let gem = Model::create(
 			&_root,
 			Transform::default(),
-			&NamespacedResource::new("fusion", "gyro_gem"),
+			&ResourceID::new_namespaced("fusion", "gyro_gem"),
 		)
 		.unwrap();
 		let ring_inner = Model::create(
 			&_root,
 			Transform::default(),
-			&NamespacedResource::new("fusion", "gyro_inside"),
+			&ResourceID::new_namespaced("fusion", "gyro_inside"),
 		)
 		.unwrap();
 		let ring_middle = Model::create(
 			&ring_inner,
 			Transform::default(),
-			&NamespacedResource::new("fusion", "gyro_middle"),
+			&ResourceID::new_namespaced("fusion", "gyro_middle"),
 		)
 		.unwrap();
 		let ring_outer = Model::create(
 			&ring_middle,
 			Transform::default(),
-			&NamespacedResource::new("fusion", "gyro_outside"),
+			&ResourceID::new_namespaced("fusion", "gyro_outside"),
 		)
 		.unwrap();
 
@@ -73,6 +72,13 @@ impl LifeCycleHandler for SpatialDemo {
 	fn logic_step(&mut self, info: LogicStepInfo) {
 		let elapsed = info.elapsed as f32;
 
+		self.gem
+			.set_material_parameter(
+				0,
+				"color",
+				MaterialParameter::Color([0.0, 0.25, 1.0, elapsed.sin().abs()]),
+			)
+			.unwrap();
 		self.gem
 			.set_rotation(None, Quat::from_rotation_y(elapsed))
 			.unwrap();

@@ -10,8 +10,11 @@ use stardust_xr::schemas::flex::serialize;
 pub use text::*;
 
 use crate::{client::Client, node::NodeError};
-use anyhow::Result;
-use std::path::Path;
+use serde::{Serialize, Serializer};
+use std::{
+	fmt::Debug,
+	path::{Path, PathBuf},
+};
 
 /// Set only the sky texture to this equirectangular `.hdr` file.
 pub fn set_sky_tex(client: &Client, file: &impl AsRef<Path>) -> Result<(), NodeError> {
@@ -60,4 +63,65 @@ async fn fusion_sky() {
 	set_sky_tex_light(&client, &sky_path).unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(5)).await;
+}
+
+#[derive(Debug, Clone)]
+/// An identifier to a resource, such as a sound or
+pub enum ResourceID {
+	/// An absolute path to a resource, not themed at all.
+	/// You should only use this for content not included with your client.
+	Direct(PathBuf),
+	/// A resource that is relative to a prefix, meant for resources that are included with the client.
+	/// Allows switching of prefix by the server as well to theme clients.
+	///
+	/// # Example
+	/// ```
+	/// use stardust_xr_fusion::{drawable::Model, resource::ResourceID};
+	///
+	/// // For a client named "star"
+	/// let model_resource = ResourceID::new_namespaced("star", "icon");
+	/// // Build a model at "[prefix]/star/icon.glb" if it exists
+	/// let model = Model::builder().spatial_parent(client.get_root()).resource(model_resource).build().unwrap();
+	/// ```
+	Namespaced {
+		/// Group that this resource is in, generally the client or library's name.
+		namespace: String,
+		/// Path inside the namespace for the exact file. Leave out the extension and ensure no leading slash.
+		path: String,
+	},
+}
+impl ResourceID {
+	pub fn new_direct(path: impl AsRef<Path>) -> std::io::Result<ResourceID> {
+		let path = path.as_ref();
+		path.try_exists()?;
+		if !path.is_absolute() {
+			return Err(std::io::Error::new(
+				std::io::ErrorKind::NotFound,
+				"Path is not absolute",
+			));
+		}
+		Ok(ResourceID::Direct(path.to_path_buf()))
+	}
+	pub fn new_namespaced(namespace: &str, path: &str) -> Self {
+		ResourceID::Namespaced {
+			namespace: namespace.to_string(),
+			path: path.to_string(),
+		}
+	}
+	pub(crate) fn parse(&self) -> String {
+		match self {
+			ResourceID::Direct(p) => p.to_str().unwrap().to_string(),
+			ResourceID::Namespaced { namespace, path } => {
+				format!("{}:{}", namespace, path)
+			}
+		}
+	}
+}
+impl Serialize for ResourceID {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		serializer.serialize_str(&self.parse())
+	}
 }
