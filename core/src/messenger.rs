@@ -142,6 +142,7 @@ impl MessageReceiver {
 		self.handle_message(message_buffer, scenegraph)
 	}
 
+	#[instrument(level = "debug", skip_all)]
 	fn handle_message<S: scenegraph::Scenegraph>(
 		&mut self,
 		message: Vec<u8>,
