@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "stardust-xr"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "chrono",
  "cluFlock",

@@ -13,7 +13,53 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
-use tracing::debug;
+
+fn debug_call(
+	incoming: bool,
+	call_type: u8,
+	id: Option<u64>,
+	path: Option<&str>,
+	method: Option<&str>,
+	err: Option<&str>,
+	data: Option<&[u8]>,
+) {
+	let level = match call_type {
+		0 => tracing::Level::ERROR,
+		_ => tracing::Level::DEBUG,
+	};
+
+	if tracing::level_enabled!(level) {
+		let direction = match incoming {
+			true => "incoming",
+			false => "outgoing",
+		};
+		let call_type = match call_type {
+			0 => "error",
+			1 => "signal",
+			2 => "method call",
+			3 => "method return",
+			_ => "unknown",
+		};
+		let data = data
+			.map(|data| match flexbuffers::Reader::get_root(data) {
+				Ok(root) => root.to_string(),
+				Err(_) => String::from_utf8_lossy(data).into_owned(),
+			})
+			.unwrap_or_else(|| {
+				err.map(|err| err.to_string())
+					.unwrap_or_else(|| "Unknown".to_string())
+			});
+
+		match level {
+			tracing::Level::ERROR => {
+				tracing::error!(direction, call_type, id, path, method, err, data,)
+			}
+			_ => {
+				tracing::debug!(direction, call_type, id, path, method, err, data,)
+			}
+		}
+	}
+}
 
 /// Error for all messenger-related failures.
 #[derive(Error, Debug)]
@@ -101,60 +147,47 @@ impl MessageReceiver {
 	) -> Result<(), MessengerError> {
 		let message = root_as_message(&message).map_err(|_| MessengerError::InvalidFlatbuffer)?;
 		let message_type = message.type_();
+
+		debug_call(
+			true,
+			message_type,
+			Some(message.id()),
+			message.object(),
+			message.method(),
+			message.error(),
+			message.data(),
+		);
+		let path = message.object().unwrap_or("unknown");
+		let method = message.method().unwrap_or("unknown");
+		let data = message.data().unwrap_or_default();
 		match message_type {
 			// Errors
 			0 => {
 				let future_opt = self.pending_futures.remove(&message.id());
-				match future_opt {
-					None => {
-						eprintln!(
-							"[Stardust XR][{}:{}] {}",
-							message.object().unwrap_or("unknown"),
-							message.method().unwrap_or("unknown"),
-							message.error().unwrap_or("unknown"),
-						);
-					}
-					Some(future) => {
-						let _ = future.send(Err(message.error().unwrap_or("unknown").to_string()));
-					}
+				if let Some(future) = future_opt {
+					let _ = future.send(Err(message.error().unwrap_or("unknown").to_string()));
 				}
 			}
 			// Signals
 			1 => {
-				let signal_status = scenegraph.send_signal(
-					message.object().unwrap(),
-					message.method().unwrap(),
-					message.data().unwrap(),
-				);
+				let signal_status = scenegraph.send_signal(path, method, data);
 				if let Err(e) = signal_status {
-					self.send_handle.error(
-						message.object().unwrap(),
-						message.method().unwrap(),
-						e,
-					)?;
+					self.send_handle.error(path, method, e)?;
 				}
 			}
 			// Method called
 			2 => {
-				let method_result = scenegraph.execute_method(
-					message.object().unwrap(),
-					message.method().unwrap(),
-					message.data().unwrap(),
-				);
+				let method_result = scenegraph.execute_method(path, method, data);
 				match method_result {
 					Ok(return_value) => self.send_handle.send(serialize_call(
 						3,
 						Some(message.id()),
-						message.object().unwrap(),
-						message.method().unwrap(),
+						path,
+						method,
 						None,
 						Some(&return_value),
 					))?,
-					Err(error) => self.send_handle.error(
-						message.object().unwrap(),
-						message.method().unwrap(),
-						error,
-					)?,
+					Err(error) => self.send_handle.error(path, method, error)?,
 				};
 			}
 			// Method return
@@ -163,13 +196,13 @@ impl MessageReceiver {
 				match future_opt {
 					None => {
 						self.send_handle.error(
-							message.object().unwrap(),
-							message.method().unwrap(),
+							path,
+							method,
 							"Method return without method call".to_string(),
 						)?;
 					}
 					Some(future) => {
-						let _ = future.send(Ok(message.data().unwrap().to_vec()));
+						let _ = future.send(Ok(data.to_vec()));
 					}
 				}
 			}
@@ -200,28 +233,7 @@ fn serialize_call(
 	err: Option<&str>,
 	data: Option<&[u8]>,
 ) -> Message {
-	debug!(
-		call_type = match call_type {
-			0 => "error",
-			1 => "signal",
-			2 => "method call",
-			3 => "method return",
-			_ => "unknown",
-		},
-		id,
-		path,
-		method,
-		err,
-		content = data
-			.map(|data| match flexbuffers::Reader::get_root(data) {
-				Ok(root) => format!("{}", root),
-				Err(_) => String::from_utf8_lossy(data).into_owned(),
-			})
-			.unwrap_or_else(|| {
-				err.map(|err| err.to_string())
-					.unwrap_or_else(|| "Unknown".to_string())
-			})
-	);
+	debug_call(false, call_type, id, Some(path), Some(method), err, data);
 
 	let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 	let flex_path = fbb.create_string(path);
