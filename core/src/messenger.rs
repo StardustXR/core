@@ -15,7 +15,7 @@ use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
 use tracing::instrument;
 
-#[instrument(level = "debug", skip_all)]
+#[instrument(level = "trace", skip_all)]
 fn debug_call(
 	incoming: bool,
 	call_type: u8,
@@ -142,7 +142,7 @@ impl MessageReceiver {
 		self.handle_message(message_buffer, scenegraph)
 	}
 
-	#[instrument(level = "debug", skip_all)]
+	#[instrument(level = "trace", skip_all)]
 	fn handle_message<S: scenegraph::Scenegraph>(
 		&mut self,
 		message: Vec<u8>,
@@ -228,7 +228,7 @@ pub fn serialize_signal_call(object: &str, method: &str, data: &[u8]) -> Message
 pub fn serialize_method_call(id: u64, object: &str, method: &str, data: &[u8]) -> Message {
 	serialize_call(2, Some(id), object, method, None, Some(data))
 }
-#[instrument(level = "debug", skip_all)]
+#[instrument(level = "trace", skip_all)]
 fn serialize_call(
 	call_type: u8,
 	id: Option<u64>,
@@ -393,7 +393,7 @@ impl MessageSenderHandle {
 		Ok(async move { rx.await.map_err(|e| e.to_string())? })
 	}
 
-	#[instrument(level = "debug", skip_all)]
+	#[instrument(level = "trace", skip_all)]
 	fn send(&self, message: Message) -> Result<(), MessengerError> {
 		self.message_tx
 			.send(message)
