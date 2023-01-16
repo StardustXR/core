@@ -744,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "stardust-xr-fusion"
-version = "0.31.0"
+version = "0.32.0"
 dependencies = [
  "anyhow",
  "buildstructor",

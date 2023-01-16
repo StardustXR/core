@@ -81,7 +81,7 @@ impl<'a> Zone {
 		zone.spatials
 			.write()
 			.insert(uid.to_string(), spatial_stored);
-		handler.lock().capture(uid, spatial);
+		handler.lock().enter(uid, spatial);
 		Ok(())
 	}
 	fn handle_capture<H: ZoneHandler>(
@@ -90,12 +90,12 @@ impl<'a> Zone {
 		data: &[u8],
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
-		let captured = zone.captured.read();
-		let spatial = captured
+		let spatials = zone.spatials.read();
+		let spatial = spatials
 			.get(uid)
 			.ok_or_else(|| anyhow!("Spatial was captured before in range"))?;
 		let spatial = spatial.alias();
-		drop(captured);
+		drop(spatials);
 		zone.captured
 			.write()
 			.insert(uid.to_string(), spatial.alias());
@@ -129,13 +129,15 @@ impl<'a> Zone {
 	}
 	/// Try to capture a spatial.
 	/// If you sucessfully capture it you'll get a `capture()` call to the handler if wrapped and it added to the `captured` hashmap.
-	pub fn capture(&self, uid: &str) -> Result<(), NodeError> {
-		self.node.send_remote_signal("capture", &uid)
+	pub fn capture(&self, spatial: &Spatial) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("capture", &spatial.node().get_path()?)
 	}
 	/// Try to release a spatial.
 	/// If the spatial was already released, this does nothing.
-	pub fn release(&self, uid: &str) -> Result<(), NodeError> {
-		self.node.send_remote_signal("release", &uid)
+	pub fn release(&self, spatial: &Spatial) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("release", &spatial.node().get_path()?)
 	}
 
 	/// Get the list of spatials that are visible to this zone.
@@ -173,6 +175,10 @@ impl Deref for Zone {
 
 #[tokio::test]
 async fn fusion_zone() {
+	tracing_subscriber::fmt()
+		.with_max_level(tracing::Level::ERROR)
+		.init();
+
 	use crate::client::Client;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
@@ -189,41 +195,30 @@ async fn fusion_zone() {
 		crate::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
 			.unwrap();
 
-	struct LifeCycle(HandlerWrapper<Zone, ZoneTest>);
-	impl crate::client::LifeCycleHandler for LifeCycle {
-		fn logic_step(&mut self, info: crate::client::LogicStepInfo) {
-			self.0.node().update().unwrap();
-			for (_, spatial) in self.0.node().captured.read().iter() {
-				spatial
-					.set_position(None, glam::vec3(0.0, info.elapsed.sin() as f32 * 0.1, 0.0))
-					.unwrap();
-			}
-		}
-	}
-
-	struct ZoneTest(Arc<Client>, Zone);
+	struct ZoneTest(Arc<Client>, Spatial, Zone);
 	impl ZoneHandler for ZoneTest {
-		fn enter(&mut self, uid: &str, _spatial: Spatial) {
+		fn enter(&mut self, uid: &str, spatial: Spatial) {
 			println!("Spatial {} entered zone", uid);
-			self.1.capture(uid).unwrap();
+			self.2.capture(&spatial).unwrap();
 		}
-		fn capture(&mut self, uid: &str, _spatial: Spatial) {
+		fn capture(&mut self, uid: &str, spatial: Spatial) {
 			println!("Spatial {} was captured", uid);
-			self.1.release(uid).unwrap();
+			self.2.release(&spatial).unwrap();
 		}
 		fn release(&mut self, uid: &str) {
 			println!("Spatial {} was released", uid);
-			self.0.stop_loop();
+			self.1.set_position(None, [0.0, 1.0, 0.0]).unwrap();
+			self.2.update().unwrap();
 		}
 		fn leave(&mut self, uid: &str) {
 			println!("Spatial {} left zone", uid);
+			self.0.stop_loop();
 		}
 	}
 	let zone = Zone::create(client.get_root(), Transform::default(), &field).unwrap();
-	let zone_handler = ZoneTest(client.clone(), zone.alias());
-	let demo = LifeCycle(zone.wrap(zone_handler).unwrap());
-
-	let _handler = client.wrap_root(demo);
+	let zone_handler = ZoneTest(client.clone(), model_parent.alias(), zone.alias());
+	let zone = zone.wrap(zone_handler).unwrap();
+	zone.node().update().unwrap();
 
 	tokio::select! {
 		biased;
