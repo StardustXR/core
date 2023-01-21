@@ -84,7 +84,6 @@ impl Serialize for LinePoint {
 pub struct Lines {
 	spatial: Spatial,
 }
-// #[buildstructor::buildstructor]
 impl Lines {
 	/// Create a new Lines node.
 	///

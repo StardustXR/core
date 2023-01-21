@@ -194,6 +194,10 @@ impl PanelItem {
 		)
 	}
 
+	/// Set whether the pointer is active or not.
+	pub fn pointer_set_active(&self, active: bool) -> Result<(), NodeError> {
+		self.node.send_remote_signal("pointer_set_active", &active)
+	}
 	/// Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer.
 	pub fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
 		self.node
@@ -201,31 +205,34 @@ impl PanelItem {
 	}
 	/// Send an event to set a pointer button's state if the pointer's active.
 	///
-	/// The `button` is from the `input_event_codes` crate (e.g. BTN_LEFT for left click) and the state is `false` for released, `true` for pressed.
-	pub fn pointer_button(&self, button: u32, state: bool) -> Result<(), NodeError> {
+	/// The `button` is from the `input_event_codes` crate (e.g. BTN_LEFT for left click).
+	pub fn pointer_button(&self, button: u32, pressed: bool) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointer_button", &(button, state as u32))
+			.send_remote_signal("pointer_button", &(button, pressed as u32))
 	}
 	/// Send an event to scroll the pointer if it's active.
 	///
 	/// Scroll distance is a value in pixels corresponding to the "distance" the surface should be scrolled.
+	/// Scroll steps is a value in columns/rows corresponding to the wheel clicks of a mouse or such. This also supports fractions of a wheel click.
 	///
-	/// Scroll steps is a value in columns/rows corresponding to the wheel clicks of a mouse or such.  This also supports fractions of a wheel click.
+	/// If both the distance and steps are `None` then the scroll will be considered stopped. Either one being `Some` just scrolls.
 	pub fn pointer_scroll(
 		&self,
-		scroll_distance: Vector2<f32>,
-		scroll_steps: Vector2<f32>,
+		scroll_distance: Option<Vector2<f32>>,
+		scroll_steps: Option<Vector2<f32>>,
 	) -> Result<(), NodeError> {
 		self.node
 			.send_remote_signal("pointer_scroll", &(scroll_distance, scroll_steps))
 	}
-	/// Deactivate the pointer, for example whenever nothing is pointing at the panel item's UI.
-	pub fn pointer_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("pointer_deactivate", &())
-	}
 
-	/// Activate the keyboard with a given `xkb` keymap.
-	pub fn keyboard_activate(&self, keymap: &str) -> Result<(), NodeError> {
+	/// Set whether the keyboard is active or not.
+	///
+	/// Make sure to set the keymap or no key events will go through!
+	pub fn keyboard_set_active(&self, active: bool) -> Result<(), NodeError> {
+		self.node.send_remote_signal("keyboard_set_active", &active)
+	}
+	/// Set the keyboard's keymap with a given `xkb` keymap.
+	pub fn keyboard_set_keymap(&self, keymap: &str) -> Result<(), NodeError> {
 		Keymap::new_from_string(
 			&xkb::Context::new(0),
 			keymap.to_string(),
@@ -234,18 +241,15 @@ impl PanelItem {
 		)
 		.ok_or(NodeError::InvalidPath)?;
 		self.node
-			.send_remote_signal("keyboard_activate_string", &keymap)
+			.send_remote_signal("keyboard_set_keymap_string", &keymap)
 	}
+
 	/// Set a key's state if the keyboard is active.
 	///
 	/// `key` is a raw keycode that corresponds to the given keymap.
-	pub fn keyboard_key_state(&self, key: u32, state: bool) -> Result<(), NodeError> {
+	pub fn keyboard_key(&self, key: u32, state: bool) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("keyboard_key_state", &(key, state as u32))
-	}
-	/// Deactivate the keyboard.
-	pub fn keyboard_deactivate(&self) -> Result<(), NodeError> {
-		self.node.send_remote_signal("keyboard_deactivate", &())
+			.send_remote_signal("keyboard_key", &(key, state as u32))
 	}
 
 	fn handle_commit_toplevel<H: PanelItemHandler>(

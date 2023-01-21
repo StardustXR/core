@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stardust-xr-fusion"
-version = "0.32.0"
+version = "0.33.0"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "High level client library for the Stardust XR display server"
 license = "MIT"
@@ -9,8 +9,7 @@ repository = "https://github.com/StardustXR/stardust-xr/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
-anyhow = "1.0.57"
-buildstructor = "0.5.0"
+anyhow = "1.0.68"
 color-rs = "0.7.1"
 flagset = "0.4.3"
 glam = { version = "0.22.0", features = ["mint"] }
@@ -18,10 +17,10 @@ mint = "0.5.9"
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
-stardust-xr = {path = "../core", version = "0.10.4"}
-serde = "1.0.145"
-serde_repr = "0.1.9"
-thiserror = "1.0.31"
+stardust-xr = {path = "../core", version = "0.10.5"}
+serde = "1.0.152"
+serde_repr = "0.1.10"
+thiserror = "1.0.38"
 tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-util", "signal"] }
 xkbcommon = { version = "0.5.0", default-features = false }
 tracing = "0.1.37"

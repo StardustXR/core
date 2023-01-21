@@ -44,7 +44,6 @@ pub enum MaterialParameter {
 pub struct Model {
 	spatial: Spatial,
 }
-// #[buildstructor::buildstructor]
 impl<'a> Model {
 	/// Create a model node. GLTF and GLB are supported.
 	pub fn create(

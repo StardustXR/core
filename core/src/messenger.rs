@@ -57,7 +57,7 @@ fn debug_call(
 				tracing::error!(direction, call_type, id, path, method, err, data,)
 			}
 			_ => {
-				tracing::debug!(direction, call_type, id, path, method, err, data,)
+				tracing::trace!(direction, call_type, id, path, method, err, data,)
 			}
 		}
 	}
