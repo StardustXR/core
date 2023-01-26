@@ -66,7 +66,7 @@ impl Deref for TipInputMethod {
 
 #[tokio::test]
 async fn fusion_tip_input_method() {
-	use crate::client::{Client, LogicStepInfo};
+	use crate::client::{Client, FrameInfo};
 	use crate::drawable::Model;
 
 	let (client, event_loop) = Client::connect_with_async_loop()
@@ -105,8 +105,8 @@ async fn fusion_tip_input_method() {
 		tip: TipInputMethod,
 		cursor: Cursor,
 	}
-	impl crate::client::LifeCycleHandler for TipDemo {
-		fn logic_step(&mut self, info: LogicStepInfo) {
+	impl crate::client::RootHandler for TipDemo {
+		fn frame(&mut self, info: FrameInfo) {
 			let (sin, cos) = (info.elapsed as f32).sin_cos();
 			self.tip
 				.set_position(None, mint::Vector3::from([sin * 0.1, 0.0, cos * 0.1]))

@@ -193,8 +193,8 @@ async fn fusion_input_action_handler() {
 		}
 	}
 
-	impl crate::client::LifeCycleHandler for InputActionHandlerTest {
-		fn logic_step(&mut self, info: crate::client::LogicStepInfo) {
+	impl crate::client::RootHandler for InputActionHandlerTest {
+		fn frame(&mut self, info: crate::client::FrameInfo) {
 			println!("Life cycle step {}s", info.elapsed);
 			self.input_handler.lock_wrapped().update_actions(
 				[

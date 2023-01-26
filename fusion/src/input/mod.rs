@@ -15,7 +15,7 @@
 //! Every frame, the server will do this for each input method:
 //! - Sort the input handlers by the distance from the input method to their fields (often absolute value for onion skinning)
 //! - Send out input events (`InputHandlerHandler::input`) in order of distance until an input handler has captured the method.
-//! - The logic_step event is sent (`LifeCycle::logic_step`).
+//! - The frame event is sent (`LifeCycle::frame`).
 //!
 //! To make this all easier, the `action` module exists, check it out.
 

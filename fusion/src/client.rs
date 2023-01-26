@@ -90,8 +90,8 @@ impl scenegraph::Scenegraph for Scenegraph {
 }
 
 struct DummyHandler;
-impl LifeCycleHandler for DummyHandler {
-	fn logic_step(&mut self, _info: LogicStepInfo) {}
+impl RootHandler for DummyHandler {
+	fn frame(&mut self, _info: FrameInfo) {}
 }
 
 #[derive(Deserialize)]
@@ -100,17 +100,17 @@ struct LogicStepInfoInternal {
 }
 /// Information on the frame.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct LogicStepInfo {
+pub struct FrameInfo {
 	/// The time between this frame and last frame's display time, in seconds.
 	pub delta: f64,
 	/// The total time in seconds the client has been connected to the server.
 	pub elapsed: f64,
 }
 
-/// Handle the life cycle of the client.
-pub trait LifeCycleHandler: Send + Sync + 'static {
+/// Handle the events that apply to the whole client.
+pub trait RootHandler: Send + Sync + 'static {
 	/// Runs every frame with information about the current frame, for animations and motion and a consistent update.
-	fn logic_step(&mut self, _info: LogicStepInfo);
+	fn frame(&mut self, _info: FrameInfo);
 }
 
 #[derive(Error, Debug)]
@@ -135,7 +135,7 @@ pub struct Client {
 	pub(crate) registered_item_uis: Mutex<Vec<TypeId>>,
 
 	elapsed_time: Mutex<f64>,
-	life_cycle_handler: Mutex<Weak<Mutex<dyn LifeCycleHandler>>>,
+	life_cycle_handler: Mutex<Weak<Mutex<dyn RootHandler>>>,
 }
 
 impl Client {
@@ -177,29 +177,23 @@ impl Client {
 		client
 			.get_root()
 			.node
-			.add_local_signal("logic_step", {
+			.add_local_signal("frame", {
 				let client = client.clone();
 				move |data| {
 					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
 						let info_internal: LogicStepInfoInternal = deserialize(data)?;
 						let mut elapsed = client.elapsed_time.lock();
 						(*elapsed) += info_internal.delta;
-						let info = LogicStepInfo {
+						let info = FrameInfo {
 							delta: info_internal.delta,
 							elapsed: *elapsed,
 						};
-						handler.lock().logic_step(info);
+						handler.lock().frame(info);
 					}
 					Ok(())
 				}
 			})
 			.unwrap();
-
-		client
-			.get_root()
-			.node
-			.send_remote_signal_raw("subscribe_logic_step", &[])
-			.map_err(|e| ClientError::NodeError { e })?;
 		Ok(())
 	}
 
@@ -251,12 +245,15 @@ impl Client {
 	}
 
 	/// Wrap the root in a handler and return an `Arc` to the handler.
-	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
-	pub fn wrap_root<H: LifeCycleHandler>(&self, wrapped: H) -> Arc<Mutex<H>> {
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler, and you want to check for errors too"]
+	pub fn wrap_root<H: RootHandler>(&self, wrapped: H) -> Result<Arc<Mutex<H>>, NodeError> {
+		self.get_root()
+			.node
+			.send_remote_signal_raw("subscribe_frame", &[])?;
 		let wrapped = Arc::new(Mutex::new(wrapped));
 		*self.life_cycle_handler.lock() =
-			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn LifeCycleHandler>>));
-		wrapped
+			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
+		Ok(wrapped)
 	}
 
 	/// Set the prefixes for any `NamespacedResource`s.
@@ -301,14 +298,14 @@ async fn fusion_client_connect() {
 async fn fusion_client_life_cycle() {
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
-	struct LifeCycleHandlerDummy(Arc<Client>);
-	impl LifeCycleHandler for LifeCycleHandlerDummy {
-		fn logic_step(&mut self, _info: LogicStepInfo) {
+	struct RootHandlerDummy(Arc<Client>);
+	impl RootHandler for RootHandlerDummy {
+		fn frame(&mut self, _info: FrameInfo) {
 			self.0.stop_loop();
 		}
 	}
 
-	let _wrapper = client.wrap_root(LifeCycleHandlerDummy(client.clone()));
+	let _wrapper = client.wrap_root(RootHandlerDummy(client.clone())).unwrap();
 
 	tokio::select! {
 		biased;

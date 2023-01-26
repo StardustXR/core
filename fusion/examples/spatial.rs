@@ -2,7 +2,7 @@ use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::Transform;
 use stardust_xr_fusion::{
-	client::{Client, LifeCycleHandler, LogicStepInfo},
+	client::{Client, FrameInfo, RootHandler},
 	drawable::{MaterialParameter, Model, ResourceID},
 	spatial::Spatial,
 };
@@ -68,8 +68,8 @@ impl SpatialDemo {
 		}
 	}
 }
-impl LifeCycleHandler for SpatialDemo {
-	fn logic_step(&mut self, info: LogicStepInfo) {
+impl RootHandler for SpatialDemo {
+	fn frame(&mut self, info: FrameInfo) {
 		let elapsed = info.elapsed as f32;
 
 		self.gem
