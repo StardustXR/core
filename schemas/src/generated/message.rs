@@ -28,8 +28,8 @@ pub struct Message<'a> {
 impl<'a> flatbuffers::Follow<'a> for Message<'a> {
   type Inner = Message<'a>;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: flatbuffers::Table { buf, loc } }
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
@@ -46,7 +46,7 @@ impl<'a> Message<'a> {
   }
 
   #[inline]
-  pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     Message { _tab: table }
   }
   #[allow(unused_mut)]
@@ -77,7 +77,7 @@ impl<'a> Message<'a> {
       x.to_string()
     });
     let data = self.data().map(|x| {
-      x.to_vec()
+      x.into_iter().collect()
     });
     MessageT {
       type_,
@@ -91,27 +91,45 @@ impl<'a> Message<'a> {
 
   #[inline]
   pub fn type_(&self) -> u8 {
-    self._tab.get::<u8>(Message::VT_TYPE_, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u8>(Message::VT_TYPE_, Some(0)).unwrap()}
   }
   #[inline]
   pub fn id(&self) -> u64 {
-    self._tab.get::<u64>(Message::VT_ID, Some(0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u64>(Message::VT_ID, Some(0)).unwrap()}
   }
   #[inline]
   pub fn object(&self) -> Option<&'a str> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_OBJECT, None)
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_OBJECT, None)}
   }
   #[inline]
   pub fn method(&self) -> Option<&'a str> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_METHOD, None)
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_METHOD, None)}
   }
   #[inline]
   pub fn error(&self) -> Option<&'a str> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_ERROR, None)
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_ERROR, None)}
   }
   #[inline]
-  pub fn data(&self) -> Option<&'a [u8]> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(Message::VT_DATA, None).map(|v| v.safe_slice())
+  pub fn data(&self) -> Option<flatbuffers::Vector<'a, u8>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(Message::VT_DATA, None)}
   }
 }
 
@@ -261,18 +279,6 @@ impl MessageT {
     })
   }
 }
-#[inline]
-#[deprecated(since="2.0.0", note="Deprecated in favor of `root_as...` methods.")]
-pub fn get_root_as_message<'a>(buf: &'a [u8]) -> Message<'a> {
-  unsafe { flatbuffers::root_unchecked::<Message<'a>>(buf) }
-}
-
-#[inline]
-#[deprecated(since="2.0.0", note="Deprecated in favor of `root_as...` methods.")]
-pub fn get_size_prefixed_root_as_message<'a>(buf: &'a [u8]) -> Message<'a> {
-  unsafe { flatbuffers::size_prefixed_root_unchecked::<Message<'a>>(buf) }
-}
-
 #[inline]
 /// Verifies that a buffer of bytes contains a `Message`
 /// and returns it.

@@ -158,11 +158,11 @@ impl MessageReceiver {
 			message.object(),
 			message.method(),
 			message.error(),
-			message.data(),
+			message.data().map(|d| d.bytes()),
 		);
 		let path = message.object().unwrap_or("unknown");
 		let method = message.method().unwrap_or("unknown");
-		let data = message.data().unwrap_or_default();
+		let data = message.data().unwrap_or_default().bytes();
 		match message_type {
 			// Errors
 			0 => {

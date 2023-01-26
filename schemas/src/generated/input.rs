@@ -80,10 +80,8 @@ impl core::fmt::Debug for InputDataRaw {
 impl<'a> flatbuffers::Follow<'a> for InputDataRaw {
   type Inner = Self;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    let b = unsafe {
-      flatbuffers::read_scalar_at::<u8>(buf, loc)
-    };
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    let b = flatbuffers::read_scalar_at::<u8>(buf, loc);
     Self(b)
   }
 }
@@ -91,21 +89,21 @@ impl<'a> flatbuffers::Follow<'a> for InputDataRaw {
 impl flatbuffers::Push for InputDataRaw {
     type Output = InputDataRaw;
     #[inline]
-    fn push(&self, dst: &mut [u8], _rest: &[u8]) {
-        unsafe { flatbuffers::emplace_scalar::<u8>(dst, self.0); }
+    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+        flatbuffers::emplace_scalar::<u8>(dst, self.0);
     }
 }
 
 impl flatbuffers::EndianScalar for InputDataRaw {
+  type Scalar = u8;
   #[inline]
-  fn to_little_endian(self) -> Self {
-    let b = u8::to_le(self.0);
-    Self(b)
+  fn to_little_endian(self) -> u8 {
+    self.0.to_le()
   }
   #[inline]
   #[allow(clippy::wrong_self_convention)]
-  fn from_little_endian(self) -> Self {
-    let b = u8::from_le(self.0);
+  fn from_little_endian(v: u8) -> Self {
+    let b = u8::from_le(v);
     Self(b)
   }
 }
@@ -228,8 +226,8 @@ pub struct InputData<'a> {
 impl<'a> flatbuffers::Follow<'a> for InputData<'a> {
   type Inner = InputData<'a>;
   #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    Self { _tab: flatbuffers::Table { buf, loc } }
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
@@ -245,7 +243,7 @@ impl<'a> InputData<'a> {
   }
 
   #[inline]
-  pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
     InputData { _tab: table }
   }
   #[allow(unused_mut)]
@@ -288,7 +286,7 @@ impl<'a> InputData<'a> {
     };
     let distance = self.distance();
     let datamap = self.datamap().map(|x| {
-      x.to_vec()
+      x.into_iter().collect()
     });
     InputDataT {
       uid,
@@ -300,30 +298,48 @@ impl<'a> InputData<'a> {
 
   #[inline]
   pub fn uid(&self) -> &'a str {
-    self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(InputData::VT_UID, None).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(InputData::VT_UID, None).unwrap()}
   }
   #[inline]
   pub fn input_type(&self) -> InputDataRaw {
-    self._tab.get::<InputDataRaw>(InputData::VT_INPUT_TYPE, Some(InputDataRaw::NONE)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<InputDataRaw>(InputData::VT_INPUT_TYPE, Some(InputDataRaw::NONE)).unwrap()}
   }
   #[inline]
   pub fn input(&self) -> flatbuffers::Table<'a> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Table<'a>>>(InputData::VT_INPUT, None).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Table<'a>>>(InputData::VT_INPUT, None).unwrap()}
   }
   #[inline]
   pub fn distance(&self) -> f32 {
-    self._tab.get::<f32>(InputData::VT_DISTANCE, Some(0.0)).unwrap()
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<f32>(InputData::VT_DISTANCE, Some(0.0)).unwrap()}
   }
   #[inline]
-  pub fn datamap(&self) -> Option<&'a [u8]> {
-    self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(InputData::VT_DATAMAP, None).map(|v| v.safe_slice())
+  pub fn datamap(&self) -> Option<flatbuffers::Vector<'a, u8>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, u8>>>(InputData::VT_DATAMAP, None)}
   }
   #[inline]
   #[allow(non_snake_case)]
   pub fn input_as_pointer(&self) -> Option<Pointer<'a>> {
     if self.input_type() == InputDataRaw::Pointer {
       let u = self.input();
-      Some(Pointer::init_from_table(u))
+      // Safety:
+      // Created from a valid Table for this object
+      // Which contains a valid union in this slot
+      Some(unsafe { Pointer::init_from_table(u) })
     } else {
       None
     }
@@ -334,7 +350,10 @@ impl<'a> InputData<'a> {
   pub fn input_as_hand(&self) -> Option<Hand<'a>> {
     if self.input_type() == InputDataRaw::Hand {
       let u = self.input();
-      Some(Hand::init_from_table(u))
+      // Safety:
+      // Created from a valid Table for this object
+      // Which contains a valid union in this slot
+      Some(unsafe { Hand::init_from_table(u) })
     } else {
       None
     }
@@ -345,7 +364,10 @@ impl<'a> InputData<'a> {
   pub fn input_as_tip(&self) -> Option<Tip<'a>> {
     if self.input_type() == InputDataRaw::Tip {
       let u = self.input();
-      Some(Tip::init_from_table(u))
+      // Safety:
+      // Created from a valid Table for this object
+      // Which contains a valid union in this slot
+      Some(unsafe { Tip::init_from_table(u) })
     } else {
       None
     }
@@ -516,18 +538,6 @@ impl InputDataT {
     })
   }
 }
-#[inline]
-#[deprecated(since="2.0.0", note="Deprecated in favor of `root_as...` methods.")]
-pub fn get_root_as_input_data<'a>(buf: &'a [u8]) -> InputData<'a> {
-  unsafe { flatbuffers::root_unchecked::<InputData<'a>>(buf) }
-}
-
-#[inline]
-#[deprecated(since="2.0.0", note="Deprecated in favor of `root_as...` methods.")]
-pub fn get_size_prefixed_root_as_input_data<'a>(buf: &'a [u8]) -> InputData<'a> {
-  unsafe { flatbuffers::size_prefixed_root_unchecked::<InputData<'a>>(buf) }
-}
-
 #[inline]
 /// Verifies that a buffer of bytes contains a `InputData`
 /// and returns it.

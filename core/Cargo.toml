@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stardust-xr"
-version = "0.10.5"
+version = "0.10.6"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "Base library for the Stardust XR display server"
 license = "MIT"
@@ -13,7 +13,7 @@ cluFlock = "1.2.7"
 color-rs = "0.7.1"
 mint = {version = "0.5.9", features = ["serde"]}
 parking_lot = "0.12.1"
-stardust-xr-schemas = {path = "../schemas", version = "1.3.0"}
+stardust-xr-schemas = {path = "../schemas", version = "1.4.0"}
 serde = {version = "1.0.152", features = ["derive"]}
 rustc-hash = "1.1.0"
 thiserror = "1.0.38"
