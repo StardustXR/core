@@ -27,8 +27,13 @@ use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
 };
-use crate::{fields::Field, node::HandledNodeType, spatial::Spatial, HandlerWrapper};
-use anyhow::{anyhow, Result};
+use crate::{
+	fields::{Field, UnknownField},
+	node::HandledNodeType,
+	spatial::Spatial,
+	HandlerWrapper,
+};
+use anyhow::{anyhow, bail, Result};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use serde::de::DeserializeOwned;
@@ -70,7 +75,7 @@ pub trait ItemUIHandler<I: Item>: Send + Sync + 'static {
 	/// The item with `uid` has been destroyed.
 	fn item_destroyed(&mut self, uid: &str) {}
 	/// The item acceptor with `uid` has been created. `acceptor` is an aliased node to the acceptor.
-	fn acceptor_created(&mut self, uid: &str, acceptor: ItemAcceptor<I>) {}
+	fn acceptor_created(&mut self, uid: &str, acceptor: ItemAcceptor<I>, field: UnknownField) {}
 	/// The item acceptor with `uid` has been destroyed.
 	fn acceptor_destroyed(&mut self, uid: &str) {}
 }
@@ -80,7 +85,7 @@ pub struct ItemUI<I: Item> {
 	node: Node,
 	items: Arc<RwLock<FxHashMap<String, I>>>,
 	captured: Arc<RwLock<FxHashMap<String, I>>>,
-	acceptors: Arc<RwLock<FxHashMap<String, ItemAcceptor<I>>>>,
+	acceptors: Arc<RwLock<FxHashMap<String, (ItemAcceptor<I>, UnknownField)>>>,
 }
 impl<I: Item> ItemUI<I> {
 	/// Attempt to register the ItemUI for this type of item. Will fail with `NodeError::OverrideSingleton` if it's already been registered.
@@ -107,14 +112,22 @@ impl<I: Item> ItemUI<I> {
 			let client = Arc::downgrade(client);
 			let acceptors = item_ui.acceptors.clone();
 			move |data| {
-				let acceptor_uid: String = deserialize(data)?;
-
-				let acceptor = ItemAcceptor::<I>::from_path(
-					&client.upgrade().ok_or_else(|| anyhow!("Client dropped"))?,
+				let Some(client) = client.upgrade() else {bail!("No client")};
+				let uid: &str = deserialize(data)?;
+				let acceptor: ItemAcceptor<I> = ItemAcceptor::from_path(
+					&client,
 					format!("/item/{}/acceptor", I::TYPE_NAME),
-					&acceptor_uid,
+					&uid,
 				);
-				acceptors.write().insert(acceptor_uid, acceptor);
+				let field = UnknownField {
+					spatial: Spatial::from_path(
+						&client,
+						format!("/item/{}/acceptor/{}", I::TYPE_NAME, uid),
+						"field",
+						false,
+					),
+				};
+				acceptors.write().insert(uid.to_string(), (acceptor, field));
 				Ok(())
 			}
 		})?;
@@ -218,14 +231,25 @@ impl<I: Item> ItemUI<I> {
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 
-		let acceptor: ItemAcceptor<I> = ItemAcceptor::from_path(
-			&ui.client()?,
-			format!("/item/{}/acceptor", I::TYPE_NAME),
-			&uid,
-		);
+		let client = ui.client()?;
+		let acceptor: ItemAcceptor<I> =
+			ItemAcceptor::from_path(&client, format!("/item/{}/acceptor", I::TYPE_NAME), &uid);
+		let field = UnknownField {
+			spatial: Spatial::from_path(
+				&client,
+				format!("/item/{}/acceptor/{}", I::TYPE_NAME, uid),
+				"field",
+				false,
+			),
+		};
 		let acceptor_aliased = acceptor.alias();
-		ui.acceptors.write().insert(uid.to_string(), acceptor);
-		handler.lock().acceptor_created(uid, acceptor_aliased);
+		let field_aliased = field.alias();
+		ui.acceptors
+			.write()
+			.insert(uid.to_string(), (acceptor, field));
+		handler
+			.lock()
+			.acceptor_created(uid, acceptor_aliased, field_aliased);
 		Ok(())
 	}
 	fn handle_destroy_acceptor<H: ItemUIHandler<I>>(
@@ -248,7 +272,7 @@ impl<I: Item> ItemUI<I> {
 		self.captured.read()
 	}
 	/// Get a read guard to all the acceptors of the item ui's type that exist with the keys being their UIDs.
-	pub fn acceptors(&self) -> RwLockReadGuard<FxHashMap<String, ItemAcceptor<I>>> {
+	pub fn acceptors(&self) -> RwLockReadGuard<FxHashMap<String, (ItemAcceptor<I>, UnknownField)>> {
 		self.acceptors.read()
 	}
 }

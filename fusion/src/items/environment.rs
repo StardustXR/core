@@ -113,6 +113,7 @@ async fn fusion_environment_ui() {
 			&mut self,
 			_uid: &str,
 			_acceptor: crate::items::ItemAcceptor<EnvironmentItem>,
+			_field: crate::fields::UnknownField,
 		) {
 		}
 		fn acceptor_destroyed(&mut self, _uid: &str) {}
