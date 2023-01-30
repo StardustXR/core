@@ -77,4 +77,12 @@ async fn fusion_box_field() {
 		.await
 		.expect("Unable to get box field distance");
 	assert_eq!(distance, 0.5);
+	let distance = client
+		.get_root()
+		.field_distance([0.0, 1.0, 0.0], [&box_field as &dyn Field])
+		.unwrap()
+		.await
+		.unwrap()[0]
+		.unwrap();
+	assert_eq!(distance, 0.5);
 }

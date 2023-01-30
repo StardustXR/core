@@ -17,6 +17,8 @@
 mod zone;
 pub use zone::*;
 
+use crate::fields::Field;
+
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
@@ -131,6 +133,45 @@ impl Spatial {
 	/// Set if this spatial is zoneable or not. You may want to set this to false when being grabbed or interacted with, then back to true when it's floating inert in space.
 	pub fn set_zoneable(&self, zoneable: bool) -> Result<(), NodeError> {
 		self.node.send_remote_signal("set_zoneable", &zoneable)
+	}
+
+	pub fn field_distance<'a>(
+		&self,
+		point: impl Into<Vector3<f32>>,
+		fields: impl IntoIterator<Item = &'a dyn Field>,
+	) -> Result<impl Future<Output = Result<Vec<Option<f32>>, NodeError>>, NodeError> {
+		let field_paths = fields
+			.into_iter()
+			.filter_map(|f| f.node().get_path().ok())
+			.collect::<Vec<String>>();
+		self.node
+			.execute_remote_method("field_distance", &(point.into(), field_paths))
+	}
+
+	pub fn field_normal<'a>(
+		&self,
+		point: impl Into<Vector3<f32>>,
+		fields: impl IntoIterator<Item = &'a dyn Field>,
+	) -> Result<impl Future<Output = Result<Vec<Option<Vector3<f32>>>, NodeError>>, NodeError> {
+		let field_paths = fields
+			.into_iter()
+			.filter_map(|f| f.node().get_path().ok())
+			.collect::<Vec<String>>();
+		self.node
+			.execute_remote_method("field_normal", &(point.into(), field_paths))
+	}
+
+	pub fn field_closest_point<'a>(
+		&self,
+		point: impl Into<Vector3<f32>>,
+		fields: impl IntoIterator<Item = &'a dyn Field>,
+	) -> Result<impl Future<Output = Result<Vec<Option<Vector3<f32>>>, NodeError>>, NodeError> {
+		let field_paths = fields
+			.into_iter()
+			.filter_map(|f| f.node().get_path().ok())
+			.collect::<Vec<String>>();
+		self.node
+			.execute_remote_method("field_closest_point", &(point.into(), field_paths))
 	}
 }
 impl NodeType for Spatial {

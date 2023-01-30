@@ -43,7 +43,8 @@ pub enum NodeError {
 }
 
 /// Common methods all nodes share, to make them easier to use.
-pub trait NodeType: Send + Sync + Sized + 'static {
+// #[enum_dispatch(FieldType)]
+pub trait NodeType: Send + Sync + 'static {
 	/// Get a reference to the node.
 	fn node(&self) -> &Node;
 	/// Try to get the client
@@ -54,7 +55,9 @@ pub trait NodeType: Send + Sync + Sized + 'static {
 	/// Not the same as node scenegraph aliases,
 	/// they are useful instead for getting a weak handle to a node.
 	/// If the original node is destroyed, then any messages to the server will fail instantly with `NodeError::DoesNotExist`.
-	fn alias(&self) -> Self;
+	fn alias(&self) -> Self
+	where
+		Self: Sized;
 }
 /// A trait to ensure this node type could be put in a `HandlerWrapper`.
 pub trait HandledNodeType: NodeType {}

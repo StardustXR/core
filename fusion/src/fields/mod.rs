@@ -47,16 +47,29 @@ impl RayMarchResult {
 	}
 }
 
+// #[enum_dispatch]
+// pub enum FieldType {
+// 	BoxField,
+// 	CylinderField,
+// 	SphereField,
+// 	TorusField,
+// 	UnknownField,
+// }
+
 /// A node that is spatial and contains an SDF.
 ///
 /// This is used in place of colliders as it provides a much more analog and emergent set of behaviors, leading to more intuitive design.
+// #[enum_dispatch(FieldType)]
 pub trait Field: NodeType {
 	/// Get the distance from a point in the given space to the field's surface. Outside is a positive distance, inside is negative.
 	fn distance(
 		&self,
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<f32, NodeError>>, NodeError> {
+	) -> Result<BoxedFuture<Result<f32, NodeError>>, NodeError>
+	where
+		Self: Sized,
+	{
 		self.node()
 			.execute_remote_method_trait("distance", &(space.node().get_path()?, point.into()))
 	}
@@ -66,7 +79,10 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<Vector3<f32>, NodeError>>, NodeError> {
+	) -> Result<BoxedFuture<Result<Vector3<f32>, NodeError>>, NodeError>
+	where
+		Self: Sized,
+	{
 		self.node()
 			.execute_remote_method_trait("normal", &(space.node().get_path()?, point.into()))
 	}
@@ -76,7 +92,10 @@ pub trait Field: NodeType {
 		&self,
 		space: &Spatial,
 		point: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<Vector3<f32>, NodeError>>, NodeError> {
+	) -> Result<BoxedFuture<Result<Vector3<f32>, NodeError>>, NodeError>
+	where
+		Self: Sized,
+	{
 		self.node()
 			.execute_remote_method_trait("closestPoint", &(space.node().get_path()?, point.into()))
 	}
@@ -87,7 +106,10 @@ pub trait Field: NodeType {
 		space: &Spatial,
 		ray_origin: impl Into<Vector3<f32>>,
 		ray_direction: impl Into<Vector3<f32>>,
-	) -> Result<BoxedFuture<Result<RayMarchResult, NodeError>>, NodeError> {
+	) -> Result<BoxedFuture<Result<RayMarchResult, NodeError>>, NodeError>
+	where
+		Self: Sized,
+	{
 		let ray_origin = ray_origin.into();
 		let ray_direction = ray_direction.into();
 		#[derive(Debug, Deserialize)]
