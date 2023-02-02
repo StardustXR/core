@@ -137,6 +137,15 @@ pub trait Field: NodeType {
 			})
 		}))
 	}
+
+	/// Create an alias of this field with type `UnknownField`. This is useful for field type erasure.
+	fn alias_unknown_field(&self) -> UnknownField {
+		UnknownField {
+			spatial: Spatial {
+				node: self.node().alias(),
+			},
+		}
+	}
 }
 
 /// A field that isn't owned by the client, so no data is known about it.

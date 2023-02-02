@@ -79,7 +79,7 @@ async fn fusion_box_field() {
 	assert_eq!(distance, 0.5);
 	let distance = client
 		.get_root()
-		.field_distance([0.0, 1.0, 0.0], [&box_field as &dyn Field])
+		.field_distance([0.0, 1.0, 0.0], [box_field.alias_unknown_field()])
 		.unwrap()
 		.await
 		.unwrap()[0]

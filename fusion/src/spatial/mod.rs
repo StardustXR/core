@@ -17,12 +17,11 @@
 mod zone;
 pub use zone::*;
 
-use crate::fields::Field;
-
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
 };
+use crate::fields::UnknownField;
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
 use stardust_xr::values::Transform;
@@ -37,8 +36,8 @@ pub struct Spatial {
 }
 impl Spatial {
 	/// Create a new spatial. If the position, rotation, or scale values are `None` they'll be the identity values.
-	pub fn create<'a>(
-		spatial_parent: &'a Spatial,
+	pub fn create(
+		spatial_parent: &Spatial,
 		transform: Transform,
 		zoneable: bool,
 	) -> Result<Self, NodeError> {
@@ -135,23 +134,26 @@ impl Spatial {
 		self.node.send_remote_signal("set_zoneable", &zoneable)
 	}
 
-	pub fn field_distance<'a>(
+	/// Get the distance to a bunch of fields
+	pub fn field_distance(
 		&self,
 		point: impl Into<Vector3<f32>>,
-		fields: impl IntoIterator<Item = &'a dyn Field>,
+		fields: impl IntoIterator<Item = UnknownField>,
 	) -> Result<impl Future<Output = Result<Vec<Option<f32>>, NodeError>>, NodeError> {
 		let field_paths = fields
 			.into_iter()
 			.filter_map(|f| f.node().get_path().ok())
 			.collect::<Vec<String>>();
-		self.node
-			.execute_remote_method("field_distance", &(point.into(), field_paths))
+		Ok(Box::pin(self.node.execute_remote_method(
+			"field_distance",
+			&(point.into(), field_paths),
+		)?))
 	}
 
-	pub fn field_normal<'a>(
+	pub fn field_normal(
 		&self,
 		point: impl Into<Vector3<f32>>,
-		fields: impl IntoIterator<Item = &'a dyn Field>,
+		fields: impl IntoIterator<Item = UnknownField>,
 	) -> Result<impl Future<Output = Result<Vec<Option<Vector3<f32>>>, NodeError>>, NodeError> {
 		let field_paths = fields
 			.into_iter()
@@ -161,10 +163,10 @@ impl Spatial {
 			.execute_remote_method("field_normal", &(point.into(), field_paths))
 	}
 
-	pub fn field_closest_point<'a>(
+	pub fn field_closest_point(
 		&self,
 		point: impl Into<Vector3<f32>>,
-		fields: impl IntoIterator<Item = &'a dyn Field>,
+		fields: impl IntoIterator<Item = UnknownField>,
 	) -> Result<impl Future<Output = Result<Vec<Option<Vector3<f32>>>, NodeError>>, NodeError> {
 		let field_paths = fields
 			.into_iter()
