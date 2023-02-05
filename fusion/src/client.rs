@@ -117,8 +117,13 @@ pub trait RootHandler: Send + Sync + 'static {
 pub enum ClientError {
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
-	#[error("Node error: {e}")]
-	NodeError { e: NodeError },
+	#[error("Node error: {0}")]
+	NodeError(NodeError),
+}
+impl From<NodeError> for ClientError {
+	fn from(e: NodeError) -> Self {
+		ClientError::NodeError(e)
+	}
 }
 
 /// Your connection to the Stardust server.
@@ -174,26 +179,22 @@ impl Client {
 			.set(Arc::new(Spatial::from_path(client, "", "", false)));
 		let _ = client.hmd.set(Spatial::from_path(client, "", "hmd", false));
 
-		client
-			.get_root()
-			.node
-			.add_local_signal("frame", {
-				let client = client.clone();
-				move |data| {
-					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
-						let info_internal: LogicStepInfoInternal = deserialize(data)?;
-						let mut elapsed = client.elapsed_time.lock();
-						(*elapsed) += info_internal.delta;
-						let info = FrameInfo {
-							delta: info_internal.delta,
-							elapsed: *elapsed,
-						};
-						handler.lock().frame(info);
-					}
-					Ok(())
+		client.get_root().node.add_local_signal("frame", {
+			let client = client.clone();
+			move |data| {
+				if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
+					let info_internal: LogicStepInfoInternal = deserialize(data)?;
+					let mut elapsed = client.elapsed_time.lock();
+					(*elapsed) += info_internal.delta;
+					let info = FrameInfo {
+						delta: info_internal.delta,
+						elapsed: *elapsed,
+					};
+					handler.lock().frame(info);
 				}
-			})
-			.unwrap();
+				Ok(())
+			}
+		})?;
 		Ok(())
 	}
 

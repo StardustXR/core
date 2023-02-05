@@ -2,7 +2,7 @@
 
 use crate::scenegraph;
 use rustc_hash::FxHashMap;
-use stardust_xr_schemas::flat::flatbuffers;
+use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
 use stardust_xr_schemas::flex::flexbuffers;
 use std::future::Future;
@@ -69,14 +69,24 @@ pub enum MessengerError {
 	/// The MessageReceiver has been dropped with pending futures
 	#[error("Receiver has been dropped")]
 	ReceiverDropped,
-	#[error("IO Error: {e}")]
-	IOError { e: std::io::Error },
+	#[error("IO Error: {0}")]
+	IOError(std::io::Error),
 	/// The incoming message is corrupted
-	#[error("Invalid flatbuffer")]
-	InvalidFlatbuffer,
+	#[error("Invalid flatbuffer {0}")]
+	InvalidFlatbuffer(InvalidFlatbuffer),
 	/// The message type u8 is greater than method return (3)
 	#[error("Message type is out of bounds")]
 	MessageTypeOutOfBounds,
+}
+impl From<std::io::Error> for MessengerError {
+	fn from(e: std::io::Error) -> Self {
+		MessengerError::IOError(e)
+	}
+}
+impl From<InvalidFlatbuffer> for MessengerError {
+	fn from(e: InvalidFlatbuffer) -> Self {
+		MessengerError::InvalidFlatbuffer(e)
+	}
 }
 
 /// Wrapper for messages after being serialized, for type safety.
@@ -126,17 +136,11 @@ impl MessageReceiver {
 		scenegraph: &S,
 	) -> Result<(), MessengerError> {
 		let mut message_length_buffer: [u8; 4] = [0; 4];
-		self.read
-			.read_exact(&mut message_length_buffer)
-			.await
-			.map_err(|e| MessengerError::IOError { e })?;
+		self.read.read_exact(&mut message_length_buffer).await?;
 		let message_length: u32 = u32::from_ne_bytes(message_length_buffer);
 
 		let mut message_buffer: Vec<u8> = std::vec::from_elem(0_u8, message_length as usize);
-		self.read
-			.read_exact(message_buffer.as_mut_slice())
-			.await
-			.map_err(|e| MessengerError::IOError { e })?;
+		self.read.read_exact(message_buffer.as_mut_slice()).await?;
 
 		self.update_pending_futures();
 		self.handle_message(message_buffer, scenegraph)
@@ -148,7 +152,7 @@ impl MessageReceiver {
 		message: Vec<u8>,
 		scenegraph: &S,
 	) -> Result<(), MessengerError> {
-		let message = root_as_message(&message).map_err(|_| MessengerError::InvalidFlatbuffer)?;
+		let message = root_as_message(&message)?;
 		let message_type = message.type_();
 
 		debug_call(
@@ -297,14 +301,9 @@ impl MessageSender {
 	pub async fn send(&mut self, message: Message) -> Result<(), MessengerError> {
 		let message = message.into_data();
 		let message_length = message.len() as u32;
-		self.write
-			.write_all(&message_length.to_ne_bytes())
-			.await
-			.map_err(|e| MessengerError::IOError { e })?;
-		self.write
-			.write_all(&message)
-			.await
-			.map_err(|e| MessengerError::IOError { e })
+		self.write.write_all(&message_length.to_ne_bytes()).await?;
+		self.write.write_all(&message).await?;
+		Ok(())
 	}
 	/// Get a handle to send messages from anywhere.
 	pub fn handle(&self) -> MessageSenderHandle {
