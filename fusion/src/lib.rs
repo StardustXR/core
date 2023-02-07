@@ -30,6 +30,7 @@ pub mod fields;
 pub mod input;
 pub mod items;
 pub mod spatial;
+pub mod audio;
 pub mod startup_settings;
 
 use self::node::HandledNodeType;
