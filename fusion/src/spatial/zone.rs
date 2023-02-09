@@ -61,7 +61,14 @@ impl<'a> Zone {
 	/// Wrap this node and a `ZoneHandler` in a `HandlerWrapper` to run code ASAP. Instead, you can also get the `spatials()` and `captured()` hashmaps.
 	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap<H: ZoneHandler>(self, handler: H) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap this node and a `ZoneHandler` in a `HandlerWrapper` to run code ASAP. Instead, you can also get the `spatials()` and `captured()` hashmaps.
+	pub fn wrap_raw<H: ZoneHandler>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 		handler_wrapper.add_handled_signal("enter", Self::handle_enter)?;
 		handler_wrapper.add_handled_signal("capture", Self::handle_capture)?;
 		handler_wrapper.add_handled_signal("release", Self::handle_release)?;

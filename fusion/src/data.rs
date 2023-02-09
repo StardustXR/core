@@ -187,7 +187,16 @@ impl PulseSender {
 		self,
 		handler: H,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+
+	/// Wrap this node and a pulse sender handler struct into a `HandlerWrapper` struct. You can use `PulseSender::receivers()` instead.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
+	pub fn wrap_raw<H: PulseSenderHandler>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 		handler_wrapper.add_handled_signal("new_receiver", Self::handle_new_receiver)?;
 		handler_wrapper.add_handled_signal("drop_receiver", Self::handle_drop_receiver)?;
 		Ok(handler_wrapper)
@@ -302,7 +311,15 @@ impl PulseReceiver {
 		self,
 		handler: H,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap this struct and a handler into a `HandlerWrapper` if possible.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
+	pub fn wrap_raw<H: PulseReceiverHandler>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 
 		handler_wrapper.add_handled_signal("data", move |_receiver, handler, data| {
 			#[derive(Deserialize)]

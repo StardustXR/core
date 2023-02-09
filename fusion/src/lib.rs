@@ -35,12 +35,12 @@ pub mod startup_settings;
 use self::node::HandledNodeType;
 use anyhow::{anyhow, Result};
 use node::NodeError;
-use parking_lot::{Mutex, MutexGuard};
+pub use parking_lot::{Mutex, MutexGuard};
 use std::sync::Arc;
 
 /// A wrapper around a node and a handler struct implementing the node's handler trait.
 /// Necessary because the methods on the handler may be called at any time and bundling the 2 together makes it harder to screw up.
-/// Can't be created directly, nodes that could use handlers have a `wrap()` method on them that consumes them and a handler and returns a `HandlerWrapper`.
+/// Can't be created directly, nodes that could use handlers have a `wrap()` and `wrap_raw()` method on them that consumes them and a handler and returns a `HandlerWrapper`.
 ///
 /// # Example
 /// ```
@@ -64,9 +64,9 @@ pub struct HandlerWrapper<N: HandledNodeType, H: Send + Sync + 'static> {
 	wrapped: Arc<Mutex<H>>,
 }
 impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
-	pub(crate) fn new(node: N, handler: H) -> Self {
+	pub(crate) fn new_raw(node: N, handler: Arc<Mutex<H>>) -> Self {
 		Self {
-			wrapped: Arc::new(Mutex::new(handler)),
+			wrapped: handler,
 			node: Arc::new(node),
 		}
 	}

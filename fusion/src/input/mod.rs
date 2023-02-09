@@ -103,7 +103,15 @@ impl<'a> InputHandler {
 		self,
 		handler: H,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap this node and an `InputHandlerHandler` in a `HandlerWrapper`. This is necessary to get any input events.
+	#[must_use = "Dropping this handler wrapper would immediately drop the node"]
+	pub fn wrap_raw<H: InputHandlerHandler>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 		handler_wrapper.add_handled_method("input", Self::handle_input)?;
 		Ok(handler_wrapper)
 	}

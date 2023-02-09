@@ -161,7 +161,15 @@ impl<I: Item> ItemUI<I> {
 		self,
 		handler: H,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap this node and an `ItemUIHandler` in a `HandlerWrapper` to run code ASAP. Instead, you can also get the `items()` and `captured()` and `acceptors()` hashmaps.
+	#[must_use = "Dropping this handler wrapper would immediately drop the node"]
+	pub fn wrap_raw<H: ItemUIHandler<I>>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 		handler_wrapper.add_handled_signal("create_item", Self::handle_create_item)?;
 		handler_wrapper.add_handled_signal("capture_item", Self::handle_capture_item)?;
 		handler_wrapper.add_handled_signal("release_item", Self::handle_release_item)?;
@@ -393,7 +401,15 @@ impl<I: Item> ItemAcceptor<I> {
 		self,
 		handler: H,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap this node and an `ItemAcceptorHandler` in a `HandlerWrapper` to run code ASAP. Instead, you can also get the `items()` hashmap.
+	#[must_use = "Dropping this handler wrapper would immediately drop the node"]
+	pub fn wrap_raw<H: ItemAcceptorHandler<I>>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 		handler_wrapper.add_handled_signal("capture", Self::handle_capture_item)?;
 		handler_wrapper.add_handled_signal("release", Self::handle_release_item)?;
 		Ok(handler_wrapper)

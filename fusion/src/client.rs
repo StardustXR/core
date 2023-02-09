@@ -256,6 +256,15 @@ impl Client {
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
 		Ok(wrapped)
 	}
+	/// Wrap the root in an already wrapped handler
+	pub fn wrap_root_raw<H: RootHandler>(&self, wrapped: &Arc<Mutex<H>>) -> Result<(), NodeError> {
+		self.get_root()
+			.node
+			.send_remote_signal_raw("subscribe_frame", &[])?;
+		*self.life_cycle_handler.lock() =
+			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
+		Ok(())
+	}
 
 	/// Set the prefixes for any `NamespacedResource`s.
 	pub fn set_base_prefixes<H: AsRef<Path>>(&self, prefixes: &[H]) {

@@ -283,7 +283,15 @@ impl PanelItem {
 		self,
 		handler: H,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
-		let handler_wrapper = HandlerWrapper::new(self, handler);
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap the panel item and `PanelItemHandler` in a `HandlerWrapper` to receive resize and cursor events.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
+	pub fn wrap_raw<H: PanelItemHandler>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 		handler_wrapper
 			.add_handled_signal("commit_toplevel", Self::handle_commit_toplevel)
 			.unwrap();
