@@ -51,6 +51,10 @@ pub trait NodeType: Send + Sync + 'static {
 	fn client(&self) -> Result<Arc<Client>, NodeError> {
 		self.node().client()
 	}
+	/// Set whether the node is active or not. This has different effects depending on the node.
+	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
+		self.node().send_remote_signal("set_enabled", &enabled)
+	}
 	/// Create an alias of this node.
 	/// Not the same as node scenegraph aliases,
 	/// they are useful instead for getting a weak handle to a node.
