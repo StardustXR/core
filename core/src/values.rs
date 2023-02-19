@@ -9,6 +9,32 @@ pub struct Transform {
 	pub scale: Option<Vector3<f32>>,
 }
 impl Transform {
+	pub fn none() -> Self {
+		Self::default()
+	}
+	pub fn identity() -> Self {
+		Transform {
+			position: Some(Vector3 {
+				x: 0.0,
+				y: 0.0,
+				z: 0.0,
+			}),
+			rotation: Some(Quaternion {
+				v: Vector3 {
+					x: 0.0,
+					y: 0.0,
+					z: 0.0,
+				},
+				s: 1.0,
+			}),
+			scale: Some(Vector3 {
+				x: 1.0,
+				y: 1.0,
+				z: 1.0,
+			}),
+		}
+	}
+
 	pub fn from_position(position: impl Into<Vector3<f32>>) -> Self {
 		Transform {
 			position: Some(position.into()),
