@@ -4,6 +4,7 @@ use crate::{
 	spatial::Spatial,
 };
 use anyhow::Result;
+use mint::Vector3;
 use std::ops::Deref;
 
 #[derive(Debug)]
@@ -13,7 +14,7 @@ pub struct SphereField {
 impl<'a> SphereField {
 	pub fn create(
 		spatial_parent: &'a Spatial,
-		position: mint::Vector3<f32>,
+		position: impl Into<Vector3<f32>>,
 		radius: f32,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
@@ -26,7 +27,12 @@ impl<'a> SphereField {
 					"/field",
 					true,
 					&id.clone(),
-					(id, spatial_parent.node().get_path()?, position, radius),
+					(
+						id,
+						spatial_parent.node().get_path()?,
+						position.into(),
+						radius,
+					),
 				)?,
 			},
 		})

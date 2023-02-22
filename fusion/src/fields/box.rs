@@ -16,7 +16,7 @@ impl<'a> BoxField {
 	pub fn create(
 		spatial_parent: &'a Spatial,
 		transform: Transform,
-		size: Vector3<f32>,
+		size: impl Into<Vector3<f32>>,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(BoxField {
@@ -28,7 +28,12 @@ impl<'a> BoxField {
 					"/field",
 					true,
 					&id.clone(),
-					(id, spatial_parent.node().get_path()?, transform, size),
+					(
+						id,
+						spatial_parent.node().get_path()?,
+						transform,
+						size.into(),
+					),
 				)?,
 			},
 		})
