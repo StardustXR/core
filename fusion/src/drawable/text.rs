@@ -38,14 +38,14 @@ pub enum TextFit {
 	Overflow = 1 << 4,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Bounds {
 	pub bounds: Vector2<f32>,
 	pub fit: TextFit,
 	pub bounds_align: FlagSet<Alignment>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TextStyle {
 	pub character_height: f32,
 	pub color: Rgba<f32>,

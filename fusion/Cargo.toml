@@ -12,7 +12,6 @@ homepage = "https://stardustxr.org"
 anyhow = "1.0.68"
 color-rs = "0.7.1"
 flagset = "0.4.3"
-glam = { version = "0.22.0", features = ["mint"] }
 mint = "0.5.9"
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
@@ -27,6 +26,6 @@ tracing = "0.1.37"
 enum_dispatch = "0.3.11"
 
 [dev-dependencies]
-glam = {version = "0.22.0", features = ["mint"]}
+glam = { version = "0.23.0", features = ["mint"] }
 manifest-dir-macros = "0.1.16"
 tracing-subscriber = "0.3.16"
