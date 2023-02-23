@@ -9,10 +9,14 @@ pub struct Transform {
 	pub scale: Option<Vector3<f32>>,
 }
 impl Transform {
-	pub fn none() -> Self {
-		Self::default()
+	pub const fn none() -> Self {
+		Transform {
+			position: None,
+			rotation: None,
+			scale: None,
+		}
 	}
-	pub fn identity() -> Self {
+	pub const fn identity() -> Self {
 		Transform {
 			position: Some(Vector3 {
 				x: 0.0,
