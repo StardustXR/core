@@ -73,12 +73,7 @@ impl Serialize for LinePoint {
 /// 		..Default::default()
 /// 	},
 /// ];
-/// let _lines = Lines::builder()
-/// 	.spatial_parent(client.get_root())
-/// 	.points(&points)
-/// 	.cyclic(true)
-/// 	.build()
-/// 	.unwrap();
+/// let _lines = Lines::create(client.get_root(), Transform::none(), &points, true).unwrap();
 /// ```
 #[derive(Debug)]
 pub struct Lines {

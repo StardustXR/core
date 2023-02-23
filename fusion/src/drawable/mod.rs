@@ -81,7 +81,7 @@ pub enum ResourceID {
 	/// // For a client named "star"
 	/// let model_resource = ResourceID::new_namespaced("star", "icon");
 	/// // Build a model at "[prefix]/star/icon.glb" if it exists
-	/// let model = Model::builder().spatial_parent(client.get_root()).resource(model_resource).build().unwrap();
+	/// let model = Model::create(client.get_root(), Transform::none(), model_resource).unwrap();
 	/// ```
 	Namespaced {
 		/// Group that this resource is in, generally the client or library's name.

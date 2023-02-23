@@ -16,7 +16,7 @@ mint = "0.5.9"
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
-stardust-xr = {path = "../core", version = "0.10.7"}
+stardust-xr = {path = "../core", version = "0.11.0"}
 serde = "1.0.152"
 serde_repr = "0.1.10"
 thiserror = "1.0.38"

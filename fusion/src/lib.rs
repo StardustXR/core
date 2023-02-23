@@ -23,6 +23,7 @@ pub use stardust_xr as core;
 #[macro_use]
 pub mod node;
 
+pub mod audio;
 pub mod client;
 pub mod data;
 pub mod drawable;
@@ -30,7 +31,6 @@ pub mod fields;
 pub mod input;
 pub mod items;
 pub mod spatial;
-pub mod audio;
 pub mod startup_settings;
 
 use self::node::HandledNodeType;
@@ -55,8 +55,8 @@ use std::sync::Arc;
 /// 	fn leave(&mut self, uid: &str) {}
 /// }
 ///
-/// let sphere_field = SphereField::builder().spatial_parent(client.get_root()).radius(0.5).build().unwrap();
-/// let zone = Zone::builder().spatial_parent(client.get_root()).field(&sphere_field).build().unwrap();
+/// let sphere_field = SphereField::create(client.get_root(), Transform::none(), 0.5).unwrap();
+/// let zone = Zone::create(client.get_root(), Transform::none(), &sphere_field).unwrap();
 /// let zone_wrapped = zone.wrap(ZoneHandlerTest);
 /// ```
 #[derive(Debug)]

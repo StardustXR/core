@@ -35,10 +35,7 @@ pub enum MaterialParameter {
 /// # Example
 /// ```
 /// let gyro_gem_resource = crate::resource::NamespacedResource::new("fusion", "gyro_gem");
-/// let _model = Model::builder()
-/// 	.spatial_parent(client.get_root())
-/// 	.resource(&gyro_gem_resource)
-/// 	.build().unwrap();
+/// let model = Model::create(client.get_root(), Transform::none(), &gyro_gem_resource).unwrap();
 /// ```
 #[derive(Debug)]
 pub struct Model {
