@@ -3,8 +3,8 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
 use color::{rgba, Rgba};
+
 use flagset::{flags, FlagSet};
 use mint::Vector2;
 use stardust_xr::values::Transform;
@@ -149,18 +149,20 @@ impl Deref for Text {
 }
 
 #[tokio::test]
-async fn fusion_text() -> Result<()> {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
+async fn fusion_text() {
+	color_eyre::install().unwrap();
+	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
+		.await
+		.unwrap();
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let style: TextStyle = TextStyle {
 		font_resource: Some(ResourceID::new_namespaced("fusion", "common_case")),
 		..Default::default()
 	};
-	let text = Text::create(client.get_root(), Transform::default(), "Test Text", style)?;
-	text.set_character_height(0.05)?;
-	text.set_text("Test Text: Changed")?;
+	let text = Text::create(client.get_root(), Transform::default(), "Test Text", style).unwrap();
+	text.set_character_height(0.05).unwrap();
+	text.set_text("Test Text: Changed").unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
-	Ok(())
 }

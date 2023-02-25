@@ -1,7 +1,7 @@
 //! The base of all objects in Stardust.
 
 use super::client::Client;
-use anyhow::Result;
+
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
@@ -66,8 +66,8 @@ pub trait NodeType: Send + Sync + 'static {
 /// A trait to ensure this node type could be put in a `HandlerWrapper`.
 pub trait HandledNodeType: NodeType {}
 
-type Signal = dyn Fn(&[u8]) -> Result<()> + Send + Sync + 'static;
-type Method = dyn Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static;
+type Signal = dyn Fn(&[u8]) -> color_eyre::eyre::Result<()> + Send + Sync + 'static;
+type Method = dyn Fn(&[u8]) -> color_eyre::eyre::Result<Vec<u8>> + Send + Sync + 'static;
 
 pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O>>>;
 
@@ -157,7 +157,7 @@ impl Node {
 	/// Add a signal to the node so that the server can send a message to it. Not needed unless implementing functionality Fusion does not already have.
 	pub fn add_local_signal<F>(&self, name: impl ToString, signal: F) -> Result<(), NodeError>
 	where
-		F: Fn(&[u8]) -> Result<()> + Send + Sync + 'static,
+		F: Fn(&[u8]) -> color_eyre::eyre::Result<()> + Send + Sync + 'static,
 	{
 		self.internals()?
 			.local_signals
@@ -169,7 +169,7 @@ impl Node {
 	/// Add a signal to the node so that the server can send a message to it and get a response back. Not needed unless implementing functionality Fusion does not already have.
 	pub fn add_local_method<F>(&self, name: impl ToString, method: F) -> Result<(), NodeError>
 	where
-		F: Fn(&[u8]) -> Result<Vec<u8>> + Send + Sync + 'static,
+		F: Fn(&[u8]) -> color_eyre::eyre::Result<Vec<u8>> + Send + Sync + 'static,
 	{
 		self.internals()?
 			.local_methods

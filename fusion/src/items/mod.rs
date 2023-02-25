@@ -33,7 +33,7 @@ use crate::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use anyhow::{anyhow, bail, Result};
+use color_eyre::eyre::{anyhow, bail, Result};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use serde::de::DeserializeOwned;

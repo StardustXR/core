@@ -81,6 +81,7 @@ impl StartupSettings {
 
 #[tokio::test]
 async fn fusion_startup_settings() {
+	color_eyre::install().unwrap();
 	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

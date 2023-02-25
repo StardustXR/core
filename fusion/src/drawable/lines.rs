@@ -2,8 +2,8 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
 use color::{rgba, Rgba};
+
 use mint::Vector3;
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 use stardust_xr::values::Transform;
@@ -140,6 +140,7 @@ impl Deref for Lines {
 
 #[tokio::test]
 async fn fusion_lines() {
+	color_eyre::install().unwrap();
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();

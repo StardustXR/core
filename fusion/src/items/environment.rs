@@ -84,6 +84,7 @@ impl Deref for EnvironmentItem {
 
 #[tokio::test]
 async fn fusion_environment_ui() {
+	color_eyre::install().unwrap();
 	use manifest_dir_macros::file_relative_path;
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 

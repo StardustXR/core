@@ -189,6 +189,7 @@ impl NodeType for Spatial {
 
 #[tokio::test]
 async fn fusion_spatial() {
+	color_eyre::install().unwrap();
 	use super::client::Client;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await

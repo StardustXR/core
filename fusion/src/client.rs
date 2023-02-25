@@ -3,7 +3,7 @@
 use crate::node::NodeError;
 use crate::node::NodeInternals;
 use crate::spatial::Spatial;
-use anyhow::Result;
+
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -295,6 +295,7 @@ impl Drop for Client {
 
 #[tokio::test]
 async fn fusion_client_connect() {
+	color_eyre::install().unwrap();
 	let (_client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
 	tokio::select! {
@@ -306,6 +307,7 @@ async fn fusion_client_connect() {
 
 #[tokio::test]
 async fn fusion_client_life_cycle() {
+	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
 	struct RootHandlerDummy(Arc<Client>);

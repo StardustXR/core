@@ -3,7 +3,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
+
 use mint::Vector3;
 use std::ops::Deref;
 
@@ -65,6 +65,7 @@ impl Deref for SphereField {
 #[tokio::test]
 async fn fusion_sphere_field() {
 	use crate::client::Client;
+	color_eyre::install().unwrap();
 	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

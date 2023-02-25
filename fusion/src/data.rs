@@ -24,7 +24,7 @@ use crate::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use anyhow::Result;
+
 use mint::{Quaternion, Vector3};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
@@ -129,7 +129,7 @@ impl PulseSender {
 		sender: Arc<PulseSender>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> Result<()> {
+	) -> color_eyre::eyre::Result<()> {
 		let client = sender.client()?;
 		let info: NewReceiverInfo = deserialize(data)?;
 		let receiver_stored = PulseReceiver {
@@ -157,7 +157,7 @@ impl PulseSender {
 		sender: Arc<PulseSender>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> Result<()> {
+	) -> color_eyre::eyre::Result<()> {
 		let uid: &str = deserialize(data)?;
 		sender.receivers.write().remove(uid);
 		handler.lock().drop_receiver(uid);
@@ -362,6 +362,7 @@ impl Deref for PulseReceiver {
 #[tokio::test]
 async fn fusion_pulses() {
 	use super::client::Client;
+	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

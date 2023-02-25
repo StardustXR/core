@@ -3,7 +3,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
+
 use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
 use std::ops::Deref;
 
@@ -68,7 +68,7 @@ impl Deref for TipInputMethod {
 async fn fusion_tip_input_method() {
 	use crate::client::{Client, FrameInfo};
 	use crate::drawable::Model;
-
+	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

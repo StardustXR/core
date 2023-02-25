@@ -51,6 +51,7 @@ fn set_sky(
 
 #[tokio::test]
 async fn fusion_sky() {
+	color_eyre::install().unwrap();
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

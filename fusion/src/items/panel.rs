@@ -256,7 +256,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> anyhow::Result<()> {
+	) -> color_eyre::eyre::Result<()> {
 		handler.lock().commit_toplevel(deserialize(data)?);
 		Ok(())
 	}
@@ -264,7 +264,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> anyhow::Result<()> {
+	) -> color_eyre::eyre::Result<()> {
 		handler.lock().recommend_toplevel_state(deserialize(data)?);
 		Ok(())
 	}
@@ -272,7 +272,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> anyhow::Result<()> {
+	) -> color_eyre::eyre::Result<()> {
 		handler.lock().set_cursor(deserialize(data)?);
 		Ok(())
 	}
@@ -356,6 +356,7 @@ impl Deref for PanelItem {
 
 #[tokio::test]
 async fn fusion_panel_ui() {
+	color_eyre::install().unwrap();
 	use manifest_dir_macros::directory_relative_path;
 	use rustc_hash::FxHashMap;
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();

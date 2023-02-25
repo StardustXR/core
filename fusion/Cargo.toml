@@ -9,7 +9,6 @@ repository = "https://github.com/StardustXR/stardust-xr/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
-anyhow = "1.0.68"
 color-rs = "0.7.1"
 flagset = "0.4.3"
 mint = "0.5.9"
@@ -24,6 +23,7 @@ tokio = { version = "1", features = ["sync", "macros", "rt", "time", "net", "io-
 xkbcommon = { version = "0.5.0", default-features = false }
 tracing = "0.1.37"
 enum_dispatch = "0.3.11"
+color-eyre = "0.6.2"
 
 [dev-dependencies]
 glam = { version = "0.23.0", features = ["mint"] }

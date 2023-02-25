@@ -5,7 +5,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
+
 use stardust_xr::values::Transform;
 use std::ops::Deref;
 
@@ -66,8 +66,11 @@ impl Deref for Sound {
 }
 
 #[tokio::test]
-async fn fusion_sound() -> Result<()> {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
+async fn fusion_sound() {
+	color_eyre::install().unwrap();
+	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
+		.await
+		.unwrap();
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let lightspeed_resource = ResourceID::new_namespaced("fusion", "kittn_lightspeed");
@@ -75,12 +78,11 @@ async fn fusion_sound() -> Result<()> {
 		client.get_root(),
 		Transform::default(),
 		&lightspeed_resource,
-	)?;
-	sound.play()?;
+	)
+	.unwrap();
+	sound.play().unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(10)).await;
-	sound.stop()?;
+	sound.stop().unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(2)).await;
-
-	Ok(())
 }

@@ -34,7 +34,7 @@ pub mod spatial;
 pub mod startup_settings;
 
 use self::node::HandledNodeType;
-use anyhow::{anyhow, Result};
+use color_eyre::eyre::{anyhow, Result};
 use node::NodeError;
 pub use parking_lot::{Mutex, MutexGuard};
 use std::sync::Arc;

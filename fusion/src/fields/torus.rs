@@ -3,7 +3,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
+
 use stardust_xr::values::Transform;
 use std::ops::Deref;
 
@@ -68,6 +68,7 @@ impl Deref for TorusField {
 #[tokio::test]
 async fn fusion_torus_field() {
 	use crate::client::Client;
+	color_eyre::install().unwrap();
 	let (client, _event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

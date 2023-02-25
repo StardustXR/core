@@ -32,7 +32,7 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use anyhow::anyhow;
+use color_eyre::eyre::anyhow;
 use parking_lot::Mutex;
 use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
 use std::{ops::Deref, sync::Arc};
@@ -152,7 +152,7 @@ impl<'a> InputHandler {
 		input_handler: Arc<InputHandler>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> anyhow::Result<()> {
+	) -> color_eyre::eyre::Result<()> {
 		let data = InputData::deserialize(data).map_err(|e| anyhow!(e))?;
 		handler.lock().input(
 			UnknownInputMethod::from_path(input_handler, &data.uid)?,
@@ -184,6 +184,7 @@ impl Deref for InputHandler {
 #[tokio::test]
 async fn fusion_input_handler() {
 	use super::client::Client;
+	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

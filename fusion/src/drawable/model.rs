@@ -3,7 +3,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use anyhow::Result;
+
 use mint::{ColumnMatrix4, Vector2, Vector3, Vector4};
 use serde::Serialize;
 use stardust_xr::values::Transform;
@@ -95,14 +95,18 @@ impl Deref for Model {
 }
 
 #[tokio::test]
-async fn fusion_model() -> Result<()> {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop().await?;
+async fn fusion_model() {
+	color_eyre::install().unwrap();
+	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
+		.await
+		.unwrap();
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let gyro_gem_resource = ResourceID::new_namespaced("fusion", "gyro_gem");
-	let model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource)?;
-	model.set_material_parameter(0, "color", MaterialParameter::Color([0.0, 1.0, 0.5, 0.75]))?;
+	let model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource).unwrap();
+	model
+		.set_material_parameter(0, "color", MaterialParameter::Color([0.0, 1.0, 0.5, 0.75]))
+		.unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
-	Ok(())
 }

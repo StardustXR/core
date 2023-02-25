@@ -152,6 +152,7 @@ impl<S: InputActionState> InputHandlerHandler for InputActionHandler<S> {
 
 #[tokio::test]
 async fn fusion_input_action_handler() {
+	color_eyre::install().unwrap();
 	use crate::{client::Client, fields::SphereField, input::InputHandler};
 	use stardust_xr::values::Transform;
 	let (client, event_loop) = Client::connect_with_async_loop()
@@ -211,11 +212,11 @@ async fn fusion_input_action_handler() {
 		}
 	}
 
-	let _root = client.wrap_root(input_action_test);
+	let _root = client.wrap_root(input_action_test).unwrap();
 
 	tokio::select! {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
-		_ = event_loop => (),
+		e = event_loop => e.unwrap().unwrap(),
 	};
 }

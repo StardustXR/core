@@ -5,7 +5,7 @@ use crate::{
 };
 
 use super::Spatial;
-use anyhow::{anyhow, Result};
+use color_eyre::eyre::{anyhow, Result};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use stardust_xr::{schemas::flex::deserialize, values::Transform};
@@ -182,10 +182,7 @@ impl Deref for Zone {
 
 #[tokio::test]
 async fn fusion_zone() {
-	tracing_subscriber::fmt()
-		.with_max_level(tracing::Level::ERROR)
-		.init();
-
+	color_eyre::install().unwrap();
 	use crate::client::Client;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
