@@ -1,4 +1,4 @@
-use super::{InputData, InputHandlerHandler};
+use super::{InputData, InputHandlerHandler, UnknownInputMethod};
 use rustc_hash::FxHashSet;
 use std::{fmt::Debug, iter::FromIterator, mem::swap, sync::Arc};
 
@@ -64,9 +64,9 @@ impl<S: InputActionState> BaseInputAction<S> {
 		self.active_condition = external.active_condition;
 	}
 
-	fn input_event(&mut self, input_data: &Arc<InputData>, state: &S) -> bool {
-		if (self.active_condition)(input_data, state) {
-			self.queued_inputs.insert(input_data.clone());
+	fn input_event(&mut self, data: &Arc<InputData>, state: &S) -> bool {
+		if (self.active_condition)(data, state) {
+			self.queued_inputs.insert(data.clone());
 			true
 		} else {
 			false
@@ -137,12 +137,16 @@ impl<S: InputActionState> InputActionHandler<S> {
 	}
 }
 impl<S: InputActionState> InputHandlerHandler for InputActionHandler<S> {
-	fn input(&mut self, input: InputData) -> bool {
-		let input = Arc::new(input);
-		self.actions
+	fn input(&mut self, input: UnknownInputMethod, data: InputData) {
+		let data = Arc::new(data);
+		let capture = self
+			.actions
 			.iter_mut()
-			.map(|action| action.input_event(&input, &self.state) && action.capture_on_trigger)
-			.any(|b| b)
+			.map(|action| action.input_event(&data, &self.state) && action.capture_on_trigger)
+			.any(|b| b);
+		if capture {
+			let _ = input.capture();
+		}
 	}
 }
 

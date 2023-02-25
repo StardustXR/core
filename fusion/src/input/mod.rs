@@ -34,10 +34,7 @@ use super::{
 };
 use anyhow::anyhow;
 use parking_lot::Mutex;
-use stardust_xr::{
-	schemas::flex::{flexbuffers, serialize},
-	values::Transform,
-};
+use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
 use std::{ops::Deref, sync::Arc};
 
 /// Handle raw input events.
@@ -45,20 +42,55 @@ pub trait InputHandlerHandler: Send + Sync {
 	/// An input method has sent an input event on this frame.
 	///
 	/// Return "true" to capture the input method or "false" to not.
-	fn input(&mut self, input: InputData) -> bool;
+	fn input(&mut self, input: UnknownInputMethod, data: InputData);
 }
 
 /// Node representing a spatial input device.
 pub trait InputMethod {
 	fn node(&self) -> &Node;
-	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.node().send_remote_signal("set_enabled", &enabled)
-	}
 	fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
 		flexbuffers::Reader::get_root(datamap)
 			.and_then(|root| root.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 		self.node().send_remote_signal_raw("set_datamap", datamap)
+	}
+}
+
+pub struct UnknownInputMethod {
+	spatial: Spatial,
+	handler: Arc<InputHandler>,
+}
+impl UnknownInputMethod {
+	fn from_path(handler: Arc<InputHandler>, uid: &str) -> Result<Self, NodeError> {
+		Ok(UnknownInputMethod {
+			spatial: Spatial {
+				node: Node::from_path(&handler.client()?, handler.node().get_path()?, uid, false),
+			},
+			handler,
+		})
+	}
+	pub fn capture(&self) -> Result<(), NodeError> {
+		self.node()
+			.send_remote_signal("capture", &self.handler.node().get_path()?)
+	}
+}
+impl NodeType for UnknownInputMethod {
+	fn node(&self) -> &Node {
+		&self.spatial.node
+	}
+
+	fn alias(&self) -> Self {
+		UnknownInputMethod {
+			spatial: self.spatial.alias(),
+			handler: self.handler.clone(),
+		}
+	}
+}
+impl Deref for UnknownInputMethod {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
 	}
 }
 
@@ -112,19 +144,21 @@ impl<'a> InputHandler {
 		handler: Arc<Mutex<H>>,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
 		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
-		handler_wrapper.add_handled_method("input", Self::handle_input)?;
+		handler_wrapper.add_handled_signal("input", Self::handle_input)?;
 		Ok(handler_wrapper)
 	}
 
 	fn handle_input<H: InputHandlerHandler>(
-		_zone: Arc<InputHandler>,
+		input_handler: Arc<InputHandler>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
-	) -> anyhow::Result<Vec<u8>> {
-		let capture = handler
-			.lock()
-			.input(InputData::deserialize(data).map_err(|e| anyhow!(e))?);
-		Ok(serialize(capture)?)
+	) -> anyhow::Result<()> {
+		let data = InputData::deserialize(data).map_err(|e| anyhow!(e))?;
+		handler.lock().input(
+			UnknownInputMethod::from_path(input_handler, &data.uid)?,
+			data,
+		);
+		Ok(())
 	}
 }
 impl NodeType for InputHandler {
@@ -160,16 +194,16 @@ async fn fusion_input_handler() {
 
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
-		fn input(&mut self, input: InputData) -> bool {
-			dbg!(input.uid);
-			dbg!(input.distance);
-			match &input.input {
+		fn input(&mut self, _input: UnknownInputMethod, data: InputData) {
+			dbg!(data.uid);
+			dbg!(data.distance);
+			match &data.input {
 				InputDataType::Pointer(_) => {
 					println!("Pointer input");
 				}
 				InputDataType::Hand(_) => {
 					println!("Hand input");
-					let _ = input.datamap.with_data(|datamap| {
+					let _ = data.datamap.with_data(|datamap| {
 						dbg!(datamap
 							.iter_keys()
 							.zip(datamap.iter_values())
@@ -181,7 +215,6 @@ async fn fusion_input_handler() {
 					println!("Tip input");
 				}
 			}
-			false
 		}
 	}
 
