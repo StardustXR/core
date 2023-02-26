@@ -40,8 +40,6 @@ use std::{ops::Deref, sync::Arc};
 /// Handle raw input events.
 pub trait InputHandlerHandler: Send + Sync {
 	/// An input method has sent an input event on this frame.
-	///
-	/// Return "true" to capture the input method or "false" to not.
 	fn input(&mut self, input: UnknownInputMethod, data: InputData);
 }
 
@@ -56,6 +54,7 @@ pub trait InputMethod {
 	}
 }
 
+/// An input method on the server, but the type is unknown.
 pub struct UnknownInputMethod {
 	spatial: Spatial,
 	handler: Arc<InputHandler>,
@@ -69,6 +68,7 @@ impl UnknownInputMethod {
 			handler,
 		})
 	}
+	/// Have the input handler that this method reference came from capture the method for the next frame.
 	pub fn capture(&self) -> Result<(), NodeError> {
 		self.node()
 			.send_remote_signal("capture", &self.handler.node().get_path()?)
