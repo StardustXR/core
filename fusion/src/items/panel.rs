@@ -8,7 +8,12 @@ use crate::{
 };
 use mint::Vector2;
 use parking_lot::Mutex;
-use serde::Deserialize;
+use rustc_hash::FxHashMap;
+use serde::{
+	de::{Deserializer, Error, SeqAccess, Visitor},
+	ser::Serializer,
+	Deserialize,
+};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use stardust_xr::schemas::flex::deserialize;
 use std::{ops::Deref, sync::Arc};
@@ -33,6 +38,18 @@ pub trait PanelItemHandler: Send + Sync {
 	///
 	/// The cursor's material will automatically update, you just need to hide/show the cursor and account for the new size/hotspot.
 	fn set_cursor(&mut self, info: Option<CursorInfo>) {}
+
+	/// A new popup was created. Popups are short-lived overlay surfaces like for context menus or modals.
+	fn new_popup(&mut self, uid: &str, data: Option<PopupInfo>) {}
+	/// The popup's positioner has changed and you need to update the UI.
+	fn reposition_popup(&mut self, uid: &str, data: Option<PositionerData>) {}
+	/// This popup was destroyed.
+	fn drop_popup(&mut self, uid: &str) {}
+
+	/// The given surface is the only one that should recieve pointer input. If None, any surface in this panel item can receive pointer input.
+	fn grab_pointer_focus(&mut self, focus: Option<SurfaceID>) {}
+	/// The given surface is the only one that should recieve keyboard input. If None, any surface in this panel item can receive keyboard input.
+	fn grab_keyboard_focus(&mut self, focus: Option<SurfaceID>) {}
 }
 
 /// An updated cursor.
@@ -58,6 +75,67 @@ pub struct ToplevelInfo {
 	pub min_size: Option<Vector2<u32>>,
 	/// Array of states
 	pub states: Vec<State>,
+}
+
+/// Data on positioning a popup
+#[derive(Debug, Clone, Deserialize)]
+pub struct PopupInfo {
+	pub parent: SurfaceID,
+	pub positioner_data: PositionerData,
+}
+
+#[repr(u32)]
+#[derive(Copy, Clone, Debug, Deserialize_repr, PartialEq, Eq)]
+pub enum Alignment {
+	TopLeft = 0,
+	Top = 1,
+	TopRight = 2,
+	Left = 3,
+	Center = 4,
+	Right = 5,
+	BottomLeft = 6,
+	Bottom = 7,
+	BottomRight = 8,
+}
+
+#[repr(u32)]
+#[derive(Copy, Clone, Debug, Deserialize_repr, PartialEq, Eq)]
+pub enum ConstraintAdjustment {
+	None = 0,
+	SlideX = 1,
+	SlideY = 2,
+	FlipX = 3,
+	FlipY = 4,
+	ResizeX = 5,
+	ResizeY = 6,
+}
+
+/// Data on positioning a popup
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct PositionerData {
+	/// The size of the surface in px.
+	pub size: Vector2<u32>,
+
+	/// The position of the rectangle that the positioned surface will be anchored to.
+	pub anchor_rect_pos: Vector2<i32>,
+
+	/// The size of the rectangle that the positioned surface will be anchored to.
+	pub anchor_rect_size: Vector2<u32>,
+
+	/// Specifies the point on the surface that will be anchored to the anchor rectangle.
+	pub anchor: Alignment,
+
+	/// Defines how the surface should be positioned relative to the anchor rectangle.
+	pub gravity: Alignment,
+
+	/// Specifies the adjustment behavior of the positioner when the surface would fall outside the screen.
+	pub constraint_adjustment: ConstraintAdjustment,
+
+	/// The offset of the surface relative to the anchor rectangle.
+	pub offset: Vector2<i32>,
+
+	/// Whether the positioner reacts to changes in the geometry of the anchor rectangle.
+	pub reactive: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -128,13 +206,76 @@ pub enum Capability {
 	/// Minimize is supported, this just makes the button send the panel item handler an event when it's clicked.
 	Minimize = 4,
 }
+
 /// The init data for the panel item.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PanelItemInitData {
-	/// Size of the toplevel surface in pixels.
-	pub toplevel: Option<ToplevelInfo>,
 	/// The cursor, if applicable.
 	pub cursor: Option<CursorInfo>,
+	/// Size of the toplevel surface in pixels.
+	pub toplevel: Option<ToplevelInfo>,
+	/// Vector of popups that already exist
+	pub popups: FxHashMap<String, PopupInfo>,
+	/// The surface, if any, that has exclusive input to the pointer.
+	pub pointer_grab: Option<SurfaceID>,
+	/// The surface, if any, that has exclusive input to the keyboard.
+	pub keyboard_grab: Option<SurfaceID>,
+}
+
+/// An ID for a surface inside this panel item
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub enum SurfaceID {
+	Cursor,
+	Toplevel,
+	Popup(String),
+}
+
+impl<'de> serde::Deserialize<'de> for SurfaceID {
+	fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+		deserializer.deserialize_seq(SurfaceIDVisitor)
+	}
+}
+
+struct SurfaceIDVisitor;
+
+impl<'de> Visitor<'de> for SurfaceIDVisitor {
+	type Value = SurfaceID;
+
+	fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		f.write_str("idk")
+	}
+
+	fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+		let Some(discrim) = seq.next_element()? else {
+            return Err(A::Error::missing_field("discrim"));
+        };
+
+		// idk if you wanna check for extraneous elements
+		// I didn't bother
+
+		match discrim {
+			"Cursor" => Ok(SurfaceID::Cursor),
+			"Toplevel" => Ok(SurfaceID::Toplevel),
+			"Popup" => {
+				let Some(text) = seq.next_element()? else {
+                    return Err(A::Error::missing_field("popup_text"));
+                };
+				Ok(SurfaceID::Popup(text))
+			}
+			_ => Err(A::Error::unknown_variant(discrim, &["Toplevel", "Popup"])),
+		}
+	}
+}
+
+impl serde::Serialize for SurfaceID {
+	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		match self {
+			Self::Cursor => ["Cursor"].serialize(serializer),
+			Self::Toplevel => ["Toplevel"].serialize(serializer),
+			Self::Popup(text) => ["Popup", text].serialize(serializer),
+		}
+	}
 }
 
 /// An item that represents a toplevel wayland surface (base window) and all its popups (context menus, modals, etc.).
@@ -143,18 +284,19 @@ pub struct PanelItem {
 	spatial: Spatial,
 }
 impl PanelItem {
-	/// Apply the toplevel surface's visuals as a material to a model.
+	/// Apply a surface's visuals as a material to a model.
 	///
 	/// This material is unlit with the [Simula text shader](https://github.com/SimulaVR/Simula/blob/master/addons/godot-haskell-plugin/TextShader.tres) ported on the server.
 	/// The material index is global across the whole model for now, just play around with it a bit.
-	pub fn apply_toplevel_material(
+	pub fn apply_surface_material(
 		&self,
+		surface: SurfaceID,
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
 		self.node.send_remote_signal(
-			"apply_toplevel_material",
-			&(model.node().get_path()?, material_index),
+			"apply_surface_material",
+			&(surface, model.node().get_path()?, material_index),
 		)
 	}
 
@@ -177,21 +319,6 @@ impl PanelItem {
 	) -> Result<(), NodeError> {
 		self.node
 			.send_remote_signal("configure_toplevel", &(size, states, bounds))
-	}
-
-	/// Apply the cursor's visuals as a material to a model.
-	///
-	/// This material is unlit with the [Simula text shader](https://github.com/SimulaVR/Simula/blob/master/addons/godot-haskell-plugin/TextShader.tres) ported on the server.
-	/// The material index is global across the whole model for now, just play around with it a bit.
-	pub fn apply_cursor_material(
-		&self,
-		model: &Model,
-		material_index: u32,
-	) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
-			"apply_cursor_material",
-			&(model.node().get_path()?, material_index),
-		)
 	}
 
 	/// Set whether the pointer is active or not.
@@ -277,6 +404,50 @@ impl PanelItem {
 		Ok(())
 	}
 
+	fn handle_grab_keyboard<H: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> color_eyre::eyre::Result<()> {
+		handler.lock().grab_keyboard_focus(deserialize(data)?);
+		Ok(())
+	}
+	fn handle_grab_pointer<H: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> color_eyre::eyre::Result<()> {
+		handler.lock().grab_pointer_focus(deserialize(data)?);
+		Ok(())
+	}
+
+	fn handle_new_popup<H: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> color_eyre::eyre::Result<()> {
+		let (uid, data): (&str, Option<PopupInfo>) = deserialize(data)?;
+		handler.lock().new_popup(uid, data);
+		Ok(())
+	}
+	fn handle_reposition_popup<H: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> color_eyre::eyre::Result<()> {
+		let (uid, data): (&str, Option<PositionerData>) = deserialize(data)?;
+		handler.lock().reposition_popup(uid, data);
+		Ok(())
+	}
+	fn handle_drop_popup<H: PanelItemHandler>(
+		_panel_item: Arc<PanelItem>,
+		handler: Arc<Mutex<H>>,
+		data: &[u8],
+	) -> color_eyre::eyre::Result<()> {
+		handler.lock().drop_popup(deserialize(data)?);
+		Ok(())
+	}
+
 	/// Wrap the panel item and `PanelItemHandler` in a `HandlerWrapper` to receive resize and cursor events.
 	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap<H: PanelItemHandler>(
@@ -304,6 +475,23 @@ impl PanelItem {
 		handler_wrapper
 			.add_handled_signal("set_cursor", Self::handle_set_cursor)
 			.unwrap();
+		handler_wrapper
+			.add_handled_signal("grab_keyboard", Self::handle_grab_keyboard)
+			.unwrap();
+		handler_wrapper
+			.add_handled_signal("grab_pointer", Self::handle_grab_pointer)
+			.unwrap();
+
+		handler_wrapper
+			.add_handled_signal("new_popup", Self::handle_new_popup)
+			.unwrap();
+		handler_wrapper
+			.add_handled_signal("reposition_popup", Self::handle_reposition_popup)
+			.unwrap();
+		handler_wrapper
+			.add_handled_signal("drop_popup", Self::handle_drop_popup)
+			.unwrap();
+
 		Ok(handler_wrapper)
 	}
 }
