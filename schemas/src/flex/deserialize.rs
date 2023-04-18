@@ -218,6 +218,12 @@ impl<'de> Deserializer<'de> for FlexbuffersDeserializer<'de> {
 	{
 		let (variant, value) = match self.0.flexbuffer_type() {
 			FlexBufferType::String => (self.0.as_str(), None),
+			FlexBufferType::Vector => {
+				let m = self.0.get_vector()?;
+				let variant = "t";
+				let value = Some(m.idx(0));
+				(variant, value)
+			}
 			FlexBufferType::Map => {
 				let m = self.0.get_map()?;
 				let variant = m.keys_vector().idx(0).get_key()?;
