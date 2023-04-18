@@ -23,7 +23,7 @@ fn debug_call(
 	path: Option<&str>,
 	method: Option<&str>,
 	err: Option<&str>,
-	data: Option<&[u8]>,
+	data: &[u8],
 ) {
 	let level = match call_type {
 		0 => tracing::Level::ERROR,
@@ -42,15 +42,10 @@ fn debug_call(
 			3 => "method return",
 			_ => "unknown",
 		};
-		let data = data
-			.map(|data| match flexbuffers::Reader::get_root(data) {
-				Ok(root) => root.to_string(),
-				Err(_) => String::from_utf8_lossy(data).into_owned(),
-			})
-			.unwrap_or_else(|| {
-				err.map(|err| err.to_string())
-					.unwrap_or_else(|| "Unknown".to_string())
-			});
+		let data = match flexbuffers::Reader::get_root(data) {
+			Ok(root) => root.to_string(),
+			Err(_) => String::from_utf8_lossy(data).into_owned(),
+		};
 
 		match level {
 			tracing::Level::ERROR => {
@@ -162,7 +157,7 @@ impl MessageReceiver {
 			message.object(),
 			message.method(),
 			message.error(),
-			message.data().map(|d| d.bytes()),
+			message.data().map(|d| d.bytes()).unwrap_or(&[]),
 		);
 		let path = message.object().unwrap_or("unknown");
 		let method = message.method().unwrap_or("unknown");
@@ -179,7 +174,7 @@ impl MessageReceiver {
 			1 => {
 				let signal_status = scenegraph.send_signal(path, method, data);
 				if let Err(e) = signal_status {
-					self.send_handle.error(path, method, e)?;
+					self.send_handle.error(path, method, e, data)?;
 				}
 			}
 			// Method called
@@ -192,9 +187,9 @@ impl MessageReceiver {
 						path,
 						method,
 						None,
-						Some(&return_value),
+						&return_value,
 					))?,
-					Err(error) => self.send_handle.error(path, method, error)?,
+					Err(error) => self.send_handle.error(path, method, error, data)?,
 				};
 			}
 			// Method return
@@ -206,6 +201,7 @@ impl MessageReceiver {
 							path,
 							method,
 							"Method return without method call".to_string(),
+							data,
 						)?;
 					}
 					Some(future) => {
@@ -220,17 +216,22 @@ impl MessageReceiver {
 }
 
 /// Generate an error message from arguments.
-pub fn serialize_error<T: std::fmt::Display>(object: &str, method: &str, err: T) -> Message {
+pub fn serialize_error<T: std::fmt::Display>(
+	object: &str,
+	method: &str,
+	err: T,
+	data: &[u8],
+) -> Message {
 	let error = format!("{}", err);
-	serialize_call(0, None, object, method, Some(error.as_str()), None)
+	serialize_call(0, None, object, method, Some(error.as_str()), data)
 }
 /// Generate a signal message from arguments.
 pub fn serialize_signal_call(object: &str, method: &str, data: &[u8]) -> Message {
-	serialize_call(1, None, object, method, None, Some(data))
+	serialize_call(1, None, object, method, None, data)
 }
 /// Generate a method message from arguments.
 pub fn serialize_method_call(id: u64, object: &str, method: &str, data: &[u8]) -> Message {
-	serialize_call(2, Some(id), object, method, None, Some(data))
+	serialize_call(2, Some(id), object, method, None, data)
 }
 #[instrument(level = "trace", skip_all)]
 fn serialize_call(
@@ -239,7 +240,7 @@ fn serialize_call(
 	path: &str,
 	method: &str,
 	err: Option<&str>,
-	data: Option<&[u8]>,
+	data: &[u8],
 ) -> Message {
 	debug_call(false, call_type, id, Some(path), Some(method), err, data);
 
@@ -247,7 +248,7 @@ fn serialize_call(
 	let flex_path = fbb.create_string(path);
 	let flex_method = fbb.create_string(method);
 	let flex_err = err.map(|s| fbb.create_string(s));
-	let flex_data = data.map(|s| fbb.create_vector(s));
+	let flex_data = fbb.create_vector(data);
 
 	let message_constructed = FlatMessage::create(
 		&mut fbb,
@@ -257,7 +258,7 @@ fn serialize_call(
 			object: Some(flex_path),
 			method: Some(flex_method),
 			error: flex_err,
-			data: flex_data,
+			data: Some(flex_data),
 		},
 	);
 	fbb.finish(message_constructed, None);
@@ -316,8 +317,9 @@ impl MessageSender {
 		node_path: &str,
 		method_name: &str,
 		err: E,
+		data: &[u8],
 	) -> Result<(), MessengerError> {
-		self.send(serialize_error(node_path, method_name, err))
+		self.send(serialize_error(node_path, method_name, err, data))
 			.await
 	}
 	/// Send a signal immediately, await until sent.
@@ -363,8 +365,9 @@ impl MessageSenderHandle {
 		node_path: &str,
 		method_name: &str,
 		err: E,
+		data: &[u8],
 	) -> Result<(), MessengerError> {
-		self.send(serialize_error(node_path, method_name, err))
+		self.send(serialize_error(node_path, method_name, err, data))
 	}
 	/// Queue up a signal to be sent.
 	pub fn signal(
