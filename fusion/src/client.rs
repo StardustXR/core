@@ -16,6 +16,7 @@ use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
 };
 use std::any::TypeId;
+use std::future::Future;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use thiserror::Error;
@@ -277,6 +278,20 @@ impl Client {
 		self.message_sender_handle
 			.signal("/", "set_base_prefixes", &serialize(prefixes).unwrap())
 			.unwrap();
+	}
+
+	pub fn get_connection_environment(
+		&self,
+	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
+		let future = self
+			.message_sender_handle
+			.method("/startup", "get_connection_environment", &[])
+			.map_err(|e| NodeError::MessengerError { e })?;
+
+		Ok(async move {
+			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
+			deserialize(&result).map_err(|e| NodeError::Deserialization { e })
+		})
 	}
 
 	/// Stop the event loop if created with async loop. Equivalent to a graceful disconnect.
