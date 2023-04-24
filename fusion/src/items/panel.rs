@@ -6,9 +6,9 @@ use crate::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
+use flagset::{flags, FlagSet};
 use mint::Vector2;
 use parking_lot::Mutex;
-use rustc_hash::FxHashMap;
 use serde::{
 	de::{Deserializer, Error, SeqAccess, Visitor},
 	ser::Serializer,
@@ -60,19 +60,29 @@ pub struct CursorInfo {
 	/// Hotspot position in pixels. This is the point relative to the top left where the cursor matches the 2D pointer.
 	pub hotspot: Vector2<i32>,
 }
+/// The origin and size of the surface's "solid" part.
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub struct Geometry {
+	pub origin: Vector2<i32>,
+	pub size: Vector2<u32>,
+}
 /// The state of the panel item's toplevel.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ToplevelInfo {
-	/// Equivalent to the window title.
+	/// The UID of the panel item of the parent of this toplevel, if it exists
+	pub parent: Option<String>,
+	/// Equivalent to the window title
 	pub title: Option<String>,
 	/// Application identifier, see https://standards.freedesktop.org/desktop-entry-spec/
 	pub app_id: Option<String>,
 	/// Current size in pixels
 	pub size: Vector2<u32>,
-	/// Recommended maximum size in pixels
-	pub max_size: Option<Vector2<u32>>,
 	/// Recommended minimum size in pixels
 	pub min_size: Option<Vector2<u32>>,
+	/// Recommended maximum size in pixels
+	pub max_size: Option<Vector2<u32>>,
+	/// Surface geometry
+	pub geometry: Geometry,
 	/// Array of states
 	pub states: Vec<State>,
 }
@@ -80,6 +90,7 @@ pub struct ToplevelInfo {
 /// Data on positioning a popup
 #[derive(Debug, Clone, Deserialize)]
 pub struct PopupInfo {
+	pub uid: String,
 	pub parent: SurfaceID,
 	pub positioner_data: PositionerData,
 }
@@ -98,16 +109,16 @@ pub enum Alignment {
 	BottomRight = 8,
 }
 
-#[repr(u32)]
-#[derive(Copy, Clone, Debug, Deserialize_repr, PartialEq, Eq)]
-pub enum ConstraintAdjustment {
-	None = 0,
-	SlideX = 1,
-	SlideY = 2,
-	FlipX = 3,
-	FlipY = 4,
-	ResizeX = 5,
-	ResizeY = 6,
+flags! {
+	pub enum ConstraintAdjustment: u32 {
+		None = 0,
+		SlideX = 1,
+		SlideY = 2,
+		FlipX = 4,
+		FlipY = 8,
+		ResizeX = 16,
+		ResizeY = 32,
+	}
 }
 
 /// Data on positioning a popup
@@ -129,13 +140,100 @@ pub struct PositionerData {
 	pub gravity: Alignment,
 
 	/// Specifies the adjustment behavior of the positioner when the surface would fall outside the screen.
-	pub constraint_adjustment: ConstraintAdjustment,
+	pub constraint_adjustment: FlagSet<ConstraintAdjustment>,
 
 	/// The offset of the surface relative to the anchor rectangle.
 	pub offset: Vector2<i32>,
 
 	/// Whether the positioner reacts to changes in the geometry of the anchor rectangle.
 	pub reactive: bool,
+}
+impl PositionerData {
+	fn anchor_has_edge(&self, edge: Alignment) -> bool {
+		match edge {
+			Alignment::Top => {
+				self.anchor == Alignment::Top
+					|| self.anchor == Alignment::TopLeft
+					|| self.anchor == Alignment::TopRight
+			}
+			Alignment::Bottom => {
+				self.anchor == Alignment::Bottom
+					|| self.anchor == Alignment::BottomLeft
+					|| self.anchor == Alignment::BottomRight
+			}
+			Alignment::Left => {
+				self.anchor == Alignment::Left
+					|| self.anchor == Alignment::TopLeft
+					|| self.anchor == Alignment::BottomLeft
+			}
+			Alignment::Right => {
+				self.anchor == Alignment::Right
+					|| self.anchor == Alignment::TopRight
+					|| self.anchor == Alignment::BottomRight
+			}
+			_ => unreachable!(),
+		}
+	}
+
+	fn gravity_has_edge(&self, edge: Alignment) -> bool {
+		match edge {
+			Alignment::Top => {
+				self.gravity == Alignment::Top
+					|| self.gravity == Alignment::TopLeft
+					|| self.gravity == Alignment::TopRight
+			}
+			Alignment::Bottom => {
+				self.gravity == Alignment::Bottom
+					|| self.gravity == Alignment::BottomLeft
+					|| self.gravity == Alignment::BottomRight
+			}
+			Alignment::Left => {
+				self.gravity == Alignment::Left
+					|| self.gravity == Alignment::TopLeft
+					|| self.gravity == Alignment::BottomLeft
+			}
+			Alignment::Right => {
+				self.gravity == Alignment::Right
+					|| self.gravity == Alignment::TopRight
+					|| self.gravity == Alignment::BottomRight
+			}
+			_ => unreachable!(),
+		}
+	}
+
+	pub fn get_pos(&self) -> Vector2<i32> {
+		let mut pos = self.offset;
+
+		if self.anchor_has_edge(Alignment::Top) {
+			pos.y += self.anchor_rect_pos.y;
+		} else if self.anchor_has_edge(Alignment::Bottom) {
+			pos.y += self.anchor_rect_pos.y + self.anchor_rect_size.y as i32;
+		} else {
+			pos.y += self.anchor_rect_pos.y + self.anchor_rect_size.y as i32 / 2;
+		}
+
+		if self.anchor_has_edge(Alignment::Left) {
+			pos.x += self.anchor_rect_pos.x;
+		} else if self.anchor_has_edge(Alignment::Right) {
+			pos.x += self.anchor_rect_pos.x + self.anchor_rect_size.x as i32;
+		} else {
+			pos.x += self.anchor_rect_pos.x + self.anchor_rect_size.x as i32 / 2;
+		}
+
+		if self.gravity_has_edge(Alignment::Top) {
+			pos.y -= self.size.y as i32;
+		} else if !self.gravity_has_edge(Alignment::Bottom) {
+			pos.y -= self.size.y as i32 / 2;
+		}
+
+		if self.gravity_has_edge(Alignment::Left) {
+			pos.x -= self.size.x as i32;
+		} else if !self.gravity_has_edge(Alignment::Right) {
+			pos.x -= self.size.x as i32 / 2;
+		}
+
+		pos
+	}
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -215,7 +313,7 @@ pub struct PanelItemInitData {
 	/// Size of the toplevel surface in pixels.
 	pub toplevel: Option<ToplevelInfo>,
 	/// Vector of popups that already exist
-	pub popups: FxHashMap<String, PopupInfo>,
+	pub popups: Vec<PopupInfo>,
 	/// The surface, if any, that has exclusive input to the pointer.
 	pub pointer_grab: Option<SurfaceID>,
 	/// The surface, if any, that has exclusive input to the keyboard.
@@ -223,7 +321,7 @@ pub struct PanelItemInitData {
 }
 
 /// An ID for a surface inside this panel item
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum SurfaceID {
 	Cursor,
@@ -290,7 +388,7 @@ impl PanelItem {
 	/// The material index is global across the whole model for now, just play around with it a bit.
 	pub fn apply_surface_material(
 		&self,
-		surface: SurfaceID,
+		surface: &SurfaceID,
 		model: &Model,
 		material_index: u32,
 	) -> Result<(), NodeError> {
@@ -321,21 +419,26 @@ impl PanelItem {
 			.send_remote_signal("configure_toplevel", &(size, states, bounds))
 	}
 
-	/// Set whether the pointer is active or not.
-	pub fn pointer_set_active(&self, active: bool) -> Result<(), NodeError> {
-		self.node.send_remote_signal("pointer_set_active", &active)
-	}
 	/// Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer.
-	pub fn pointer_motion(&self, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
+	pub fn pointer_motion(
+		&self,
+		surface: &SurfaceID,
+		position: impl Into<Vector2<f32>>,
+	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointer_motion", &position.into())
+			.send_remote_signal("pointer_motion", &(surface, position.into()))
 	}
 	/// Send an event to set a pointer button's state if the pointer's active.
 	///
 	/// The `button` is from the `input_event_codes` crate (e.g. BTN_LEFT for left click).
-	pub fn pointer_button(&self, button: u32, pressed: bool) -> Result<(), NodeError> {
+	pub fn pointer_button(
+		&self,
+		surface: &SurfaceID,
+		button: u32,
+		pressed: bool,
+	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointer_button", &(button, pressed as u32))
+			.send_remote_signal("pointer_button", &(surface, button, pressed as u32))
 	}
 	/// Send an event to scroll the pointer if it's active.
 	///
@@ -345,19 +448,14 @@ impl PanelItem {
 	/// If both the distance and steps are `None` then the scroll will be considered stopped. Either one being `Some` just scrolls.
 	pub fn pointer_scroll(
 		&self,
+		surface: &SurfaceID,
 		scroll_distance: Option<Vector2<f32>>,
 		scroll_steps: Option<Vector2<f32>>,
 	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("pointer_scroll", &(scroll_distance, scroll_steps))
+			.send_remote_signal("pointer_scroll", &(surface, scroll_distance, scroll_steps))
 	}
 
-	/// Set whether the keyboard is active or not.
-	///
-	/// Make sure to set the keymap or no key events will go through!
-	pub fn keyboard_set_active(&self, active: bool) -> Result<(), NodeError> {
-		self.node.send_remote_signal("keyboard_set_active", &active)
-	}
 	/// Set the keyboard's keymap with a given `xkb` keymap.
 	pub fn keyboard_set_keymap(&self, keymap: &str) -> Result<(), NodeError> {
 		Keymap::new_from_string(
@@ -374,9 +472,14 @@ impl PanelItem {
 	/// Set a key's state if the keyboard is active.
 	///
 	/// `key` is a raw keycode that corresponds to the given keymap.
-	pub fn keyboard_key(&self, key: u32, state: bool) -> Result<(), NodeError> {
+	pub fn keyboard_key(
+		&self,
+		surface: &SurfaceID,
+		key: u32,
+		state: bool,
+	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("keyboard_key", &(key, state as u32))
+			.send_remote_signal("keyboard_key", &(surface, key, state as u32))
 	}
 
 	fn handle_commit_toplevel<H: PanelItemHandler>(

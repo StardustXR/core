@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "stardust-xr-fusion"
-version = "0.38.1"
+version = "0.39.0"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "High level client library for the Stardust XR display server"
 license = "MIT"
@@ -10,7 +10,7 @@ homepage = "https://stardustxr.org"
 
 [dependencies]
 color-rs = "0.7.1"
-flagset = "0.4.3"
+flagset = { version = "0.4.3", features = ["serde"] }
 mint = "0.5.9"
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
