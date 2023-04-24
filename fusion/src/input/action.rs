@@ -135,6 +135,9 @@ impl<S: InputActionState> InputActionHandler<S> {
 			})
 			.collect();
 	}
+	pub fn update_state(&mut self, state: S) {
+		self.state = state;
+	}
 }
 impl<S: InputActionState> InputHandlerHandler for InputActionHandler<S> {
 	fn input(&mut self, input: UnknownInputMethod, data: InputData) {
