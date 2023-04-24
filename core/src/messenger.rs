@@ -50,12 +50,12 @@ fn debug_call(
 						true => "remote",
 						false => "local",
 					},
-					call_type,
 					id,
 					path,
 					method,
 					err,
 					data,
+					"Stardust error",
 				)
 			}
 			_ => {
@@ -70,6 +70,7 @@ fn debug_call(
 					method,
 					err,
 					data,
+					"Stardust message",
 				)
 			}
 		}
