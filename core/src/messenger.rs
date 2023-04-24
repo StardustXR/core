@@ -26,15 +26,11 @@ fn debug_call(
 	data: &[u8],
 ) {
 	let level = match call_type {
-		0 => tracing::Level::ERROR,
+		0 => tracing::Level::WARN,
 		_ => tracing::Level::DEBUG,
 	};
 
 	if tracing::level_enabled!(level) {
-		let direction = match incoming {
-			true => "incoming",
-			false => "outgoing",
-		};
 		let call_type = match call_type {
 			0 => "error",
 			1 => "signal",
@@ -48,11 +44,33 @@ fn debug_call(
 		};
 
 		match level {
-			tracing::Level::ERROR => {
-				tracing::error!(direction, call_type, id, path, method, err, data,)
+			tracing::Level::WARN => {
+				tracing::warn!(
+					source = match incoming {
+						true => "remote",
+						false => "local",
+					},
+					call_type,
+					id,
+					path,
+					method,
+					err,
+					data,
+				)
 			}
 			_ => {
-				tracing::trace!(direction, call_type, id, path, method, err, data,)
+				tracing::trace!(
+					direction = match incoming {
+						true => "incoming",
+						false => "outgoing",
+					},
+					call_type,
+					id,
+					path,
+					method,
+					err,
+					data,
+				)
 			}
 		}
 	}
