@@ -269,14 +269,20 @@ impl Client {
 
 	/// Set the prefixes for any `NamespacedResource`s.
 	pub fn set_base_prefixes<H: AsRef<Path>>(&self, prefixes: &[H]) {
-		let prefixes: Vec<&Path> = prefixes
-			.iter()
-			.map(|p| Path::new(p.as_ref()))
-			.filter(|p| p.is_absolute() && p.exists())
-			.collect();
+		let env_prefixes = option_env!("STARDUST_RES_PREFIXES");
+
+		let prefix_vec: Vec<&Path> = if let Some(env_prefixes) = env_prefixes {
+			env_prefixes.split(":").map(|p| Path::new(p)).collect()
+		} else {
+			prefixes
+				.iter()
+				.map(|p| p.as_ref())
+				.filter(|p| p.is_absolute() && p.exists())
+				.collect()
+		};
 
 		self.message_sender_handle
-			.signal("/", "set_base_prefixes", &serialize(prefixes).unwrap())
+			.signal("/", "set_base_prefixes", &serialize(prefix_vec).unwrap())
 			.unwrap();
 	}
 
