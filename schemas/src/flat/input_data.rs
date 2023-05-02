@@ -66,6 +66,8 @@ pub struct InputData {
 	pub distance: f32,
 	/// Non-spatial data in a map.
 	pub datamap: Datamap,
+	/// There are [order] objects that got this input data before this one.
+	pub order: u32,
 }
 impl InputData {
 	pub fn deserialize(data: &[u8]) -> Result<InputData, String> {
@@ -83,6 +85,7 @@ impl InputData {
 			},
 			distance: input.distance,
 			datamap: Datamap::new(datamap).map_err(|e| e.to_string())?,
+			order: input.order,
 		})
 	}
 	pub fn serialize(&self) -> Vec<u8> {
@@ -95,6 +98,7 @@ impl InputData {
 			},
 			distance: self.distance,
 			datamap: Some(self.datamap.0.borrow_raw().clone()),
+			order: self.order,
 		};
 
 		let mut fbb = flatbuffers::FlatBufferBuilder::new();
