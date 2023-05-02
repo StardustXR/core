@@ -146,7 +146,8 @@ impl<S: InputActionState> InputHandlerHandler for InputActionHandler<S> {
 			.actions
 			.iter_mut()
 			.map(|action| action.input_event(&data, &self.state) && action.capture_on_trigger)
-			.any(|b| b);
+			.reduce(|a, b| a || b)
+			.unwrap_or_default();
 		if capture {
 			let _ = input.capture();
 		}
