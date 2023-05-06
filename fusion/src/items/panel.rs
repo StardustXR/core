@@ -18,7 +18,6 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use stardust_xr::schemas::flex::deserialize;
 use std::{ops::Deref, sync::Arc};
 pub use xkbcommon::xkb;
-use xkbcommon::xkb::{Keymap, KEYMAP_FORMAT_TEXT_V1};
 
 /// Handler for the `panel` item.
 #[allow(unused_variables)]
@@ -458,10 +457,11 @@ impl PanelItem {
 
 	/// Set the keyboard's keymap with a given `xkb` keymap.
 	pub fn keyboard_set_keymap(&self, keymap: &str) -> Result<(), NodeError> {
-		Keymap::new_from_string(
+		#[cfg(feature = "verify-keymap")]
+		xkb::Keymap::new_from_string(
 			&xkb::Context::new(0),
 			keymap.to_string(),
-			KEYMAP_FORMAT_TEXT_V1,
+			xkb::KEYMAP_FORMAT_TEXT_V1,
 			0,
 		)
 		.ok_or(NodeError::InvalidPath)?;

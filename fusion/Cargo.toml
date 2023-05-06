@@ -1,12 +1,16 @@
 [package]
 edition = "2021"
 name = "stardust-xr-fusion"
-version = "0.39.3"
+version = "0.39.4"
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "High level client library for the Stardust XR display server"
 license = "MIT"
 repository = "https://github.com/StardustXR/stardust-xr/"
 homepage = "https://stardustxr.org"
+
+[features]
+default = []
+verify-keymap = []
 
 [dependencies]
 color-rs = "0.7.1"
