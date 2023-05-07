@@ -5,7 +5,7 @@ version = "1.5.0"
 authors = ["Nova King <technobaboo@protonmail.me", "Philpax"]
 description = "Stardust XR core schemas, generated from flatbuffers automatically"
 license = "MIT"
-repository = "https://github.com/StardustXR/stardust-xr/"
+repository = "https://github.com/StardustXR/core/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
@@ -17,6 +17,9 @@ mint = {version = "0.5.9", features = ["serde"]}
 serde = {version = "1.0.160", features = ["derive"]}
 thiserror = "1.0.40"
 
-[dev-dependencies]
+[build-dependencies]
 manifest-dir-macros = "0.1.16"
+serde_repr = "0.1.9"
+
+[dev-dependencies]
 serde_repr = "0.1.9"

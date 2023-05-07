@@ -1,4 +1,4 @@
-use crate::generated::common::{QuatT, Vec3T};
+use super::generated::common::{QuatT, Vec3T};
 use mint::{Quaternion, Vector3};
 
 impl From<Vector3<f32>> for Vec3T {

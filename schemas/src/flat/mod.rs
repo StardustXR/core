@@ -2,6 +2,8 @@
 
 pub use flatbuffers;
 
+pub(crate) mod generated;
+
 mod common;
 pub use common::*;
 mod hand;
@@ -13,4 +15,4 @@ pub use pointer::*;
 mod tip;
 pub use tip::*;
 
-pub use crate::generated::message;
+pub use generated::message;

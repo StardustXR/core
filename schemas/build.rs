@@ -1,13 +1,17 @@
-use manifest_dir_macros::{directory_relative_path, file_relative_path};
+use manifest_dir_macros::{directory_relative_path, path};
 use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 fn main() {
-	println!("cargo:rerun-if-changed=schemas");
-	let out_dir = PathBuf::from_str(directory_relative_path!("src/generated")).unwrap();
-	fs::remove_dir_all(&out_dir).unwrap();
+	if option_env!("STARDUST_REGEN_FBS").is_none() {
+		return;
+	}
+
+	println!("cargo:rerun-if-changed=fbs");
+	let out_dir = PathBuf::from_str(path!("src/flat/generated")).unwrap();
+	let _ = fs::remove_dir_all(&out_dir);
 	fs::create_dir_all(&out_dir).unwrap();
 
 	let files: Vec<_> = fs::read_dir(directory_relative_path!("fbs"))
@@ -55,5 +59,5 @@ fn main() {
 		.unwrap();
 	}
 
-	fs::write(file_relative_path!("src/generated/mod.rs"), buf).unwrap();
+	fs::write(path!("src/flat/generated/mod.rs"), buf).unwrap();
 }

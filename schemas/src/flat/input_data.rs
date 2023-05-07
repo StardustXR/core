@@ -1,4 +1,4 @@
-use crate::generated::{
+use super::generated::{
 	self,
 	input::{InputDataRawT, InputDataT},
 };

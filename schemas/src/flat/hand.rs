@@ -1,4 +1,4 @@
-use crate::generated::{
+use super::generated::{
 	common::JointT,
 	input_hand::{FingerT, HandT, ThumbT},
 };

@@ -5,11 +5,11 @@
 #![allow(clippy::derivable_impls)]
 #![allow(clippy::extra_unused_lifetimes)]
 #![allow(clippy::derive_partial_eq_without_eq)]
-mod generated;
-use generated::*;
-
 /// Flatbuffers schemas and exports.
 pub mod flat;
+
+/// To get the files compiling correctly
+use flat::generated::*;
 
 /// Flexbuffers schemas and exports.
 pub mod flex;
