@@ -1,7 +1,7 @@
 use super::Item;
 use crate::{
 	client::Client,
-	drawable::Model,
+	drawable::ModelPart,
 	node::{HandledNodeType, Node, NodeError, NodeType},
 	spatial::Spatial,
 	HandlerWrapper,
@@ -387,12 +387,11 @@ impl PanelItem {
 	pub fn apply_surface_material(
 		&self,
 		surface: &SurfaceID,
-		model: &Model,
-		material_index: u32,
+		model_part: &ModelPart,
 	) -> Result<(), NodeError> {
 		self.node.send_remote_signal(
 			"apply_surface_material",
-			&(surface, model.node().get_path()?, material_index),
+			&(surface, model_part.node().get_path()?),
 		)
 	}
 
