@@ -3,8 +3,7 @@ use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::Transform;
 use stardust_xr_fusion::{
 	client::{Client, FrameInfo, RootHandler},
-	drawable::{MaterialParameter, Model, ResourceID},
-	spatial::Spatial,
+	drawable::{MaterialParameter, Model, ModelPart, ResourceID},
 };
 use std::sync::Arc;
 
@@ -24,47 +23,27 @@ async fn main() {
 }
 
 struct SpatialDemo {
-	_root: Spatial,
-	gem: Model,
-	ring_inner: Model,
-	ring_middle: Model,
-	ring_outer: Model,
+	_gyro: Model,
+	gem: ModelPart,
+	ring_inner: ModelPart,
+	ring_middle: ModelPart,
+	ring_outer: ModelPart,
 }
 impl SpatialDemo {
 	fn new(client: &Arc<Client>) -> Self {
-		let _root = Spatial::create(client.get_root(), Transform::default(), true).unwrap();
-
-		let gem = Model::create(
-			&_root,
+		let gyro = Model::create(
+			&client.get_root(),
 			Transform::default(),
-			&ResourceID::new_namespaced("fusion", "gyro_gem"),
-		)
-		.unwrap();
-		let ring_inner = Model::create(
-			&_root,
-			Transform::default(),
-			&ResourceID::new_namespaced("fusion", "gyro_inside"),
-		)
-		.unwrap();
-		let ring_middle = Model::create(
-			&ring_inner,
-			Transform::default(),
-			&ResourceID::new_namespaced("fusion", "gyro_middle"),
-		)
-		.unwrap();
-		let ring_outer = Model::create(
-			&ring_middle,
-			Transform::default(),
-			&ResourceID::new_namespaced("fusion", "gyro_outside"),
+			&ResourceID::new_namespaced("fusion", "gyro"),
 		)
 		.unwrap();
 
 		SpatialDemo {
-			_root,
-			gem,
-			ring_inner,
-			ring_middle,
-			ring_outer,
+			gem: gyro.model_part("Gem").unwrap(),
+			ring_inner: gyro.model_part("OuterRing/MiddleRing/InnerRing").unwrap(),
+			ring_middle: gyro.model_part("OuterRing/MiddleRing").unwrap(),
+			ring_outer: gyro.model_part("OuterRing").unwrap(),
+			_gyro: gyro,
 		}
 	}
 }
@@ -74,7 +53,6 @@ impl RootHandler for SpatialDemo {
 
 		self.gem
 			.set_material_parameter(
-				0,
 				"color",
 				MaterialParameter::Color([0.0, 0.25, 1.0, elapsed.sin().abs()]),
 			)
@@ -83,13 +61,13 @@ impl RootHandler for SpatialDemo {
 			.set_rotation(None, Quat::from_rotation_y(elapsed))
 			.unwrap();
 		self.ring_inner
-			.set_rotation(None, Quat::from_rotation_z(elapsed))
-			.unwrap();
-		self.ring_middle
 			.set_rotation(None, Quat::from_rotation_x(elapsed))
 			.unwrap();
-		self.ring_outer
+		self.ring_middle
 			.set_rotation(None, Quat::from_rotation_z(elapsed))
+			.unwrap();
+		self.ring_outer
+			.set_rotation(None, Quat::from_rotation_x(elapsed))
 			.unwrap();
 	}
 }

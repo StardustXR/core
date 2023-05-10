@@ -30,6 +30,40 @@ pub enum MaterialParameter {
 	Texture(ResourceID),
 }
 
+#[derive(Debug)]
+pub struct ModelPart {
+	spatial: Spatial,
+}
+impl ModelPart {
+	/// Set a property of a material on this model node.
+	pub fn set_material_parameter(
+		&self,
+		name: &str,
+		value: MaterialParameter,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("set_material_parameter", &(name, value))
+	}
+}
+impl NodeType for ModelPart {
+	fn node(&self) -> &Node {
+		&self.spatial.node()
+	}
+
+	fn alias(&self) -> Self {
+		ModelPart {
+			spatial: self.spatial.alias(),
+		}
+	}
+}
+impl Deref for ModelPart {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
+	}
+}
+
 /// A 3D model in the GLTF format.
 ///
 /// # Example
@@ -65,14 +99,20 @@ impl<'a> Model {
 	}
 
 	/// Set a property of a material on this model.
-	pub fn set_material_parameter(
-		&self,
-		material_idx: u32,
-		name: &str,
-		value: MaterialParameter,
-	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("set_material_parameter", &(material_idx, name, value))
+	pub fn model_part(&self, relative_path: &str) -> Result<ModelPart, NodeError> {
+		if relative_path.starts_with('/') {
+			return Err(NodeError::InvalidPath);
+		}
+		Ok(ModelPart {
+			spatial: Spatial {
+				node: Node::from_path(
+					&self.node().client()?,
+					self.node().get_path()?,
+					relative_path,
+					false,
+				),
+			},
+		})
 	}
 }
 impl NodeType for Model {
@@ -105,7 +145,9 @@ async fn fusion_model() {
 	let gyro_gem_resource = ResourceID::new_namespaced("fusion", "gyro_gem");
 	let model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource).unwrap();
 	model
-		.set_material_parameter(0, "color", MaterialParameter::Color([0.0, 1.0, 0.5, 0.75]))
+		.model_part("Gem")
+		.unwrap()
+		.set_material_parameter("color", MaterialParameter::Color([0.0, 1.0, 0.5, 0.75]))
 		.unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
