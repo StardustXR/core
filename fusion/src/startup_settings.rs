@@ -3,11 +3,11 @@
 use crate::{
 	client::Client,
 	items::{Item, ItemAcceptor},
-	node::{Node, NodeError},
+	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
 use nanoid::nanoid;
-use std::{future::Future, sync::Arc};
+use std::{future::Future, ops::Deref, sync::Arc};
 
 /// A node to generate startup IDs for launching clients with.
 ///
@@ -76,6 +76,24 @@ impl StartupSettings {
 	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
 		self.node
 			.execute_remote_method("generate_startup_token", &())
+	}
+}
+impl NodeType for StartupSettings {
+	fn node(&self) -> &Node {
+		&self.node
+	}
+
+	fn alias(&self) -> Self {
+		StartupSettings {
+			node: self.node.alias(),
+		}
+	}
+}
+impl Deref for StartupSettings {
+	type Target = Node;
+
+	fn deref(&self) -> &Self::Target {
+		self.node()
 	}
 }
 
