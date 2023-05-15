@@ -4,7 +4,11 @@ use crate::{
 	spatial::Spatial,
 };
 
-use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
+use serde::{Deserialize, Serialize};
+use stardust_xr::{
+	schemas::flex::flexbuffers::{self, FlexbufferSerializer},
+	values::Transform,
+};
 use std::ops::Deref;
 
 /// Virtual spatial input device representing a tool device with a single point of interaction (pen tip, controller tip, etc.)
@@ -87,7 +91,7 @@ async fn fusion_tip_input_method() {
 	fn summon_model(parent: &Spatial, rotation: glam::Quat) -> Model {
 		Model::create(
 			parent,
-			Transform::from_rotation_scale(rotation, mint::Vector3::from([0.1; 3])),
+			Transform::from_rotation_scale(rotation, [0.1; 3]),
 			&crate::drawable::ResourceID::new_namespaced("fusion", "cursor_spike"),
 		)
 		.unwrap()
@@ -101,9 +105,15 @@ async fn fusion_tip_input_method() {
 		forward: Model,
 		backward: Model,
 	}
+	#[derive(Default, Serialize, Deserialize)]
+	struct Datamap {
+		grab: f32,
+		select: f32,
+	}
 	struct TipDemo {
 		tip: TipInputMethod,
 		cursor: Cursor,
+		datamap: Datamap,
 	}
 	impl crate::client::RootHandler for TipDemo {
 		fn frame(&mut self, info: FrameInfo) {
@@ -111,6 +121,11 @@ async fn fusion_tip_input_method() {
 			self.tip
 				.set_position(None, mint::Vector3::from([sin * 0.1, 0.0, cos * 0.1]))
 				.unwrap();
+
+			self.datamap.grab = sin;
+			let mut serializer = FlexbufferSerializer::new();
+			self.datamap.serialize(&mut serializer).unwrap();
+			self.tip.set_datamap(&serializer.take_buffer()).unwrap();
 		}
 	}
 
@@ -142,6 +157,7 @@ async fn fusion_tip_input_method() {
 			),
 		},
 		tip,
+		datamap: Datamap::default(),
 	});
 
 	tokio::select! {
