@@ -4,9 +4,8 @@ use crate::{
 	spatial::Spatial,
 };
 
-use serde::{Deserialize, Serialize};
 use stardust_xr::{
-	schemas::flex::flexbuffers::{self, FlexbufferSerializer},
+	schemas::flex::flexbuffers::{self},
 	values::Transform,
 };
 use std::ops::Deref;
@@ -72,6 +71,8 @@ impl Deref for TipInputMethod {
 async fn fusion_tip_input_method() {
 	use crate::client::{Client, FrameInfo};
 	use crate::drawable::Model;
+	use serde::Serialize;
+	
 	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
@@ -105,7 +106,7 @@ async fn fusion_tip_input_method() {
 		forward: Model,
 		backward: Model,
 	}
-	#[derive(Default, Serialize, Deserialize)]
+	#[derive(Default, serde::Serialize, serde::Deserialize)]
 	struct Datamap {
 		grab: f32,
 		select: f32,
@@ -123,7 +124,7 @@ async fn fusion_tip_input_method() {
 				.unwrap();
 
 			self.datamap.grab = sin;
-			let mut serializer = FlexbufferSerializer::new();
+			let mut serializer = flexbuffers::FlexbufferSerializer::new();
 			self.datamap.serialize(&mut serializer).unwrap();
 			self.tip.set_datamap(&serializer.take_buffer()).unwrap();
 		}
