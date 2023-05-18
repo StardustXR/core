@@ -71,7 +71,7 @@ pub struct ToplevelInfo {
 	pub parent: Option<String>,
 	/// Equivalent to the window title
 	pub title: Option<String>,
-	/// Application identifier, see https://standards.freedesktop.org/desktop-entry-spec/
+	/// Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>
 	pub app_id: Option<String>,
 	/// Current size in pixels
 	pub size: Vector2<u32>,
