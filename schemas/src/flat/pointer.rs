@@ -17,7 +17,7 @@ impl Pointer {
 			glam::Mat4::from_rotation_translation(self.orientation.into(), self.origin.into());
 
 		transform
-			.transform_vector3(glam::vec3(0.0, 0.0, 1.0))
+			.transform_vector3(glam::vec3(0.0, 0.0, -1.0))
 			.into()
 	}
 }
