@@ -20,11 +20,16 @@
 //! To make this all easier, the `action` module exists, check it out.
 
 pub mod action;
+mod pointer;
 mod tip;
 
 pub use action as action_handler;
+pub use pointer::PointerInputMethod;
+use rustc_hash::FxHashMap;
 pub use stardust_xr::schemas::flat::*;
 pub use tip::TipInputMethod;
+
+use crate::fields::UnknownField;
 
 use super::{
 	fields::Field,
@@ -32,9 +37,12 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use color_eyre::eyre::anyhow;
-use parking_lot::Mutex;
-use stardust_xr::{schemas::flex::flexbuffers, values::Transform};
+use color_eyre::eyre::{anyhow, bail};
+use parking_lot::{Mutex, RwLock, RwLockReadGuard};
+use stardust_xr::{
+	schemas::flex::{deserialize, flexbuffers},
+	values::Transform,
+};
 use std::{ops::Deref, sync::Arc};
 
 /// Handle raw input events.
@@ -44,13 +52,92 @@ pub trait InputHandlerHandler: Send + Sync {
 }
 
 /// Node representing a spatial input device.
-pub trait InputMethod {
-	fn node(&self) -> &Node;
-	fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
+#[derive(Debug)]
+pub struct InputMethod {
+	spatial: Spatial,
+	input_handlers: Arc<RwLock<FxHashMap<String, InputHandler>>>,
+}
+impl InputMethod {
+	pub(crate) fn handle_methods(&self) -> Result<(), NodeError> {
+		let client = Arc::downgrade(&self.node().client()?);
+		let path = self.node().get_path()?;
+		let input_handlers = Arc::downgrade(&self.input_handlers);
+		self.node().add_local_signal(
+			"handler_created",
+			move |data| -> color_eyre::eyre::Result<()> {
+				let Some(client) = client.upgrade() else {bail!("no client??")};
+				let Some(handlers) = input_handlers.upgrade() else {bail!("no handlers ohno")};
+				let uid: String = deserialize(data)?;
+
+				let node = Node::from_path(&client, &path, &uid, false);
+				let spatial = Spatial { node };
+				let field = UnknownField {
+					spatial: Spatial {
+						node: Node::from_path(
+							&client,
+							spatial.node().get_path().unwrap(),
+							"field",
+							false,
+						),
+					},
+				};
+				let input_handler = InputHandler { spatial, field };
+				handlers.write().insert(uid, input_handler);
+				Ok(())
+			},
+		)?;
+
+		let input_handlers = Arc::downgrade(&self.input_handlers);
+		self.node().add_local_signal(
+			"handler_destroyed",
+			move |data| -> color_eyre::eyre::Result<()> {
+				let Some(handlers) = input_handlers.upgrade() else {bail!("no handlers ohno")};
+				let uid: &str = deserialize(data)?;
+				handlers.write().remove(uid);
+				Ok(())
+			},
+		)?;
+
+		Ok(())
+	}
+
+	pub fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
 		flexbuffers::Reader::get_root(datamap)
 			.and_then(|root| root.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 		self.node().send_remote_signal_raw("set_datamap", datamap)
+	}
+
+	pub fn set_handler_order(&self, handlers: &[&InputHandler]) -> Result<(), NodeError> {
+		let handlers: Vec<_> = handlers
+			.into_iter()
+			.filter_map(|h| h.node().get_path().ok())
+			.collect();
+		self.node().send_remote_signal("set_handlers", &handlers)
+	}
+
+	/// Get a read only guard to the handlers list.
+	pub fn input_handlers(&self) -> RwLockReadGuard<FxHashMap<String, InputHandler>> {
+		self.input_handlers.read()
+	}
+}
+impl NodeType for InputMethod {
+	fn node(&self) -> &Node {
+		&self.spatial.node
+	}
+
+	fn alias(&self) -> Self {
+		InputMethod {
+			spatial: self.spatial.alias(),
+			input_handlers: self.input_handlers.clone(),
+		}
+	}
+}
+impl Deref for InputMethod {
+	type Target = Spatial;
+
+	fn deref(&self) -> &Self::Target {
+		&self.spatial
 	}
 }
 
@@ -98,6 +185,7 @@ impl Deref for UnknownInputMethod {
 #[derive(Debug)]
 pub struct InputHandler {
 	spatial: Spatial,
+	field: UnknownField,
 }
 impl<'a> InputHandler {
 	/// Create an input handler given a field, this will become inactive if the field is dropped.
@@ -126,6 +214,7 @@ impl<'a> InputHandler {
 					),
 				)?,
 			},
+			field: field.alias_unknown_field(),
 		})
 	}
 
@@ -160,6 +249,10 @@ impl<'a> InputHandler {
 		);
 		Ok(())
 	}
+
+	pub fn field(&self) -> Option<UnknownField> {
+		self.field.node().alive().then(|| self.field.alias())
+	}
 }
 impl NodeType for InputHandler {
 	fn node(&self) -> &Node {
@@ -169,6 +262,7 @@ impl NodeType for InputHandler {
 	fn alias(&self) -> Self {
 		InputHandler {
 			spatial: self.spatial.alias(),
+			field: self.field.alias(),
 		}
 	}
 }
