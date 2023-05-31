@@ -26,6 +26,8 @@ pub enum NodeError {
 	MessengerError { e: MessengerError },
 	#[error("Node does not exist anymore")]
 	DoesNotExist,
+	#[error("Node's signal/method isn't available because it is an alias node")]
+	NotAliased,
 	#[error("invalid path")]
 	InvalidPath,
 	#[error("Serialization failed")]
@@ -69,7 +71,7 @@ pub trait HandledNodeType: NodeType {}
 type Signal = dyn Fn(&[u8]) -> color_eyre::eyre::Result<()> + Send + Sync + 'static;
 type Method = dyn Fn(&[u8]) -> color_eyre::eyre::Result<Vec<u8>> + Send + Sync + 'static;
 
-pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O>>>;
+pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O> + Send + Sync>>;
 
 pub struct NodeInternals {
 	client: Weak<Client>,
@@ -201,6 +203,14 @@ impl Node {
 		Ok(self.internals()?.path())
 	}
 
+	/// Check if this node is still alive.
+	pub fn alive(&self) -> bool {
+		match self {
+			Node::Owned(_) => true,
+			Node::Aliased(a) => a.strong_count() > 0,
+		}
+	}
+
 	/// Send a signal to the node on the server. Not needed unless implementing functionality Fusion does not already have.
 	pub fn send_remote_signal<S: Serialize>(
 		&self,
@@ -238,7 +248,7 @@ impl Node {
 		&self,
 		method_name: &str,
 		send_data: &S,
-	) -> Result<Pin<Box<dyn Future<Output = Result<D, NodeError>>>>, NodeError> {
+	) -> Result<Pin<Box<dyn Future<Output = Result<D, NodeError>> + Send + Sync>>, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
 		let future = self.execute_remote_method_raw(method_name, &send_data)?;
 		Ok(Box::pin(async move {
