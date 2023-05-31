@@ -97,7 +97,7 @@ pub trait Field: NodeType {
 		Self: Sized,
 	{
 		self.node()
-			.execute_remote_method_trait("closestPoint", &(space.node().get_path()?, point.into()))
+			.execute_remote_method_trait("closest_point", &(space.node().get_path()?, point.into()))
 	}
 
 	/// Ray march through the given field at a server-defined ray march step length.
@@ -121,7 +121,7 @@ pub trait Field: NodeType {
 		}
 
 		let future = self.node().execute_remote_method_trait(
-			"closestPoint",
+			"ray_march",
 			&(space.node().get_path()?, ray_origin, ray_direction),
 		)?;
 
