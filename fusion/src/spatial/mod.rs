@@ -24,7 +24,7 @@ use super::{
 use crate::fields::UnknownField;
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
-use stardust_xr::values::Transform;
+use stardust_xr::values::{self, Transform};
 use std::{future::Future, sync::Arc};
 
 /// A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
@@ -64,6 +64,19 @@ impl Spatial {
 		Spatial {
 			node: Node::from_path(client, parent, name, destroyable),
 		}
+	}
+
+	/// Get the bounding box of this spatial and its children relative to another spatial
+	pub fn get_bounding_box(
+		&self,
+		relative_to: Option<&Spatial>,
+	) -> Result<impl Future<Output = Result<values::Box, NodeError>>, NodeError> {
+		self.node.execute_remote_method(
+			"get_bounding_box",
+			&relative_to
+				.map(|relative_to| relative_to.node().get_path())
+				.transpose()?,
+		)
 	}
 
 	/// Get the position, rotation, and scale relative to some other spatial node.
@@ -194,7 +207,24 @@ async fn fusion_spatial() {
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	let spatial = Spatial::create(client.get_root(), Transform::default(), false).unwrap();
+	let spatial = Spatial::create(
+		client.get_root(),
+		Transform::from_position_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
+		false,
+	)
+	.unwrap();
+	let bounding_box = spatial
+		.get_bounding_box(Some(client.get_root()))
+		.unwrap()
+		.await
+		.unwrap();
+	assert_eq!(
+		bounding_box,
+		stardust_xr::values::Box {
+			center: [1.0, 0.5, 0.1].into(),
+			size: [0.0; 3].into()
+		}
+	);
 	drop(spatial);
 
 	tokio::select! {

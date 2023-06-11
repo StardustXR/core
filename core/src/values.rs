@@ -1,6 +1,13 @@
 use mint::{Quaternion, Vector3};
 use serde::{Deserialize, Serialize};
 
+/// A box
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Box {
+	pub center: Vector3<f32>,
+	pub size: Vector3<f32>,
+}
+
 /// Simple transform
 #[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Transform {
