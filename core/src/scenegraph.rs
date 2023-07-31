@@ -1,4 +1,5 @@
 use thiserror::Error;
+use std::os::unix::io::RawFd;
 
 /// Error for all scenegraph-related things.
 #[derive(Error, Debug)]
@@ -19,13 +20,14 @@ pub enum ScenegraphError {
 
 /// Handles node signals and method calls for the messenger.
 pub trait Scenegraph {
-	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
-		self.execute_method(path, method, data).map(|_| ())
+	fn send_signal(&self, path: &str, method: &str, data: &[u8], fds: Vec<RawFd>) -> Result<(), ScenegraphError> {
+		self.execute_method(path, method, data, fds).map(|_| ())
 	}
 	fn execute_method(
 		&self,
 		path: &str,
 		method: &str,
 		data: &[u8],
+		fds: Vec<RawFd>,
 	) -> Result<Vec<u8>, ScenegraphError>;
 }

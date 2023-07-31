@@ -12,6 +12,7 @@ homepage = "https://stardustxr.org"
 cluFlock = "1.2.7"
 color-rs = "0.7.1"
 mint = { version = "0.5.9", features = ["serde"] }
+nix = "0.26.2"
 parking_lot = "0.12.1"
 stardust-xr-schemas = { path = "../schemas", version = "1.5.0" }
 serde = { version = "1.0.152", features = ["derive"] }

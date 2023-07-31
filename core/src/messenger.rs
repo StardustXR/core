@@ -1,15 +1,18 @@
 //! Symmetrical messenger for both client and server.
 
 use crate::scenegraph;
+use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags, CMSG_SPACE, c_uint};
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
 use stardust_xr_schemas::flex::flexbuffers;
 use std::future::Future;
+use std::io::{IoSlice, IoSliceMut};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::os::unix::io::{AsRawFd, RawFd};
 use thiserror::Error;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, Interest};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
@@ -106,11 +109,27 @@ impl From<InvalidFlatbuffer> for MessengerError {
 /// Wrapper for messages after being serialized, for type safety.
 pub struct Message {
 	data: Vec<u8>,
+	fds: Vec<RawFd>,
 }
-impl Message {
-	/// Get the data inside to send over the socket.
-	pub fn into_data(self) -> Vec<u8> {
-		self.data
+
+/// Header for sending messages over the socket.
+#[derive(Clone, Copy)]
+pub struct Header {
+	pub body_length: u32,
+	pub fd_count: u8,
+}
+impl Header {
+	pub const SIZE: usize = 5;
+	pub fn into_bytes(self) -> [u8; Self::SIZE] {
+		let mut bytes = [0; Self::SIZE];
+		bytes[0..4].copy_from_slice(&self.body_length.to_ne_bytes());
+		bytes[4] = self.fd_count;
+		bytes
+	}
+	pub fn from_bytes(bytes: [u8; Self::SIZE]) -> Self {
+		let [body_length @ .., fd_count] = bytes;
+		let body_length = u32::from_ne_bytes(body_length);
+		Header { body_length, fd_count }
 	}
 }
 
@@ -149,15 +168,46 @@ impl MessageReceiver {
 		&mut self,
 		scenegraph: &S,
 	) -> Result<(), MessengerError> {
-		let mut message_length_buffer: [u8; 4] = [0; 4];
-		self.read.read_exact(&mut message_length_buffer).await?;
-		let message_length: u32 = u32::from_ne_bytes(message_length_buffer);
+		let mut header_buffer = [0_u8; Header::SIZE];
+		self.read.read_exact(&mut header_buffer).await?;
+		let header = Header::from_bytes(header_buffer);
 
-		let mut message_buffer: Vec<u8> = std::vec::from_elem(0_u8, message_length as usize);
-		self.read.read_exact(message_buffer.as_mut_slice()).await?;
+		let mut body: Vec<u8> = std::vec::from_elem(0_u8, header.body_length as usize);
+		let fds: Vec<RawFd>;
+		if header.fd_count < 1 {
+			self.read.read_exact(&mut body.as_mut_slice()).await?;
+			fds = Vec::new();
+			
+		} else {
+			let iov = &mut [IoSliceMut::new(body.as_mut_slice())];
+
+			// Nix's suggested cmsg_space macro doesn't support fd_count as a variable, so we have to do this manually.
+			let space = unsafe {
+				CMSG_SPACE((::std::mem::size_of::<RawFd>() * header.fd_count as usize) as c_uint)
+			} as usize;
+            let mut cmsgs = Vec::<u8>::with_capacity(space);
+
+			let stream = self.read.as_ref();
+			fds = stream.async_io(Interest::READABLE, || {
+				match recvmsg::<()>(stream.as_raw_fd(), iov, Some(&mut cmsgs), MsgFlags::empty()){
+					Ok(recv_msg) => {
+						let fds = recv_msg.cmsgs().map(|cmsg| {
+							if let ControlMessageOwned::ScmRights(fds) = cmsg {
+								fds
+							} else {
+								Vec::new()
+							}
+						}).flatten().collect();
+						Ok(fds)
+					},
+					Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
+					Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+				}
+			}).await?;
+		}
 
 		self.update_pending_futures();
-		self.handle_message(message_buffer, scenegraph)
+		self.handle_message(body, scenegraph, fds)
 	}
 
 	#[instrument(level = "trace", skip_all)]
@@ -165,6 +215,7 @@ impl MessageReceiver {
 		&mut self,
 		message: Vec<u8>,
 		scenegraph: &S,
+		fds: Vec<RawFd>,
 	) -> Result<(), MessengerError> {
 		let message = root_as_message(&message)?;
 		let message_type = message.type_();
@@ -191,14 +242,14 @@ impl MessageReceiver {
 			}
 			// Signals
 			1 => {
-				let signal_status = scenegraph.send_signal(path, method, data);
+				let signal_status = scenegraph.send_signal(path, method, data, fds);
 				if let Err(e) = signal_status {
 					self.send_handle.error(path, method, e, data)?;
 				}
 			}
 			// Method called
 			2 => {
-				let method_result = scenegraph.execute_method(path, method, data);
+				let method_result = scenegraph.execute_method(path, method, data, fds);
 				match method_result {
 					Ok(return_value) => self.send_handle.send(serialize_call(
 						3,
@@ -207,6 +258,7 @@ impl MessageReceiver {
 						method,
 						None,
 						&return_value,
+						&[],
 					))?,
 					Err(error) => self.send_handle.error(path, method, error, data)?,
 				};
@@ -242,15 +294,15 @@ pub fn serialize_error<T: std::fmt::Display>(
 	data: &[u8],
 ) -> Message {
 	let error = format!("{}", err);
-	serialize_call(0, None, object, method, Some(error.as_str()), data)
+	serialize_call(0, None, object, method, Some(error.as_str()), data, &[])
 }
 /// Generate a signal message from arguments.
-pub fn serialize_signal_call(object: &str, method: &str, data: &[u8]) -> Message {
-	serialize_call(1, None, object, method, None, data)
+pub fn serialize_signal_call(object: &str, method: &str, data: &[u8], fds: &[RawFd]) -> Message {
+	serialize_call(1, None, object, method, None, data, fds)
 }
 /// Generate a method message from arguments.
-pub fn serialize_method_call(id: u64, object: &str, method: &str, data: &[u8]) -> Message {
-	serialize_call(2, Some(id), object, method, None, data)
+pub fn serialize_method_call(id: u64, object: &str, method: &str, data: &[u8], fds: &[RawFd]) -> Message {
+	serialize_call(2, Some(id), object, method, None, data, fds)
 }
 #[instrument(level = "trace", skip_all)]
 fn serialize_call(
@@ -260,6 +312,7 @@ fn serialize_call(
 	method: &str,
 	err: Option<&str>,
 	data: &[u8],
+	fds: &[RawFd],
 ) -> Message {
 	debug_call(false, call_type, id, Some(path), Some(method), err, data);
 
@@ -283,6 +336,7 @@ fn serialize_call(
 	fbb.finish(message_constructed, None);
 	Message {
 		data: fbb.finished_data().to_vec(),
+		fds: fds.to_vec(),
 	}
 }
 
@@ -319,10 +373,29 @@ impl MessageSender {
 	}
 	/// Send a message and await until sent.
 	pub async fn send(&mut self, message: Message) -> Result<(), MessengerError> {
-		let message = message.into_data();
-		let message_length = message.len() as u32;
-		self.write.write_all(&message_length.to_ne_bytes()).await?;
-		self.write.write_all(&message).await?;
+		let body = &message.data;
+		let header = Header {
+			body_length: body.len() as u32,
+			fd_count: message.fds.len() as u8,
+		};
+
+		self.write.write_all(&header.into_bytes()).await?;
+
+		if header.fd_count < 1 {
+			self.write.write_all(body).await?;
+		} else {
+			let iov = &[IoSlice::new(body)];
+			let cmsgs = &[ControlMessage::ScmRights(&message.fds)];
+
+			let stream = self.write.as_ref();
+			stream.async_io(Interest::WRITABLE, || {
+				match sendmsg::<()>(stream.as_raw_fd(), iov, cmsgs, MsgFlags::empty(), None){
+					Ok(_) => Ok(()),
+					Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
+					Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+				}
+			}).await?;
+		}
 		Ok(())
 	}
 	/// Get a handle to send messages from anywhere.
@@ -347,8 +420,9 @@ impl MessageSender {
 		node_path: &str,
 		signal_name: &str,
 		data: &[u8],
+		fds: &[RawFd],
 	) -> Result<(), MessengerError> {
-		self.send(serialize_signal_call(node_path, signal_name, data))
+		self.send(serialize_signal_call(node_path, signal_name, data, fds))
 			.await
 	}
 	/// Call a method immediately, await until other side sends back a response or the message fails to send.
@@ -357,13 +431,14 @@ impl MessageSender {
 		node_path: &str,
 		method: &str,
 		data: &[u8],
+		fds: &[RawFd],
 	) -> Result<Result<Vec<u8>, String>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let id = self.max_message_id.load(Ordering::Relaxed);
 		self.pending_future_tx
 			.send((id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
-		self.send(serialize_method_call(id, node_path, method, data))
+		self.send(serialize_method_call(id, node_path, method, data, fds))
 			.await?;
 		self.max_message_id.store(id + 1, Ordering::Relaxed);
 		rx.await.map_err(|_| MessengerError::ReceiverDropped)
@@ -394,8 +469,9 @@ impl MessageSenderHandle {
 		node_path: &str,
 		signal_name: &str,
 		data: &[u8],
+		fds: &[RawFd],
 	) -> Result<(), MessengerError> {
-		self.send(serialize_signal_call(node_path, signal_name, data))
+		self.send(serialize_signal_call(node_path, signal_name, data, fds))
 	}
 	/// Queue up a method to be sent and get back a future for when a response is returned.
 	pub fn method(
@@ -403,13 +479,14 @@ impl MessageSenderHandle {
 		node_path: &str,
 		method: &str,
 		data: &[u8],
+		fds: &[RawFd],
 	) -> Result<impl Future<Output = Result<Vec<u8>, String>>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let id = self.max_message_id.load(Ordering::Relaxed);
 		self.pending_future_tx
 			.send((id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
-		self.send(serialize_method_call(id, node_path, method, data))?;
+		self.send(serialize_method_call(id, node_path, method, data, fds))?;
 		self.max_message_id.store(id + 1, Ordering::Relaxed);
 		Ok(async move { rx.await.map_err(|e| e.to_string())? })
 	}

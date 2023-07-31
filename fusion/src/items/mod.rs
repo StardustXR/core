@@ -150,6 +150,7 @@ impl<I: Item> ItemUI<I> {
 				"/item",
 				"register_item_ui",
 				&serialize([I::TYPE_NAME]).map_err(|_| NodeError::Serialization)?,
+				&[],
 			)
 			.map_err(|e| NodeError::MessengerError { e })?;
 		Ok(item_ui)

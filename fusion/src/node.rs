@@ -101,7 +101,7 @@ impl Drop for NodeInternals {
 		if let Some(client) = self.client.upgrade() {
 			let path = self.path();
 			if self.destroyable {
-				let _ = client.message_sender_handle.signal(&path, "destroy", &[]);
+				let _ = client.message_sender_handle.signal(&path, "destroy", &[], &[]);
 			}
 			client.scenegraph.remove_node(&path);
 		}
@@ -131,6 +131,7 @@ impl Node {
 				interface_path,
 				interface_method,
 				&serialize(data).map_err(|_| NodeError::Serialization)?,
+				&[],
 			)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
@@ -226,7 +227,7 @@ impl Node {
 	pub fn send_remote_signal_raw(&self, signal_name: &str, data: &[u8]) -> Result<(), NodeError> {
 		self.client()?
 			.message_sender_handle
-			.signal(&self.get_path()?, signal_name, data)
+			.signal(&self.get_path()?, signal_name, data, &[])
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
@@ -266,7 +267,7 @@ impl Node {
 		let future = self
 			.client()?
 			.message_sender_handle
-			.method(&self.get_path()?, method_name, data)
+			.method(&self.get_path()?, method_name, data, &[])
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
