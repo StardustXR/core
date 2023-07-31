@@ -17,6 +17,7 @@ use stardust_xr::{
 };
 use std::any::TypeId;
 use std::future::Future;
+use std::os::unix::io::RawFd;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use thiserror::Error;
@@ -51,7 +52,7 @@ impl Scenegraph {
 }
 
 impl scenegraph::Scenegraph for Scenegraph {
-	fn send_signal(&self, path: &str, method: &str, data: &[u8]) -> Result<(), ScenegraphError> {
+	fn send_signal(&self, path: &str, method: &str, data: &[u8], fds: Vec<RawFd>) -> Result<(), ScenegraphError> {
 		let node = self
 			.nodes
 			.lock()
@@ -72,6 +73,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 		path: &str,
 		method: &str,
 		data: &[u8],
+		fds: Vec<RawFd>,
 	) -> Result<Vec<u8>, ScenegraphError> {
 		let node = self
 			.nodes
@@ -282,7 +284,7 @@ impl Client {
 		};
 
 		self.message_sender_handle
-			.signal("/", "set_base_prefixes", &serialize(prefix_vec).unwrap())
+			.signal("/", "set_base_prefixes", &serialize(prefix_vec).unwrap(), &[])
 			.unwrap();
 	}
 
@@ -291,7 +293,7 @@ impl Client {
 	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
 		let future = self
 			.message_sender_handle
-			.method("/startup", "get_connection_environment", &[])
+			.method("/startup", "get_connection_environment", &[], &[])
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move {
@@ -310,7 +312,7 @@ impl Drop for Client {
 		self.stop_loop();
 		let _ = self
 			.message_sender_handle
-			.signal("/", "disconnect", &[0_u8; 0]);
+			.signal("/", "disconnect", &[0_u8; 0], &[]);
 	}
 }
 

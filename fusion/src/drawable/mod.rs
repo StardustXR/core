@@ -45,6 +45,7 @@ fn set_sky(
 			"/drawable",
 			"set_sky_file",
 			&serialize(&(file_str, tex, light)).map_err(|_| NodeError::Serialization)?,
+			&[],
 		)
 		.map_err(|e| NodeError::MessengerError { e })
 }
