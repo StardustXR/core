@@ -1,17 +1,16 @@
 //! Symmetrical messenger for both client and server.
 
 use crate::scenegraph;
+use nix::cmsg_space;
 use nix::fcntl::{fcntl, FcntlArg};
-use nix::sys::socket::{
-	c_uint, recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags, CMSG_SPACE,
-};
+use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags};
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
 use stardust_xr_schemas::flex::flexbuffers;
 use std::future::Future;
 use std::io::{IoSlice, IoSliceMut};
-use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd};
+use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use thiserror::Error;
@@ -127,23 +126,15 @@ impl Message {
 #[derive(Clone, Copy)]
 pub struct Header {
 	pub body_length: u32,
-	pub fd_count: u8,
 }
 impl Header {
-	pub const SIZE: usize = 5;
+	pub const SIZE: usize = 4;
 	pub fn into_bytes(self) -> [u8; Self::SIZE] {
-		let mut bytes = [0; Self::SIZE];
-		bytes[0..4].copy_from_slice(&self.body_length.to_ne_bytes());
-		bytes[4] = self.fd_count;
-		bytes
+		self.body_length.to_ne_bytes()
 	}
 	pub fn from_bytes(bytes: [u8; Self::SIZE]) -> Self {
-		let [body_length @ .., fd_count] = bytes;
-		let body_length = u32::from_ne_bytes(body_length);
-		Header {
-			body_length,
-			fd_count,
-		}
+		let body_length = u32::from_ne_bytes(bytes);
+		Header { body_length }
 	}
 }
 
@@ -188,51 +179,38 @@ impl MessageReceiver {
 
 		let mut body: Vec<u8> = std::vec::from_elem(0_u8, header.body_length as usize);
 		let fds: Vec<OwnedFd>;
-		if header.fd_count < 1 {
-			self.read.read_exact(&mut body.as_mut_slice()).await?;
-			fds = Vec::new();
-		} else {
-			let iov = &mut [IoSliceMut::new(body.as_mut_slice())];
+		let iov = &mut [IoSliceMut::new(body.as_mut_slice())];
 
-			// Nix's suggested cmsg_space macro doesn't support fd_count as a variable, so we have to do this manually.
-			let space = unsafe {
-				CMSG_SPACE((::std::mem::size_of::<OwnedFd>() * header.fd_count as usize) as c_uint)
-			} as usize;
-			let mut cmsgs = Vec::<u8>::with_capacity(space);
+		// 253 is the Linux value for SCM_MAX_FD (max FDs in a cmsg)
+		let mut cmsgs = cmsg_space!([RawFd; 253]);
 
-			let stream = self.read.as_ref();
-			fds = stream
-				.async_io(Interest::READABLE, || {
-					match recvmsg::<()>(
-						stream.as_raw_fd(),
-						iov,
-						Some(&mut cmsgs),
-						MsgFlags::empty(),
-					) {
-						Ok(recv_msg) => {
-							let fds = recv_msg
-								.cmsgs()
-								.map(|cmsg| {
-									if let ControlMessageOwned::ScmRights(fds) = cmsg {
-										fds
-									} else {
-										Vec::new()
-									}
-								})
-								.flatten()
-								.filter_map(|fd| match fcntl(fd, FcntlArg::F_GETFD) {
-									Err(nix::errno::Errno::EBADF) => None,
-									_ => unsafe { Some(OwnedFd::from_raw_fd(fd)) }, // Consider non-EBADF errors as valid
-								})
-								.collect();
-							Ok(fds)
-						}
-						Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
-						Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+		let stream = self.read.as_ref();
+		fds = stream
+			.async_io(Interest::READABLE, || {
+				match recvmsg::<()>(stream.as_raw_fd(), iov, Some(&mut cmsgs), MsgFlags::empty()) {
+					Ok(recv_msg) => {
+						let fds = recv_msg
+							.cmsgs()
+							.map(|cmsg| {
+								if let ControlMessageOwned::ScmRights(fds) = cmsg {
+									fds
+								} else {
+									Vec::new()
+								}
+							})
+							.flatten()
+							.filter_map(|fd| match fcntl(fd, FcntlArg::F_GETFD) {
+								Err(nix::errno::Errno::EBADF) => None,
+								_ => unsafe { Some(OwnedFd::from_raw_fd(fd)) }, // Consider non-EBADF errors as valid
+							})
+							.collect();
+						Ok(fds)
 					}
-				})
-				.await?;
-		}
+					Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
+					Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+				}
+			})
+			.await?;
 
 		self.update_pending_futures();
 		self.handle_message(body, scenegraph, fds)
@@ -426,12 +404,11 @@ impl MessageSender {
 		let body = &message.data;
 		let header = Header {
 			body_length: body.len() as u32,
-			fd_count: message.fds.len() as u8,
 		};
 
 		self.write.write_all(&header.into_bytes()).await?;
 
-		if header.fd_count < 1 {
+		if message.fds.is_empty() {
 			self.write.write_all(body).await?;
 		} else {
 			let iov = &[IoSlice::new(body)];
