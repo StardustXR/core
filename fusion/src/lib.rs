@@ -37,7 +37,7 @@ use self::node::HandledNodeType;
 use color_eyre::eyre::{anyhow, Result};
 use node::NodeError;
 pub use parking_lot::{Mutex, MutexGuard};
-use std::sync::Arc;
+use std::{os::fd::OwnedFd, sync::Arc};
 
 /// A wrapper around a node and a handler struct implementing the node's handler trait.
 /// Necessary because the methods on the handler may be called at any time and bundling the 2 together makes it harder to screw up.
@@ -94,28 +94,28 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 	pub(crate) fn add_handled_signal(
 		&self,
 		name: &str,
-		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8]) -> Result<()>,
+		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8], Vec<OwnedFd>) -> Result<()>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
-		self.node.node().add_local_signal(name, move |data| {
+		self.node.node().add_local_signal(name, move |data, fds| {
 			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
 			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
-			parse(node, handler, data)
+			parse(node, handler, data, fds)
 		})
 	}
 	// #[allow(clippy::type_complexity)]
 	pub(crate) fn add_handled_method(
 		&self,
 		name: &str,
-		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8]) -> Result<Vec<u8>>,
+		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8], Vec<OwnedFd>) -> Result<(Vec<u8>, Vec<OwnedFd>)>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
-		self.node.node().add_local_method(name, move |data| {
+		self.node.node().add_local_method(name, move |data, fds| {
 			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
 			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
-			parse(node, handler, data)
+			parse(node, handler, data, fds)
 		})
 	}
 }

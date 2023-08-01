@@ -41,7 +41,7 @@ use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
 	values::Transform,
 };
-use std::{any::TypeId, ops::Deref, sync::Arc};
+use std::{any::TypeId, ops::Deref, os::fd::OwnedFd, sync::Arc};
 
 /// Base item trait, `release` and `uid` are the ones that client devs may want to use.
 pub trait Item: NodeType + Send + Sync + 'static {
@@ -111,7 +111,7 @@ impl<I: Item> ItemUI<I> {
 		item_ui.node.add_local_signal("create_acceptor", {
 			let client = Arc::downgrade(client);
 			let acceptors = item_ui.acceptors.clone();
-			move |data| {
+			move |data, _fds| {
 				let Some(client) = client.upgrade() else {bail!("No client")};
 				let uid: &str = deserialize(data)?;
 				let acceptor: ItemAcceptor<I> = ItemAcceptor::from_path(
@@ -133,7 +133,7 @@ impl<I: Item> ItemUI<I> {
 		})?;
 		item_ui.node.add_local_signal("destroy_acceptor", {
 			let acceptors = item_ui.acceptors.clone();
-			move |data| {
+			move |data, _fds| {
 				let name: &str = deserialize(data)?;
 				acceptors.write().remove(name);
 				Ok(())
@@ -150,7 +150,7 @@ impl<I: Item> ItemUI<I> {
 				"/item",
 				"register_item_ui",
 				&serialize([I::TYPE_NAME]).map_err(|_| NodeError::Serialization)?,
-				&[],
+				Vec::new(),
 			)
 			.map_err(|e| NodeError::MessengerError { e })?;
 		Ok(item_ui)
@@ -182,6 +182,7 @@ impl<I: Item> ItemUI<I> {
 		ui: Arc<ItemUI<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let (uid, init_data): (&str, I::InitData) = deserialize(data)?;
 
@@ -200,6 +201,7 @@ impl<I: Item> ItemUI<I> {
 		ui: Arc<ItemUI<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
 		let items = ui.items.read();
@@ -216,6 +218,7 @@ impl<I: Item> ItemUI<I> {
 		ui: Arc<ItemUI<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
 		let Some(item) = ui.captured.write().remove(item_uid) else { return Ok(()) };
@@ -226,6 +229,7 @@ impl<I: Item> ItemUI<I> {
 		ui: Arc<ItemUI<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		ui.items.write().remove(uid);
@@ -358,7 +362,7 @@ impl<I: Item> ItemAcceptor<I> {
 		item_acceptor.node().add_local_signal("capture", {
 			let client = Arc::downgrade(&spatial_parent.node().client()?);
 			let items = item_acceptor.captured_items.clone();
-			move |data| {
+			move |data, _fds| {
 				let (item_uid, init_data): (&str, I::InitData) = deserialize(data)?;
 
 				let item = I::from_path(
@@ -373,7 +377,7 @@ impl<I: Item> ItemAcceptor<I> {
 		})?;
 		item_acceptor.node().add_local_signal("release", {
 			let items = item_acceptor.captured_items.clone();
-			move |data| {
+			move |data, _fds| {
 				let name: &str = deserialize(data)?;
 				items.write().remove(name);
 				Ok(())
@@ -420,6 +424,7 @@ impl<I: Item> ItemAcceptor<I> {
 		acceptor: Arc<ItemAcceptor<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let (uid, init_data): (&str, I::InitData) = deserialize(data)?;
 		let item = I::from_path(
@@ -440,6 +445,7 @@ impl<I: Item> ItemAcceptor<I> {
 		acceptor: Arc<ItemAcceptor<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		acceptor.captured_items.write().remove(uid);

@@ -33,7 +33,7 @@ use stardust_xr::{
 	schemas::flex::{deserialize, flexbuffers},
 	values::Transform,
 };
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
 
 /// Trait for handling when pulse receivers matching the sender's mask are created/destroyed on the server.
 pub trait PulseSenderHandler: Send + Sync {
@@ -129,6 +129,7 @@ impl PulseSender {
 		sender: Arc<PulseSender>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let client = sender.client()?;
 		let info: NewReceiverInfo = deserialize(data)?;
@@ -157,6 +158,7 @@ impl PulseSender {
 		sender: Arc<PulseSender>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let uid: &str = deserialize(data)?;
 		sender.receivers.write().remove(uid);
@@ -321,7 +323,7 @@ impl PulseReceiver {
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
 		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
 
-		handler_wrapper.add_handled_signal("data", move |_receiver, handler, data| {
+		handler_wrapper.add_handled_signal("data", move |_receiver, handler, data, _fds| {
 			#[derive(Deserialize)]
 			struct SendDataInfo<'a> {
 				uid: &'a str,

@@ -1,16 +1,19 @@
 //! Symmetrical messenger for both client and server.
 
 use crate::scenegraph;
-use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags, CMSG_SPACE, c_uint};
+use nix::fcntl::{fcntl, FcntlArg};
+use nix::sys::socket::{
+	c_uint, recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags, CMSG_SPACE,
+};
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
 use stardust_xr_schemas::flex::flexbuffers;
 use std::future::Future;
 use std::io::{IoSlice, IoSliceMut};
+use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::os::unix::io::{AsRawFd, RawFd};
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, Interest};
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
@@ -109,7 +112,15 @@ impl From<InvalidFlatbuffer> for MessengerError {
 /// Wrapper for messages after being serialized, for type safety.
 pub struct Message {
 	data: Vec<u8>,
-	fds: Vec<RawFd>,
+	fds: Vec<OwnedFd>,
+}
+impl Message {
+	pub fn into_message(self) -> Vec<u8> {
+		self.data
+	}
+	pub fn into_components(self) -> (Vec<u8>, Vec<OwnedFd>) {
+		(self.data, self.fds)
+	}
 }
 
 /// Header for sending messages over the socket.
@@ -129,11 +140,14 @@ impl Header {
 	pub fn from_bytes(bytes: [u8; Self::SIZE]) -> Self {
 		let [body_length @ .., fd_count] = bytes;
 		let body_length = u32::from_ne_bytes(body_length);
-		Header { body_length, fd_count }
+		Header {
+			body_length,
+			fd_count,
+		}
 	}
 }
 
-type PendingFuture = oneshot::Sender<Result<Vec<u8>, String>>;
+type PendingFuture = oneshot::Sender<Result<Message, String>>;
 type PendingFutureSender = mpsc::UnboundedSender<(u64, PendingFuture)>;
 type PendingFutureReceiver = mpsc::UnboundedReceiver<(u64, PendingFuture)>;
 
@@ -173,37 +187,51 @@ impl MessageReceiver {
 		let header = Header::from_bytes(header_buffer);
 
 		let mut body: Vec<u8> = std::vec::from_elem(0_u8, header.body_length as usize);
-		let fds: Vec<RawFd>;
+		let fds: Vec<OwnedFd>;
 		if header.fd_count < 1 {
 			self.read.read_exact(&mut body.as_mut_slice()).await?;
 			fds = Vec::new();
-			
 		} else {
 			let iov = &mut [IoSliceMut::new(body.as_mut_slice())];
 
 			// Nix's suggested cmsg_space macro doesn't support fd_count as a variable, so we have to do this manually.
 			let space = unsafe {
-				CMSG_SPACE((::std::mem::size_of::<RawFd>() * header.fd_count as usize) as c_uint)
+				CMSG_SPACE((::std::mem::size_of::<OwnedFd>() * header.fd_count as usize) as c_uint)
 			} as usize;
-            let mut cmsgs = Vec::<u8>::with_capacity(space);
+			let mut cmsgs = Vec::<u8>::with_capacity(space);
 
 			let stream = self.read.as_ref();
-			fds = stream.async_io(Interest::READABLE, || {
-				match recvmsg::<()>(stream.as_raw_fd(), iov, Some(&mut cmsgs), MsgFlags::empty()){
-					Ok(recv_msg) => {
-						let fds = recv_msg.cmsgs().map(|cmsg| {
-							if let ControlMessageOwned::ScmRights(fds) = cmsg {
-								fds
-							} else {
-								Vec::new()
-							}
-						}).flatten().collect();
-						Ok(fds)
-					},
-					Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
-					Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
-				}
-			}).await?;
+			fds = stream
+				.async_io(Interest::READABLE, || {
+					match recvmsg::<()>(
+						stream.as_raw_fd(),
+						iov,
+						Some(&mut cmsgs),
+						MsgFlags::empty(),
+					) {
+						Ok(recv_msg) => {
+							let fds = recv_msg
+								.cmsgs()
+								.map(|cmsg| {
+									if let ControlMessageOwned::ScmRights(fds) = cmsg {
+										fds
+									} else {
+										Vec::new()
+									}
+								})
+								.flatten()
+								.filter_map(|fd| match fcntl(fd, FcntlArg::F_GETFD) {
+									Err(nix::errno::Errno::EBADF) => None,
+									_ => unsafe { Some(OwnedFd::from_raw_fd(fd)) }, // Consider non-EBADF errors as valid
+								})
+								.collect();
+							Ok(fds)
+						}
+						Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
+						Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+					}
+				})
+				.await?;
 		}
 
 		self.update_pending_futures();
@@ -215,7 +243,7 @@ impl MessageReceiver {
 		&mut self,
 		message: Vec<u8>,
 		scenegraph: &S,
-		fds: Vec<RawFd>,
+		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
 		let message = root_as_message(&message)?;
 		let message_type = message.type_();
@@ -257,8 +285,8 @@ impl MessageReceiver {
 						path,
 						method,
 						None,
-						&return_value,
-						&[],
+						&return_value.0,
+						return_value.1,
 					))?,
 					Err(error) => self.send_handle.error(path, method, error, data)?,
 				};
@@ -276,7 +304,10 @@ impl MessageReceiver {
 						)?;
 					}
 					Some(future) => {
-						let _ = future.send(Ok(data.to_vec()));
+						let _ = future.send(Ok(Message {
+							data: data.to_vec(),
+							fds,
+						}));
 					}
 				}
 			}
@@ -294,14 +325,33 @@ pub fn serialize_error<T: std::fmt::Display>(
 	data: &[u8],
 ) -> Message {
 	let error = format!("{}", err);
-	serialize_call(0, None, object, method, Some(error.as_str()), data, &[])
+	serialize_call(
+		0,
+		None,
+		object,
+		method,
+		Some(error.as_str()),
+		data,
+		Vec::new(),
+	)
 }
 /// Generate a signal message from arguments.
-pub fn serialize_signal_call(object: &str, method: &str, data: &[u8], fds: &[RawFd]) -> Message {
+pub fn serialize_signal_call(
+	object: &str,
+	method: &str,
+	data: &[u8],
+	fds: Vec<OwnedFd>,
+) -> Message {
 	serialize_call(1, None, object, method, None, data, fds)
 }
 /// Generate a method message from arguments.
-pub fn serialize_method_call(id: u64, object: &str, method: &str, data: &[u8], fds: &[RawFd]) -> Message {
+pub fn serialize_method_call(
+	id: u64,
+	object: &str,
+	method: &str,
+	data: &[u8],
+	fds: Vec<OwnedFd>,
+) -> Message {
 	serialize_call(2, Some(id), object, method, None, data, fds)
 }
 #[instrument(level = "trace", skip_all)]
@@ -312,7 +362,7 @@ fn serialize_call(
 	method: &str,
 	err: Option<&str>,
 	data: &[u8],
-	fds: &[RawFd],
+	fds: Vec<OwnedFd>,
 ) -> Message {
 	debug_call(false, call_type, id, Some(path), Some(method), err, data);
 
@@ -336,7 +386,7 @@ fn serialize_call(
 	fbb.finish(message_constructed, None);
 	Message {
 		data: fbb.finished_data().to_vec(),
-		fds: fds.to_vec(),
+		fds,
 	}
 }
 
@@ -385,16 +435,23 @@ impl MessageSender {
 			self.write.write_all(body).await?;
 		} else {
 			let iov = &[IoSlice::new(body)];
-			let cmsgs = &[ControlMessage::ScmRights(&message.fds)];
+			let fds = message
+				.fds
+				.into_iter()
+				.map(IntoRawFd::into_raw_fd)
+				.collect::<Vec<_>>();
+			let cmsgs = &[ControlMessage::ScmRights(&fds)];
 
 			let stream = self.write.as_ref();
-			stream.async_io(Interest::WRITABLE, || {
-				match sendmsg::<()>(stream.as_raw_fd(), iov, cmsgs, MsgFlags::empty(), None){
-					Ok(_) => Ok(()),
-					Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
-					Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
-				}
-			}).await?;
+			stream
+				.async_io(Interest::WRITABLE, || {
+					match sendmsg::<()>(stream.as_raw_fd(), iov, cmsgs, MsgFlags::empty(), None) {
+						Ok(_) => Ok(()),
+						Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
+						Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+					}
+				})
+				.await?;
 		}
 		Ok(())
 	}
@@ -420,7 +477,7 @@ impl MessageSender {
 		node_path: &str,
 		signal_name: &str,
 		data: &[u8],
-		fds: &[RawFd],
+		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
 		self.send(serialize_signal_call(node_path, signal_name, data, fds))
 			.await
@@ -431,8 +488,8 @@ impl MessageSender {
 		node_path: &str,
 		method: &str,
 		data: &[u8],
-		fds: &[RawFd],
-	) -> Result<Result<Vec<u8>, String>, MessengerError> {
+		fds: Vec<OwnedFd>,
+	) -> Result<Result<Message, String>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let id = self.max_message_id.load(Ordering::Relaxed);
 		self.pending_future_tx
@@ -469,7 +526,7 @@ impl MessageSenderHandle {
 		node_path: &str,
 		signal_name: &str,
 		data: &[u8],
-		fds: &[RawFd],
+		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
 		self.send(serialize_signal_call(node_path, signal_name, data, fds))
 	}
@@ -479,8 +536,8 @@ impl MessageSenderHandle {
 		node_path: &str,
 		method: &str,
 		data: &[u8],
-		fds: &[RawFd],
-	) -> Result<impl Future<Output = Result<Vec<u8>, String>>, MessengerError> {
+		fds: Vec<OwnedFd>,
+	) -> Result<impl Future<Output = Result<Message, String>>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let id = self.max_message_id.load(Ordering::Relaxed);
 		self.pending_future_tx

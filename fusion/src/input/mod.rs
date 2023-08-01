@@ -43,7 +43,7 @@ use stardust_xr::{
 	schemas::flex::{deserialize, flexbuffers},
 	values::Transform,
 };
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
 
 /// Handle raw input events.
 pub trait InputHandlerHandler: Send + Sync {
@@ -64,7 +64,7 @@ impl InputMethod {
 		let input_handlers = Arc::downgrade(&self.input_handlers);
 		self.node().add_local_signal(
 			"handler_created",
-			move |data| -> color_eyre::eyre::Result<()> {
+			move |data, _fds| -> color_eyre::eyre::Result<()> {
 				let Some(client) = client.upgrade() else {bail!("no client??")};
 				let Some(handlers) = input_handlers.upgrade() else {bail!("no handlers ohno")};
 				let uid: String = deserialize(data)?;
@@ -90,7 +90,7 @@ impl InputMethod {
 		let input_handlers = Arc::downgrade(&self.input_handlers);
 		self.node().add_local_signal(
 			"handler_destroyed",
-			move |data| -> color_eyre::eyre::Result<()> {
+			move |data, _fds| -> color_eyre::eyre::Result<()> {
 				let Some(handlers) = input_handlers.upgrade() else {bail!("no handlers ohno")};
 				let uid: &str = deserialize(data)?;
 				handlers.write().remove(uid);
@@ -105,7 +105,8 @@ impl InputMethod {
 		flexbuffers::Reader::get_root(datamap)
 			.and_then(|root| root.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
-		self.node().send_remote_signal_raw("set_datamap", datamap)
+		self.node()
+			.send_remote_signal_raw("set_datamap", datamap, Vec::new())
 	}
 
 	pub fn set_handler_order(&self, handlers: &[&InputHandler]) -> Result<(), NodeError> {
@@ -241,6 +242,7 @@ impl<'a> InputHandler {
 		input_handler: Arc<InputHandler>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let data = InputData::deserialize(data).map_err(|e| anyhow!(e))?;
 		handler.lock().input(

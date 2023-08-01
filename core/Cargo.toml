@@ -10,15 +10,15 @@ homepage = "https://stardustxr.org"
 
 [dependencies]
 cluFlock = "1.2.7"
-color-rs = "0.7.1"
+color-rs = "0.8.0"
 mint = { version = "0.5.9", features = ["serde"] }
 nix = "0.26.2"
 parking_lot = "0.12.1"
 stardust-xr-schemas = { path = "../schemas", version = "1.5.0" }
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "1.0.177", features = ["derive"] }
 rustc-hash = "1.1.0"
-thiserror = "1.0.38"
-tokio = { version = "1", features = [
+thiserror = "1.0.44"
+tokio = { version = "1.29.1", features = [
     "sync",
     "macros",
     "net",
@@ -26,6 +26,6 @@ tokio = { version = "1", features = [
     "rt",
     "parking_lot",
 ] }
-chrono = "0.4.22"
+chrono = "0.4.26"
 tracing = "0.1.37"
-dirs = "5.0.0"
+dirs = "5.0.1"

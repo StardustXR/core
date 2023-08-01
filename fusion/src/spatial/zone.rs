@@ -9,7 +9,7 @@ use color_eyre::eyre::{anyhow, Result};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
 use rustc_hash::FxHashMap;
 use stardust_xr::{schemas::flex::deserialize, values::Transform};
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
 
 /// Hamdle spatials entering the zone's field, leaving it, being captured, and released.
 pub trait ZoneHandler: Send + Sync {
@@ -80,6 +80,7 @@ impl<'a> Zone {
 		zone: Arc<Zone>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		let spatial_stored =
@@ -95,6 +96,7 @@ impl<'a> Zone {
 		zone: Arc<Zone>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		let spatials = zone.spatials.read();
@@ -113,6 +115,7 @@ impl<'a> Zone {
 		zone: Arc<Zone>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		zone.captured.write().remove(uid);
@@ -123,6 +126,7 @@ impl<'a> Zone {
 		zone: Arc<Zone>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		zone.spatials.write().remove(uid);

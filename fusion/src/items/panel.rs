@@ -16,7 +16,7 @@ use serde::{
 };
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use stardust_xr::schemas::flex::deserialize;
-use std::{ops::Deref, sync::Arc};
+use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
 
 /// Handler for the `panel` item.
 #[allow(unused_variables)]
@@ -484,6 +484,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		handler.lock().commit_toplevel(deserialize(data)?);
 		Ok(())
@@ -492,6 +493,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		handler.lock().recommend_toplevel_state(deserialize(data)?);
 		Ok(())
@@ -500,6 +502,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		handler.lock().set_cursor(deserialize(data)?);
 		Ok(())
@@ -509,6 +512,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		handler.lock().grab_keyboard_focus(deserialize(data)?);
 		Ok(())
@@ -517,6 +521,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		handler.lock().grab_pointer_focus(deserialize(data)?);
 		Ok(())
@@ -526,6 +531,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let (uid, data): (&str, Option<PopupInfo>) = deserialize(data)?;
 		handler.lock().new_popup(uid, data);
@@ -535,6 +541,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let (uid, data): (&str, Option<PositionerData>) = deserialize(data)?;
 		handler.lock().reposition_popup(uid, data);
@@ -544,6 +551,7 @@ impl PanelItem {
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		handler.lock().drop_popup(deserialize(data)?);
 		Ok(())

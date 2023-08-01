@@ -6,12 +6,13 @@ use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::{
-	messenger::MessengerError,
+	messenger::{Message, MessengerError},
 	schemas::flex::{deserialize, flexbuffers::DeserializationError, serialize},
 };
 use std::{
 	fmt::Debug,
 	future::Future,
+	os::fd::OwnedFd,
 	pin::Pin,
 	sync::{Arc, Weak},
 	vec::Vec,
@@ -68,8 +69,11 @@ pub trait NodeType: Send + Sync + 'static {
 /// A trait to ensure this node type could be put in a `HandlerWrapper`.
 pub trait HandledNodeType: NodeType {}
 
-type Signal = dyn Fn(&[u8]) -> color_eyre::eyre::Result<()> + Send + Sync + 'static;
-type Method = dyn Fn(&[u8]) -> color_eyre::eyre::Result<Vec<u8>> + Send + Sync + 'static;
+type Signal = dyn Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<()> + Send + Sync + 'static;
+type Method = dyn Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, Vec<OwnedFd>)>
+	+ Send
+	+ Sync
+	+ 'static;
 
 pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O> + Send + Sync>>;
 
@@ -101,7 +105,9 @@ impl Drop for NodeInternals {
 		if let Some(client) = self.client.upgrade() {
 			let path = self.path();
 			if self.destroyable {
-				let _ = client.message_sender_handle.signal(&path, "destroy", &[], &[]);
+				let _ = client
+					.message_sender_handle
+					.signal(&path, "destroy", &[], Vec::new());
 			}
 			client.scenegraph.remove_node(&path);
 		}
@@ -131,7 +137,7 @@ impl Node {
 				interface_path,
 				interface_method,
 				&serialize(data).map_err(|_| NodeError::Serialization)?,
-				&[],
+				Vec::new(),
 			)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
@@ -160,7 +166,7 @@ impl Node {
 	/// Add a signal to the node so that the server can send a message to it. Not needed unless implementing functionality Fusion does not already have.
 	pub fn add_local_signal<F>(&self, name: impl ToString, signal: F) -> Result<(), NodeError>
 	where
-		F: Fn(&[u8]) -> color_eyre::eyre::Result<()> + Send + Sync + 'static,
+		F: Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<()> + Send + Sync + 'static,
 	{
 		self.internals()?
 			.local_signals
@@ -172,7 +178,10 @@ impl Node {
 	/// Add a signal to the node so that the server can send a message to it and get a response back. Not needed unless implementing functionality Fusion does not already have.
 	pub fn add_local_method<F>(&self, name: impl ToString, method: F) -> Result<(), NodeError>
 	where
-		F: Fn(&[u8]) -> color_eyre::eyre::Result<Vec<u8>> + Send + Sync + 'static,
+		F: Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, Vec<OwnedFd>)>
+			+ Send
+			+ Sync
+			+ 'static,
 	{
 		self.internals()?
 			.local_methods
@@ -221,13 +230,19 @@ impl Node {
 		self.send_remote_signal_raw(
 			signal_name,
 			&serialize(data).map_err(|_| NodeError::Serialization)?,
+			Vec::new(),
 		)
 	}
 	/// Send a signal to the node on the server with raw data (like when sending flatbuffers over). Not needed unless implementing functionality Fusion does not already have.
-	pub fn send_remote_signal_raw(&self, signal_name: &str, data: &[u8]) -> Result<(), NodeError> {
+	pub fn send_remote_signal_raw(
+		&self,
+		signal_name: &str,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+	) -> Result<(), NodeError> {
 		self.client()?
 			.message_sender_handle
-			.signal(&self.get_path()?, signal_name, data, &[])
+			.signal(&self.get_path()?, signal_name, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
@@ -237,11 +252,11 @@ impl Node {
 		send_data: &S,
 	) -> Result<impl Future<Output = Result<D, NodeError>>, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(method_name, &send_data)?;
+		let future = self.execute_remote_method_raw(method_name, &send_data, Vec::new())?;
 		Ok(async move {
-			future
-				.await
-				.and_then(|data| deserialize(&data).map_err(|e| NodeError::Deserialization { e }))
+			future.await.and_then(|data| {
+				deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
+			})
 		})
 	}
 	/// Execute a method on the node on the server. This will return a trait safe future, pinned and boxed. Not needed unless implementing functionality Fusion does not already have.
@@ -251,11 +266,11 @@ impl Node {
 		send_data: &S,
 	) -> Result<Pin<Box<dyn Future<Output = Result<D, NodeError>> + Send + Sync>>, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(method_name, &send_data)?;
+		let future = self.execute_remote_method_raw(method_name, &send_data, Vec::new())?;
 		Ok(Box::pin(async move {
-			future
-				.await
-				.and_then(|data| deserialize(&data).map_err(|e| NodeError::Deserialization { e }))
+			future.await.and_then(|data| {
+				deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
+			})
 		}))
 	}
 	/// Execute a method on the node on the server with raw data (like when sending over flatbuffers). Not needed unless implementing functionality Fusion does not already have.
@@ -263,11 +278,12 @@ impl Node {
 		&self,
 		method_name: &str,
 		data: &[u8],
-	) -> Result<impl Future<Output = Result<Vec<u8>, NodeError>>, NodeError> {
+		fds: Vec<OwnedFd>,
+	) -> Result<impl Future<Output = Result<Message, NodeError>>, NodeError> {
 		let future = self
 			.client()?
 			.message_sender_handle
-			.method(&self.get_path()?, method_name, data, &[])
+			.method(&self.get_path()?, method_name, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })

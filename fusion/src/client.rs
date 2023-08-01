@@ -17,7 +17,7 @@ use stardust_xr::{
 };
 use std::any::TypeId;
 use std::future::Future;
-use std::os::unix::io::RawFd;
+use std::os::unix::io::OwnedFd;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use thiserror::Error;
@@ -52,7 +52,13 @@ impl Scenegraph {
 }
 
 impl scenegraph::Scenegraph for Scenegraph {
-	fn send_signal(&self, path: &str, method: &str, data: &[u8], fds: Vec<RawFd>) -> Result<(), ScenegraphError> {
+	fn send_signal(
+		&self,
+		path: &str,
+		method: &str,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+	) -> Result<(), ScenegraphError> {
 		let node = self
 			.nodes
 			.lock()
@@ -64,7 +70,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(method)
 			.ok_or(ScenegraphError::SignalNotFound)?
 			.clone();
-		signal(data).map_err(|e| ScenegraphError::SignalError {
+		signal(data, fds).map_err(|e| ScenegraphError::SignalError {
 			error: e.to_string(),
 		})
 	}
@@ -73,8 +79,8 @@ impl scenegraph::Scenegraph for Scenegraph {
 		path: &str,
 		method: &str,
 		data: &[u8],
-		fds: Vec<RawFd>,
-	) -> Result<Vec<u8>, ScenegraphError> {
+		fds: Vec<OwnedFd>,
+	) -> Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError> {
 		let node = self
 			.nodes
 			.lock()
@@ -86,7 +92,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(method)
 			.ok_or(ScenegraphError::MethodNotFound)?
 			.clone();
-		method(data).map_err(|e| ScenegraphError::MethodError {
+		method(data, fds).map_err(|e| ScenegraphError::MethodError {
 			error: e.to_string(),
 		})
 	}
@@ -184,7 +190,7 @@ impl Client {
 
 		client.get_root().node.add_local_signal("frame", {
 			let client = client.clone();
-			move |data| {
+			move |data, _| {
 				if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
 					let info_internal: LogicStepInfoInternal = deserialize(data)?;
 					let mut elapsed = client.elapsed_time.lock();
@@ -253,7 +259,7 @@ impl Client {
 	pub fn wrap_root<H: RootHandler>(&self, wrapped: H) -> Result<Arc<Mutex<H>>, NodeError> {
 		self.get_root()
 			.node
-			.send_remote_signal_raw("subscribe_frame", &[])?;
+			.send_remote_signal_raw("subscribe_frame", &[], Vec::new())?;
 		let wrapped = Arc::new(Mutex::new(wrapped));
 		*self.life_cycle_handler.lock() =
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
@@ -263,7 +269,7 @@ impl Client {
 	pub fn wrap_root_raw<H: RootHandler>(&self, wrapped: &Arc<Mutex<H>>) -> Result<(), NodeError> {
 		self.get_root()
 			.node
-			.send_remote_signal_raw("subscribe_frame", &[])?;
+			.send_remote_signal_raw("subscribe_frame", &[], Vec::new())?;
 		*self.life_cycle_handler.lock() =
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
 		Ok(())
@@ -284,7 +290,12 @@ impl Client {
 		};
 
 		self.message_sender_handle
-			.signal("/", "set_base_prefixes", &serialize(prefix_vec).unwrap(), &[])
+			.signal(
+				"/",
+				"set_base_prefixes",
+				&serialize(prefix_vec).unwrap(),
+				Vec::new(),
+			)
 			.unwrap();
 	}
 
@@ -293,12 +304,12 @@ impl Client {
 	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
 		let future = self
 			.message_sender_handle
-			.method("/startup", "get_connection_environment", &[], &[])
+			.method("/startup", "get_connection_environment", &[], Vec::new())
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move {
 			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
-			deserialize(&result).map_err(|e| NodeError::Deserialization { e })
+			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
 		})
 	}
 
@@ -312,7 +323,7 @@ impl Drop for Client {
 		self.stop_loop();
 		let _ = self
 			.message_sender_handle
-			.signal("/", "disconnect", &[0_u8; 0], &[]);
+			.signal("/", "disconnect", &[0_u8; 0], Vec::new());
 	}
 }
 
