@@ -26,6 +26,5 @@ tokio = { version = "1.29.1", features = [
     "rt",
     "parking_lot",
 ] }
-chrono = "0.4.26"
 tracing = "0.1.37"
 dirs = "5.0.1"
