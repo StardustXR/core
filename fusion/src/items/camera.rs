@@ -2,31 +2,26 @@ use super::Item;
 use crate::client::Client;
 use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
+use mint::{RowMatrix4, Vector2};
 use stardust_xr::values::Transform;
 use std::ops::Deref;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Item that contains the path to an equirectangular `.hdr` file.
-pub struct EnvironmentItem {
+pub struct CameraItem {
 	spatial: Spatial,
-	pub path: PathBuf,
 }
 
-impl EnvironmentItem {
+impl CameraItem {
 	/// Create a new environment item from a file path.
-	pub fn create<P: AsRef<Path>>(
+	pub fn create(
 		spatial_parent: &Spatial,
 		transform: Transform,
-		file_path: P,
+		proj_matrix: impl Into<RowMatrix4<f32>>,
+		px_size: impl Into<Vector2<u32>>,
 	) -> Result<Self, NodeError> {
-		let path = file_path.as_ref();
-		if path.is_relative() || !path.exists() {
-			return Err(NodeError::InvalidPath);
-		}
-
 		let id = nanoid::nanoid!();
-		Ok(EnvironmentItem {
+		Ok(CameraItem {
 			spatial: Spatial {
 				node: Node::new(
 					&spatial_parent.node.client()?,
@@ -35,45 +30,48 @@ impl EnvironmentItem {
 					"/item/environment/item",
 					true,
 					&id.clone(),
-					(id, spatial_parent.node().get_path()?, transform, path),
+					(
+						id,
+						spatial_parent.node().get_path()?,
+						transform,
+						proj_matrix.into(),
+						px_size.into(),
+					),
 				)?,
 			},
-			path: path.to_path_buf(),
 		})
 	}
 }
-impl NodeType for EnvironmentItem {
+impl NodeType for CameraItem {
 	fn node(&self) -> &Node {
 		&self.spatial.node
 	}
 
 	fn alias(&self) -> Self {
-		EnvironmentItem {
+		CameraItem {
 			spatial: self.spatial.alias(),
-			path: self.path.clone(),
 		}
 	}
 }
-impl Item for EnvironmentItem {
-	type InitData = PathBuf;
-	const TYPE_NAME: &'static str = "environment";
+impl Item for CameraItem {
+	type InitData = ();
+	const TYPE_NAME: &'static str = "camera";
 
 	fn from_path(
 		client: &Arc<Client>,
 		parent_path: impl ToString,
 		name: impl ToString,
-		init_data: &PathBuf,
+		_init_data: &(),
 	) -> Self {
-		EnvironmentItem {
+		CameraItem {
 			spatial: Spatial {
 				node: Node::from_path(client, parent_path, name, false),
 			},
-			path: init_data.clone(),
 		}
 	}
 	// fn alias
 }
-impl Deref for EnvironmentItem {
+impl Deref for CameraItem {
 	type Target = Spatial;
 
 	fn deref(&self) -> &Self::Target {
@@ -82,48 +80,46 @@ impl Deref for EnvironmentItem {
 }
 
 #[tokio::test]
-async fn fusion_environment_ui() {
+async fn fusion_camera_ui() {
 	color_eyre::install().unwrap();
-	use manifest_dir_macros::file_relative_path;
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
-	let environment_item = EnvironmentItem::create(
+	let environment_item = CameraItem::create(
 		client.get_root(),
 		Transform::default(),
-		file_relative_path!("res/fusion/sky.hdr"),
+		glam::Mat4::perspective_infinite_rh(
+			std::f32::consts::PI * 0.5,
+			std::f32::consts::PI * 0.5,
+			0.01,
+		),
+		[512, 512],
 	)
 	.unwrap();
 
-	struct EnvironmentUIManager(Arc<Client>);
-	impl crate::items::ItemUIHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn item_created(&mut self, uid: &str, _item: EnvironmentItem, path: PathBuf) {
-			println!(
-				"Environment item {uid} created with path {}",
-				path.display()
-			);
+	struct CameraUIManager(Arc<Client>);
+	impl crate::items::ItemUIHandler<CameraItem> for CameraUIManager {
+		fn item_created(&mut self, uid: &str, _item: CameraItem, _data: ()) {
+			println!("Camera item {uid} created");
 		}
-		fn item_captured(&mut self, uid: &str, acceptor_uid: &str, _item: EnvironmentItem) {
+		fn item_captured(&mut self, uid: &str, acceptor_uid: &str, _item: CameraItem) {
 			println!("Capturing environment item {uid} in acceptor {acceptor_uid}");
 		}
-		fn item_released(&mut self, uid: &str, acceptor_uid: &str, _item: EnvironmentItem) {
+		fn item_released(&mut self, uid: &str, acceptor_uid: &str, _item: CameraItem) {
 			println!("Released environment item {uid} from acceptor {acceptor_uid}");
 		}
 		fn item_destroyed(&mut self, _uid: &str) {}
 		fn acceptor_created(
 			&mut self,
 			_uid: &str,
-			_acceptor: crate::items::ItemAcceptor<EnvironmentItem>,
+			_acceptor: crate::items::ItemAcceptor<CameraItem>,
 			_field: crate::fields::UnknownField,
 		) {
 		}
 		fn acceptor_destroyed(&mut self, _uid: &str) {}
 	}
-	impl crate::items::ItemAcceptorHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn captured(&mut self, uid: &str, item: EnvironmentItem, path: PathBuf) {
-			println!(
-				"Item {uid} accepted sucessfully with path {}!",
-				path.display()
-			);
+	impl crate::items::ItemAcceptorHandler<CameraItem> for CameraUIManager {
+		fn captured(&mut self, uid: &str, item: CameraItem, _data: ()) {
+			println!("Item {uid} accepted sucessfully!");
 			item.release().unwrap();
 		}
 		fn released(&mut self, uid: &str) {
@@ -134,7 +130,7 @@ async fn fusion_environment_ui() {
 
 	let _item_ui = crate::items::ItemUI::register(&client)
 		.unwrap()
-		.wrap(EnvironmentUIManager(client.clone()))
+		.wrap(CameraUIManager(client.clone()))
 		.unwrap();
 
 	let item_acceptor_field =
@@ -146,7 +142,7 @@ async fn fusion_environment_ui() {
 		&item_acceptor_field,
 	)
 	.unwrap()
-	.wrap(EnvironmentUIManager(client.clone()))
+	.wrap(CameraUIManager(client.clone()))
 	.unwrap();
 
 	item_acceptor.node().capture(&environment_item).unwrap();

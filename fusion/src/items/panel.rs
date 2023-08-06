@@ -617,7 +617,6 @@ impl NodeType for PanelItem {
 }
 impl HandledNodeType for PanelItem {}
 impl Item for PanelItem {
-	type ItemType = PanelItem;
 	type InitData = PanelItemInitData;
 	const TYPE_NAME: &'static str = "panel";
 

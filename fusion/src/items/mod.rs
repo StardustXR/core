@@ -18,6 +18,7 @@
 //!
 //! The client that summoned the item (if applicable), item UI, and item acceptor can all call `release()` on the item to instantly release it from any acceptor that captured it.
 
+pub mod camera;
 mod environment;
 pub use environment::*;
 
@@ -45,7 +46,6 @@ use std::{any::TypeId, ops::Deref, os::fd::OwnedFd, sync::Arc};
 
 /// Base item trait, `release` and `uid` are the ones that client devs may want to use.
 pub trait Item: NodeType + Send + Sync + 'static {
-	type ItemType;
 	type InitData: DeserializeOwned + Send;
 	const TYPE_NAME: &'static str;
 
