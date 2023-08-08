@@ -6,7 +6,6 @@ use crate::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use flagset::{flags, FlagSet};
 use mint::Vector2;
 use parking_lot::Mutex;
 use serde::{
@@ -37,12 +36,12 @@ pub trait PanelItemHandler: Send + Sync {
 	/// The cursor's material will automatically update, you just need to hide/show the cursor and account for the new size/hotspot.
 	fn set_cursor(&mut self, info: Option<CursorInfo>) {}
 
-	/// A new popup was created. Popups are short-lived overlay surfaces like for context menus or modals.
-	fn new_popup(&mut self, uid: &str, data: Option<PopupInfo>) {}
-	/// The popup's positioner has changed and you need to update the UI.
-	fn reposition_popup(&mut self, uid: &str, data: Option<PositionerData>) {}
-	/// This popup was destroyed.
-	fn drop_popup(&mut self, uid: &str) {}
+	/// A new child was created. Childs are short-lived overlay surfaces like for context menus or modals.
+	fn new_child(&mut self, uid: &str, data: Option<ChildInfo>) {}
+	/// The child's positioner has changed and you need to update the UI.
+	fn reposition_child(&mut self, uid: &str, data: Option<PositionerData>) {}
+	/// This child was destroyed.
+	fn drop_child(&mut self, uid: &str) {}
 
 	/// The given surface is the only one that should recieve pointer input. If None, any surface in this panel item can receive pointer input.
 	fn grab_pointer_focus(&mut self, focus: Option<SurfaceID>) {}
@@ -85,153 +84,22 @@ pub struct ToplevelInfo {
 	pub states: Vec<State>,
 }
 
-/// Data on positioning a popup
+/// Data on positioning a child
 #[derive(Debug, Clone, Deserialize)]
-pub struct PopupInfo {
+pub struct ChildInfo {
 	pub uid: String,
 	pub parent: SurfaceID,
 	pub positioner_data: PositionerData,
 }
 
-#[repr(u32)]
-#[derive(Copy, Clone, Debug, Deserialize_repr, PartialEq, Eq)]
-pub enum Alignment {
-	TopLeft = 0,
-	Top = 1,
-	TopRight = 2,
-	Left = 3,
-	Center = 4,
-	Right = 5,
-	BottomLeft = 6,
-	Bottom = 7,
-	BottomRight = 8,
-}
-
-flags! {
-	pub enum ConstraintAdjustment: u32 {
-		None = 0,
-		SlideX = 1,
-		SlideY = 2,
-		FlipX = 4,
-		FlipY = 8,
-		ResizeX = 16,
-		ResizeY = 32,
-	}
-}
-
-/// Data on positioning a popup
+/// Data on positioning a child
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct PositionerData {
-	/// The size of the surface in px.
-	pub size: Vector2<u32>,
-
-	/// The position of the rectangle that the positioned surface will be anchored to.
-	pub anchor_rect_pos: Vector2<i32>,
-
-	/// The size of the rectangle that the positioned surface will be anchored to.
-	pub anchor_rect_size: Vector2<u32>,
-
-	/// Specifies the point on the surface that will be anchored to the anchor rectangle.
-	pub anchor: Alignment,
-
-	/// Defines how the surface should be positioned relative to the anchor rectangle.
-	pub gravity: Alignment,
-
-	/// Specifies the adjustment behavior of the positioner when the surface would fall outside the screen.
-	pub constraint_adjustment: FlagSet<ConstraintAdjustment>,
-
 	/// The offset of the surface relative to the anchor rectangle.
 	pub offset: Vector2<i32>,
 
-	/// Whether the positioner reacts to changes in the geometry of the anchor rectangle.
-	pub reactive: bool,
-}
-impl PositionerData {
-	fn anchor_has_edge(&self, edge: Alignment) -> bool {
-		match edge {
-			Alignment::Top => {
-				self.anchor == Alignment::Top
-					|| self.anchor == Alignment::TopLeft
-					|| self.anchor == Alignment::TopRight
-			}
-			Alignment::Bottom => {
-				self.anchor == Alignment::Bottom
-					|| self.anchor == Alignment::BottomLeft
-					|| self.anchor == Alignment::BottomRight
-			}
-			Alignment::Left => {
-				self.anchor == Alignment::Left
-					|| self.anchor == Alignment::TopLeft
-					|| self.anchor == Alignment::BottomLeft
-			}
-			Alignment::Right => {
-				self.anchor == Alignment::Right
-					|| self.anchor == Alignment::TopRight
-					|| self.anchor == Alignment::BottomRight
-			}
-			_ => unreachable!(),
-		}
-	}
-
-	fn gravity_has_edge(&self, edge: Alignment) -> bool {
-		match edge {
-			Alignment::Top => {
-				self.gravity == Alignment::Top
-					|| self.gravity == Alignment::TopLeft
-					|| self.gravity == Alignment::TopRight
-			}
-			Alignment::Bottom => {
-				self.gravity == Alignment::Bottom
-					|| self.gravity == Alignment::BottomLeft
-					|| self.gravity == Alignment::BottomRight
-			}
-			Alignment::Left => {
-				self.gravity == Alignment::Left
-					|| self.gravity == Alignment::TopLeft
-					|| self.gravity == Alignment::BottomLeft
-			}
-			Alignment::Right => {
-				self.gravity == Alignment::Right
-					|| self.gravity == Alignment::TopRight
-					|| self.gravity == Alignment::BottomRight
-			}
-			_ => unreachable!(),
-		}
-	}
-
-	pub fn get_pos(&self) -> Vector2<i32> {
-		let mut pos = self.offset;
-
-		if self.anchor_has_edge(Alignment::Top) {
-			pos.y += self.anchor_rect_pos.y;
-		} else if self.anchor_has_edge(Alignment::Bottom) {
-			pos.y += self.anchor_rect_pos.y + self.anchor_rect_size.y as i32;
-		} else {
-			pos.y += self.anchor_rect_pos.y + self.anchor_rect_size.y as i32 / 2;
-		}
-
-		if self.anchor_has_edge(Alignment::Left) {
-			pos.x += self.anchor_rect_pos.x;
-		} else if self.anchor_has_edge(Alignment::Right) {
-			pos.x += self.anchor_rect_pos.x + self.anchor_rect_size.x as i32;
-		} else {
-			pos.x += self.anchor_rect_pos.x + self.anchor_rect_size.x as i32 / 2;
-		}
-
-		if self.gravity_has_edge(Alignment::Top) {
-			pos.y -= self.size.y as i32;
-		} else if !self.gravity_has_edge(Alignment::Bottom) {
-			pos.y -= self.size.y as i32 / 2;
-		}
-
-		if self.gravity_has_edge(Alignment::Left) {
-			pos.x -= self.size.x as i32;
-		} else if !self.gravity_has_edge(Alignment::Right) {
-			pos.x -= self.size.x as i32 / 2;
-		}
-
-		pos
-	}
+	/// The size of the surface in px.
+	pub size: Vector2<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -310,8 +178,8 @@ pub struct PanelItemInitData {
 	pub cursor: Option<CursorInfo>,
 	/// Size of the toplevel surface in pixels.
 	pub toplevel: Option<ToplevelInfo>,
-	/// Vector of popups that already exist
-	pub popups: Vec<PopupInfo>,
+	/// Vector of childs that already exist
+	pub childs: Vec<ChildInfo>,
 	/// The surface, if any, that has exclusive input to the pointer.
 	pub pointer_grab: Option<SurfaceID>,
 	/// The surface, if any, that has exclusive input to the keyboard.
@@ -324,7 +192,7 @@ pub struct PanelItemInitData {
 pub enum SurfaceID {
 	Cursor,
 	Toplevel,
-	Popup(String),
+	Child(String),
 }
 
 impl<'de> serde::Deserialize<'de> for SurfaceID {
@@ -353,13 +221,16 @@ impl<'de> Visitor<'de> for SurfaceIDVisitor {
 		match discrim {
 			"Cursor" => Ok(SurfaceID::Cursor),
 			"Toplevel" => Ok(SurfaceID::Toplevel),
-			"Popup" => {
+			"Child" => {
 				let Some(text) = seq.next_element()? else {
-                    return Err(A::Error::missing_field("popup_text"));
+                    return Err(A::Error::missing_field("child_text"));
                 };
-				Ok(SurfaceID::Popup(text))
+				Ok(SurfaceID::Child(text))
 			}
-			_ => Err(A::Error::unknown_variant(discrim, &["Toplevel", "Popup"])),
+			_ => Err(A::Error::unknown_variant(
+				discrim,
+				&["Cursor", "Toplevel", "Child"],
+			)),
 		}
 	}
 }
@@ -369,12 +240,12 @@ impl serde::Serialize for SurfaceID {
 		match self {
 			Self::Cursor => ["Cursor"].serialize(serializer),
 			Self::Toplevel => ["Toplevel"].serialize(serializer),
-			Self::Popup(text) => ["Popup", text].serialize(serializer),
+			Self::Child(text) => ["Child", text].serialize(serializer),
 		}
 	}
 }
 
-/// An item that represents a toplevel wayland surface (base window) and all its popups (context menus, modals, etc.).
+/// An item that represents a toplevel wayland surface (base window) and all its childs (context menus, modals, etc.).
 #[derive(Debug)]
 pub struct PanelItem {
 	spatial: Spatial,
@@ -527,33 +398,33 @@ impl PanelItem {
 		Ok(())
 	}
 
-	fn handle_new_popup<H: PanelItemHandler>(
+	fn handle_new_child<H: PanelItemHandler>(
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
-		let (uid, data): (&str, Option<PopupInfo>) = deserialize(data)?;
-		handler.lock().new_popup(uid, data);
+		let (uid, data): (&str, Option<ChildInfo>) = deserialize(data)?;
+		handler.lock().new_child(uid, data);
 		Ok(())
 	}
-	fn handle_reposition_popup<H: PanelItemHandler>(
+	fn handle_reposition_child<H: PanelItemHandler>(
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let (uid, data): (&str, Option<PositionerData>) = deserialize(data)?;
-		handler.lock().reposition_popup(uid, data);
+		handler.lock().reposition_child(uid, data);
 		Ok(())
 	}
-	fn handle_drop_popup<H: PanelItemHandler>(
+	fn handle_drop_child<H: PanelItemHandler>(
 		_panel_item: Arc<PanelItem>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
-		handler.lock().drop_popup(deserialize(data)?);
+		handler.lock().drop_child(deserialize(data)?);
 		Ok(())
 	}
 
@@ -592,13 +463,13 @@ impl PanelItem {
 			.unwrap();
 
 		handler_wrapper
-			.add_handled_signal("new_popup", Self::handle_new_popup)
+			.add_handled_signal("new_child", Self::handle_new_child)
 			.unwrap();
 		handler_wrapper
-			.add_handled_signal("reposition_popup", Self::handle_reposition_popup)
+			.add_handled_signal("reposition_child", Self::handle_reposition_child)
 			.unwrap();
 		handler_wrapper
-			.add_handled_signal("drop_popup", Self::handle_drop_popup)
+			.add_handled_signal("drop_child", Self::handle_drop_child)
 			.unwrap();
 
 		Ok(handler_wrapper)
