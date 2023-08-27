@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::os::unix::io::OwnedFd;
 use thiserror::Error;
 
@@ -19,6 +20,7 @@ pub enum ScenegraphError {
 }
 
 /// Handles node signals and method calls for the messenger.
+#[async_trait]
 pub trait Scenegraph {
 	fn send_signal(
 		&self,
@@ -26,10 +28,8 @@ pub trait Scenegraph {
 		method: &str,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-	) -> Result<(), ScenegraphError> {
-		self.execute_method(path, method, data, fds).map(|_| ())
-	}
-	fn execute_method(
+	) -> Result<(), ScenegraphError>;
+	async fn execute_method(
 		&self,
 		path: &str,
 		method: &str,

@@ -4,6 +4,7 @@ use crate::node::NodeError;
 use crate::node::NodeInternals;
 use crate::spatial::Spatial;
 
+use async_trait::async_trait;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -51,6 +52,7 @@ impl Scenegraph {
 	// }
 }
 
+#[async_trait]
 impl scenegraph::Scenegraph for Scenegraph {
 	fn send_signal(
 		&self,
@@ -74,7 +76,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 			error: e.to_string(),
 		})
 	}
-	fn execute_method(
+	async fn execute_method(
 		&self,
 		path: &str,
 		method: &str,

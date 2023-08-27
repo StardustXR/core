@@ -213,11 +213,11 @@ impl MessageReceiver {
 			.await?;
 
 		self.update_pending_futures();
-		self.handle_message(body, scenegraph, fds)
+		self.handle_message(body, scenegraph, fds).await
 	}
 
 	#[instrument(level = "trace", skip_all)]
-	fn handle_message<S: scenegraph::Scenegraph>(
+	async fn handle_message<S: scenegraph::Scenegraph>(
 		&mut self,
 		message: Vec<u8>,
 		scenegraph: &S,
@@ -255,7 +255,7 @@ impl MessageReceiver {
 			}
 			// Method called
 			2 => {
-				let method_result = scenegraph.execute_method(path, method, data, fds);
+				let method_result = scenegraph.execute_method(path, method, data, fds).await;
 				match method_result {
 					Ok(return_value) => self.send_handle.send(serialize_call(
 						3,
