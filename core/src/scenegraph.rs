@@ -1,6 +1,6 @@
-use async_trait::async_trait;
 use std::os::unix::io::OwnedFd;
 use thiserror::Error;
+use tokio::sync::oneshot;
 
 /// Error for all scenegraph-related things.
 #[derive(Error, Debug)]
@@ -20,7 +20,6 @@ pub enum ScenegraphError {
 }
 
 /// Handles node signals and method calls for the messenger.
-#[async_trait]
 pub trait Scenegraph {
 	fn send_signal(
 		&self,
@@ -29,11 +28,12 @@ pub trait Scenegraph {
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), ScenegraphError>;
-	async fn execute_method(
+	fn execute_method(
 		&self,
 		path: &str,
 		method: &str,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-	) -> Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>;
+		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,
+	);
 }

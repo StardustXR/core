@@ -1,6 +1,6 @@
 //! Symmetrical messenger for both client and server.
 
-use crate::scenegraph;
+use crate::scenegraph::{self, ScenegraphError};
 use nix::cmsg_space;
 use nix::fcntl::{fcntl, FcntlArg};
 use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags};
@@ -213,17 +213,17 @@ impl MessageReceiver {
 			.await?;
 
 		self.update_pending_futures();
-		self.handle_message(body, scenegraph, fds).await
+		self.handle_message(body, scenegraph, fds)
 	}
 
 	#[instrument(level = "trace", skip_all)]
-	async fn handle_message<S: scenegraph::Scenegraph>(
+	fn handle_message<S: scenegraph::Scenegraph>(
 		&mut self,
-		message: Vec<u8>,
+		raw_message: Vec<u8>,
 		scenegraph: &S,
 		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
-		let message = root_as_message(&message)?;
+		let message = root_as_message(&raw_message)?;
 		let message_type = message.type_();
 
 		debug_call(
@@ -255,19 +255,37 @@ impl MessageReceiver {
 			}
 			// Method called
 			2 => {
-				let method_result = scenegraph.execute_method(path, method, data, fds).await;
-				match method_result {
-					Ok(return_value) => self.send_handle.send(serialize_call(
-						3,
-						Some(message.id()),
-						path,
-						method,
-						None,
-						&return_value.0,
-						return_value.1,
-					))?,
-					Err(error) => self.send_handle.error(path, method, error, data)?,
-				};
+				let (response_tx, response_rx) =
+					oneshot::channel::<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>();
+				let send_handle = self.send_handle.clone();
+				scenegraph.execute_method(path, method, data, fds, response_tx);
+				tokio::task::spawn(async move {
+					let Ok(message) = root_as_message(&raw_message) else {return};
+					let path = message.object().unwrap_or("unknown");
+					let method = message.method().unwrap_or("unknown");
+					let data = message.data().unwrap_or_default().bytes();
+					if let Ok(result) = response_rx.await {
+						let _ = match result {
+							Ok((data, fds)) => send_handle.send(serialize_call(
+								3,
+								Some(message.id()),
+								path,
+								method,
+								None,
+								&data,
+								fds,
+							)),
+							Err(error) => send_handle.error(path, method, error, data),
+						};
+					} else {
+						let _ = send_handle.error(
+							path,
+							method,
+							"Internal: method did not return a response",
+							data,
+						);
+					}
+				});
 			}
 			// Method return
 			3 => {

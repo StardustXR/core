@@ -4,7 +4,6 @@ use crate::node::NodeError;
 use crate::node::NodeInternals;
 use crate::spatial::Spatial;
 
-use async_trait::async_trait;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -17,12 +16,12 @@ use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
 };
 use std::any::TypeId;
-use std::future::Future;
 use std::os::unix::io::OwnedFd;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use thiserror::Error;
 use tokio::net::UnixStream;
+use tokio::sync::oneshot;
 use tokio::sync::{Notify, OnceCell};
 use tokio::task::JoinHandle;
 
@@ -52,7 +51,6 @@ impl Scenegraph {
 	// }
 }
 
-#[async_trait]
 impl scenegraph::Scenegraph for Scenegraph {
 	fn send_signal(
 		&self,
@@ -76,27 +74,32 @@ impl scenegraph::Scenegraph for Scenegraph {
 			error: e.to_string(),
 		})
 	}
-	async fn execute_method(
+	fn execute_method(
 		&self,
 		path: &str,
 		method: &str,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-	) -> Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError> {
-		let node = self
-			.nodes
-			.lock()
-			.get(path)
-			.and_then(Weak::upgrade)
-			.ok_or(ScenegraphError::NodeNotFound)?;
-		let local_methods = node.local_methods.lock();
-		let method = local_methods
-			.get(method)
-			.ok_or(ScenegraphError::MethodNotFound)?
-			.clone();
-		method(data, fds).map_err(|e| ScenegraphError::MethodError {
-			error: e.to_string(),
-		})
+		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,
+	) {
+		let method_method = || {
+			let node = self
+				.nodes
+				.lock()
+				.get(path)
+				.and_then(Weak::upgrade)
+				.ok_or(ScenegraphError::NodeNotFound)?;
+			let local_methods = node.local_methods.lock();
+			let method = local_methods
+				.get(method)
+				.ok_or(ScenegraphError::MethodNotFound)?
+				.clone();
+			method(data, fds).map_err(|e| ScenegraphError::MethodError {
+				error: e.to_string(),
+			})
+		};
+
+		let _ = response.send(method_method());
 	}
 }
 
