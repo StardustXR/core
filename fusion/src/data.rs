@@ -35,6 +35,56 @@ use stardust_xr::{
 };
 use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
 
+#[cfg(feature = "keymap")]
+use crate::client::Client;
+#[cfg(feature = "keymap")]
+use stardust_xr::schemas::flex::serialize;
+#[cfg(feature = "keymap")]
+use xkbcommon::xkb::{ffi::XKB_KEYMAP_FORMAT_TEXT_V1, Keymap};
+
+#[cfg(feature = "keymap")]
+impl Client {
+	pub fn register_keymap(
+		&self,
+		keymap: &Keymap,
+	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
+		let future = self
+			.message_sender_handle
+			.method(
+				"/data",
+				"register_keymap",
+				&serialize(keymap.get_as_string(XKB_KEYMAP_FORMAT_TEXT_V1))
+					.map_err(|_| NodeError::Serialization)?,
+				Vec::new(),
+			)
+			.map_err(|e| NodeError::MessengerError { e })?;
+
+		Ok(async move {
+			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
+			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
+		})
+	}
+	pub fn get_keymap_string(
+		&self,
+		keymap_id: &str,
+	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
+		let future = self
+			.message_sender_handle
+			.method(
+				"/data",
+				"get_keymap",
+				&serialize(keymap_id).map_err(|_| NodeError::Serialization)?,
+				Vec::new(),
+			)
+			.map_err(|e| NodeError::MessengerError { e })?;
+
+		Ok(async move {
+			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
+			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
+		})
+	}
+}
+
 /// Trait for handling when pulse receivers matching the sender's mask are created/destroyed on the server.
 pub trait PulseSenderHandler: Send + Sync {
 	fn new_receiver(&mut self, info: NewReceiverInfo, receiver: PulseReceiver, field: UnknownField);

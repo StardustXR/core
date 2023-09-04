@@ -119,3 +119,36 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 		})
 	}
 }
+
+#[macro_export]
+macro_rules! handle_action {
+    ($handler:ident, $action:ident) => {
+        $handler
+            .add_handled_signal(stringify!($action), |_, handler, _, _| {
+                handler.lock().$action();  // No data deserialization
+                Ok(())
+            })
+            .unwrap();
+    };
+
+    ($handler:ident, $action:ident, $name:ident) => {
+        $handler
+            .add_handled_signal(stringify!($action), |_, handler, data, _| {
+                handler.lock().$action(deserialize(data)?);
+                Ok(())
+            })
+            .unwrap();
+    };
+
+    ($handler:ident, $action:ident, ($( $name:ident ),*)) => {
+        $handler
+            .add_handled_signal(stringify!($action), |_, handler, data, _| {
+                let ($($name),*,) = deserialize(data)?;
+                handler.lock().$action($(
+                    $name
+                ),*);
+                Ok(())
+            })
+            .unwrap();
+    };
+}

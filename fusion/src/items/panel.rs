@@ -2,61 +2,51 @@ use super::Item;
 use crate::{
 	client::Client,
 	drawable::ModelPart,
+	handle_action,
 	node::{HandledNodeType, Node, NodeError, NodeType},
 	spatial::Spatial,
 	HandlerWrapper,
 };
 use mint::Vector2;
 use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
 use serde::{
 	de::{Deserializer, Error, SeqAccess, Visitor},
 	ser::Serializer,
 	Deserialize,
 };
-use serde_repr::{Deserialize_repr, Serialize_repr};
 use stardust_xr::schemas::flex::deserialize;
-use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
-/// Handler for the `panel` item.
 #[allow(unused_variables)]
+/// Handler for the `panel` item.
 pub trait PanelItemHandler: Send + Sync {
-	/// The toplevel surface's state has just been updated to `state`.
-	fn commit_toplevel(&mut self, state: Option<ToplevelInfo>);
+	/// This is invoked when the parent of the top-level surface changes.
+	fn toplevel_parent_changed(&mut self, parent: &str) {}
+	/// The title of the top-level surface was changed.
+	fn toplevel_title_changed(&mut self, title: &str) {}
+	/// The app id of the top-level surface was updated.
+	fn toplevel_app_id_changed(&mut self, app_id: &str) {}
+	/// The fullscreen state of the top-level surface was updated. The parameter 'active' indicates whether fullscreen is now active or not.
+	fn toplevel_fullscreen_active(&mut self, active: bool) {}
+	/// This receives a request to move the top-level surface.
+	fn toplevel_move_request(&mut self) {}
+	/// This is invoked when there is a request to resize the top-level surface. The parameters up, down, left and right indicate which edges are supposed to resize.
+	fn toplevel_resize_request(&mut self, up: bool, down: bool, left: bool, right: bool) {}
+	/// The size of the top-level surface changed.
+	fn toplevel_size_changed(&mut self, size: Vector2<u32>);
 
-	/// The toplevel surface recommends that you set the state to this.
-	///
-	/// You don't have to though.
-	fn recommend_toplevel_state(&mut self, state: RequestedState) {}
+	/// The cursor's material will automatically update -- you just need to hide/show the cursor and account for the new size/hotspot. The hotspot is the offset in the geometry.
+	fn set_cursor(&mut self, geometry: Option<Geometry>) {}
 
-	/// The toplevel surface requests that you show a menu to control the window, like if you right clicked the client side decorations.
-	fn show_window_menu(&mut self) {}
-
-	/// The cursor is being changed.
-	///
-	/// The cursor's material will automatically update, you just need to hide/show the cursor and account for the new size/hotspot.
-	fn set_cursor(&mut self, info: Option<CursorInfo>) {}
-
-	/// A new child was created. Childs are short-lived overlay surfaces like for context menus or modals.
-	fn new_child(&mut self, uid: &str, data: Option<ChildInfo>) {}
-	/// The child's positioner has changed and you need to update the UI.
-	fn reposition_child(&mut self, uid: &str, data: Option<PositionerData>) {}
-	/// This child was destroyed.
-	fn drop_child(&mut self, uid: &str) {}
-
-	/// The given surface is the only one that should recieve pointer input. If None, any surface in this panel item can receive pointer input.
-	fn grab_pointer_focus(&mut self, focus: Option<SurfaceID>) {}
-	/// The given surface is the only one that should recieve keyboard input. If None, any surface in this panel item can receive keyboard input.
-	fn grab_keyboard_focus(&mut self, focus: Option<SurfaceID>) {}
+	/// A new child was created. Children are drawn independently for efficiency or to exceed the boundaries of the toplevel.
+	fn new_child(&mut self, uid: &str, info: ChildInfo);
+	/// The child has moved or resized itself, update your UI accordingly.
+	fn reposition_child(&mut self, uid: &str, geometry: Geometry);
+	/// The child was destroyed.
+	fn drop_child(&mut self, uid: &str);
 }
 
-/// An updated cursor.
-#[derive(Debug, Clone, Deserialize)]
-pub struct CursorInfo {
-	/// Size of the cursor in pixels.
-	pub size: Vector2<u32>,
-	/// Hotspot position in pixels. This is the point relative to the top left where the cursor matches the 2D pointer.
-	pub hotspot: Vector2<i32>,
-}
 /// The origin and size of the surface's "solid" part.
 #[derive(Debug, Deserialize, Clone, Copy)]
 pub struct Geometry {
@@ -79,107 +69,25 @@ pub struct ToplevelInfo {
 	/// Recommended maximum size in pixels
 	pub max_size: Option<Vector2<u32>>,
 	/// Surface geometry
-	pub geometry: Geometry,
-	/// Array of states
-	pub states: Vec<State>,
+	pub logical_rectangle: Geometry,
 }
 
 /// Data on positioning a child
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChildInfo {
-	pub uid: String,
 	pub parent: SurfaceID,
-	pub positioner_data: PositionerData,
-}
-
-/// Data on positioning a child
-#[derive(Debug, Clone, Copy, Deserialize)]
-pub struct PositionerData {
-	/// The offset of the surface relative to the anchor rectangle.
-	pub offset: Vector2<i32>,
-
-	/// The size of the surface in px.
-	pub size: Vector2<u32>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "type", content = "content")]
-pub enum RequestedState {
-	Maximize(bool),
-	Fullscreen(bool),
-	Minimize,
-	Move,
-	Resize(Edge),
-}
-#[derive(Debug, Clone, Deserialize_repr)]
-#[repr(u32)]
-pub enum Edge {
-	None = 0,
-	Top = 1,
-	Bottom = 2,
-	Left = 4,
-	TopLeft = 5,
-	BottomLeft = 6,
-	Right = 8,
-	TopRight = 9,
-	BottomRight = 10,
-}
-
-/// The states the toplevel can be in.
-#[repr(u32)]
-#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
-pub enum State {
-	/// The surface is maximized.
-	///
-	/// The window geometry specified in the configure event must be obeyed by the client.
-	/// The client should draw without shadow or other decoration outside of the window geometry.
-	Maximized = 1,
-	/// The surface is fullscreen.
-	///
-	/// The window geometry specified in the configure event is a maximum; the client cannot resize beyond it.
-	/// For a surface to cover the whole fullscreened area, the geometry dimensions must be obeyed by the client.
-	Fullscreen = 2,
-	/// The surface is being resized.
-	///
-	/// The window geometry specified in the configure event is a maximum; the client cannot resize beyond it.
-	/// Clients that have aspect ratio or cell sizing configuration can use a smaller size, however.
-	Resizing = 3,
-	/// Client window decorations should be painted as if the window is active.
-	///
-	/// This does not mean that the window actually has keyboard or pointer focus.
-	Activated = 4,
-	/// The window is currently in a tiled layout and the left edge is considered to be adjacent to another part of the tiling grid.
-	TiledLeft = 5,
-	/// The window is currently in a tiled layout and the right edge is considered to be adjacent to another part of the tiling grid.
-	TiledRight = 6,
-	/// The window is currently in a tiled layout and the top edge is considered to be adjacent to another part of the tiling grid.
-	TiledTop = 7,
-	/// The window is currently in a tiled layout and the bottom edge is considered to be adjacent to another part of the tiling grid.
-	TiledBottom = 8,
-}
-/// A capability the panel item UI has.
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, Deserialize_repr, Serialize_repr)]
-pub enum Capability {
-	/// Wayland clients can tell this stardust client to open a context menu for window management options.
-	WindowMenu = 1,
-	/// Maximize is supported, no shadows and the panel item UI controls the size of the window entirely.
-	Maximize = 2,
-	/// Fullscreen is supported, no shadows or title bar and the panel item UI controls the size of the window entirely.
-	Fullscreen = 3,
-	/// Minimize is supported, this just makes the button send the panel item handler an event when it's clicked.
-	Minimize = 4,
+	pub geometry: Geometry,
 }
 
 /// The init data for the panel item.
 #[derive(Debug, Clone, Deserialize)]
 pub struct PanelItemInitData {
-	/// The cursor, if applicable.
-	pub cursor: Option<CursorInfo>,
+	/// The cursor, if applicable. The origin is the hotspot, size is size. If this is Some, you can apply its surface material to anything.
+	pub cursor: Option<Geometry>,
 	/// Size of the toplevel surface in pixels.
-	pub toplevel: Option<ToplevelInfo>,
-	/// Vector of childs that already exist
-	pub childs: Vec<ChildInfo>,
+	pub toplevel: ToplevelInfo,
+	/// Children that already exist, in a hashmap with UID keys for your convenience
+	pub children: FxHashMap<String, ChildInfo>,
 	/// The surface, if any, that has exclusive input to the pointer.
 	pub pointer_grab: Option<SurfaceID>,
 	/// The surface, if any, that has exclusive input to the keyboard.
@@ -266,25 +174,27 @@ impl PanelItem {
 		)
 	}
 
-	/// Request a resize of the surface (in pixels).
+	/// Try to close the toplevel, equivalent of ctrl+w or such.
 	///
-	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
-	pub fn set_toplevel_capabilities(&self, capabilities: &[Capability]) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("set_toplevel_capabilities", &capabilities)
+	/// The panel item UI handler or panel item acceptor will drop the panel item if this succeeds.
+	pub fn close_toplevel(&self) -> Result<(), NodeError> {
+		self.node().send_remote_signal("close_toplevel", &())
 	}
-
+	/// Request a resize of the surface (in pixels) to whatever size the 2D app wants.
+	///
+	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
+	pub fn auto_size_toplevel(&self) -> Result<(), NodeError> {
+		self.node().send_remote_signal("auto_size_toplevel", &())
+	}
 	/// Request a resize of the surface (in pixels).
 	///
 	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
-	pub fn configure_toplevel(
-		&self,
-		size: Option<Vector2<u32>>,
-		states: &[State],
-		bounds: Option<Vector2<u32>>,
-	) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("configure_toplevel", &(size, states, bounds))
+	pub fn set_toplevel_size(&self, size: Vector2<u32>) -> Result<(), NodeError> {
+		self.node().send_remote_signal("set_toplevel_size", &size)
+	}
+	pub fn set_toplevel_focused_visuals(&self, focused: bool) -> Result<(), NodeError> {
+		self.node()
+			.send_remote_signal("set_toplevel_focused_visuals", &focused)
 	}
 
 	/// Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer.
@@ -324,108 +234,17 @@ impl PanelItem {
 			.send_remote_signal("pointer_scroll", &(surface, scroll_distance, scroll_steps))
 	}
 
-	/// Set the keyboard's keymap with a given `xkb` keymap.
-	pub fn keyboard_set_keymap(&self, keymap: &str) -> Result<(), NodeError> {
-		#[cfg(feature = "verify-keymap")]
-		xkbcommon::xkb::Keymap::new_from_string(
-			&xkbcommon::xkb::Context::new(0),
-			keymap.to_string(),
-			xkbcommon::xkb::KEYMAP_FORMAT_TEXT_V1,
-			0,
-		)
-		.ok_or(NodeError::InvalidPath)?;
-		self.node
-			.send_remote_signal("keyboard_set_keymap_string", &keymap)
-	}
-
-	/// Set a key's state if the keyboard is active.
+	/// Send a series of key presses and releases (positive keycode for pressed, negative for released).
 	///
-	/// `key` is a raw keycode that corresponds to the given keymap.
-	pub fn keyboard_key(
+	/// To get a keymap ID use `Client::register_keymap` with your keymap.
+	pub fn keyboard_keys(
 		&self,
 		surface: &SurfaceID,
-		key: u32,
-		state: bool,
+		keymap_id: &str,
+		keys: Vec<i32>,
 	) -> Result<(), NodeError> {
 		self.node
-			.send_remote_signal("keyboard_key", &(surface, key, state as u32))
-	}
-
-	fn handle_commit_toplevel<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		handler.lock().commit_toplevel(deserialize(data)?);
-		Ok(())
-	}
-	fn handle_recommend_toplevel_state<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		handler.lock().recommend_toplevel_state(deserialize(data)?);
-		Ok(())
-	}
-	fn handle_set_cursor<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		handler.lock().set_cursor(deserialize(data)?);
-		Ok(())
-	}
-
-	fn handle_grab_keyboard<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		handler.lock().grab_keyboard_focus(deserialize(data)?);
-		Ok(())
-	}
-	fn handle_grab_pointer<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		handler.lock().grab_pointer_focus(deserialize(data)?);
-		Ok(())
-	}
-
-	fn handle_new_child<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		let (uid, data): (&str, Option<ChildInfo>) = deserialize(data)?;
-		handler.lock().new_child(uid, data);
-		Ok(())
-	}
-	fn handle_reposition_child<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		let (uid, data): (&str, Option<PositionerData>) = deserialize(data)?;
-		handler.lock().reposition_child(uid, data);
-		Ok(())
-	}
-	fn handle_drop_child<H: PanelItemHandler>(
-		_panel_item: Arc<PanelItem>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> color_eyre::eyre::Result<()> {
-		handler.lock().drop_child(deserialize(data)?);
-		Ok(())
+			.send_remote_signal("keyboard_key", &(surface, keymap_id, keys))
 	}
 
 	/// Wrap the panel item and `PanelItemHandler` in a `HandlerWrapper` to receive resize and cursor events.
@@ -443,34 +262,24 @@ impl PanelItem {
 		handler: Arc<Mutex<H>>,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
 		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
-		handler_wrapper
-			.add_handled_signal("commit_toplevel", Self::handle_commit_toplevel)
-			.unwrap();
-		handler_wrapper
-			.add_handled_signal(
-				"recommend_toplevel_state",
-				Self::handle_recommend_toplevel_state,
-			)
-			.unwrap();
-		handler_wrapper
-			.add_handled_signal("set_cursor", Self::handle_set_cursor)
-			.unwrap();
-		handler_wrapper
-			.add_handled_signal("grab_keyboard", Self::handle_grab_keyboard)
-			.unwrap();
-		handler_wrapper
-			.add_handled_signal("grab_pointer", Self::handle_grab_pointer)
-			.unwrap();
 
-		handler_wrapper
-			.add_handled_signal("new_child", Self::handle_new_child)
-			.unwrap();
-		handler_wrapper
-			.add_handled_signal("reposition_child", Self::handle_reposition_child)
-			.unwrap();
-		handler_wrapper
-			.add_handled_signal("drop_child", Self::handle_drop_child)
-			.unwrap();
+		handle_action!(handler_wrapper, set_cursor, geometry);
+
+		handle_action!(handler_wrapper, toplevel_parent_changed, parent);
+		handle_action!(handler_wrapper, toplevel_title_changed, title);
+		handle_action!(handler_wrapper, toplevel_app_id_changed, app_id);
+		handle_action!(handler_wrapper, toplevel_fullscreen_active, active);
+		handle_action!(handler_wrapper, toplevel_move_request);
+		handle_action!(
+			handler_wrapper,
+			toplevel_resize_request,
+			(up, down, left, right)
+		);
+		handle_action!(handler_wrapper, toplevel_size_changed, size);
+
+		handle_action!(handler_wrapper, new_child, (uid, info));
+		handle_action!(handler_wrapper, reposition_child, (uid, position));
+		handle_action!(handler_wrapper, drop_child, uid);
 
 		Ok(handler_wrapper)
 	}
@@ -532,12 +341,8 @@ async fn fusion_panel_ui() {
 	struct PanelItemManager(FxHashMap<String, HandlerWrapper<PanelItem, PanelItemUI>>);
 	impl crate::items::ItemUIHandler<PanelItem> for PanelItemManager {
 		fn item_created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
-			item.configure_toplevel(
-				Some(Vector2::from([1000; 2])),
-				&[State::Activated],
-				Some(Vector2::from([500; 2])),
-			)
-			.unwrap();
+			item.set_toplevel_focused_visuals(true).unwrap();
+			item.auto_size_toplevel().unwrap();
 			self.0.insert(
 				uid.to_string(),
 				item.wrap(PanelItemUI::new(init_data)).unwrap(),
@@ -566,17 +371,24 @@ async fn fusion_panel_ui() {
 		}
 	}
 	impl PanelItemHandler for PanelItemUI {
-		fn commit_toplevel(&mut self, toplevel_state: Option<ToplevelInfo>) {
-			dbg!(toplevel_state);
-		}
-		fn recommend_toplevel_state(&mut self, state: RequestedState) {
-			dbg!(state);
-		}
-		fn show_window_menu(&mut self) {
-			println!("Show window menu");
-		}
-		fn set_cursor(&mut self, cursor_info: Option<CursorInfo>) {
+		fn set_cursor(&mut self, cursor_info: Option<Geometry>) {
 			dbg!(cursor_info);
+		}
+
+		fn toplevel_size_changed(&mut self, size: Vector2<u32>) {
+			dbg!(size);
+		}
+
+		fn new_child(&mut self, uid: &str, info: ChildInfo) {
+			dbg!(uid);
+			dbg!(info);
+		}
+		fn reposition_child(&mut self, uid: &str, geometry: Geometry) {
+			dbg!(uid);
+			dbg!(geometry);
+		}
+		fn drop_child(&mut self, uid: &str) {
+			dbg!(uid);
 		}
 	}
 	impl Drop for PanelItemUI {

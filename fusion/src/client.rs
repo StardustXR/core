@@ -304,20 +304,6 @@ impl Client {
 			.unwrap();
 	}
 
-	pub fn get_connection_environment(
-		&self,
-	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
-		let future = self
-			.message_sender_handle
-			.method("/startup", "get_connection_environment", &[], Vec::new())
-			.map_err(|e| NodeError::MessengerError { e })?;
-
-		Ok(async move {
-			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
-			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
-		})
-	}
-
 	/// Stop the event loop if created with async loop. Equivalent to a graceful disconnect.
 	pub fn stop_loop(&self) {
 		self.stop_notifier.notify_one();

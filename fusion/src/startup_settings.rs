@@ -7,7 +7,25 @@ use crate::{
 	spatial::Spatial,
 };
 use nanoid::nanoid;
+use rustc_hash::FxHashMap;
+use stardust_xr::schemas::flex::deserialize;
 use std::{future::Future, ops::Deref, sync::Arc};
+
+impl Client {
+	pub fn get_connection_environment(
+		&self,
+	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
+		let future = self
+			.message_sender_handle
+			.method("/startup", "get_connection_environment", &[], Vec::new())
+			.map_err(|e| NodeError::MessengerError { e })?;
+
+		Ok(async move {
+			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
+			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
+		})
+	}
+}
 
 /// A node to generate startup IDs for launching clients with.
 ///
