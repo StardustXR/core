@@ -42,21 +42,31 @@ use stardust_xr::schemas::flex::serialize;
 #[cfg(feature = "keymap")]
 use std::future::Future;
 #[cfg(feature = "keymap")]
-use xkbcommon::xkb::{ffi::XKB_KEYMAP_FORMAT_TEXT_V1, Keymap};
+use xkbcommon::xkb::{ffi::XKB_KEYMAP_FORMAT_TEXT_V1, Context, Keymap};
 
 #[cfg(feature = "keymap")]
 impl Client {
 	pub fn register_keymap(
 		&self,
-		keymap: &Keymap,
+		keymap: impl AsRef<str>,
 	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
+		let test_keymap = Keymap::new_from_string(
+			&Context::new(0),
+			keymap.as_ref().to_string(),
+			XKB_KEYMAP_FORMAT_TEXT_V1,
+			0,
+		);
+		if test_keymap.is_none() {
+			return Err(NodeError::ReturnedError {
+				e: "Keymap is not valid".to_string(),
+			});
+		};
 		let future = self
 			.message_sender_handle
 			.method(
 				"/data",
 				"register_keymap",
-				&serialize(keymap.get_as_string(XKB_KEYMAP_FORMAT_TEXT_V1))
-					.map_err(|_| NodeError::Serialization)?,
+				&serialize(keymap.as_ref()).map_err(|_| NodeError::Serialization)?,
 				Vec::new(),
 			)
 			.map_err(|e| NodeError::MessengerError { e })?;
