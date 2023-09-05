@@ -40,6 +40,8 @@ use crate::client::Client;
 #[cfg(feature = "keymap")]
 use stardust_xr::schemas::flex::serialize;
 #[cfg(feature = "keymap")]
+use std::future::Future;
+#[cfg(feature = "keymap")]
 use xkbcommon::xkb::{ffi::XKB_KEYMAP_FORMAT_TEXT_V1, Keymap};
 
 #[cfg(feature = "keymap")]
