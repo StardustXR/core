@@ -1,6 +1,7 @@
 //! Symmetrical messenger for both client and server.
 
 use crate::scenegraph::{self, ScenegraphError};
+use global_counter::primitive::exact::CounterU64;
 use nix::cmsg_space;
 use nix::fcntl::{fcntl, FcntlArg};
 use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags};
@@ -11,7 +12,6 @@ use stardust_xr_schemas::flex::flexbuffers;
 use std::future::Future;
 use std::io::{IoSlice, IoSliceMut};
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, Interest};
@@ -24,7 +24,7 @@ use tracing::instrument;
 fn debug_call(
 	incoming: bool,
 	call_type: u8,
-	id: Option<u64>,
+	id: u64,
 	path: Option<&str>,
 	method: Option<&str>,
 	err: Option<&str>,
@@ -229,12 +229,13 @@ impl MessageReceiver {
 		debug_call(
 			true,
 			message_type,
-			Some(message.id()),
+			message.id(),
 			message.object(),
 			message.method(),
 			message.error(),
 			message.data().map(|d| d.bytes()).unwrap_or(&[]),
 		);
+		let id = message.id();
 		let path = message.object().unwrap_or("unknown");
 		let method = message.method().unwrap_or("unknown");
 		let data = message.data().unwrap_or_default().bytes();
@@ -250,7 +251,8 @@ impl MessageReceiver {
 			1 => {
 				let signal_status = scenegraph.send_signal(path, method, data, fds);
 				if let Err(e) = signal_status {
-					self.send_handle.error(path, method, e, data)?;
+					self.send_handle
+						.error(message.id(), path, method, e, data)?;
 				}
 			}
 			// Method called
@@ -268,17 +270,20 @@ impl MessageReceiver {
 						let _ = match result {
 							Ok((data, fds)) => send_handle.send(serialize_call(
 								3,
-								Some(message.id()),
+								message.id(),
 								path,
 								method,
 								None,
 								&data,
 								fds,
 							)),
-							Err(error) => send_handle.error(path, method, error, data),
+							Err(error) => {
+								send_handle.error(message.id(), path, method, error, data)
+							}
 						};
 					} else {
 						let _ = send_handle.error(
+							message.id(),
 							path,
 							method,
 							"Internal: method did not return a response",
@@ -289,10 +294,11 @@ impl MessageReceiver {
 			}
 			// Method return
 			3 => {
-				let future_opt = self.pending_futures.remove(&message.id());
+				let future_opt = self.pending_futures.remove(&id);
 				match future_opt {
 					None => {
 						self.send_handle.error(
+							message.id(),
 							path,
 							method,
 							"Method return without method call".to_string(),
@@ -315,6 +321,7 @@ impl MessageReceiver {
 
 /// Generate an error message from arguments.
 pub fn serialize_error<T: std::fmt::Display>(
+	id: u64,
 	object: &str,
 	method: &str,
 	err: T,
@@ -323,7 +330,7 @@ pub fn serialize_error<T: std::fmt::Display>(
 	let error = format!("{}", err);
 	serialize_call(
 		0,
-		None,
+		id,
 		object,
 		method,
 		Some(error.as_str()),
@@ -333,12 +340,13 @@ pub fn serialize_error<T: std::fmt::Display>(
 }
 /// Generate a signal message from arguments.
 pub fn serialize_signal_call(
+	id: u64,
 	object: &str,
 	method: &str,
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	serialize_call(1, None, object, method, None, data, fds)
+	serialize_call(1, id, object, method, None, data, fds)
 }
 /// Generate a method message from arguments.
 pub fn serialize_method_call(
@@ -348,12 +356,12 @@ pub fn serialize_method_call(
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	serialize_call(2, Some(id), object, method, None, data, fds)
+	serialize_call(2, id, object, method, None, data, fds)
 }
 #[instrument(level = "trace", skip_all)]
 fn serialize_call(
 	call_type: u8,
-	id: Option<u64>,
+	id: u64,
 	path: &str,
 	method: &str,
 	err: Option<&str>,
@@ -372,7 +380,7 @@ fn serialize_call(
 		&mut fbb,
 		&MessageArgs {
 			type_: call_type,
-			id: id.unwrap_or(0),
+			id,
 			object: Some(flex_path),
 			method: Some(flex_method),
 			error: flex_err,
@@ -392,22 +400,22 @@ pub struct MessageSender {
 	handle: MessageSenderHandle,
 	message_rx: mpsc::UnboundedReceiver<Message>,
 	pending_future_tx: PendingFutureSender,
-	max_message_id: Arc<AtomicU64>,
+	message_counter: Arc<CounterU64>,
 }
 impl MessageSender {
 	fn new(write: OwnedWriteHalf, pending_future_tx: PendingFutureSender) -> Self {
 		let (message_tx, message_rx) = mpsc::unbounded_channel();
-		let max_message_id = Arc::new(AtomicU64::new(0));
+		let max_message_id = Arc::new(CounterU64::new(0));
 		MessageSender {
 			write,
 			handle: MessageSenderHandle {
 				message_tx,
 				pending_future_tx: pending_future_tx.clone(),
-				max_message_id: max_message_id.clone(),
+				message_counter: max_message_id.clone(),
 			},
 			message_rx,
 			pending_future_tx,
-			max_message_id,
+			message_counter: max_message_id,
 		}
 	}
 	/// Send all the queued messages from the handles
@@ -455,17 +463,6 @@ impl MessageSender {
 		self.handle.clone()
 	}
 
-	/// Send an error immediately, await until sent.
-	pub async fn error<E: std::fmt::Display>(
-		&mut self,
-		node_path: &str,
-		method_name: &str,
-		err: E,
-		data: &[u8],
-	) -> Result<(), MessengerError> {
-		self.send(serialize_error(node_path, method_name, err, data))
-			.await
-	}
 	/// Send a signal immediately, await until sent.
 	pub async fn signal(
 		&mut self,
@@ -474,7 +471,8 @@ impl MessageSender {
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
-		self.send(serialize_signal_call(node_path, signal_name, data, fds))
+		let id = self.message_counter.inc();
+		self.send(serialize_signal_call(id, node_path, signal_name, data, fds))
 			.await
 	}
 	/// Call a method immediately, await until other side sends back a response or the message fails to send.
@@ -486,13 +484,12 @@ impl MessageSender {
 		fds: Vec<OwnedFd>,
 	) -> Result<Result<Message, String>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
-		let id = self.max_message_id.load(Ordering::Relaxed);
+		let id = self.message_counter.inc();
 		self.pending_future_tx
 			.send((id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
 		self.send(serialize_method_call(id, node_path, method, data, fds))
 			.await?;
-		self.max_message_id.store(id + 1, Ordering::Relaxed);
 		rx.await.map_err(|_| MessengerError::ReceiverDropped)
 	}
 }
@@ -502,18 +499,19 @@ impl MessageSender {
 pub struct MessageSenderHandle {
 	message_tx: mpsc::UnboundedSender<Message>,
 	pending_future_tx: PendingFutureSender,
-	max_message_id: Arc<AtomicU64>,
+	message_counter: Arc<CounterU64>,
 }
 impl MessageSenderHandle {
 	/// Queue up an error to be sent.
 	pub fn error<E: std::fmt::Display>(
 		&self,
+		id: u64,
 		node_path: &str,
 		method_name: &str,
 		err: E,
 		data: &[u8],
 	) -> Result<(), MessengerError> {
-		self.send(serialize_error(node_path, method_name, err, data))
+		self.send(serialize_error(id, node_path, method_name, err, data))
 	}
 	/// Queue up a signal to be sent.
 	pub fn signal(
@@ -523,7 +521,8 @@ impl MessageSenderHandle {
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
-		self.send(serialize_signal_call(node_path, signal_name, data, fds))
+		let id = self.message_counter.inc();
+		self.send(serialize_signal_call(id, node_path, signal_name, data, fds))
 	}
 	/// Queue up a method to be sent and get back a future for when a response is returned.
 	pub fn method(
@@ -534,12 +533,11 @@ impl MessageSenderHandle {
 		fds: Vec<OwnedFd>,
 	) -> Result<impl Future<Output = Result<Message, String>>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
-		let id = self.max_message_id.load(Ordering::Relaxed);
+		let id = self.message_counter.inc();
 		self.pending_future_tx
 			.send((id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
 		self.send(serialize_method_call(id, node_path, method, data, fds))?;
-		self.max_message_id.store(id + 1, Ordering::Relaxed);
 		Ok(async move { rx.await.map_err(|e| e.to_string())? })
 	}
 
