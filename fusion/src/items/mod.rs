@@ -175,6 +175,8 @@ impl<I: Item> ItemUI<I> {
 		handler_wrapper.add_handled_signal("capture_item", Self::handle_capture_item)?;
 		handler_wrapper.add_handled_signal("release_item", Self::handle_release_item)?;
 		handler_wrapper.add_handled_signal("destroy_item", Self::handle_destroy_item)?;
+		handler_wrapper.add_handled_signal("create_acceptor", Self::handle_create_acceptor)?;
+		handler_wrapper.add_handled_signal("destroy_acceptor", Self::handle_destroy_acceptor)?;
 		Ok(handler_wrapper)
 	}
 
@@ -241,6 +243,7 @@ impl<I: Item> ItemUI<I> {
 		ui: Arc<ItemUI<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 
@@ -269,6 +272,7 @@ impl<I: Item> ItemUI<I> {
 		ui: Arc<ItemUI<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
 		ui.acceptors.write().remove(uid);
