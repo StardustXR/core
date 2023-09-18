@@ -1,5 +1,6 @@
 use mint::{Quaternion, Vector3};
 use serde::{Deserialize, Serialize};
+use drm_fourcc::{DrmFourcc, DrmModifier};
 
 /// A box
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -108,4 +109,20 @@ impl Transform {
 			scale: Some(scale.into()),
 		}
 	}
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BufferPlaneInfo{
+	pub idx: u32,
+	pub offset: u32,
+	pub stride: u32,
+	pub modifier: DrmModifier,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct BufferInfo {
+	pub size: (u32, u32),
+	pub fourcc: DrmFourcc,
+	pub flags: u32,
+	pub planes: Vec<BufferPlaneInfo>,
 }

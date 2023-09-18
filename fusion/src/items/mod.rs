@@ -5,6 +5,7 @@
 //! - File item (Holds a file's data/path/url as well as its MIME type, planned).
 //! - Panel item (Represents a toplevel Wayland surface aka window as well as its popups (context menus for example)).
 //! - Lens item (Represents an OpenXR session, planned).
+//! - Camera item (Represents the capability of rendering from a viewpoint and projection)
 //!
 //! Item acceptors are a way to temporarily take posession of (capture) an item.
 //! They have an attached field to provide a logical counterpart for the visual element to the item UI.
@@ -112,7 +113,9 @@ impl<I: Item> ItemUI<I> {
 			let client = Arc::downgrade(client);
 			let acceptors = item_ui.acceptors.clone();
 			move |data, _fds| {
-				let Some(client) = client.upgrade() else {bail!("No client")};
+				let Some(client) = client.upgrade() else {
+					bail!("No client")
+				};
 				let uid: &str = deserialize(data)?;
 				let acceptor: ItemAcceptor<I> = ItemAcceptor::from_path(
 					&client,
@@ -207,7 +210,9 @@ impl<I: Item> ItemUI<I> {
 	) -> Result<()> {
 		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
 		let items = ui.items.read();
-		let Some(item) = items.get(item_uid) else { return Ok(()) };
+		let Some(item) = items.get(item_uid) else {
+			return Ok(());
+		};
 		ui.captured
 			.write()
 			.insert(item_uid.to_string(), item.alias());
@@ -223,7 +228,9 @@ impl<I: Item> ItemUI<I> {
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
-		let Some(item) = ui.captured.write().remove(item_uid) else { return Ok(()) };
+		let Some(item) = ui.captured.write().remove(item_uid) else {
+			return Ok(());
+		};
 		handler.lock().item_released(item_uid, acceptor_uid, item);
 		Ok(())
 	}

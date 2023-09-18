@@ -1,24 +1,28 @@
 use super::Item;
 use crate::client::Client;
+use crate::drawable::ModelPart;
 use crate::node::{Node, NodeError, NodeType};
 use crate::spatial::Spatial;
 use mint::{RowMatrix4, Vector2};
-use stardust_xr::values::Transform;
+use stardust_xr::schemas::flex::{deserialize, serialize};
+use stardust_xr::values::{BufferInfo, Transform};
+use std::future::Future;
 use std::ops::Deref;
+use std::os::fd::OwnedFd;
 use std::sync::Arc;
 
-/// Item that contains the path to an equirectangular `.hdr` file.
+/// Item that represents the capability of rendering from a viewpoint and projection
 pub struct CameraItem {
 	spatial: Spatial,
 }
 
 impl CameraItem {
-	/// Create a new environment item from a file path.
+	/// Create a new camera item.
 	pub fn create(
 		spatial_parent: &Spatial,
 		transform: Transform,
 		proj_matrix: impl Into<RowMatrix4<f32>>,
-		px_size: impl Into<Vector2<u32>>,
+		preview_size: impl Into<Vector2<u32>>,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(CameraItem {
@@ -26,8 +30,8 @@ impl CameraItem {
 				node: Node::new(
 					&spatial_parent.node.client()?,
 					"/item",
-					"create_environment_item",
-					"/item/environment/item",
+					"create_camera_item",
+					"/item/camera/item",
 					true,
 					&id.clone(),
 					(
@@ -35,10 +39,37 @@ impl CameraItem {
 						spatial_parent.node().get_path()?,
 						transform,
 						proj_matrix.into(),
-						px_size.into(),
+						preview_size.into(),
 					),
 				)?,
 			},
+		})
+	}
+
+	/// Apply the camera's preview as a material to a model.
+	///
+	/// This material is unlit with the [Simula text shader](https://github.com/SimulaVR/Simula/blob/master/addons/godot-haskell-plugin/TextShader.tres) ported on the server.
+	/// The material index is global across the whole model for now, just play around with it a bit.
+	pub fn apply_surface_material(&self, model_part: &ModelPart) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("apply_preview_material", &(model_part.node().get_path()?))
+	}
+
+	/// Request the camera's view to be render to a Dmabuf.
+	///
+	/// To avoid tearing, the buffer should not be read until receiving the response that it has been rendered.
+	pub async fn render(
+		&self,
+		buffer: (BufferInfo, Vec<OwnedFd>),
+	) -> Result<impl Future<Output = Result<(), NodeError>>, NodeError> {
+		let send_data = serialize(&(buffer.0)).map_err(|_| NodeError::Serialization)?;
+		let future = self
+			.node
+			.execute_remote_method_raw("render", &send_data, buffer.1)?;
+		Ok(async move {
+			future.await.and_then(|data| {
+				deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
+			})
 		})
 	}
 }
@@ -84,7 +115,7 @@ async fn fusion_camera_ui() {
 	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
-	let environment_item = CameraItem::create(
+	let camera_item = CameraItem::create(
 		client.get_root(),
 		Transform::default(),
 		glam::Mat4::perspective_infinite_rh(
@@ -102,10 +133,10 @@ async fn fusion_camera_ui() {
 			println!("Camera item {uid} created");
 		}
 		fn item_captured(&mut self, uid: &str, acceptor_uid: &str, _item: CameraItem) {
-			println!("Capturing environment item {uid} in acceptor {acceptor_uid}");
+			println!("Capturing camera item {uid} in acceptor {acceptor_uid}");
 		}
 		fn item_released(&mut self, uid: &str, acceptor_uid: &str, _item: CameraItem) {
-			println!("Released environment item {uid} from acceptor {acceptor_uid}");
+			println!("Released camera item {uid} from acceptor {acceptor_uid}");
 		}
 		fn item_destroyed(&mut self, _uid: &str) {}
 		fn acceptor_created(
@@ -145,7 +176,7 @@ async fn fusion_camera_ui() {
 	.wrap(CameraUIManager(client.clone()))
 	.unwrap();
 
-	item_acceptor.node().capture(&environment_item).unwrap();
+	item_acceptor.node().capture(&camera_item).unwrap();
 
 	tokio::select! {
 		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => panic!("Timed Out"),
