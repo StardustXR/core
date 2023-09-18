@@ -77,7 +77,7 @@ async fn fusion_pointer_input_method() {
 	fbb.start_map();
 	let pointer = PointerInputMethod::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		Some(fbb.take_buffer()),
 	)
 	.unwrap();

@@ -73,7 +73,7 @@ async fn fusion_box_field() {
 		.expect("Couldn't connect");
 	let box_field = BoxField::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		Vector3::from([1.0; 3]),
 	)
 	.expect("Unable to make box field");

@@ -472,14 +472,14 @@ async fn fusion_pulses() {
 		fbb.take_buffer()
 	};
 
-	let pulse_sender = PulseSender::create(client.get_root(), Transform::default(), &mask).unwrap();
+	let pulse_sender = PulseSender::create(client.get_root(), Transform::none(), &mask).unwrap();
 	let pulse_sender_handler = PulseSenderTest {
 		data: mask.clone(),
 		node: pulse_sender.alias(),
 	};
 	let _pulse_sender_handler = pulse_sender.wrap(pulse_sender_handler).unwrap();
 	let _pulse_receiver =
-		PulseReceiver::create(client.get_root(), Transform::default(), &field, &mask)
+		PulseReceiver::create(client.get_root(), Transform::none(), &field, &mask)
 			.unwrap()
 			.wrap(PulseReceiverTest(client.clone()))
 			.unwrap();

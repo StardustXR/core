@@ -83,7 +83,7 @@ async fn fusion_tip_input_method() {
 	fbb.start_map();
 	let tip = TipInputMethod::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		0.5,
 		Some(fbb.take_buffer()),
 	)

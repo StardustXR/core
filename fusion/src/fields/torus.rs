@@ -73,7 +73,7 @@ async fn fusion_torus_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let cylinder_field = TorusField::create(client.get_root(), Transform::default(), 1.0, 0.5)
+	let cylinder_field = TorusField::create(client.get_root(), Transform::none(), 1.0, 0.5)
 		.expect("Unable to make torus field");
 	let distance = cylinder_field
 		.distance(client.get_root(), mint::Vector3::from([1.0, 1.0, 0.0]))

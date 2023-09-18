@@ -1,6 +1,5 @@
 use mint::{Quaternion, Vector3};
 use serde::{Deserialize, Serialize};
-use drm_fourcc::{DrmFourcc, DrmModifier};
 
 /// A box
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -10,7 +9,7 @@ pub struct Box {
 }
 
 /// Simple transform
-#[derive(Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Transform {
 	pub position: Option<Vector3<f32>>,
 	pub rotation: Option<Quaternion<f32>>,
@@ -50,19 +49,22 @@ impl Transform {
 	pub fn from_position(position: impl Into<Vector3<f32>>) -> Self {
 		Transform {
 			position: Some(position.into()),
-			..Default::default()
+			rotation: None,
+			scale: None,
 		}
 	}
 	pub fn from_rotation(rotation: impl Into<Quaternion<f32>>) -> Self {
 		Transform {
+			position: None,
 			rotation: Some(rotation.into()),
-			..Default::default()
+			scale: None,
 		}
 	}
 	pub fn from_scale(scale: impl Into<Vector3<f32>>) -> Self {
 		Transform {
+			position: None,
+			rotation: None,
 			scale: Some(scale.into()),
-			..Default::default()
 		}
 	}
 
@@ -73,7 +75,7 @@ impl Transform {
 		Transform {
 			position: Some(position.into()),
 			rotation: Some(rotation.into()),
-			..Default::default()
+			scale: None,
 		}
 	}
 	pub fn from_rotation_scale(
@@ -81,9 +83,9 @@ impl Transform {
 		scale: impl Into<Vector3<f32>>,
 	) -> Self {
 		Transform {
+			position: None,
 			rotation: Some(rotation.into()),
 			scale: Some(scale.into()),
-			..Default::default()
 		}
 	}
 
@@ -93,8 +95,8 @@ impl Transform {
 	) -> Self {
 		Transform {
 			position: Some(position.into()),
+			rotation: None,
 			scale: Some(scale.into()),
-			..Default::default()
 		}
 	}
 
@@ -111,18 +113,19 @@ impl Transform {
 	}
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct BufferPlaneInfo{
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BufferPlaneInfo {
 	pub idx: u32,
 	pub offset: u32,
 	pub stride: u32,
-	pub modifier: DrmModifier,
+	pub modifier: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BufferInfo {
-	pub size: (u32, u32),
-	pub fourcc: DrmFourcc,
+	pub width: u32,
+	pub height: u32,
+	pub fourcc: u32,
 	pub flags: u32,
 	pub planes: Vec<BufferPlaneInfo>,
 }

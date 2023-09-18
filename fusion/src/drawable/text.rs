@@ -160,7 +160,7 @@ async fn fusion_text() {
 		font_resource: Some(ResourceID::new_namespaced("fusion", "common_case")),
 		..Default::default()
 	};
-	let text = Text::create(client.get_root(), Transform::default(), "Test Text", style).unwrap();
+	let text = Text::create(client.get_root(), Transform::none(), "Test Text", style).unwrap();
 	text.set_character_height(0.05).unwrap();
 	text.set_text("Test Text: Changed").unwrap();
 

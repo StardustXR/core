@@ -33,7 +33,7 @@ impl SpatialDemo {
 	fn new(client: &Arc<Client>) -> Self {
 		let gyro = Model::create(
 			&client.get_root(),
-			Transform::default(),
+			Transform::none(),
 			&ResourceID::new_namespaced("fusion", "gyro"),
 		)
 		.unwrap();

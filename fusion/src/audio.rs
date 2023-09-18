@@ -74,12 +74,7 @@ async fn fusion_sound() {
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let lightspeed_resource = ResourceID::new_namespaced("fusion", "kittn_lightspeed");
-	let sound = Sound::create(
-		client.get_root(),
-		Transform::default(),
-		&lightspeed_resource,
-	)
-	.unwrap();
+	let sound = Sound::create(client.get_root(), Transform::none(), &lightspeed_resource).unwrap();
 	sound.play().unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(10)).await;

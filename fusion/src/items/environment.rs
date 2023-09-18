@@ -89,7 +89,7 @@ async fn fusion_environment_ui() {
 
 	let environment_item = EnvironmentItem::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		file_relative_path!("res/fusion/sky.hdr"),
 	)
 	.unwrap();
@@ -142,7 +142,7 @@ async fn fusion_environment_ui() {
 			.unwrap();
 	let item_acceptor = crate::items::ItemAcceptor::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		&item_acceptor_field,
 	)
 	.unwrap()

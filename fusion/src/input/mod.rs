@@ -322,7 +322,7 @@ async fn fusion_input_handler() {
 	// 	.build()
 	// 	.await
 	// 	.unwrap();
-	let _input_handler = InputHandler::create(client.get_root(), Transform::default(), &field)
+	let _input_handler = InputHandler::create(client.get_root(), Transform::none(), &field)
 		.unwrap()
 		.wrap(InputHandlerTest)
 		.unwrap();

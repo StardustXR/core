@@ -143,7 +143,7 @@ async fn fusion_model() {
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
 	let gyro_gem_resource = ResourceID::new_namespaced("fusion", "gyro_gem");
-	let model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource).unwrap();
+	let model = Model::create(client.get_root(), Transform::none(), &gyro_gem_resource).unwrap();
 	model
 		.model_part("Gem")
 		.unwrap()

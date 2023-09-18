@@ -172,7 +172,7 @@ async fn fusion_input_action_handler() {
 
 	let field = SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1).unwrap();
 	let input_action_test = InputActionHandlerTest {
-		input_handler: InputHandler::create(client.get_root(), Transform::default(), &field)
+		input_handler: InputHandler::create(client.get_root(), Transform::none(), &field)
 			.unwrap()
 			.wrap(InputActionHandler::new(0.05))
 			.unwrap(),

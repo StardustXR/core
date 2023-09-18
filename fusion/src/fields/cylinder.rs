@@ -72,7 +72,7 @@ async fn fusion_cylinder_field() {
 		.await
 		.expect("Couldn't connect");
 
-	let cylinder_field = CylinderField::create(client.get_root(), Transform::default(), 1.0, 0.5)
+	let cylinder_field = CylinderField::create(client.get_root(), Transform::none(), 1.0, 0.5)
 		.expect("Unable to make cylinder field");
 	let distance = cylinder_field
 		.distance(client.get_root(), mint::Vector3::from([0.0, 1.0, 0.0]))

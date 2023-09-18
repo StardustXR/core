@@ -193,11 +193,11 @@ async fn fusion_zone() {
 		.expect("Couldn't connect");
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let model_parent = Spatial::create(client.get_root(), Transform::default(), true).unwrap();
+	let model_parent = Spatial::create(client.get_root(), Transform::none(), true).unwrap();
 
 	let gyro_gem = crate::drawable::ResourceID::new_namespaced("fusion", "gyro_gem");
 	let _model =
-		crate::drawable::Model::create(&model_parent, Transform::default(), &gyro_gem).unwrap();
+		crate::drawable::Model::create(&model_parent, Transform::none(), &gyro_gem).unwrap();
 
 	let field =
 		crate::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
@@ -223,7 +223,7 @@ async fn fusion_zone() {
 			self.0.stop_loop();
 		}
 	}
-	let zone = Zone::create(client.get_root(), Transform::default(), &field).unwrap();
+	let zone = Zone::create(client.get_root(), Transform::none(), &field).unwrap();
 	let zone_handler = ZoneTest(client.clone(), model_parent.alias(), zone.alias());
 	let zone = zone.wrap(zone_handler).unwrap();
 	zone.node().update().unwrap();

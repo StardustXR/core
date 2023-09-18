@@ -169,7 +169,7 @@ async fn fusion_lines() {
 			..Default::default()
 		},
 	];
-	let _lines = Lines::create(client.get_root(), Transform::default(), &points, true).unwrap();
+	let _lines = Lines::create(client.get_root(), Transform::none(), &points, true).unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 }
