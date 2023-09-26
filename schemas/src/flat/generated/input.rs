@@ -4,9 +4,9 @@
 // @generated
 
 use crate::input_pointer::*;
-use crate::common::*;
 use crate::input_hand::*;
 use crate::input_tip::*;
+use crate::common::*;
 use core::mem;
 use core::cmp::Ordering;
 
@@ -17,9 +17,9 @@ use self::flatbuffers::{EndianScalar, Follow};
 pub mod stardust_xr {
 
   use crate::input_pointer::*;
-  use crate::common::*;
   use crate::input_hand::*;
   use crate::input_tip::*;
+  use crate::common::*;
   use core::mem;
   use core::cmp::Ordering;
 

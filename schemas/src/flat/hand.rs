@@ -10,6 +10,7 @@ pub struct Joint {
 	pub position: Vector3<f32>,
 	pub rotation: Quaternion<f32>,
 	pub radius: f32,
+	pub distance: f32,
 }
 impl Default for Joint {
 	fn default() -> Self {
@@ -17,6 +18,7 @@ impl Default for Joint {
 			position: Vector3::from([0.0; 3]),
 			rotation: Quaternion::from([0.0, 0.0, 0.0, 1.0]),
 			radius: Default::default(),
+			distance: Default::default(),
 		}
 	}
 }
@@ -26,6 +28,7 @@ impl From<JointT> for Joint {
 			position: joint.position.into(),
 			rotation: joint.rotation.into(),
 			radius: joint.radius,
+			distance: joint.distance,
 		}
 	}
 }
@@ -35,6 +38,7 @@ impl From<Joint> for JointT {
 			position: joint.position.into(),
 			rotation: joint.rotation.into(),
 			radius: joint.radius,
+			distance: joint.distance,
 		}
 	}
 }

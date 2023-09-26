@@ -536,10 +536,10 @@ impl PoseT {
 // struct Joint, aligned to 4
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq)]
-pub struct Joint(pub [u8; 32]);
+pub struct Joint(pub [u8; 36]);
 impl Default for Joint { 
   fn default() -> Self { 
-    Self([0; 32])
+    Self([0; 36])
   }
 }
 impl core::fmt::Debug for Joint {
@@ -548,6 +548,7 @@ impl core::fmt::Debug for Joint {
       .field("position", &self.position())
       .field("rotation", &self.rotation())
       .field("radius", &self.radius())
+      .field("distance", &self.distance())
       .finish()
   }
 }
@@ -592,11 +593,13 @@ impl<'a> Joint {
     position: &Vec3,
     rotation: &Quat,
     radius: f32,
+    distance: f32,
   ) -> Self {
-    let mut s = Self([0; 32]);
+    let mut s = Self([0; 36]);
     s.set_position(position);
     s.set_rotation(rotation);
     s.set_radius(radius);
+    s.set_distance(distance);
     s
   }
 
@@ -657,11 +660,41 @@ impl<'a> Joint {
     }
   }
 
+  pub fn distance(&self) -> f32 {
+    let mut mem = core::mem::MaybeUninit::<<f32 as EndianScalar>::Scalar>::uninit();
+    // Safety:
+    // Created from a valid Table for this object
+    // Which contains a valid value in this slot
+    EndianScalar::from_little_endian(unsafe {
+      core::ptr::copy_nonoverlapping(
+        self.0[32..].as_ptr(),
+        mem.as_mut_ptr() as *mut u8,
+        core::mem::size_of::<<f32 as EndianScalar>::Scalar>(),
+      );
+      mem.assume_init()
+    })
+  }
+
+  pub fn set_distance(&mut self, x: f32) {
+    let x_le = x.to_little_endian();
+    // Safety:
+    // Created from a valid Table for this object
+    // Which contains a valid value in this slot
+    unsafe {
+      core::ptr::copy_nonoverlapping(
+        &x_le as *const _ as *const u8,
+        self.0[32..].as_mut_ptr(),
+        core::mem::size_of::<<f32 as EndianScalar>::Scalar>(),
+      );
+    }
+  }
+
   pub fn unpack(&self) -> JointT {
     JointT {
       position: self.position().unpack(),
       rotation: self.rotation().unpack(),
       radius: self.radius(),
+      distance: self.distance(),
     }
   }
 }
@@ -671,6 +704,7 @@ pub struct JointT {
   pub position: Vec3T,
   pub rotation: QuatT,
   pub radius: f32,
+  pub distance: f32,
 }
 impl JointT {
   pub fn pack(&self) -> Joint {
@@ -678,6 +712,7 @@ impl JointT {
       &self.position.pack(),
       &self.rotation.pack(),
       self.radius,
+      self.distance,
     )
   }
 }

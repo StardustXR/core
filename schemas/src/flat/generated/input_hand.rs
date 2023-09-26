@@ -23,10 +23,10 @@ pub mod stardust_xr {
 // struct Finger, aligned to 4
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq)]
-pub struct Finger(pub [u8; 160]);
+pub struct Finger(pub [u8; 180]);
 impl Default for Finger { 
   fn default() -> Self { 
-    Self([0; 160])
+    Self([0; 180])
   }
 }
 impl core::fmt::Debug for Finger {
@@ -84,7 +84,7 @@ impl<'a> Finger {
     proximal: &Joint,
     metacarpal: &Joint,
   ) -> Self {
-    let mut s = Self([0; 160]);
+    let mut s = Self([0; 180]);
     s.set_tip(tip);
     s.set_distal(distal);
     s.set_intermediate(intermediate);
@@ -106,55 +106,55 @@ impl<'a> Finger {
 
   #[allow(clippy::identity_op)]
   pub fn set_tip(&mut self, x: &Joint) {
-    self.0[0..0 + 32].copy_from_slice(&x.0)
+    self.0[0..0 + 36].copy_from_slice(&x.0)
   }
 
   pub fn distal(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[32..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[36..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_distal(&mut self, x: &Joint) {
-    self.0[32..32 + 32].copy_from_slice(&x.0)
+    self.0[36..36 + 36].copy_from_slice(&x.0)
   }
 
   pub fn intermediate(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[64..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[72..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_intermediate(&mut self, x: &Joint) {
-    self.0[64..64 + 32].copy_from_slice(&x.0)
+    self.0[72..72 + 36].copy_from_slice(&x.0)
   }
 
   pub fn proximal(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[96..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[108..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_proximal(&mut self, x: &Joint) {
-    self.0[96..96 + 32].copy_from_slice(&x.0)
+    self.0[108..108 + 36].copy_from_slice(&x.0)
   }
 
   pub fn metacarpal(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[128..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[144..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_metacarpal(&mut self, x: &Joint) {
-    self.0[128..128 + 32].copy_from_slice(&x.0)
+    self.0[144..144 + 36].copy_from_slice(&x.0)
   }
 
   pub fn unpack(&self) -> FingerT {
@@ -191,10 +191,10 @@ impl FingerT {
 // struct Thumb, aligned to 4
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq)]
-pub struct Thumb(pub [u8; 128]);
+pub struct Thumb(pub [u8; 144]);
 impl Default for Thumb { 
   fn default() -> Self { 
-    Self([0; 128])
+    Self([0; 144])
   }
 }
 impl core::fmt::Debug for Thumb {
@@ -250,7 +250,7 @@ impl<'a> Thumb {
     proximal: &Joint,
     metacarpal: &Joint,
   ) -> Self {
-    let mut s = Self([0; 128]);
+    let mut s = Self([0; 144]);
     s.set_tip(tip);
     s.set_distal(distal);
     s.set_proximal(proximal);
@@ -271,43 +271,43 @@ impl<'a> Thumb {
 
   #[allow(clippy::identity_op)]
   pub fn set_tip(&mut self, x: &Joint) {
-    self.0[0..0 + 32].copy_from_slice(&x.0)
+    self.0[0..0 + 36].copy_from_slice(&x.0)
   }
 
   pub fn distal(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[32..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[36..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_distal(&mut self, x: &Joint) {
-    self.0[32..32 + 32].copy_from_slice(&x.0)
+    self.0[36..36 + 36].copy_from_slice(&x.0)
   }
 
   pub fn proximal(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[64..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[72..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_proximal(&mut self, x: &Joint) {
-    self.0[64..64 + 32].copy_from_slice(&x.0)
+    self.0[72..72 + 36].copy_from_slice(&x.0)
   }
 
   pub fn metacarpal(&self) -> &Joint {
     // Safety:
     // Created from a valid Table for this object
     // Which contains a valid struct in this slot
-    unsafe { &*(self.0[96..].as_ptr() as *const Joint) }
+    unsafe { &*(self.0[108..].as_ptr() as *const Joint) }
   }
 
   #[allow(clippy::identity_op)]
   pub fn set_metacarpal(&mut self, x: &Joint) {
-    self.0[96..96 + 32].copy_from_slice(&x.0)
+    self.0[108..108 + 36].copy_from_slice(&x.0)
   }
 
   pub fn unpack(&self) -> ThumbT {

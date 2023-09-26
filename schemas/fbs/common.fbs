@@ -22,4 +22,5 @@ struct Joint {
 	position:Vec3;
 	rotation:Quat;
 	radius:float;
+	distance:float;
 }
