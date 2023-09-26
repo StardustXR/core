@@ -247,6 +247,33 @@ impl PanelItem {
 			.send_remote_signal("keyboard_key", &(surface, keymap_id, keys))
 	}
 
+	/// Put a touch down on this surface with the unique ID `uid` at `position`.
+	pub fn touch_down(
+		&self,
+		surface: &SurfaceID,
+		uid: u32,
+		position: impl Into<Vector2<f32>>,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("touch_down", &(surface, uid, position.into()))
+	}
+	/// Move an existing touch point.
+	pub fn touch_move(&self, uid: u32, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("touch_move", &(uid, position.into()))
+	}
+	/// Release a touch from its surface.
+	pub fn touch_up(&self, uid: u32) -> Result<(), NodeError> {
+		self.node.send_remote_signal("touch_up", &uid)
+	}
+	/// Make sure nothing is touching any surface on this panel item.
+	///
+	/// Useful for when it's newly captured into an item acceptor to make sure no touches get stuck.
+	pub fn reset_touches(&self) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal_raw("reset_touches", &[], Vec::new())
+	}
+
 	/// Wrap the panel item and `PanelItemHandler` in a `HandlerWrapper` to receive resize and cursor events.
 	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 	pub fn wrap<H: PanelItemHandler>(
