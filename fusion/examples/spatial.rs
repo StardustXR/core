@@ -2,7 +2,7 @@ use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::Transform;
 use stardust_xr_fusion::{
-	client::{Client, FrameInfo, RootHandler},
+	client::{Client, ClientState, FrameInfo, RootHandler},
 	drawable::{MaterialParameter, Model, ModelPart, ResourceID},
 };
 use std::sync::Arc;
@@ -69,5 +69,8 @@ impl RootHandler for SpatialDemo {
 		self.ring_outer
 			.set_rotation(None, Quat::from_rotation_x(elapsed))
 			.unwrap();
+	}
+	fn save_state(&mut self) -> ClientState {
+		ClientState::default()
 	}
 }

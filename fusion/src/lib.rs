@@ -30,8 +30,8 @@ pub mod drawable;
 pub mod fields;
 pub mod input;
 pub mod items;
+mod scenegraph;
 pub mod spatial;
-pub mod startup_settings;
 
 use self::node::HandledNodeType;
 use color_eyre::eyre::{anyhow, Result};

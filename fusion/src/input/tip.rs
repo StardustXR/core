@@ -128,6 +128,9 @@ async fn fusion_tip_input_method() {
 			self.datamap.serialize(&mut serializer).unwrap();
 			self.tip.set_datamap(&serializer.take_buffer()).unwrap();
 		}
+		fn save_state(&mut self) -> crate::client::ClientState {
+			crate::client::ClientState::default()
+		}
 	}
 
 	let _wrapped_root = client.wrap_root(TipDemo {

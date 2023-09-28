@@ -214,6 +214,9 @@ async fn fusion_input_action_handler() {
 			);
 			// dbg!(&self.hover_action);
 		}
+		fn save_state(&mut self) -> crate::client::ClientState {
+			crate::client::ClientState::default()
+		}
 	}
 
 	let _root = client.wrap_root(input_action_test).unwrap();

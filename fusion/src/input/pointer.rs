@@ -104,6 +104,9 @@ async fn fusion_pointer_input_method() {
 			self.datamap.serialize(&mut serializer).unwrap();
 			self.pointer.set_datamap(&serializer.take_buffer()).unwrap();
 		}
+		fn save_state(&mut self) -> crate::client::ClientState {
+			crate::client::ClientState::default()
+		}
 	}
 
 	let model = Model::create(

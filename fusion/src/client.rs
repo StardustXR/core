@@ -1,14 +1,13 @@
 //! Your connection to the Stardust server and other essentials.
 
-use crate::node::NodeError;
-use crate::node::NodeInternals;
+use crate::node::{Node, NodeType};
 use crate::spatial::Spatial;
+use crate::{node::NodeError, scenegraph::Scenegraph};
 
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
-use serde::Deserialize;
-use stardust_xr::scenegraph;
-use stardust_xr::scenegraph::ScenegraphError;
+use serde::{Deserialize, Serialize};
+use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
 use stardust_xr::{
 	client,
 	messenger::{self, MessengerError},
@@ -16,102 +15,51 @@ use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
 };
 use std::any::TypeId;
-use std::os::unix::io::OwnedFd;
+use std::future::Future;
 use std::path::Path;
 use std::sync::{Arc, Weak};
 use thiserror::Error;
 use tokio::net::UnixStream;
-use tokio::sync::oneshot;
-use tokio::sync::{Notify, OnceCell};
+use tokio::sync::{watch, Notify, OnceCell};
 use tokio::task::JoinHandle;
 
-/// Scenegraph full of aliases to nodes, needed so the `Messenger` can send messages to nodes.
-#[derive(Default)]
-pub struct Scenegraph {
-	nodes: Mutex<FxHashMap<String, Weak<NodeInternals>>>,
+/// The persistent state of a Stardust client.
+#[derive(Debug, Default)]
+pub struct ClientState {
+	/// Data specific to your client, put anything you like here and it'll be saved/restored intact.
+	pub data: Option<Vec<u8>>,
+	/// The root node of this client.
+	pub root: Option<Spatial>,
+	/// Spatials that will be in the same place you left them.
+	pub spatial_anchors: FxHashMap<String, Spatial>,
 }
-
-impl Scenegraph {
-	pub fn new() -> Self {
-		Default::default()
-	}
-
-	pub fn add_node(&self, node_internals: &Arc<NodeInternals>) {
-		self.nodes
-			.lock()
-			.insert(node_internals.path(), Arc::downgrade(&node_internals));
-	}
-
-	pub fn remove_node(&self, node_path: &str) {
-		self.nodes.lock().remove(node_path);
-	}
-
-	// pub fn get_node(&self, path: &str) -> Option<Node> {
-	// 	self.nodes.lock().get(path).cloned().unwrap_or_default()
-	// }
-}
-
-impl scenegraph::Scenegraph for Scenegraph {
-	fn send_signal(
-		&self,
-		path: &str,
-		method: &str,
-		data: &[u8],
-		fds: Vec<OwnedFd>,
-	) -> Result<(), ScenegraphError> {
-		let node = self
-			.nodes
-			.lock()
-			.get(path)
-			.and_then(Weak::upgrade)
-			.ok_or(ScenegraphError::NodeNotFound)?;
-		let local_signals = node.local_signals.lock();
-		let signal = local_signals
-			.get(method)
-			.ok_or(ScenegraphError::SignalNotFound)?
-			.clone();
-		signal(data, fds).map_err(|e| ScenegraphError::SignalError {
-			error: e.to_string(),
-		})
-	}
-	fn execute_method(
-		&self,
-		path: &str,
-		method: &str,
-		data: &[u8],
-		fds: Vec<OwnedFd>,
-		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,
-	) {
-		let method_method = || {
-			let node = self
-				.nodes
-				.lock()
-				.get(path)
-				.and_then(Weak::upgrade)
-				.ok_or(ScenegraphError::NodeNotFound)?;
-			let local_methods = node.local_methods.lock();
-			let method = local_methods
-				.get(method)
-				.ok_or(ScenegraphError::MethodNotFound)?
-				.clone();
-			method(data, fds).map_err(|e| ScenegraphError::MethodError {
-				error: e.to_string(),
-			})
-		};
-
-		let _ = response.send(method_method());
+impl ClientState {
+	fn to_internal(&self) -> ClientStateInternal {
+		ClientStateInternal {
+			data: self.data.clone(),
+			root: self
+				.root
+				.as_ref()
+				.map(|r| &r.node)
+				.map(Node::get_path)
+				.map(Result::ok)
+				.flatten(),
+			spatial_anchors: self
+				.spatial_anchors
+				.iter()
+				.filter_map(|(k, v)| Some((k.clone(), v.node.get_path().ok()?)))
+				.collect(),
+		}
 	}
 }
 
-struct DummyHandler;
-impl RootHandler for DummyHandler {
-	fn frame(&mut self, _info: FrameInfo) {}
+#[derive(Default, Serialize, Deserialize)]
+struct ClientStateInternal {
+	data: Option<Vec<u8>>,
+	root: Option<String>,
+	spatial_anchors: FxHashMap<String, String>,
 }
 
-#[derive(Deserialize)]
-struct LogicStepInfoInternal {
-	delta: f64,
-}
 /// Information on the frame.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct FrameInfo {
@@ -125,6 +73,17 @@ pub struct FrameInfo {
 pub trait RootHandler: Send + Sync + 'static {
 	/// Runs every frame with information about the current frame, for animations and motion and a consistent update.
 	fn frame(&mut self, _info: FrameInfo);
+	/// The server needs your client to save its state so that it can be restored (through Client::get_state) on relaunch. This may happen for any reason.
+	///
+	/// Client root transform is always saved.
+	fn save_state(&mut self) -> ClientState;
+}
+struct DummyHandler;
+impl RootHandler for DummyHandler {
+	fn frame(&mut self, _info: FrameInfo) {}
+	fn save_state(&mut self) -> ClientState {
+		ClientState::default()
+	}
 }
 
 #[derive(Error, Debug)]
@@ -137,6 +96,21 @@ pub enum ClientError {
 impl From<NodeError> for ClientError {
 	fn from(e: NodeError) -> Self {
 		ClientError::NodeError(e)
+	}
+}
+impl From<MessengerError> for ClientError {
+	fn from(e: MessengerError) -> Self {
+		ClientError::NodeError(NodeError::MessengerError { e })
+	}
+}
+impl From<String> for ClientError {
+	fn from(e: String) -> Self {
+		ClientError::NodeError(NodeError::ReturnedError { e })
+	}
+}
+impl From<DeserializationError> for ClientError {
+	fn from(e: DeserializationError) -> Self {
+		ClientError::NodeError(NodeError::Deserialization { e })
 	}
 }
 
@@ -155,6 +129,8 @@ pub struct Client {
 
 	elapsed_time: Mutex<f64>,
 	life_cycle_handler: Mutex<Weak<Mutex<dyn RootHandler>>>,
+
+	state: watch::Receiver<ClientState>,
 }
 
 impl Client {
@@ -163,12 +139,15 @@ impl Client {
 		let connection = client::connect()
 			.await
 			.map_err(|_| ClientError::ConnectionFailure)?;
-		Ok(Client::from_connection(connection))
+		Client::from_connection(connection).await
 	}
 
 	/// Create a client and messenger halves from an established tokio async `UnixStream` for manually setting up the event loop.
-	pub fn from_connection(connection: UnixStream) -> (Arc<Self>, MessageSender, MessageReceiver) {
+	pub async fn from_connection(
+		connection: UnixStream,
+	) -> Result<(Arc<Self>, MessageSender, MessageReceiver), ClientError> {
 		let (message_tx, message_rx) = messenger::create(connection);
+		let (state_tx, state_rx) = watch::channel(ClientState::default());
 		let client = Arc::new(Client {
 			scenegraph: Arc::new(Scenegraph::new()),
 			message_sender_handle: message_tx.handle(),
@@ -181,22 +160,41 @@ impl Client {
 
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),
+
+			state: state_rx,
 		});
-
-		(client, message_tx, message_rx)
-	}
-
-	/// Set up the client's root, HMD, and dummy handler when manually setting up the event loop.
-	pub fn setup(client: &Arc<Client>) -> Result<(), ClientError> {
 		let _ = client
 			.root
-			.set(Arc::new(Spatial::from_path(client, "", "", false)));
-		let _ = client.hmd.set(Spatial::from_path(client, "", "hmd", false));
+			.set(Arc::new(Spatial::from_path(&client, "", "", false)));
+		let _ = client
+			.hmd
+			.set(Spatial::from_path(&client, "", "hmd", false));
+		client.get_root().node.add_local_signal("restore_state", {
+			let client = client.clone();
 
+			move |data, _| {
+				let state: ClientStateInternal = deserialize(data)?;
+				let _ = state_tx.send(ClientState {
+					data: state.data,
+					root: Some(client.get_root().alias()),
+					spatial_anchors: state
+						.spatial_anchors
+						.into_iter()
+						.map(|(k, v)| (k, Spatial::from_path(&client, "/spatial/anchor", v, true)))
+						.collect(),
+				});
+				Ok(())
+			}
+		})?;
 		client.get_root().node.add_local_signal("frame", {
 			let client = client.clone();
 			move |data, _| {
 				if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
+					#[derive(Deserialize)]
+					struct LogicStepInfoInternal {
+						delta: f64,
+					}
+
 					let info_internal: LogicStepInfoInternal = deserialize(data)?;
 					let mut elapsed = client.elapsed_time.lock();
 					(*elapsed) += info_internal.delta;
@@ -209,7 +207,22 @@ impl Client {
 				Ok(())
 			}
 		})?;
-		Ok(())
+		client.get_root().node.add_local_method("save_state", {
+			let client = client.clone();
+			move |_, _| {
+				let state = client
+					.life_cycle_handler
+					.lock()
+					.upgrade()
+					.map(|h| h.lock().save_state())
+					.as_ref()
+					.map(ClientState::to_internal)
+					.unwrap_or_default();
+				Ok(serialize(state).map(|v| (v, vec![]))?)
+			}
+		})?;
+
+		Ok((client, message_tx, message_rx))
 	}
 
 	/// Automatically set up the client with an async loop. This option is generally what you'll want to use.
@@ -245,8 +258,13 @@ impl Client {
 				}
 			}
 		});
-		Client::setup(&client)?;
 
+		client
+			.state
+			.clone()
+			.changed()
+			.await
+			.map_err(|_| ClientError::ConnectionFailure)?;
 		Ok((client, event_loop))
 	}
 
@@ -304,6 +322,41 @@ impl Client {
 			.unwrap();
 	}
 
+	pub fn get_connection_environment(
+		&self,
+	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
+		let future = self
+			.message_sender_handle
+			.method("/", "get_connection_environment", &[], Vec::new())
+			.map_err(|e| NodeError::MessengerError { e })?;
+
+		Ok(async move {
+			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
+			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
+		})
+	}
+
+	/// Generate a client state token and return it back.
+	///
+	/// When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
+	/// Make sure the environment variable shows in `/proc/{pid}/environ` as that's the only reliable way to pass the value to the server (suggestions welcome).
+	///
+	/// # Example
+	/// ```
+	/// let state_token = client.state_token(ClientState::default()).unwrap().await.unwrap();
+	///
+	/// std::env::set_var("STARDUST_STARTUP_TOKEN", state_token); // to make sure it ends up in `/proc/{pid}/environ` of the new process
+	/// nix::unistd::execvp(ustr(&program).as_cstr(), &args).unwrap(); // make sure to use execv here to get the environment variable there properly.
+	/// ```
+	pub fn state_token(
+		&self,
+		state: &ClientState,
+	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
+		self.get_root()
+			.node
+			.execute_remote_method("state_token", &state.to_internal())
+	}
+
 	/// Stop the event loop if created with async loop. Equivalent to a graceful disconnect.
 	pub fn stop_loop(&self) {
 		self.stop_notifier.notify_one();
@@ -339,6 +392,9 @@ async fn fusion_client_life_cycle() {
 	impl RootHandler for RootHandlerDummy {
 		fn frame(&mut self, _info: FrameInfo) {
 			self.0.stop_loop();
+		}
+		fn save_state(&mut self) -> ClientState {
+			ClientState::default()
 		}
 	}
 
