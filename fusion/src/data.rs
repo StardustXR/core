@@ -200,12 +200,7 @@ impl PulseSender {
 		};
 		let receiver = receiver_stored.alias();
 		let field_stored = UnknownField {
-			spatial: Spatial::from_path(
-				&client,
-				sender.node().get_path()?,
-				info.uid.clone() + "-field",
-				false,
-			),
+			spatial: Spatial::from_path(&client, receiver.node().get_path()?, "field", false),
 		};
 		let field = field_stored.alias();
 		sender
