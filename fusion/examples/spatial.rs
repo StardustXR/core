@@ -37,6 +37,7 @@ impl SpatialDemo {
 			&ResourceID::new_namespaced("fusion", "gyro"),
 		)
 		.unwrap();
+		gyro.set_zoneable(true).unwrap();
 
 		SpatialDemo {
 			gem: gyro.model_part("Gem").unwrap(),
