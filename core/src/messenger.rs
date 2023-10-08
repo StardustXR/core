@@ -20,8 +20,7 @@ use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
 use tracing::instrument;
 
-#[instrument(level = "trace", skip_all)]
-fn debug_call(
+fn trace_call(
 	incoming: bool,
 	call_type: u8,
 	id: u64,
@@ -32,7 +31,7 @@ fn debug_call(
 ) {
 	let level = match call_type {
 		0 => tracing::Level::WARN,
-		_ => tracing::Level::DEBUG,
+		_ => tracing::Level::TRACE,
 	};
 
 	if tracing::level_enabled!(level) {
@@ -226,7 +225,7 @@ impl MessageReceiver {
 		let message = root_as_message(&raw_message)?;
 		let message_type = message.type_();
 
-		debug_call(
+		trace_call(
 			true,
 			message_type,
 			message.id(),
@@ -368,7 +367,7 @@ fn serialize_call(
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	debug_call(false, call_type, id, Some(path), Some(method), err, data);
+	trace_call(false, call_type, id, Some(path), Some(method), err, data);
 
 	let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 	let flex_path = fbb.create_string(path);
