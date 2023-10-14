@@ -5,6 +5,7 @@ use global_counter::primitive::exact::CounterU64;
 use nix::cmsg_space;
 use nix::fcntl::{fcntl, FcntlArg};
 use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags};
+use nix::unistd::close;
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
@@ -454,6 +455,9 @@ impl MessageSender {
 					}
 				})
 				.await?;
+			for fd in fds.into_iter() {
+				let _ = close(fd);
+			}
 		}
 		Ok(())
 	}
