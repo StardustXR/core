@@ -53,6 +53,15 @@ impl CameraItem {
 			.send_remote_signal("apply_preview_material", &(model_part.node().get_path()?))
 	}
 
+	/// Set the camera's projection matrix.
+	pub fn set_proj_matrix(
+		&self,
+		proj_matrix: impl Into<RowMatrix4<f32>>,
+	) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal("set_proj_matrix", &(proj_matrix.into()))
+	}
+
 	/// Request the camera's view to be render to a Dmabuf.
 	///
 	/// To avoid tearing, the buffer should not be read until receiving the response that it has been rendered.
