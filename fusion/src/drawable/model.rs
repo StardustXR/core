@@ -12,7 +12,7 @@ use stardust_xr::values::Transform;
 use std::ops::Deref;
 
 serde_with::serde_conv!(
-	RgbaAsArray,
+	pub(crate) RgbaAsArray,
 	Rgba<f32, LinearRgb>,
 	|rgba: &Rgba<f32, LinearRgb>| [rgba.c.r, rgba.c.g, rgba.c.b, rgba.a],
 	|value: [f32; 4]| -> Result<_, std::convert::Infallible> {
