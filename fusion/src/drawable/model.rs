@@ -4,11 +4,23 @@ use crate::{
 	spatial::Spatial,
 };
 
+use color::{color_space::LinearRgb, rgba_linear, Rgba};
 use mint::{ColumnMatrix4, Vector2, Vector3, Vector4};
 use serde::Serialize;
+use serde_with::serde_as;
 use stardust_xr::values::Transform;
 use std::ops::Deref;
 
+serde_with::serde_conv!(
+	RgbaAsArray,
+	Rgba<f32, LinearRgb>,
+	|rgba: &Rgba<f32, LinearRgb>| [rgba.c.r, rgba.c.g, rgba.c.b, rgba.a],
+	|value: [f32; 4]| -> Result<_, std::convert::Infallible> {
+		Ok(rgba_linear!(value[0], value[1], value[2], value[3]))
+	}
+);
+
+#[serde_as]
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "t", content = "c")]
 pub enum MaterialParameter {
@@ -16,7 +28,7 @@ pub enum MaterialParameter {
 	Vector2(Vector2<f32>),
 	Vector3(Vector3<f32>),
 	Vector4(Vector4<f32>),
-	Color([f32; 4]),
+	Color(#[serde_as(as = "RgbaAsArray")] Rgba<f32, LinearRgb>),
 	Int(i32),
 	Int2(Vector2<i32>),
 	Int3(Vector3<i32>),
@@ -147,7 +159,10 @@ async fn fusion_model() {
 	model
 		.model_part("Gem")
 		.unwrap()
-		.set_material_parameter("color", MaterialParameter::Color([0.0, 1.0, 0.5, 0.75]))
+		.set_material_parameter(
+			"color",
+			MaterialParameter::Color(color::rgba_linear!(0.0, 1.0, 0.5, 0.75)),
+		)
 		.unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;

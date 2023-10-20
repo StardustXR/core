@@ -36,6 +36,7 @@ xkbcommon = { version = "0.5.1", default-features = false, optional = true }
 tracing = "0.1.37"
 enum_dispatch = "0.3.12"
 color-eyre = "0.6.2"
+serde_with = "3.4.0"
 
 [dev-dependencies]
 glam = { version = "0.24.1", features = ["mint"] }

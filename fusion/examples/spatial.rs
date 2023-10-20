@@ -1,3 +1,4 @@
+use color::rgba_linear;
 use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::Transform;
@@ -55,7 +56,7 @@ impl RootHandler for SpatialDemo {
 		self.gem
 			.set_material_parameter(
 				"color",
-				MaterialParameter::Color([0.0, 0.25, 1.0, elapsed.sin().abs()]),
+				MaterialParameter::Color(rgba_linear!(0.0, 0.25, 1.0, elapsed.sin().abs())),
 			)
 			.unwrap();
 		self.gem
