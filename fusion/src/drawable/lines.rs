@@ -2,7 +2,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use color::{rgba, Rgba};
+use color::{color_space::LinearRgb, rgba_linear, Rgba};
 
 use mint::Vector3;
 use serde::{ser::SerializeStruct, Serialize, Serializer};
@@ -17,7 +17,7 @@ pub struct LinePoint {
 	/// Objective thickness in meters, ignores the scale of the Lines node.
 	pub thickness: f32,
 	/// This will be blended with other line points using vertex colors (sRGB RGBA gradient).
-	pub color: Rgba<f32>,
+	pub color: Rgba<f32, LinearRgb>,
 }
 impl Default for LinePoint {
 	fn default() -> Self {
@@ -28,7 +28,7 @@ impl Default for LinePoint {
 				z: 0.0,
 			},
 			thickness: 0.01,
-			color: rgba!(1.0, 1.0, 1.0, 1.0),
+			color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
 		}
 	}
 }

@@ -3,7 +3,7 @@ use crate::{
 	node::{Node, NodeError, NodeType},
 	spatial::Spatial,
 };
-use color::{rgba, Rgba};
+use color::{color_space::LinearRgb, rgba_linear, Rgba};
 
 use flagset::{flags, FlagSet};
 use mint::Vector2;
@@ -48,7 +48,7 @@ pub struct Bounds {
 #[derive(Debug, Clone)]
 pub struct TextStyle {
 	pub character_height: f32,
-	pub color: Rgba<f32>,
+	pub color: Rgba<f32, LinearRgb>,
 	pub font_resource: Option<ResourceID>,
 	pub text_align: FlagSet<Alignment>,
 	pub bounds: Option<Bounds>,
@@ -58,7 +58,7 @@ impl Default for TextStyle {
 	fn default() -> Self {
 		TextStyle {
 			character_height: 1.0,
-			color: rgba!(1.0, 1.0, 1.0, 1.0),
+			color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
 			font_resource: None,
 			text_align: Alignment::TopLeft.into(),
 			bounds: None,
