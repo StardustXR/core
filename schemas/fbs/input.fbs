@@ -15,6 +15,7 @@ table InputData {
 	distance:float = 0;
 	datamap:[ubyte] (flexbuffer);
 	order:uint = 0;
+	captured:bool = false;
 }
 
 root_type InputData;

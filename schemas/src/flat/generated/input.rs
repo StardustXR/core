@@ -238,6 +238,7 @@ impl<'a> InputData<'a> {
   pub const VT_DISTANCE: flatbuffers::VOffsetT = 10;
   pub const VT_DATAMAP: flatbuffers::VOffsetT = 12;
   pub const VT_ORDER: flatbuffers::VOffsetT = 14;
+  pub const VT_CAPTURED: flatbuffers::VOffsetT = 16;
 
   pub const fn get_fully_qualified_name() -> &'static str {
     "StardustXR.InputData"
@@ -258,6 +259,7 @@ impl<'a> InputData<'a> {
     builder.add_distance(args.distance);
     if let Some(x) = args.input { builder.add_input(x); }
     if let Some(x) = args.uid { builder.add_uid(x); }
+    builder.add_captured(args.captured);
     builder.add_input_type(args.input_type);
     builder.finish()
   }
@@ -291,12 +293,14 @@ impl<'a> InputData<'a> {
       x.into_iter().collect()
     });
     let order = self.order();
+    let captured = self.captured();
     InputDataT {
       uid,
       input,
       distance,
       datamap,
       order,
+      captured,
     }
   }
 
@@ -341,6 +345,13 @@ impl<'a> InputData<'a> {
     // Created from valid Table for this object
     // which contains a valid value in this slot
     unsafe { self._tab.get::<u32>(InputData::VT_ORDER, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn captured(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(InputData::VT_CAPTURED, Some(false)).unwrap()}
   }
   #[inline]
   #[allow(non_snake_case)]
@@ -405,6 +416,7 @@ impl flatbuffers::Verifiable for InputData<'_> {
      .visit_field::<f32>("distance", Self::VT_DISTANCE, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>("datamap", Self::VT_DATAMAP, false)?
      .visit_field::<u32>("order", Self::VT_ORDER, false)?
+     .visit_field::<bool>("captured", Self::VT_CAPTURED, false)?
      .finish();
     Ok(())
   }
@@ -416,6 +428,7 @@ pub struct InputDataArgs<'a> {
     pub distance: f32,
     pub datamap: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
     pub order: u32,
+    pub captured: bool,
 }
 impl<'a> Default for InputDataArgs<'a> {
   #[inline]
@@ -427,6 +440,7 @@ impl<'a> Default for InputDataArgs<'a> {
       distance: 0.0,
       datamap: None,
       order: 0,
+      captured: false,
     }
   }
 }
@@ -459,6 +473,10 @@ impl<'a: 'b, 'b> InputDataBuilder<'a, 'b> {
   #[inline]
   pub fn add_order(&mut self, order: u32) {
     self.fbb_.push_slot::<u32>(InputData::VT_ORDER, order, 0);
+  }
+  #[inline]
+  pub fn add_captured(&mut self, captured: bool) {
+    self.fbb_.push_slot::<bool>(InputData::VT_CAPTURED, captured, false);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> InputDataBuilder<'a, 'b> {
@@ -512,6 +530,7 @@ impl core::fmt::Debug for InputData<'_> {
       ds.field("distance", &self.distance());
       ds.field("datamap", &self.datamap());
       ds.field("order", &self.order());
+      ds.field("captured", &self.captured());
       ds.finish()
   }
 }
@@ -523,6 +542,7 @@ pub struct InputDataT {
   pub distance: f32,
   pub datamap: Option<Vec<u8>>,
   pub order: u32,
+  pub captured: bool,
 }
 impl Default for InputDataT {
   fn default() -> Self {
@@ -532,6 +552,7 @@ impl Default for InputDataT {
       distance: 0.0,
       datamap: None,
       order: 0,
+      captured: false,
     }
   }
 }
@@ -551,6 +572,7 @@ impl InputDataT {
       _fbb.create_vector(x)
     });
     let order = self.order;
+    let captured = self.captured;
     InputData::create(_fbb, &InputDataArgs{
       uid,
       input_type,
@@ -558,6 +580,7 @@ impl InputDataT {
       distance,
       datamap,
       order,
+      captured,
     })
   }
 }
