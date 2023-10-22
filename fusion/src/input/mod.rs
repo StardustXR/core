@@ -17,13 +17,11 @@
 //! - Send out input events (`InputHandlerHandler::input`) in order of distance until an input handler has captured the method.
 //! - The frame event is sent (`LifeCycle::frame`).
 //!
-//! To make this all easier, the `action` module exists, check it out.
+//! You may want to use the `InputAction`-based structs in molecules for an easy way to parse and react to the raw input.
 
-pub mod action;
 mod pointer;
 mod tip;
 
-pub use action as action_handler;
 pub use pointer::PointerInputMethod;
 use rustc_hash::FxHashMap;
 pub use stardust_xr::schemas::flat::*;
