@@ -1,21 +1,21 @@
-use super::InputMethod;
 use crate::{
-	node::{Node, NodeError, NodeType},
+	node::{HandledNodeType, Node, NodeError, NodeType},
 	spatial::Spatial,
+	HandlerWrapper,
 };
-
-use parking_lot::RwLock;
-use rustc_hash::FxHashMap;
+use parking_lot::Mutex;
 use stardust_xr::{
 	schemas::flex::flexbuffers::{self},
 	values::Transform,
 };
 use std::{ops::Deref, sync::Arc};
 
+use super::{input_method_handler_wrapper, InputMethod, InputMethodHandler};
+
 /// Virtual spatial input device representing a tool device with a single point of interaction (pen tip, controller tip, etc.)
 #[derive(Debug)]
 pub struct TipInputMethod {
-	input_method: InputMethod,
+	spatial: Spatial,
 }
 impl<'a> TipInputMethod {
 	pub fn create(
@@ -30,40 +30,70 @@ impl<'a> TipInputMethod {
 				.and_then(|root| root.get_map())
 				.map_err(|_| NodeError::MapInvalid)?;
 		}
-		let input_method = InputMethod {
-			spatial: Spatial {
-				node: Node::new(
-					&spatial_parent.node.client()?,
-					"/input",
-					"create_input_method_tip",
-					"/input/method/tip",
-					true,
-					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						transform,
-						radius,
-						datamap,
-					),
-				)?,
-			},
-			input_handlers: Arc::new(RwLock::new(FxHashMap::default())),
+		let spatial = Spatial {
+			node: Node::new(
+				&spatial_parent.node.client()?,
+				"/input",
+				"create_input_method_tip",
+				"/input/method/tip",
+				true,
+				&id.clone(),
+				(
+					id,
+					spatial_parent.node().get_path()?,
+					transform,
+					radius,
+					datamap,
+				),
+			)?,
 		};
-		input_method.handle_methods()?;
-		Ok(TipInputMethod { input_method })
+		Ok(TipInputMethod { spatial })
 	}
 
 	/// Set the radius of influence for the tip.
 	pub fn set_radius(&self, radius: f32) -> Result<(), NodeError> {
 		self.node.send_remote_signal("set_radius", &radius)
 	}
+	/// Wrap this node and an `InputMethodHandler` in a `HandlerWrapper` to run code ASAP.
+	#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
+	pub fn wrap<H: InputMethodHandler>(
+		self,
+		handler: H,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		self.wrap_raw(Arc::new(Mutex::new(handler)))
+	}
+	/// Wrap this node and an `InputMethodHandler` in a `HandlerWrapper` to run code ASAP.
+	#[must_use = "Dropping this handler wrapper would immediately drop the node"]
+	pub fn wrap_raw<H: InputMethodHandler>(
+		self,
+		handler: Arc<Mutex<H>>,
+	) -> Result<HandlerWrapper<Self, H>, NodeError> {
+		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
+		input_method_handler_wrapper(&handler_wrapper)?;
+		Ok(handler_wrapper)
+	}
 }
+impl NodeType for TipInputMethod {
+	fn node(&self) -> &Node {
+		self.spatial.node()
+	}
+
+	fn alias(&self) -> Self
+	where
+		Self: Sized,
+	{
+		TipInputMethod {
+			spatial: self.spatial.alias(),
+		}
+	}
+}
+impl HandledNodeType for TipInputMethod {}
+impl InputMethod for TipInputMethod {}
 impl Deref for TipInputMethod {
-	type Target = InputMethod;
+	type Target = Spatial;
 
 	fn deref(&self) -> &Self::Target {
-		&self.input_method
+		&self.spatial
 	}
 }
 

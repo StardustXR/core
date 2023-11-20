@@ -47,19 +47,9 @@ impl RayMarchResult {
 	}
 }
 
-// #[enum_dispatch]
-// pub enum FieldType {
-// 	BoxField,
-// 	CylinderField,
-// 	SphereField,
-// 	TorusField,
-// 	UnknownField,
-// }
-
 /// A node that is spatial and contains an SDF.
 ///
 /// This is used in place of colliders as it provides a much more analog and emergent set of behaviors, leading to more intuitive design.
-// #[enum_dispatch(FieldType)]
 pub trait Field: NodeType {
 	/// Get the distance from a point in the given space to the field's surface. Outside is a positive distance, inside is negative.
 	fn distance(

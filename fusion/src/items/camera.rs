@@ -98,14 +98,14 @@ async fn fusion_camera_ui() {
 
 	struct CameraUIManager(Arc<Client>);
 	impl crate::items::ItemUIHandler<CameraItem> for CameraUIManager {
-		fn item_created(&mut self, uid: &str, _item: CameraItem, _data: ()) {
-			println!("Camera item {uid} created");
+		fn item_created(&mut self, item_uid: &str, _item: CameraItem, _data: ()) {
+			println!("Camera item {item_uid} created");
 		}
-		fn item_captured(&mut self, uid: &str, acceptor_uid: &str, _item: CameraItem) {
-			println!("Capturing environment item {uid} in acceptor {acceptor_uid}");
+		fn item_captured(&mut self, item_uid: &str, acceptor_uid: &str) {
+			println!("Capturing environment item {item_uid} in acceptor {acceptor_uid}");
 		}
-		fn item_released(&mut self, uid: &str, acceptor_uid: &str, _item: CameraItem) {
-			println!("Released environment item {uid} from acceptor {acceptor_uid}");
+		fn item_released(&mut self, item_uid: &str, acceptor_uid: &str) {
+			println!("Released environment item {item_uid} from acceptor {acceptor_uid}");
 		}
 		fn item_destroyed(&mut self, _uid: &str) {}
 		fn acceptor_created(

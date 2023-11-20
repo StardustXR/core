@@ -5,16 +5,15 @@ use crate::{
 };
 
 use super::Spatial;
-use color_eyre::eyre::{anyhow, Result};
-use parking_lot::{Mutex, RwLock, RwLockReadGuard};
-use rustc_hash::FxHashMap;
+use color_eyre::eyre::Result;
+use parking_lot::Mutex;
 use stardust_xr::{schemas::flex::deserialize, values::Transform};
-use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
 /// Hamdle spatials entering the zone's field, leaving it, being captured, and released.
 pub trait ZoneHandler: Send + Sync {
 	fn enter(&mut self, uid: &str, spatial: Spatial);
-	fn capture(&mut self, uid: &str, spatial: Spatial);
+	fn capture(&mut self, uid: &str);
 	fn release(&mut self, uid: &str);
 	fn leave(&mut self, uid: &str);
 }
@@ -23,8 +22,6 @@ pub trait ZoneHandler: Send + Sync {
 #[derive(Debug)]
 pub struct Zone {
 	spatial: Spatial,
-	spatials: Arc<RwLock<FxHashMap<String, Spatial>>>,
-	captured: Arc<RwLock<FxHashMap<String, Spatial>>>,
 }
 impl<'a> Zone {
 	/// Create a zone given a field, this zone will become inactive if the field is dropped.
@@ -53,8 +50,6 @@ impl<'a> Zone {
 					),
 				)?,
 			},
-			spatials: Arc::new(RwLock::new(FxHashMap::default())),
-			captured: Arc::new(RwLock::new(FxHashMap::default())),
 		})
 	}
 
@@ -69,69 +64,29 @@ impl<'a> Zone {
 		handler: Arc<Mutex<H>>,
 	) -> Result<HandlerWrapper<Self, H>, NodeError> {
 		let handler_wrapper = HandlerWrapper::new_raw(self, handler);
-		handler_wrapper.add_handled_signal("enter", Self::handle_enter)?;
-		handler_wrapper.add_handled_signal("capture", Self::handle_capture)?;
-		handler_wrapper.add_handled_signal("release", Self::handle_release)?;
-		handler_wrapper.add_handled_signal("leave", Self::handle_leave)?;
+		handler_wrapper.add_handled_signal("enter", |zone, handler, data, _| {
+			let uid: &str = deserialize(data)?;
+			let spatial =
+				Spatial::from_path(&zone.node().client()?, zone.node().get_path()?, uid, false);
+			handler.lock().enter(uid, spatial);
+			Ok(())
+		})?;
+		handler_wrapper.add_handled_signal("capture", |_zone, handler, data, _| {
+			let uid: &str = deserialize(data)?;
+			handler.lock().capture(uid);
+			Ok(())
+		})?;
+		handler_wrapper.add_handled_signal("release", |_zone, handler, data, _| {
+			let uid: &str = deserialize(data)?;
+			handler.lock().release(uid);
+			Ok(())
+		})?;
+		handler_wrapper.add_handled_signal("leave", |_zone, handler, data, _| {
+			let uid: &str = deserialize(data)?;
+			handler.lock().leave(uid);
+			Ok(())
+		})?;
 		Ok(handler_wrapper)
-	}
-
-	fn handle_enter<H: ZoneHandler>(
-		zone: Arc<Zone>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
-		let spatial_stored =
-			Spatial::from_path(&zone.node().client()?, zone.node().get_path()?, uid, false);
-		let spatial = spatial_stored.alias();
-		zone.spatials
-			.write()
-			.insert(uid.to_string(), spatial_stored);
-		handler.lock().enter(uid, spatial);
-		Ok(())
-	}
-	fn handle_capture<H: ZoneHandler>(
-		zone: Arc<Zone>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
-		let spatials = zone.spatials.read();
-		let spatial = spatials
-			.get(uid)
-			.ok_or_else(|| anyhow!("Spatial was captured before in range"))?;
-		let spatial = spatial.alias();
-		drop(spatials);
-		zone.captured
-			.write()
-			.insert(uid.to_string(), spatial.alias());
-		handler.lock().capture(uid, spatial.alias());
-		Ok(())
-	}
-	fn handle_release<H: ZoneHandler>(
-		zone: Arc<Zone>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
-		zone.captured.write().remove(uid);
-		handler.lock().release(uid);
-		Ok(())
-	}
-	fn handle_leave<H: ZoneHandler>(
-		zone: Arc<Zone>,
-		handler: Arc<Mutex<H>>,
-		data: &[u8],
-		_fds: Vec<OwnedFd>,
-	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
-		zone.spatials.write().remove(uid);
-		handler.lock().leave(uid);
-		Ok(())
 	}
 
 	/// Check for new spatials. Any outdated spatials may not be transformable.
@@ -146,20 +101,9 @@ impl<'a> Zone {
 	}
 	/// Try to release a spatial.
 	/// If the spatial was already released, this does nothing.
-	pub fn release(&self, spatial: &Spatial) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("release", &spatial.node().get_path()?)
-	}
-
-	/// Get the list of spatials that are visible to this zone.
-	/// You still need to call `update()` to update this list.
-	pub fn spatials(&self) -> RwLockReadGuard<FxHashMap<String, Spatial>> {
-		self.spatials.read()
-	}
-	/// Get the list of spatials that are captured (temporarily parented) to this zone (not its field).
-	/// You do not need to call `update()` for this list.
-	pub fn captured(&self) -> RwLockReadGuard<FxHashMap<String, Spatial>> {
-		self.captured.read()
+	pub fn release(&self, uid: &str) -> Result<(), NodeError> {
+		let path = self.node().get_path()? + "/" + uid;
+		self.node.send_remote_signal("release", &path)
 	}
 }
 impl NodeType for Zone {
@@ -170,8 +114,6 @@ impl NodeType for Zone {
 	fn alias(&self) -> Self {
 		Zone {
 			spatial: self.spatial.alias(),
-			spatials: self.spatials.clone(),
-			captured: self.captured.clone(),
 		}
 	}
 }
@@ -203,28 +145,36 @@ async fn fusion_zone() {
 		crate::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
 			.unwrap();
 
-	struct ZoneTest(Arc<Client>, Spatial, Zone);
+	struct ZoneTest {
+		client: Arc<Client>,
+		root: Spatial,
+		zone: Zone,
+	}
 	impl ZoneHandler for ZoneTest {
 		fn enter(&mut self, uid: &str, spatial: Spatial) {
 			println!("Spatial {} entered zone", uid);
-			self.2.capture(&spatial).unwrap();
+			self.zone.capture(&spatial).unwrap();
 		}
-		fn capture(&mut self, uid: &str, spatial: Spatial) {
+		fn capture(&mut self, uid: &str) {
 			println!("Spatial {} was captured", uid);
-			self.2.release(&spatial).unwrap();
+			self.zone.release(uid).unwrap();
 		}
 		fn release(&mut self, uid: &str) {
 			println!("Spatial {} was released", uid);
-			self.1.set_position(None, [0.0, 1.0, 0.0]).unwrap();
-			self.2.update().unwrap();
+			self.root.set_position(None, [0.0, 1.0, 0.0]).unwrap();
+			self.zone.update().unwrap();
 		}
 		fn leave(&mut self, uid: &str) {
 			println!("Spatial {} left zone", uid);
-			self.0.stop_loop();
+			self.client.stop_loop();
 		}
 	}
 	let zone = Zone::create(client.get_root(), Transform::default(), &field).unwrap();
-	let zone_handler = ZoneTest(client.clone(), model_parent.alias(), zone.alias());
+	let zone_handler = ZoneTest {
+		client,
+		root: model_parent,
+		zone: zone.alias(),
+	};
 	let zone = zone.wrap(zone_handler).unwrap();
 	zone.node().update().unwrap();
 

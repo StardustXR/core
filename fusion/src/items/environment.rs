@@ -96,19 +96,19 @@ async fn fusion_environment_ui() {
 
 	struct EnvironmentUIManager(Arc<Client>);
 	impl crate::items::ItemUIHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn item_created(&mut self, uid: &str, _item: EnvironmentItem, path: PathBuf) {
+		fn item_created(&mut self, item_uid: &str, _item: EnvironmentItem, path: PathBuf) {
 			println!(
-				"Environment item {uid} created with path {}",
+				"Environment item {item_uid} created with path {}",
 				path.display()
 			);
 		}
-		fn item_captured(&mut self, uid: &str, acceptor_uid: &str, _item: EnvironmentItem) {
-			println!("Capturing environment item {uid} in acceptor {acceptor_uid}");
+		fn item_captured(&mut self, item_uid: &str, acceptor_uid: &str) {
+			println!("Capturing environment item {item_uid} in acceptor {acceptor_uid}");
 		}
-		fn item_released(&mut self, uid: &str, acceptor_uid: &str, _item: EnvironmentItem) {
-			println!("Released environment item {uid} from acceptor {acceptor_uid}");
+		fn item_released(&mut self, item_uid: &str, acceptor_uid: &str) {
+			println!("Released environment item {item_uid} from acceptor {acceptor_uid}");
 		}
-		fn item_destroyed(&mut self, _uid: &str) {}
+		fn item_destroyed(&mut self, _item_uid: &str) {}
 		fn acceptor_created(
 			&mut self,
 			_uid: &str,

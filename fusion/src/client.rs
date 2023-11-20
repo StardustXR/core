@@ -5,7 +5,7 @@ use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
 
 use parking_lot::Mutex;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
 use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
 use stardust_xr::{
@@ -125,7 +125,7 @@ pub struct Client {
 
 	root: OnceCell<Arc<Spatial>>,
 	hmd: OnceCell<Spatial>,
-	pub(crate) registered_item_uis: Mutex<Vec<TypeId>>,
+	pub(crate) registered_item_uis: Mutex<FxHashSet<TypeId>>,
 
 	elapsed_time: Mutex<f64>,
 	life_cycle_handler: Mutex<Weak<Mutex<dyn RootHandler>>>,
@@ -156,7 +156,7 @@ impl Client {
 
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
-			registered_item_uis: Mutex::new(Vec::new()),
+			registered_item_uis: Mutex::new(FxHashSet::default()),
 
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),

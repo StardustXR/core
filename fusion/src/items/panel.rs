@@ -120,8 +120,8 @@ impl<'de> Visitor<'de> for SurfaceIDVisitor {
 
 	fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
 		let Some(discrim) = seq.next_element()? else {
-            return Err(A::Error::missing_field("discrim"));
-        };
+			return Err(A::Error::missing_field("discrim"));
+		};
 
 		// idk if you wanna check for extraneous elements
 		// I didn't bother
@@ -131,8 +131,8 @@ impl<'de> Visitor<'de> for SurfaceIDVisitor {
 			"Toplevel" => Ok(SurfaceID::Toplevel),
 			"Child" => {
 				let Some(text) = seq.next_element()? else {
-                    return Err(A::Error::missing_field("child_text"));
-                };
+					return Err(A::Error::missing_field("child_text"));
+				};
 				Ok(SurfaceID::Child(text))
 			}
 			_ => Err(A::Error::unknown_variant(
@@ -375,19 +375,11 @@ async fn fusion_panel_ui() {
 				item.wrap(PanelItemUI::new(init_data)).unwrap(),
 			);
 		}
-		fn item_captured(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
-			println!(
-				"Acceptor {} captured panel item {}",
-				acceptor_uid,
-				item.node().get_name().unwrap()
-			);
+		fn item_captured(&mut self, item_uid: &str, acceptor_uid: &str) {
+			println!("Acceptor {acceptor_uid} captured panel item {item_uid}");
 		}
-		fn item_released(&mut self, _uid: &str, acceptor_uid: &str, item: PanelItem) {
-			println!(
-				"Acceptor {} released panel item {}",
-				acceptor_uid,
-				item.node().get_name().unwrap()
-			);
+		fn item_released(&mut self, item_uid: &str, acceptor_uid: &str) {
+			println!("Acceptor {acceptor_uid} released panel item {item_uid}");
 		}
 	}
 	struct PanelItemUI;

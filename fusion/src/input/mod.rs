@@ -12,7 +12,7 @@
 //! Input handlers should account for the occasional case where their field is closer than an input handler that captured a method by filtering out interactions that are triggered the same frame the input method first becomes visible.
 //! Capturing an input method may be delayed a frame or 2.
 //!
-//! Every frame, the server will do this for each input method:
+//! Every frame, for each input method, the server will:
 //! - Sort the input handlers by the distance from the input method to their fields (often absolute value for onion skinning)
 //! - Send out input events (`InputHandlerHandler::input`) in order of distance until an input handler has captured the method.
 //! - The frame event is sent (`LifeCycle::frame`).
@@ -23,11 +23,8 @@ mod pointer;
 mod tip;
 
 pub use pointer::PointerInputMethod;
-use rustc_hash::FxHashMap;
 pub use stardust_xr::schemas::flat::*;
 pub use tip::TipInputMethod;
-
-use crate::fields::UnknownField;
 
 use super::{
 	fields::Field,
@@ -35,71 +32,50 @@ use super::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
+use crate::fields::UnknownField;
 use color_eyre::eyre::{anyhow, bail};
-use parking_lot::{Mutex, RwLock, RwLockReadGuard};
+use parking_lot::Mutex;
 use stardust_xr::{
 	schemas::flex::{deserialize, flexbuffers},
 	values::Transform,
 };
 use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
 
-/// Handle raw input events.
-pub trait InputHandlerHandler: Send + Sync {
-	/// An input method has sent an input event on this frame.
-	fn input(&mut self, input: UnknownInputMethod, data: InputData);
+pub(self) fn input_method_handler_wrapper<N: InputMethod, H: InputMethodHandler>(
+	handler_wrapper: &HandlerWrapper<N, H>,
+) -> Result<(), NodeError> {
+	handler_wrapper.add_handled_signal("handler_created", |node, handler, data, _fds| {
+		let Ok(client) = node.client() else {
+			bail!("no client??")
+		};
+		let Ok(path) = node.node().get_path() else {
+			bail!("no path??")
+		};
+		let uid: String = deserialize(data)?;
+
+		let node = Node::from_path(&client, &path, &uid, false);
+		let spatial = Spatial { node };
+		let field = UnknownField {
+			spatial: Spatial {
+				node: Node::from_path(&client, spatial.node().get_path().unwrap(), "field", false),
+			},
+		};
+		let input_handler = InputHandler { spatial, field };
+		handler.lock().create_handler(&uid, input_handler);
+		Ok(())
+	})?;
+	handler_wrapper.add_handled_signal("handler_destroyed", |_node, handler, data, _fds| {
+		let uid = deserialize(data)?;
+		handler.lock().drop_handler(uid);
+		Ok(())
+	})?;
+
+	Ok(())
 }
 
 /// Node representing a spatial input device.
-#[derive(Debug)]
-pub struct InputMethod {
-	spatial: Spatial,
-	input_handlers: Arc<RwLock<FxHashMap<String, InputHandler>>>,
-}
-impl InputMethod {
-	pub(crate) fn handle_methods(&self) -> Result<(), NodeError> {
-		let client = Arc::downgrade(&self.node().client()?);
-		let path = self.node().get_path()?;
-		let input_handlers = Arc::downgrade(&self.input_handlers);
-		self.node().add_local_signal(
-			"handler_created",
-			move |data, _fds| -> color_eyre::eyre::Result<()> {
-				let Some(client) = client.upgrade() else {bail!("no client??")};
-				let Some(handlers) = input_handlers.upgrade() else {bail!("no handlers ohno")};
-				let uid: String = deserialize(data)?;
-
-				let node = Node::from_path(&client, &path, &uid, false);
-				let spatial = Spatial { node };
-				let field = UnknownField {
-					spatial: Spatial {
-						node: Node::from_path(
-							&client,
-							spatial.node().get_path().unwrap(),
-							"field",
-							false,
-						),
-					},
-				};
-				let input_handler = InputHandler { spatial, field };
-				handlers.write().insert(uid, input_handler);
-				Ok(())
-			},
-		)?;
-
-		let input_handlers = Arc::downgrade(&self.input_handlers);
-		self.node().add_local_signal(
-			"handler_destroyed",
-			move |data, _fds| -> color_eyre::eyre::Result<()> {
-				let Some(handlers) = input_handlers.upgrade() else {bail!("no handlers ohno")};
-				let uid: &str = deserialize(data)?;
-				handlers.write().remove(uid);
-				Ok(())
-			},
-		)?;
-
-		Ok(())
-	}
-
-	pub fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
+pub trait InputMethod: HandledNodeType {
+	fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
 		flexbuffers::Reader::get_root(datamap)
 			.and_then(|root| root.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
@@ -107,37 +83,24 @@ impl InputMethod {
 			.send_remote_signal_raw("set_datamap", datamap, Vec::new())
 	}
 
-	pub fn set_handler_order(&self, handlers: &[&InputHandler]) -> Result<(), NodeError> {
+	fn set_handler_order(&self, handlers: &[&InputHandler]) -> Result<(), NodeError> {
 		let handlers: Vec<_> = handlers
 			.into_iter()
 			.filter_map(|h| h.node().get_path().ok())
 			.collect();
 		self.node().send_remote_signal("set_handlers", &handlers)
 	}
-
-	/// Get a read only guard to the handlers list.
-	pub fn input_handlers(&self) -> RwLockReadGuard<FxHashMap<String, InputHandler>> {
-		self.input_handlers.read()
-	}
 }
-impl NodeType for InputMethod {
-	fn node(&self) -> &Node {
-		&self.spatial.node
-	}
 
-	fn alias(&self) -> Self {
-		InputMethod {
-			spatial: self.spatial.alias(),
-			input_handlers: self.input_handlers.clone(),
-		}
-	}
+pub trait InputMethodHandler: Send + Sync {
+	fn create_handler(&mut self, uid: &str, handler: InputHandler);
+	fn drop_handler(&mut self, uid: &str);
 }
-impl Deref for InputMethod {
-	type Target = Spatial;
 
-	fn deref(&self) -> &Self::Target {
-		&self.spatial
-	}
+/// Handle raw input events.
+pub trait InputHandlerHandler: Send + Sync {
+	/// An input method has sent an input event on this frame.
+	fn input(&mut self, input: UnknownInputMethod, data: InputData);
 }
 
 /// An input method on the server, but the type is unknown.

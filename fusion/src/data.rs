@@ -26,8 +26,7 @@ use crate::{
 };
 
 use mint::{Quaternion, Vector3};
-use parking_lot::{Mutex, RwLock, RwLockReadGuard};
-use rustc_hash::FxHashMap;
+use parking_lot::Mutex;
 use serde::Deserialize;
 use stardust_xr::{
 	schemas::flex::{deserialize, flexbuffers},
@@ -158,7 +157,6 @@ pub struct NewReceiverInfo {
 #[derive(Debug)]
 pub struct PulseSender {
 	spatial: Spatial,
-	receivers: Arc<RwLock<FxHashMap<String, (PulseReceiver, UnknownField)>>>,
 }
 impl PulseSender {
 	/// Create a pulse receiver node. The mask must be a flexbuffers serialized map at its root.
@@ -183,7 +181,6 @@ impl PulseSender {
 					(id, spatial_parent.node().get_path()?, transform, mask),
 				)?,
 			},
-			receivers: Arc::new(RwLock::new(FxHashMap::default())),
 		})
 	}
 
@@ -195,30 +192,23 @@ impl PulseSender {
 	) -> color_eyre::eyre::Result<()> {
 		let client = sender.client()?;
 		let info: NewReceiverInfo = deserialize(data)?;
-		let receiver_stored = PulseReceiver {
+		let receiver = PulseReceiver {
 			spatial: Spatial::from_path(&client, sender.node().get_path()?, &info.uid, false),
 		};
-		let receiver = receiver_stored.alias();
-		let field_stored = UnknownField {
+		let field = UnknownField {
 			spatial: Spatial::from_path(&client, receiver.node().get_path()?, "field", false),
 		};
-		let field = field_stored.alias();
-		sender
-			.receivers
-			.write()
-			.insert(info.uid.clone(), (receiver_stored, field_stored));
 		handler.lock().new_receiver(info, receiver, field);
 		Ok(())
 	}
 
 	fn handle_drop_receiver<H: PulseSenderHandler>(
-		sender: Arc<PulseSender>,
+		_sender: Arc<PulseSender>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> color_eyre::eyre::Result<()> {
 		let uid: &str = deserialize(data)?;
-		sender.receivers.write().remove(uid);
 		handler.lock().drop_receiver(uid);
 		Ok(())
 	}
@@ -233,11 +223,6 @@ impl PulseSender {
 
 		self.node
 			.send_remote_signal("send_data", &(receiver.node().get_path()?, data))
-	}
-
-	/// Get a read only guard to the receivers list. This can be used instead of the handler if you want.
-	pub fn receivers(&self) -> RwLockReadGuard<FxHashMap<String, (PulseReceiver, UnknownField)>> {
-		self.receivers.read()
 	}
 
 	/// Wrap this node and a pulse sender handler struct into a `HandlerWrapper` struct. You can use `PulseSender::receivers()` instead.
@@ -269,7 +254,6 @@ impl NodeType for PulseSender {
 	fn alias(&self) -> Self {
 		PulseSender {
 			spatial: self.spatial.alias(),
-			receivers: self.receivers.clone(),
 		}
 	}
 }
