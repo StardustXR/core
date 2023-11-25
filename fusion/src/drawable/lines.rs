@@ -47,9 +47,9 @@ impl Serialize for LinePoint {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Line {
-	points: Vec<LinePoint>,
+	pub points: Vec<LinePoint>,
 	/// Cyclic means the start and end points are connected together.
-	cyclic: bool,
+	pub cyclic: bool,
 }
 
 /// A single continuous polyline.
