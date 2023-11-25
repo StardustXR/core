@@ -45,6 +45,13 @@ impl Serialize for LinePoint {
 	}
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct Line {
+	points: Vec<LinePoint>,
+	/// Cyclic means the start and end points are connected together.
+	cyclic: bool,
+}
+
 /// A single continuous polyline.
 ///
 /// # Example
@@ -86,8 +93,7 @@ impl Lines {
 	pub fn create<'a>(
 		spatial_parent: &'a Spatial,
 		transform: Transform,
-		points: &'a [LinePoint],
-		cyclic: bool,
+		lines: &'a [Line],
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
 		Ok(Lines {
@@ -99,24 +105,14 @@ impl Lines {
 					"/drawable/lines",
 					true,
 					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						transform,
-						points,
-						cyclic,
-					),
+					(id, spatial_parent.node().get_path()?, transform, lines),
 				)?,
 			},
 		})
 	}
 
-	pub fn update_points(&self, points: &[LinePoint]) -> Result<(), NodeError> {
-		self.node().send_remote_signal("set_points", &points)
-	}
-	/// Cyclic means the start and end points are connected together.
-	pub fn set_cyclic(&self, cyclic: bool) -> Result<(), NodeError> {
-		self.node().send_remote_signal("set_cyclic", &cyclic)
+	pub fn update_lines(&self, lines: &[Line]) -> Result<(), NodeError> {
+		self.node().send_remote_signal("set_lines", &lines)
 	}
 }
 impl NodeType for Lines {
@@ -169,7 +165,11 @@ async fn fusion_lines() {
 			..Default::default()
 		},
 	];
-	let _lines = Lines::create(client.get_root(), Transform::default(), &points, true).unwrap();
+	let line = Line {
+		points,
+		cyclic: true,
+	};
+	let _lines = Lines::create(client.get_root(), Transform::default(), &[line]).unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 }
