@@ -47,6 +47,11 @@ pub struct ModelPart {
 	spatial: Spatial,
 }
 impl ModelPart {
+	/// Make this object become a hole that you can see through if stardust is an overlay (to show passthrough underneath).
+	pub fn apply_holdout_material(&self) -> Result<(), NodeError> {
+		self.node
+			.send_remote_signal_raw("apply_holdout_material", &[], vec![])
+	}
 	/// Set a property of a material on this model node.
 	pub fn set_material_parameter(
 		&self,
@@ -154,15 +159,29 @@ async fn fusion_model() {
 		.unwrap();
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 
-	let gyro_gem_resource = ResourceID::new_namespaced("fusion", "gyro_gem");
-	let model = Model::create(client.get_root(), Transform::default(), &gyro_gem_resource).unwrap();
-	model
+	let gyro_resource = ResourceID::new_namespaced("fusion", "gyro");
+	let gyro_model =
+		Model::create(client.get_root(), Transform::default(), &gyro_resource).unwrap();
+	gyro_model
 		.model_part("Gem")
 		.unwrap()
 		.set_material_parameter(
 			"color",
 			MaterialParameter::Color(color::rgba_linear!(0.0, 1.0, 0.5, 0.75)),
 		)
+		.unwrap();
+
+	let spike_resource = ResourceID::new_namespaced("fusion", "cursor_spike");
+	let spike_model = Model::create(
+		client.get_root(),
+		Transform::from_position_scale([0.0, 0.1, 0.0], [0.1; 3]),
+		&spike_resource,
+	)
+	.unwrap();
+	spike_model
+		.model_part("Cone")
+		.unwrap()
+		.apply_holdout_material()
 		.unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
