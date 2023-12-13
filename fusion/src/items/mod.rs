@@ -21,6 +21,7 @@
 pub mod camera;
 mod environment;
 pub use environment::*;
+use parking_lot::Mutex;
 
 pub mod panel;
 
@@ -34,9 +35,7 @@ use crate::{
 	spatial::Spatial,
 	HandlerWrapper,
 };
-use color_eyre::eyre::{anyhow, Result};
-use parking_lot::{Mutex, RwLock, RwLockReadGuard};
-use rustc_hash::FxHashMap;
+use color_eyre::eyre::Result;
 use serde::de::DeserializeOwned;
 use stardust_xr::{
 	schemas::flex::{deserialize, serialize},
@@ -164,8 +163,7 @@ impl<I: Item> ItemUI<I> {
 			&uid,
 			&init_data,
 		);
-		let item_aliased = item.alias();
-		handler.lock().item_created(uid, item_aliased, init_data);
+		handler.lock().item_created(uid, item, init_data);
 		Ok(())
 	}
 	fn handle_capture_item<H: ItemUIHandler<I>>(
@@ -218,11 +216,7 @@ impl<I: Item> ItemUI<I> {
 				false,
 			),
 		};
-		let acceptor_aliased = acceptor.alias();
-		let field_aliased = field.alias();
-		handler
-			.lock()
-			.acceptor_created(uid, acceptor_aliased, field_aliased);
+		handler.lock().acceptor_created(uid, acceptor, field);
 		Ok(())
 	}
 	fn handle_destroy_acceptor<H: ItemUIHandler<I>>(
@@ -271,7 +265,7 @@ pub trait ItemAcceptorHandler<I: Item>: Send + Sync + 'static {
 /// Node that can borrow items for a bit (capturing).
 pub struct ItemAcceptor<I: Item> {
 	spatial: Spatial,
-	captured_items: Arc<RwLock<FxHashMap<String, I>>>,
+	ty: PhantomData<I>,
 }
 impl<I: Item> ItemAcceptor<I> {
 	/// Create a new item acceptor. Field can be dropped and the acceptor will still work.
@@ -299,34 +293,8 @@ impl<I: Item> ItemAcceptor<I> {
 					),
 				)?,
 			},
-			captured_items: Arc::new(RwLock::new(FxHashMap::default())),
+			ty: PhantomData::default(),
 		};
-
-		item_acceptor.node().add_local_signal("capture", {
-			let client = Arc::downgrade(&spatial_parent.node().client()?);
-			let items = item_acceptor.captured_items.clone();
-			move |data, _fds| {
-				let (item_uid, init_data): (&str, I::InitData) = deserialize(data)?;
-
-				let item = I::from_path(
-					&client.upgrade().ok_or_else(|| anyhow!("Client dropped"))?,
-					&format!("/item/{}/item", I::TYPE_NAME),
-					item_uid,
-					&init_data,
-				);
-				items.write().insert(item_uid.to_string(), item);
-				Ok(())
-			}
-		})?;
-		item_acceptor.node().add_local_signal("release", {
-			let items = item_acceptor.captured_items.clone();
-			move |data, _fds| {
-				let name: &str = deserialize(data)?;
-				items.write().remove(name);
-				Ok(())
-			}
-		})?;
-
 		Ok(item_acceptor)
 	}
 
@@ -339,7 +307,7 @@ impl<I: Item> ItemAcceptor<I> {
 			spatial: Spatial {
 				node: Node::from_path(client, parent, name, false),
 			},
-			captured_items: Arc::new(RwLock::new(FxHashMap::default())),
+			ty: PhantomData::default(),
 		}
 	}
 
@@ -377,29 +345,20 @@ impl<I: Item> ItemAcceptor<I> {
 			&init_data,
 		);
 		let item_aliased = item.alias();
-		acceptor
-			.captured_items
-			.write()
-			.insert(uid.to_string(), item);
 		handler.lock().captured(uid, item_aliased, init_data);
 		Ok(())
 	}
 	fn handle_release_item<H: ItemAcceptorHandler<I>>(
-		acceptor: Arc<ItemAcceptor<I>>,
+		_acceptor: Arc<ItemAcceptor<I>>,
 		handler: Arc<Mutex<H>>,
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
 		let uid: &str = deserialize(data)?;
-		acceptor.captured_items.write().remove(uid);
 		handler.lock().released(uid);
 		Ok(())
 	}
 
-	/// Get all the captured items
-	pub fn captured_items(&self) -> RwLockReadGuard<FxHashMap<String, I>> {
-		self.captured_items.read()
-	}
 	/// Capture an item into the acceptor
 	pub fn capture(&self, item: &I) -> Result<(), NodeError> {
 		self.node()
@@ -413,7 +372,7 @@ impl<I: Item> NodeType for ItemAcceptor<I> {
 	fn alias(&self) -> Self {
 		ItemAcceptor {
 			spatial: self.spatial.alias(),
-			captured_items: self.captured_items.clone(),
+			ty: PhantomData::default(),
 		}
 	}
 }
