@@ -3,6 +3,7 @@ use super::generated::{
 	input::{InputDataRawT, InputDataT},
 };
 use ouroboros::self_referencing;
+use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 
 /// A map that contains non-spatial data associated with the input in flexbuffers format.
@@ -40,6 +41,16 @@ impl Debug for Datamap {
 		.finish_non_exhaustive()
 	}
 }
+impl Serialize for Datamap {
+	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		self.0.serialize(serializer)
+	}
+}
+impl<'de> Deserialize<'de> for Datamap {
+	fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+		Datamap::new(Vec::<u8>::deserialize(deserializer)?).map_err(|e| serde::de::Error::custom(e))
+	}
+}
 
 #[self_referencing]
 struct DatamapInner {
@@ -52,6 +63,11 @@ struct DatamapInner {
 impl Clone for Datamap {
 	fn clone(&self) -> Self {
 		Self::new(self.0.borrow_raw().clone()).unwrap()
+	}
+}
+impl Serialize for DatamapInner {
+	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		self.with_raw(|r| r.serialize(serializer))
 	}
 }
 
