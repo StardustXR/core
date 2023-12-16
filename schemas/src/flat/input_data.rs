@@ -23,6 +23,11 @@ impl Datamap {
 	{
 		self.0.with_reader(f)
 	}
+
+	/// Get a reference to the raw binary data
+	pub fn raw(&self) -> &Vec<u8> {
+		self.0.borrow_raw()
+	}
 }
 impl Debug for Datamap {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
