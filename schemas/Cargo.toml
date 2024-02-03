@@ -19,7 +19,6 @@ glam = { version = "0.24.0", features = ["mint"] }
 mint = { version = "0.5.9", features = ["serde"] }
 serde = { version = "1.0.160", features = ["derive"] }
 thiserror = "1.0.40"
-chumsky = "0.9.3"
 kdl = "4.6.0"
 
 [build-dependencies]
