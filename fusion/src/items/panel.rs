@@ -1,10 +1,10 @@
-use super::Item;
+use super::ItemAspect;
 use crate::{
 	client::Client,
-	drawable::ModelPart,
+	drawable::ModelPartAspect,
 	handle_action,
-	node::{HandledNodeType, Node, NodeError, NodeType},
-	spatial::Spatial,
+	node::{Node, NodeError, NodeType},
+	spatial::SpatialAspect,
 	HandlerWrapper,
 };
 use mint::Vector2;
@@ -15,8 +15,7 @@ use serde::{
 	ser::Serializer,
 	Deserialize,
 };
-use stardust_xr::schemas::flex::deserialize;
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 #[allow(unused_variables)]
 /// Handler for the `panel` item.
@@ -155,9 +154,7 @@ impl serde::Serialize for SurfaceID {
 
 /// An item that represents a toplevel wayland surface (base window) and all its childs (context menus, modals, etc.).
 #[derive(Debug)]
-pub struct PanelItem {
-	spatial: Spatial,
-}
+pub struct PanelItem(Node);
 impl PanelItem {
 	/// Apply a surface's visuals as a material to a model.
 	///
@@ -166,9 +163,9 @@ impl PanelItem {
 	pub fn apply_surface_material(
 		&self,
 		surface: &SurfaceID,
-		model_part: &ModelPart,
+		model_part: &impl ModelPartAspect,
 	) -> Result<(), NodeError> {
-		self.node.send_remote_signal(
+		self.node().send_remote_signal(
 			"apply_surface_material",
 			&(surface, model_part.node().get_path()?),
 		)
@@ -203,7 +200,7 @@ impl PanelItem {
 		surface: &SurfaceID,
 		position: impl Into<Vector2<f32>>,
 	) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal("pointer_motion", &(surface, position.into()))
 	}
 	/// Send an event to set a pointer button's state if the pointer's active.
@@ -215,7 +212,7 @@ impl PanelItem {
 		button: u32,
 		pressed: bool,
 	) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal("pointer_button", &(surface, button, pressed as u32))
 	}
 	/// Send an event to scroll the pointer if it's active.
@@ -230,7 +227,7 @@ impl PanelItem {
 		scroll_distance: Option<Vector2<f32>>,
 		scroll_steps: Option<Vector2<f32>>,
 	) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal("pointer_scroll", &(surface, scroll_distance, scroll_steps))
 	}
 
@@ -243,7 +240,7 @@ impl PanelItem {
 		keymap_id: &str,
 		keys: Vec<i32>,
 	) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal("keyboard_key", &(surface, keymap_id, keys))
 	}
 
@@ -254,23 +251,23 @@ impl PanelItem {
 		uid: u32,
 		position: impl Into<Vector2<f32>>,
 	) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal("touch_down", &(surface, uid, position.into()))
 	}
 	/// Move an existing touch point.
 	pub fn touch_move(&self, uid: u32, position: impl Into<Vector2<f32>>) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal("touch_move", &(uid, position.into()))
 	}
 	/// Release a touch from its surface.
 	pub fn touch_up(&self, uid: u32) -> Result<(), NodeError> {
-		self.node.send_remote_signal("touch_up", &uid)
+		self.node().send_remote_signal("touch_up", &uid)
 	}
 	/// Make sure nothing is touching any surface on this panel item.
 	///
 	/// Useful for when it's newly captured into an item acceptor to make sure no touches get stuck.
 	pub fn reset_touches(&self) -> Result<(), NodeError> {
-		self.node
+		self.node()
 			.send_remote_signal_raw("reset_touches", &[], Vec::new())
 	}
 
@@ -313,48 +310,21 @@ impl PanelItem {
 }
 impl NodeType for PanelItem {
 	fn node(&self) -> &Node {
-		&self.spatial.node
+		&self.0
 	}
 
 	fn alias(&self) -> Self {
-		PanelItem {
-			spatial: self.spatial.alias(),
-		}
+		PanelItem(self.0.alias())
+	}
+
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self {
+		PanelItem(Node::from_path(client, path, destroyable))
 	}
 }
-impl HandledNodeType for PanelItem {}
-impl Item for PanelItem {
+impl SpatialAspect for PanelItem {}
+impl ItemAspect for PanelItem {
 	type InitData = PanelItemInitData;
 	const TYPE_NAME: &'static str = "panel";
-
-	fn from_path(
-		client: &Arc<Client>,
-		parent_path: impl ToString,
-		name: impl ToString,
-		_init_data: &PanelItemInitData,
-	) -> Self {
-		// let handler_wrapper = HandlerWrapper::new(item, |handler: Weak<Mutex<T>>, item| {
-		// 	ui_init_fn(init_data, handler, item)
-		// });
-		// handler_wrapper
-		// 	.add_handled_signal("resize", Self::handle_resize)
-		// 	.unwrap();
-		// handler_wrapper
-		// 	.add_handled_signal("set_cursor", Self::handle_set_cursor)
-		// 	.unwrap();
-		PanelItem {
-			spatial: Spatial {
-				node: Node::from_path(client, parent_path, name, false),
-			},
-		}
-	}
-}
-impl Deref for PanelItem {
-	type Target = Spatial;
-
-	fn deref(&self) -> &Self::Target {
-		&self.spatial
-	}
 }
 
 #[tokio::test]
@@ -367,7 +337,7 @@ async fn fusion_panel_ui() {
 
 	struct PanelItemManager(FxHashMap<String, HandlerWrapper<PanelItem, PanelItemUI>>);
 	impl crate::items::ItemUIHandler<PanelItem> for PanelItemManager {
-		fn item_created(&mut self, uid: &str, item: PanelItem, init_data: PanelItemInitData) {
+		fn item_created(&mut self, uid: String, item: PanelItem, init_data: PanelItemInitData) {
 			item.set_toplevel_focused_visuals(true).unwrap();
 			item.auto_size_toplevel().unwrap();
 			self.0.insert(
@@ -375,10 +345,10 @@ async fn fusion_panel_ui() {
 				item.wrap(PanelItemUI::new(init_data)).unwrap(),
 			);
 		}
-		fn item_captured(&mut self, item_uid: &str, acceptor_uid: &str) {
+		fn item_captured(&mut self, item_uid: String, acceptor_uid: String) {
 			println!("Acceptor {acceptor_uid} captured panel item {item_uid}");
 		}
-		fn item_released(&mut self, item_uid: &str, acceptor_uid: &str) {
+		fn item_released(&mut self, item_uid: String, acceptor_uid: String) {
 			println!("Acceptor {acceptor_uid} released panel item {item_uid}");
 		}
 	}

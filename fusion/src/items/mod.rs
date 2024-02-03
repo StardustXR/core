@@ -20,77 +20,72 @@
 
 pub mod camera;
 mod environment;
+pub mod panel;
 pub use environment::*;
 use parking_lot::Mutex;
-
-pub mod panel;
 
 use super::{
 	client::Client,
 	node::{Node, NodeError, NodeType},
 };
 use crate::{
-	fields::{Field, UnknownField},
-	node::HandledNodeType,
-	spatial::Spatial,
+	fields::{FieldAspect, UnknownField},
+	node::NodeAspect,
+	spatial::{SpatialAspect, Transform},
 	HandlerWrapper,
 };
 use color_eyre::eyre::Result;
 use serde::de::DeserializeOwned;
-use stardust_xr::{
-	schemas::flex::{deserialize, serialize},
-	values::Transform,
-};
-use std::{any::TypeId, marker::PhantomData, ops::Deref, os::fd::OwnedFd, sync::Arc};
+use stardust_xr::schemas::flex::{deserialize, serialize, Datamap};
+use std::{any::TypeId, marker::PhantomData, os::fd::OwnedFd, sync::Arc};
 
 /// Base item trait, `release` and `uid` are the ones that client devs may want to use.
-pub trait Item: NodeType + Send + Sync + 'static {
+pub trait ItemAspect: NodeType + Send + Sync + 'static {
 	type InitData: DeserializeOwned + Send;
 	const TYPE_NAME: &'static str;
 
-	fn uid(&self) -> Result<String, NodeError> {
-		self.node().get_name()
-	}
 	fn release(&self) -> Result<(), NodeError> {
 		self.node().send_remote_signal("release", &())
 	}
-	fn from_path(
-		client: &Arc<Client>,
-		parent_path: impl ToString,
-		name: impl ToString,
-		init_data: &Self::InitData,
-	) -> Self;
 }
 
 /// Handler for the ItemUI item.
 #[allow(unused_variables)]
-pub trait ItemUIHandler<I: Item>: Send + Sync + 'static {
+pub trait ItemUIHandler<I: ItemAspect>: Send + Sync + 'static {
 	/// A new item of the `I` type has been created with the given init data and `uid`. `item` is an aliased node to the real item.
-	fn item_created(&mut self, item_uid: &str, item: I, init_data: I::InitData) {}
+	fn item_created(&mut self, item_uid: String, item: I, init_data: I::InitData) {}
 	/// The item with `uid` has been captured by the item acceptor. `item` is an aliased node to the real item.
-	fn item_captured(&mut self, item_uid: &str, acceptor_uid: &str) {}
+	fn item_captured(&mut self, item_uid: String, acceptor_uid: String) {}
 	/// The item with `uid` has been released by the item acceptor. `item` is an aliased node to the real item.
-	fn item_released(&mut self, item_uid: &str, acceptor_uid: &str) {}
+	fn item_released(&mut self, item_uid: String, acceptor_uid: String) {}
 	/// The item with `uid` has been destroyed.
-	fn item_destroyed(&mut self, item_uid: &str) {}
+	fn item_destroyed(&mut self, item_uid: String) {}
 	/// The item acceptor with `uid` has been created. `acceptor` is an aliased node to the acceptor.
 	fn acceptor_created(
 		&mut self,
-		acceptor_uid: &str,
+		acceptor_uid: String,
 		acceptor: ItemAcceptor<I>,
 		field: UnknownField,
 	) {
 	}
 	/// The item acceptor with `uid` has been destroyed.
-	fn acceptor_destroyed(&mut self, acceptor_uid: &str) {}
+	fn acceptor_destroyed(&mut self, acceptor_uid: String) {}
+}
+
+#[allow(unused_variables)]
+pub trait InputItemHandler: Send + Sync {
+	/// The input is(n't) able to be tracked at the moment
+	fn track_status(&mut self, tracked: bool);
+	/// The datamap (abstract data like pinch strength, grab strength, etc.) has been updated
+	fn datamap_updated(&mut self, datamap: Datamap);
 }
 
 /// Node to get all items and acceptors to make a UI around the items.
-pub struct ItemUI<I: Item> {
+pub struct ItemUI<I: ItemAspect> {
 	ty: PhantomData<I>,
 	node: Node,
 }
-impl<I: Item> ItemUI<I> {
+impl<I: ItemAspect> ItemUI<I> {
 	/// Attempt to register the ItemUI for this type of item. Will fail with `NodeError::OverrideSingleton` if it's already been registered.
 	pub fn register(client: &Arc<Client>) -> Result<ItemUI<I>, NodeError> {
 		if !client
@@ -106,7 +101,7 @@ impl<I: Item> ItemUI<I> {
 	fn new_item_ui(client: &Arc<Client>) -> Result<ItemUI<I>, NodeError> {
 		let item_ui = ItemUI::<I> {
 			ty: PhantomData::default(),
-			node: Node::from_path(client, "/item", I::TYPE_NAME, true),
+			node: Node::from_parent_name(client, "/item", I::TYPE_NAME, true),
 		};
 
 		client.registered_item_uis.lock().insert(TypeId::of::<I>());
@@ -155,13 +150,13 @@ impl<I: Item> ItemUI<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let (uid, init_data): (&str, I::InitData) = deserialize(data)?;
+		let (uid, init_data): (String, I::InitData) = deserialize(data)?;
 
-		let item = I::from_path(
+		let item = I::from_parent_name(
 			&ui.client()?,
-			format!("/item/{}/item", I::TYPE_NAME),
+			&format!("/item/{}/item", I::TYPE_NAME),
 			&uid,
-			&init_data,
+			false,
 		);
 		handler.lock().item_created(uid, item, init_data);
 		Ok(())
@@ -172,7 +167,7 @@ impl<I: Item> ItemUI<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
+		let (item_uid, acceptor_uid): (String, String) = deserialize(data)?;
 		handler.lock().item_captured(item_uid, acceptor_uid);
 		Ok(())
 	}
@@ -182,7 +177,7 @@ impl<I: Item> ItemUI<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let (item_uid, acceptor_uid): (&str, &str) = deserialize(data)?;
+		let (item_uid, acceptor_uid): (String, String) = deserialize(data)?;
 		handler.lock().item_released(item_uid, acceptor_uid);
 		Ok(())
 	}
@@ -192,7 +187,7 @@ impl<I: Item> ItemUI<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
+		let uid: String = deserialize(data)?;
 		handler.lock().item_destroyed(uid);
 		Ok(())
 	}
@@ -203,19 +198,17 @@ impl<I: Item> ItemUI<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
+		let uid: String = deserialize(data)?;
 
 		let client = ui.client()?;
-		let acceptor: ItemAcceptor<I> =
-			ItemAcceptor::from_path(&client, format!("/item/{}/acceptor", I::TYPE_NAME), &uid);
-		let field = UnknownField {
-			spatial: Spatial::from_path(
-				&client,
-				format!("/item/{}/acceptor/{}", I::TYPE_NAME, uid),
-				"field",
-				false,
-			),
-		};
+		let acceptor: ItemAcceptor<I> = ItemAcceptor::from_parent_name(
+			&client,
+			&format!("/item/{}/acceptor", I::TYPE_NAME),
+			&uid,
+			false,
+		);
+		let field =
+			UnknownField::from_parent_name(&client, acceptor.node().get_path()?, "field", false);
 		handler.lock().acceptor_created(uid, acceptor, field);
 		Ok(())
 	}
@@ -225,12 +218,12 @@ impl<I: Item> ItemUI<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
+		let uid: String = deserialize(data)?;
 		handler.lock().acceptor_destroyed(uid);
 		Ok(())
 	}
 }
-impl<I: Item> NodeType for ItemUI<I> {
+impl<I: ItemAspect> NodeType for ItemUI<I> {
 	fn node(&self) -> &Node {
 		&self.node
 	}
@@ -241,9 +234,15 @@ impl<I: Item> NodeType for ItemUI<I> {
 			node: self.node.alias(),
 		}
 	}
+
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self {
+		ItemUI {
+			ty: Default::default(),
+			node: Node::from_path(client, path, destroyable),
+		}
+	}
 }
-impl<I: Item> HandledNodeType for ItemUI<I> {}
-impl<I: Item> Drop for ItemUI<I> {
+impl<I: ItemAspect> Drop for ItemUI<I> {
 	fn drop(&mut self) {
 		let type_id = TypeId::of::<I>();
 		if let Ok(client) = self.node.client() {
@@ -255,60 +254,50 @@ impl<I: Item> Drop for ItemUI<I> {
 
 /// Handler for the ItemAcceptor node.
 #[allow(unused_variables)]
-pub trait ItemAcceptorHandler<I: Item>: Send + Sync + 'static {
+pub trait ItemAcceptorHandler<I: ItemAspect>: Send + Sync + 'static {
 	/// Item `item` with unique ID `uid` has been captured into this acceptor with `init_data`.
-	fn captured(&mut self, uid: &str, item: I, init_data: I::InitData) {}
+	fn captured(&mut self, uid: String, item: I, init_data: I::InitData) {}
 	/// Item with unique ID `uid` has been released from this acceptor.
-	fn released(&mut self, uid: &str) {}
+	fn released(&mut self, uid: String) {}
 }
 
 /// Node that can borrow items for a bit (capturing).
-pub struct ItemAcceptor<I: Item> {
-	spatial: Spatial,
+pub struct ItemAcceptor<I: ItemAspect> {
+	node: Node,
 	ty: PhantomData<I>,
 }
-impl<I: Item> ItemAcceptor<I> {
+impl<I: ItemAspect> ItemAcceptor<I> {
 	/// Create a new item acceptor. Field can be dropped and the acceptor will still work.
-	pub fn create<'a, Fi: Field>(
-		spatial_parent: &'a Spatial,
+	pub fn create<'a>(
+		spatial_parent: &'a impl SpatialAspect,
 		transform: Transform,
-		field: &'a Fi,
+		field: &'a impl FieldAspect,
 	) -> Result<ItemAcceptor<I>, NodeError> {
 		let id = nanoid::nanoid!();
+		let client = spatial_parent.client()?;
+		client.message_sender_handle.signal(
+			"/item",
+			"create_item_acceptor",
+			&serialize((
+				&id,
+				spatial_parent.node().get_path()?,
+				transform,
+				field.node().get_path()?,
+				I::TYPE_NAME,
+			))?,
+			Vec::new(),
+		)?;
 		let item_acceptor = ItemAcceptor::<I> {
-			spatial: Spatial {
-				node: Node::new(
-					&spatial_parent.node.client()?,
-					"/item",
-					"create_item_acceptor",
-					&format!("/item/{}/acceptor", I::TYPE_NAME),
-					true,
-					&id,
-					(
-						&id,
-						spatial_parent.node().get_path()?,
-						transform,
-						field.node().get_path()?,
-						I::TYPE_NAME,
-					),
-				)?,
-			},
+			node: Node::from_parent_name(
+				&spatial_parent.client()?,
+				&format!("/item/{}/acceptor", I::TYPE_NAME),
+				&id,
+				true,
+			),
+
 			ty: PhantomData::default(),
 		};
 		Ok(item_acceptor)
-	}
-
-	fn from_path(
-		client: &Arc<Client>,
-		parent: impl ToString,
-		name: impl ToString,
-	) -> ItemAcceptor<I> {
-		ItemAcceptor {
-			spatial: Spatial {
-				node: Node::from_path(client, parent, name, false),
-			},
-			ty: PhantomData::default(),
-		}
 	}
 
 	/// Wrap this node and an `ItemAcceptorHandler` in a `HandlerWrapper` to run code ASAP. Instead, you can also get the `items()` hashmap.
@@ -337,12 +326,12 @@ impl<I: Item> ItemAcceptor<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let (uid, init_data): (&str, I::InitData) = deserialize(data)?;
-		let item = I::from_path(
+		let (uid, init_data): (String, I::InitData) = deserialize(data)?;
+		let item = I::from_parent_name(
 			&acceptor.client()?,
 			&acceptor.node().get_path()?,
-			uid,
-			&init_data,
+			&uid,
+			false,
 		);
 		let item_aliased = item.alias();
 		handler.lock().captured(uid, item_aliased, init_data);
@@ -354,7 +343,7 @@ impl<I: Item> ItemAcceptor<I> {
 		data: &[u8],
 		_fds: Vec<OwnedFd>,
 	) -> Result<()> {
-		let uid: &str = deserialize(data)?;
+		let uid: String = deserialize(data)?;
 		handler.lock().released(uid);
 		Ok(())
 	}
@@ -365,22 +354,23 @@ impl<I: Item> ItemAcceptor<I> {
 			.send_remote_signal("capture", &item.node().get_path()?)
 	}
 }
-impl<I: Item> NodeType for ItemAcceptor<I> {
+impl<I: ItemAspect> NodeType for ItemAcceptor<I> {
 	fn node(&self) -> &Node {
-		&self.spatial.node
+		&self.node
 	}
 	fn alias(&self) -> Self {
 		ItemAcceptor {
-			spatial: self.spatial.alias(),
+			node: self.node.alias(),
+			ty: PhantomData::default(),
+		}
+	}
+
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self {
+		ItemAcceptor {
+			node: Node::from_path(client, path, destroyable),
 			ty: PhantomData::default(),
 		}
 	}
 }
-impl<I: Item> HandledNodeType for ItemAcceptor<I> {}
-impl<I: Item> Deref for ItemAcceptor<I> {
-	type Target = Spatial;
-
-	fn deref(&self) -> &Self::Target {
-		&self.spatial
-	}
-}
+impl<I: ItemAspect> NodeAspect for ItemAcceptor<I> {}
+impl<I: ItemAspect> SpatialAspect for ItemAcceptor<I> {}

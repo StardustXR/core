@@ -1,23 +1,25 @@
 //! The base of all objects in Stardust.
 
-use super::client::Client;
-
+use crate::client::Client;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{de::DeserializeOwned, Serialize, Serializer};
 use stardust_xr::{
 	messenger::{Message, MessengerError},
-	schemas::flex::{deserialize, flexbuffers::DeserializationError, serialize},
+	schemas::flex::{
+		deserialize, flexbuffers::DeserializationError, serialize, FlexSerializeError,
+	},
 };
 use std::{
 	fmt::Debug,
 	future::Future,
 	os::fd::OwnedFd,
-	pin::Pin,
 	sync::{Arc, Weak},
 	vec::Vec,
 };
 use thiserror::Error;
+
+pub type MethodResult<T> = color_eyre::eyre::Result<T>;
 
 #[derive(Error, Debug)]
 pub enum NodeError {
@@ -44,14 +46,45 @@ pub enum NodeError {
 	#[error("Map is not a valid flexbuffer map at the root")]
 	MapInvalid,
 }
+impl From<MessengerError> for NodeError {
+	fn from(e: MessengerError) -> Self {
+		NodeError::MessengerError { e }
+	}
+}
+impl From<FlexSerializeError> for NodeError {
+	fn from(_: FlexSerializeError) -> Self {
+		NodeError::Serialization
+	}
+}
+impl From<DeserializationError> for NodeError {
+	fn from(e: DeserializationError) -> Self {
+		NodeError::Deserialization { e }
+	}
+}
+impl From<String> for NodeError {
+	fn from(e: String) -> Self {
+		NodeError::ReturnedError { e }
+	}
+}
 
 /// Common methods all nodes share, to make them easier to use.
 // #[enum_dispatch(FieldType)]
-pub trait NodeType: Send + Sync + 'static {
+pub trait NodeType: Sized + Send + Sync + 'static {
 	/// Get a reference to the node.
 	fn node(&self) -> &Node;
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self;
+	/// Create a node of this type from a parent node path and name
+	fn from_parent_name(
+		client: &Arc<Client>,
+		parent: impl AsRef<str>,
+		name: impl AsRef<str>,
+		destroyable: bool,
+	) -> Self {
+		let path = format!("{}/{}", parent.as_ref(), name.as_ref());
+		Self::from_path(client, path, destroyable)
+	}
 	/// Try to get the client
-	fn client(&self) -> Result<Arc<Client>, NodeError> {
+	fn client(&self) -> NodeResult<Arc<Client>> {
 		self.node().client()
 	}
 	/// Set whether the node is active or not. This has different effects depending on the node.
@@ -66,8 +99,6 @@ pub trait NodeType: Send + Sync + 'static {
 	where
 		Self: Sized;
 }
-/// A trait to ensure this node type could be put in a `HandlerWrapper`.
-pub trait HandledNodeType: NodeType {}
 
 type Signal = dyn Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<()> + Send + Sync + 'static;
 type Method = dyn Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, Vec<OwnedFd>)>
@@ -75,41 +106,26 @@ type Method = dyn Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, 
 	+ Sync
 	+ 'static;
 
-pub type BoxedFuture<O> = Pin<Box<dyn Future<Output = O> + Send + Sync>>;
+pub type NodeResult<O> = Result<O, NodeError>;
 
 pub struct NodeInternals {
 	client: Weak<Client>,
 	self_ref: Weak<NodeInternals>,
-	parent: String,
-	name: String,
+	pub(crate) path: String,
 	pub(crate) local_signals: Mutex<FxHashMap<String, Arc<Signal>>>,
 	pub(crate) local_methods: Mutex<FxHashMap<String, Arc<Method>>>,
 	pub(crate) destroyable: bool,
-}
-impl NodeInternals {
-	pub(crate) fn path(&self) -> String {
-		self.parent.clone() + "/" + &self.name
-	}
-}
-impl Serialize for NodeInternals {
-	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-	where
-		S: Serializer,
-	{
-		self.path().serialize(serializer)
-	}
 }
 
 impl Drop for NodeInternals {
 	fn drop(&mut self) {
 		if let Some(client) = self.client.upgrade() {
-			let path = self.path();
 			if self.destroyable {
 				let _ = client
 					.message_sender_handle
-					.signal(&path, "destroy", &[], Vec::new());
+					.signal(&self.path, "destroy", &[], Vec::new());
 			}
-			client.scenegraph.remove_node(&path);
+			client.scenegraph.remove_node(&self.path);
 		}
 	}
 }
@@ -129,7 +145,7 @@ impl Node {
 		id: &str,
 		data: S,
 	) -> Result<Node, NodeError> {
-		let node = Node::from_path(client, parent_path, id, destroyable);
+		let node = Node::from_parent_name(client, parent_path, id, destroyable);
 
 		client
 			.message_sender_handle
@@ -142,25 +158,6 @@ impl Node {
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(node)
-	}
-	/// Create a node from path, this is only needed when fusion does not have a proper node struct.
-	pub fn from_path(
-		client: &Arc<Client>,
-		parent: impl ToString,
-		name: impl ToString,
-		destroyable: bool,
-	) -> Node {
-		let node = Arc::new_cyclic(|self_ref| NodeInternals {
-			client: Arc::downgrade(client),
-			self_ref: self_ref.clone(),
-			parent: parent.to_string(),
-			name: name.to_string(),
-			local_signals: Mutex::new(FxHashMap::default()),
-			local_methods: Mutex::new(FxHashMap::default()),
-			destroyable,
-		});
-		client.scenegraph.add_node(&node);
-		Node::Owned(node)
 	}
 
 	/// Add a signal to the node so that the server can send a message to it. Not needed unless implementing functionality Fusion does not already have.
@@ -205,12 +202,9 @@ impl Node {
 			.ok_or(NodeError::ClientDropped)
 	}
 
-	pub fn get_name(&self) -> Result<String, NodeError> {
-		Ok(self.internals()?.parent.to_string())
-	}
 	/// Get the entire path of the node including the name.
 	pub fn get_path(&self) -> Result<String, NodeError> {
-		Ok(self.internals()?.path())
+		Ok(self.internals()?.path.clone())
 	}
 
 	/// Check if this node is still alive.
@@ -246,32 +240,15 @@ impl Node {
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
-	pub fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
+	pub async fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
 		&self,
 		method_name: &str,
 		send_data: &S,
-	) -> Result<impl Future<Output = Result<D, NodeError>>, NodeError> {
+	) -> Result<D, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
 		let future = self.execute_remote_method_raw(method_name, &send_data, Vec::new())?;
-		Ok(async move {
-			future.await.and_then(|data| {
-				deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
-			})
-		})
-	}
-	/// Execute a method on the node on the server. This will return a trait safe future, pinned and boxed. Not needed unless implementing functionality Fusion does not already have.
-	pub fn execute_remote_method_trait<S: Serialize, D: DeserializeOwned>(
-		&self,
-		method_name: &str,
-		send_data: &S,
-	) -> Result<Pin<Box<dyn Future<Output = Result<D, NodeError>> + Send + Sync>>, NodeError> {
-		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(method_name, &send_data, Vec::new())?;
-		Ok(Box::pin(async move {
-			future.await.and_then(|data| {
-				deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
-			})
-		}))
+		let data = future.await?;
+		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
 	}
 	/// Execute a method on the node on the server with raw data (like when sending over flatbuffers). Not needed unless implementing functionality Fusion does not already have.
 	pub fn execute_remote_method_raw(
@@ -288,9 +265,6 @@ impl Node {
 
 		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
 	}
-	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.send_remote_signal("set_enabled", &enabled)
-	}
 }
 impl NodeType for Node {
 	fn node(&self) -> &Node {
@@ -303,14 +277,35 @@ impl NodeType for Node {
 			Node::Aliased(internals) => Node::Aliased(internals.clone()),
 		}
 	}
-}
 
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Node {
+		let node = Arc::new_cyclic(|self_ref| NodeInternals {
+			client: Arc::downgrade(client),
+			self_ref: self_ref.clone(),
+			path: path.to_string(),
+			local_signals: Mutex::new(FxHashMap::default()),
+			local_methods: Mutex::new(FxHashMap::default()),
+			destroyable,
+		});
+		client.scenegraph.add_node(&node);
+		Node::Owned(node)
+	}
+}
+impl serde::Serialize for Node {
+	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		let node_path = self
+			.node()
+			.get_path()
+			.map_err(|e| serde::ser::Error::custom(e))?;
+		serializer.serialize_str(&node_path)
+	}
+}
 impl Debug for Node {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let mut dbg = f.debug_struct("Node");
 
 		if let Ok(internals) = self.internals() {
-			dbg.field("path", &internals.path())
+			dbg.field("path", &internals.path)
 				.field(
 					"local_signals",
 					&internals
@@ -336,3 +331,5 @@ impl Debug for Node {
 		dbg.finish()
 	}
 }
+stardust_xr_fusion_codegen::codegen_node_client_protocol!();
+impl NodeAspect for Node {}

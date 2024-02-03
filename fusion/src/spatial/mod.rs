@@ -2,7 +2,7 @@
 //!
 //! Spatials are part of most nodes such as fields and models, but can be created on their own.
 //! They include a parent, transform, and zoneable boolean.
-//! They're an infinitely small point in space with a position, rotation, and scale, so they're invisible.
+//! They're an infinitely small point in space with a translation, rotation, and scale, so they're invisible.
 //!
 //! In Stardust, everything is relative to something else spatially.
 //! In the case of creating your first spatials in your client, it'll be relative to the HMD or the client's root.
@@ -15,187 +15,123 @@
 //! Zones can see zoneable spatials if they're closer to the surface of the field than any zone that captured them, so no zones can steal and hoard them.
 
 mod zone;
+use mint::{Quaternion, Vector3};
 pub use zone::*;
 
-use super::{
-	client::Client,
-	node::{Node, NodeError, NodeType},
-};
-use crate::fields::UnknownField;
-use mint::{Quaternion, Vector3};
+use crate::node::{NodeAspect, NodeResult};
 use nanoid::nanoid;
-use stardust_xr::values::{self, Transform};
-use std::{future::Future, sync::Arc};
 
-/// A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
-///
-/// Equivalent to a Transform in Unity, Spatial in Godot, etc.
-#[derive(Debug)]
-pub struct Spatial {
-	pub(crate) node: Node,
-}
+stardust_xr_fusion_codegen::codegen_spatial_client_protocol!();
 impl Spatial {
-	/// Create a new spatial. If the position, rotation, or scale values are `None` they'll be the identity values.
 	pub fn create(
-		spatial_parent: &Spatial,
+		spatial_parent: &impl SpatialAspect,
 		transform: Transform,
 		zoneable: bool,
-	) -> Result<Self, NodeError> {
-		let id = nanoid!();
-		Ok(Spatial {
-			node: Node::new(
-				&spatial_parent.node().client()?,
-				"/spatial",
-				"create_spatial",
-				"/spatial/spatial",
-				true,
-				&id.clone(),
-				(id, spatial_parent.node().get_path()?, transform, zoneable),
-			)?,
-		})
+	) -> NodeResult<Self> {
+		create_spatial(
+			&spatial_parent.client()?,
+			&nanoid!(),
+			spatial_parent,
+			transform,
+			zoneable,
+		)
 	}
+}
 
-	pub(crate) fn from_path(
-		client: &Arc<Client>,
-		parent: impl ToString,
-		name: impl ToString,
-		destroyable: bool,
-	) -> Self {
-		Spatial {
-			node: Node::from_path(client, parent, name, destroyable),
+impl Transform {
+	pub const fn none() -> Self {
+		Transform {
+			translation: None,
+			rotation: None,
+			scale: None,
+		}
+	}
+	pub const fn identity() -> Self {
+		Transform {
+			translation: Some(Vector3 {
+				x: 0.0,
+				y: 0.0,
+				z: 0.0,
+			}),
+			rotation: Some(Quaternion {
+				v: Vector3 {
+					x: 0.0,
+					y: 0.0,
+					z: 0.0,
+				},
+				s: 1.0,
+			}),
+			scale: Some(Vector3 {
+				x: 1.0,
+				y: 1.0,
+				z: 1.0,
+			}),
 		}
 	}
 
-	/// Get the bounding box of this spatial and its children relative to another spatial
-	pub fn get_bounding_box(
-		&self,
-		relative_to: Option<&Spatial>,
-	) -> Result<impl Future<Output = Result<values::Box, NodeError>>, NodeError> {
-		self.node.execute_remote_method(
-			"get_bounding_box",
-			&relative_to
-				.map(|relative_to| relative_to.node().get_path())
-				.transpose()?,
-		)
+	pub fn from_translation(translation: impl Into<Vector3<f32>>) -> Self {
+		Transform {
+			translation: Some(translation.into()),
+			rotation: None,
+			scale: None,
+		}
+	}
+	pub fn from_rotation(rotation: impl Into<Quaternion<f32>>) -> Self {
+		Transform {
+			translation: None,
+			rotation: Some(rotation.into()),
+			scale: None,
+		}
+	}
+	pub fn from_scale(scale: impl Into<Vector3<f32>>) -> Self {
+		Transform {
+			translation: None,
+			rotation: None,
+			scale: Some(scale.into()),
+		}
 	}
 
-	/// Get the position, rotation, and scale relative to some other spatial node.
-	pub fn get_position_rotation_scale(
-		&self,
-		relative_space: &Spatial,
-	) -> Result<
-		impl Future<Output = Result<(Vector3<f32>, Quaternion<f32>, Vector3<f32>), NodeError>>,
-		NodeError,
-	> {
-		self.node
-			.execute_remote_method("get_transform", &relative_space.node().get_path()?)
+	pub fn from_translation_rotation(
+		translation: impl Into<Vector3<f32>>,
+		rotation: impl Into<Quaternion<f32>>,
+	) -> Self {
+		Transform {
+			translation: Some(translation.into()),
+			rotation: Some(rotation.into()),
+			scale: None,
+		}
+	}
+	pub fn from_rotation_scale(
+		rotation: impl Into<Quaternion<f32>>,
+		scale: impl Into<Vector3<f32>>,
+	) -> Self {
+		Transform {
+			translation: None,
+			rotation: Some(rotation.into()),
+			scale: Some(scale.into()),
+		}
 	}
 
-	/// Set the position of this spatial relative to another node, or `None` for relative to its parent node.
-	pub fn set_position(
-		&self,
-		relative_space: Option<&Spatial>,
-		position: impl Into<mint::Vector3<f32>>,
-	) -> Result<(), NodeError> {
-		self.set_transform(relative_space, Transform::from_position(position))
-	}
-	/// Set the rotation of this spatial relative to another node, or `None` for relative to its parent node.
-	pub fn set_rotation(
-		&self,
-		relative_space: Option<&Spatial>,
-		rotation: impl Into<mint::Quaternion<f32>>,
-	) -> Result<(), NodeError> {
-		self.set_transform(relative_space, Transform::from_rotation(rotation))
-	}
-	/// Set the scale of this spatial relative to another node, or `None` for relative to its parent node.
-	pub fn set_scale(
-		&self,
-		relative_space: Option<&Spatial>,
-		scale: impl Into<mint::Vector3<f32>>,
-	) -> Result<(), NodeError> {
-		self.set_transform(relative_space, Transform::from_scale(scale))
-	}
-	/// Set the transform of this spatial relative to another node, or `None` for relative to its parent node.
-	pub fn set_transform(
-		&self,
-		relative_space: Option<&Spatial>,
-		transform: Transform,
-	) -> Result<(), NodeError> {
-		let relative_space = match relative_space {
-			Some(space) => Some(space.node().get_path()?),
-			None => None,
-		};
-		self.node
-			.send_remote_signal("set_transform", &(relative_space, transform))
+	pub fn from_translation_scale(
+		translation: impl Into<Vector3<f32>>,
+		scale: impl Into<Vector3<f32>>,
+	) -> Self {
+		Transform {
+			translation: Some(translation.into()),
+			rotation: None,
+			scale: Some(scale.into()),
+		}
 	}
 
-	/// Set the spatial parent with its local transform remaining the same.
-	/// It will silently error and not set the spatial parent if it is to a child of itself.
-	pub fn set_spatial_parent(&self, parent: &Spatial) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("set_spatial_parent", &parent.node().get_path()?)
-	}
-	/// Set the spatial parent with its "global" transform remaining the same.
-	/// It will silently error and not set the spatial parent if it is to a child of itself.
-	pub fn set_spatial_parent_in_place(&self, parent: &Spatial) -> Result<(), NodeError> {
-		self.node
-			.send_remote_signal("set_spatial_parent_in_place", &parent.node().get_path()?)
-	}
-
-	/// Set if this spatial is zoneable or not. You may want to set this to false when being grabbed or interacted with, then back to true when it's floating inert in space.
-	pub fn set_zoneable(&self, zoneable: bool) -> Result<(), NodeError> {
-		self.node.send_remote_signal("set_zoneable", &zoneable)
-	}
-
-	/// Get the distance to a bunch of fields
-	pub fn field_distance(
-		&self,
-		point: impl Into<Vector3<f32>>,
-		fields: impl IntoIterator<Item = UnknownField>,
-	) -> Result<impl Future<Output = Result<Vec<Option<f32>>, NodeError>>, NodeError> {
-		let field_paths = fields
-			.into_iter()
-			.filter_map(|f| f.node().get_path().ok())
-			.collect::<Vec<String>>();
-		Ok(Box::pin(self.node.execute_remote_method(
-			"field_distance",
-			&(point.into(), field_paths),
-		)?))
-	}
-
-	pub fn field_normal(
-		&self,
-		point: impl Into<Vector3<f32>>,
-		fields: impl IntoIterator<Item = UnknownField>,
-	) -> Result<impl Future<Output = Result<Vec<Option<Vector3<f32>>>, NodeError>>, NodeError> {
-		let field_paths = fields
-			.into_iter()
-			.filter_map(|f| f.node().get_path().ok())
-			.collect::<Vec<String>>();
-		self.node
-			.execute_remote_method("field_normal", &(point.into(), field_paths))
-	}
-
-	pub fn field_closest_point(
-		&self,
-		point: impl Into<Vector3<f32>>,
-		fields: impl IntoIterator<Item = UnknownField>,
-	) -> Result<impl Future<Output = Result<Vec<Option<Vector3<f32>>>, NodeError>>, NodeError> {
-		let field_paths = fields
-			.into_iter()
-			.filter_map(|f| f.node().get_path().ok())
-			.collect::<Vec<String>>();
-		self.node
-			.execute_remote_method("field_closest_point", &(point.into(), field_paths))
-	}
-}
-impl NodeType for Spatial {
-	fn node(&self) -> &Node {
-		&self.node
-	}
-	fn alias(&self) -> Spatial {
-		Spatial {
-			node: self.node.alias(),
+	pub fn from_translation_rotation_scale(
+		translation: impl Into<Vector3<f32>>,
+		rotation: impl Into<Quaternion<f32>>,
+		scale: impl Into<Vector3<f32>>,
+	) -> Self {
+		Transform {
+			translation: Some(translation.into()),
+			rotation: Some(rotation.into()),
+			scale: Some(scale.into()),
 		}
 	}
 }
@@ -209,22 +145,16 @@ async fn fusion_spatial() {
 		.expect("Couldn't connect");
 	let spatial = Spatial::create(
 		client.get_root(),
-		Transform::from_position_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
+		Transform::from_translation_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
 		false,
 	)
 	.unwrap();
 	let bounding_box = spatial
-		.get_bounding_box(Some(client.get_root()))
-		.unwrap()
+		.get_relative_bounding_box(client.get_root())
 		.await
 		.unwrap();
-	assert_eq!(
-		bounding_box,
-		stardust_xr::values::Box {
-			center: [1.0, 0.5, 0.1].into(),
-			size: [0.0; 3].into()
-		}
-	);
+	assert_eq!(bounding_box.center, [1.0, 0.5, 0.1].into());
+	assert_eq!(bounding_box.size, [0.0; 3].into());
 	drop(spatial);
 
 	tokio::select! {

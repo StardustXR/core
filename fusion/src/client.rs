@@ -1,6 +1,6 @@
 //! Your connection to the Stardust server and other essentials.
 
-use crate::node::{Node, NodeType};
+use crate::node::{Node, NodeResult, NodeType};
 use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
 
@@ -40,14 +40,14 @@ impl ClientState {
 			root: self
 				.root
 				.as_ref()
-				.map(|r| &r.node)
+				.map(|r| r.node())
 				.map(Node::get_path)
 				.map(Result::ok)
 				.flatten(),
 			spatial_anchors: self
 				.spatial_anchors
 				.iter()
-				.filter_map(|(k, v)| Some((k.clone(), v.node.get_path().ok()?)))
+				.filter_map(|(k, v)| Some((k.clone(), v.node().get_path().ok()?)))
 				.collect(),
 		}
 	}
@@ -165,28 +165,36 @@ impl Client {
 		});
 		let _ = client
 			.root
-			.set(Arc::new(Spatial::from_path(&client, "", "", false)));
+			.set(Arc::new(Spatial::from_path(&client, "".to_owned(), false)));
 		let _ = client
 			.hmd
-			.set(Spatial::from_path(&client, "", "hmd", false));
-		client.get_root().node.add_local_signal("restore_state", {
-			let client = client.clone();
+			.set(Spatial::from_path(&client, "/hmd".to_owned(), false));
+		client
+			.get_root()
+			.node()
+			.add_local_signal("restore_state", {
+				let client = client.clone();
 
-			move |data, _| {
-				let state: ClientStateInternal = deserialize(data)?;
-				let _ = state_tx.send(ClientState {
-					data: state.data,
-					root: Some(client.get_root().alias()),
-					spatial_anchors: state
-						.spatial_anchors
-						.into_iter()
-						.map(|(k, v)| (k, Spatial::from_path(&client, "/spatial/anchor", v, true)))
-						.collect(),
-				});
-				Ok(())
-			}
-		})?;
-		client.get_root().node.add_local_signal("frame", {
+				move |data, _| {
+					let state: ClientStateInternal = deserialize(data)?;
+					let _ = state_tx.send(ClientState {
+						data: state.data,
+						root: Some(client.get_root().alias()),
+						spatial_anchors: state
+							.spatial_anchors
+							.into_iter()
+							.map(|(k, v)| {
+								(
+									k,
+									Spatial::from_parent_name(&client, "/spatial/anchor", v, true),
+								)
+							})
+							.collect(),
+					});
+					Ok(())
+				}
+			})?;
+		client.get_root().node().add_local_signal("frame", {
 			let client = client.clone();
 			move |data, _| {
 				if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
@@ -207,7 +215,7 @@ impl Client {
 				Ok(())
 			}
 		})?;
-		client.get_root().node.add_local_method("save_state", {
+		client.get_root().node().add_local_method("save_state", {
 			let client = client.clone();
 			move |_, _| {
 				let state = client
@@ -281,7 +289,7 @@ impl Client {
 	#[must_use = "Dropping this handler wrapper would immediately drop the handler, and you want to check for errors too"]
 	pub fn wrap_root<H: RootHandler>(&self, wrapped: H) -> Result<Arc<Mutex<H>>, NodeError> {
 		self.get_root()
-			.node
+			.node()
 			.send_remote_signal_raw("subscribe_frame", &[], Vec::new())?;
 		let wrapped = Arc::new(Mutex::new(wrapped));
 		*self.life_cycle_handler.lock() =
@@ -291,7 +299,7 @@ impl Client {
 	/// Wrap the root in an already wrapped handler
 	pub fn wrap_root_raw<H: RootHandler>(&self, wrapped: &Arc<Mutex<H>>) -> Result<(), NodeError> {
 		self.get_root()
-			.node
+			.node()
 			.send_remote_signal_raw("subscribe_frame", &[], Vec::new())?;
 		*self.life_cycle_handler.lock() =
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
@@ -348,13 +356,11 @@ impl Client {
 	/// std::env::set_var("STARDUST_STARTUP_TOKEN", state_token); // to make sure it ends up in `/proc/{pid}/environ` of the new process
 	/// nix::unistd::execvp(ustr(&program).as_cstr(), &args).unwrap(); // make sure to use execv here to get the environment variable there properly.
 	/// ```
-	pub fn state_token(
-		&self,
-		state: &ClientState,
-	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
+	pub async fn state_token(&self, state: &ClientState) -> NodeResult<String> {
 		self.get_root()
-			.node
+			.node()
 			.execute_remote_method("state_token", &state.to_internal())
+			.await
 	}
 
 	/// Stop the event loop if created with async loop. Equivalent to a graceful disconnect.

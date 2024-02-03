@@ -27,21 +27,25 @@ pub use stardust_xr::schemas::flat::*;
 pub use tip::TipInputMethod;
 
 use super::{
-	fields::Field,
-	node::{HandledNodeType, Node, NodeError, NodeType},
-	spatial::Spatial,
+	fields::FieldAspect,
+	node::{Node, NodeError, NodeType},
 	HandlerWrapper,
 };
-use crate::fields::UnknownField;
+use crate::{
+	client::Client,
+	fields::UnknownField,
+	node::NodeAspect,
+	spatial::{SpatialAspect, Transform},
+};
 use color_eyre::eyre::{anyhow, bail};
 use parking_lot::Mutex;
 use stardust_xr::{
-	schemas::flex::{deserialize, flexbuffers},
-	values::Transform,
+	schemas::flex::{deserialize, flexbuffers, serialize},
+	values::Datamap,
 };
-use std::{ops::Deref, os::fd::OwnedFd, sync::Arc};
+use std::{os::fd::OwnedFd, sync::Arc};
 
-pub(self) fn input_method_handler_wrapper<N: InputMethod, H: InputMethodHandler>(
+pub(self) fn input_method_handler_wrapper<N: InputMethodAspect, H: InputMethodHandler>(
 	handler_wrapper: &HandlerWrapper<N, H>,
 ) -> Result<(), NodeError> {
 	handler_wrapper.add_handled_signal("handler_created", |node, handler, data, _fds| {
@@ -53,14 +57,10 @@ pub(self) fn input_method_handler_wrapper<N: InputMethod, H: InputMethodHandler>
 		};
 		let uid: String = deserialize(data)?;
 
-		let node = Node::from_path(&client, &path, &uid, false);
-		let spatial = Spatial { node };
-		let field = UnknownField {
-			spatial: Spatial {
-				node: Node::from_path(&client, spatial.node().get_path().unwrap(), "field", false),
-			},
-		};
-		let input_handler = InputHandler { spatial, field };
+		let node = Node::from_parent_name(&client, &path, &uid, false);
+		let field =
+			UnknownField::from_parent_name(&client, node.get_path().unwrap(), "field", false);
+		let input_handler = InputHandler { node, field };
 		handler.lock().create_handler(&uid, input_handler);
 		Ok(())
 	})?;
@@ -74,13 +74,13 @@ pub(self) fn input_method_handler_wrapper<N: InputMethod, H: InputMethodHandler>
 }
 
 /// Node representing a spatial input device.
-pub trait InputMethod: HandledNodeType {
-	fn set_datamap(&self, datamap: &[u8]) -> Result<(), NodeError> {
-		flexbuffers::Reader::get_root(datamap)
+pub trait InputMethodAspect: NodeType {
+	fn set_datamap(&self, datamap: &Datamap) -> Result<(), NodeError> {
+		flexbuffers::Reader::get_root(datamap.raw().as_slice())
 			.and_then(|root| root.get_map())
 			.map_err(|_| NodeError::MapInvalid)?;
 		self.node()
-			.send_remote_signal_raw("set_datamap", datamap, Vec::new())
+			.send_remote_signal_raw("set_datamap", datamap.raw(), Vec::new())
 	}
 
 	fn set_handler_order(&self, handlers: &[&InputHandler]) -> Result<(), NodeError> {
@@ -104,79 +104,66 @@ pub trait InputHandlerHandler: Send + Sync {
 }
 
 /// An input method on the server, but the type is unknown.
-pub struct UnknownInputMethod {
-	spatial: Spatial,
-	handler: Arc<InputHandler>,
-}
+pub struct UnknownInputMethod(Node);
 impl UnknownInputMethod {
-	fn from_path(handler: Arc<InputHandler>, uid: &str) -> Result<Self, NodeError> {
-		Ok(UnknownInputMethod {
-			spatial: Spatial {
-				node: Node::from_path(&handler.client()?, handler.node().get_path()?, uid, false),
-			},
-			handler,
-		})
-	}
 	/// Have the input handler that this method reference came from capture the method for the next frame.
-	pub fn capture(&self) -> Result<(), NodeError> {
-		self.node()
-			.send_remote_signal("capture", &self.handler.node().get_path()?)
+	pub fn capture(&self, handler: &InputHandler) -> Result<(), NodeError> {
+		self.node().send_remote_signal("capture", handler.node())
 	}
 }
 impl NodeType for UnknownInputMethod {
 	fn node(&self) -> &Node {
-		&self.spatial.node
+		&self.0
 	}
 
 	fn alias(&self) -> Self {
-		UnknownInputMethod {
-			spatial: self.spatial.alias(),
-			handler: self.handler.clone(),
-		}
+		UnknownInputMethod(self.0.alias())
 	}
-}
-impl Deref for UnknownInputMethod {
-	type Target = Spatial;
 
-	fn deref(&self) -> &Self::Target {
-		&self.spatial
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self {
+		UnknownInputMethod(Node::from_path(client, path, destroyable))
 	}
 }
 
 /// Node that can receive spatial input.
 #[derive(Debug)]
 pub struct InputHandler {
-	spatial: Spatial,
+	node: Node,
 	field: UnknownField,
 }
 impl<'a> InputHandler {
 	/// Create an input handler given a field, this will become inactive if the field is dropped.
 	///
 	/// Keep in mind the handler and its field are different spatials, they can move independently.
-	pub fn create<Fi: Field>(
-		spatial_parent: &'a Spatial,
+	pub fn create(
+		spatial_parent: &'a impl SpatialAspect,
 		transform: Transform,
-		field: &'a Fi,
+		field: &'a impl FieldAspect,
 	) -> Result<Self, NodeError> {
 		let id = nanoid::nanoid!();
+		let client = spatial_parent.client()?;
+
+		let node = Node::from_parent_name(
+			&spatial_parent.client()?,
+			"/input/method/pointer",
+			&id,
+			true,
+		);
+		client.message_sender_handle.signal(
+			"/input",
+			"create_input_handler",
+			&serialize((
+				id,
+				spatial_parent.node().get_path()?,
+				transform,
+				field.node().get_path()?,
+			))?,
+			Vec::new(),
+		)?;
+
 		Ok(InputHandler {
-			spatial: Spatial {
-				node: Node::new(
-					&spatial_parent.node.client()?,
-					"/input",
-					"create_input_handler",
-					"/input/handler",
-					true,
-					&id.clone(),
-					(
-						id,
-						spatial_parent.node().get_path()?,
-						transform,
-						field.node().get_path()?,
-					),
-				)?,
-			},
-			field: field.alias_unknown_field(),
+			node,
+			field: UnknownField::alias_field(field),
 		})
 	}
 
@@ -207,7 +194,12 @@ impl<'a> InputHandler {
 	) -> color_eyre::eyre::Result<()> {
 		let data = InputData::deserialize(data).map_err(|e| anyhow!(e))?;
 		handler.lock().input(
-			UnknownInputMethod::from_path(input_handler, &data.uid)?,
+			UnknownInputMethod::from_parent_name(
+				&input_handler.client()?,
+				"/input/method",
+				&data.uid,
+				false,
+			),
 			data,
 		);
 		Ok(())
@@ -219,24 +211,29 @@ impl<'a> InputHandler {
 }
 impl NodeType for InputHandler {
 	fn node(&self) -> &Node {
-		&self.spatial.node
+		&self.node
 	}
 
 	fn alias(&self) -> Self {
 		InputHandler {
-			spatial: self.spatial.alias(),
+			node: self.node.alias(),
 			field: self.field.alias(),
 		}
 	}
-}
-impl HandledNodeType for InputHandler {}
-impl Deref for InputHandler {
-	type Target = Spatial;
 
-	fn deref(&self) -> &Self::Target {
-		&self.spatial
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self {
+		let node = Node::from_path(client, path, destroyable);
+		let field = UnknownField::from_parent_name(
+			client,
+			&node.node().get_path().unwrap(),
+			"field",
+			false,
+		);
+		InputHandler { node, field }
 	}
 }
+impl NodeAspect for InputHandler {}
+impl SpatialAspect for InputHandler {}
 
 #[tokio::test]
 async fn fusion_input_handler() {
@@ -283,7 +280,7 @@ async fn fusion_input_handler() {
 	// 	.build()
 	// 	.await
 	// 	.unwrap();
-	let _input_handler = InputHandler::create(client.get_root(), Transform::default(), &field)
+	let _input_handler = InputHandler::create(client.get_root(), Transform::none(), &field)
 		.unwrap()
 		.wrap(InputHandlerTest)
 		.unwrap();

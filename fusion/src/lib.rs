@@ -33,9 +33,8 @@ pub mod items;
 mod scenegraph;
 pub mod spatial;
 
-use self::node::HandledNodeType;
 use color_eyre::eyre::{anyhow, Result};
-use node::NodeError;
+use node::{NodeError, NodeType};
 pub use parking_lot::{Mutex, MutexGuard};
 use std::{os::fd::OwnedFd, sync::Arc};
 
@@ -60,11 +59,11 @@ use std::{os::fd::OwnedFd, sync::Arc};
 /// let zone_wrapped = zone.wrap(ZoneHandlerTest);
 /// ```
 #[derive(Debug)]
-pub struct HandlerWrapper<N: HandledNodeType, H: Send + Sync + 'static> {
+pub struct HandlerWrapper<N: NodeType, H: Send + Sync + 'static> {
 	node: Arc<N>,
 	wrapped: Arc<Mutex<H>>,
 }
-impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
+impl<N: NodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 	pub(crate) fn new_raw(node: N, handler: Arc<Mutex<H>>) -> Self {
 		Self {
 			wrapped: handler,
@@ -99,8 +98,12 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
 		self.node.node().add_local_signal(name, move |data, fds| {
-			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
-			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
+			let Some(node) = node.upgrade() else {
+				return Err(anyhow!("Node broken"));
+			};
+			let Some(handler) = handler.upgrade() else {
+				return Err(anyhow!("Handler broken"));
+			};
 			parse(node, handler, data, fds)
 		})
 	}
@@ -113,8 +116,12 @@ impl<N: HandledNodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
 		self.node.node().add_local_method(name, move |data, fds| {
-			let Some(node) = node.upgrade() else { return Err(anyhow!("Node broken")) };
-			let Some(handler) = handler.upgrade() else { return Err(anyhow!("Handler broken")) };
+			let Some(node) = node.upgrade() else {
+				return Err(anyhow!("Node broken"));
+			};
+			let Some(handler) = handler.upgrade() else {
+				return Err(anyhow!("Handler broken"));
+			};
 			parse(node, handler, data, fds)
 		})
 	}
@@ -134,7 +141,7 @@ macro_rules! handle_action {
     ($handler:ident, $action:ident, $name:ident) => {
         $handler
             .add_handled_signal(stringify!($action), |_, handler, data, _| {
-                handler.lock().$action(deserialize(data)?);
+                handler.lock().$action(stardust_xr::schemas::flex::deserialize(data)?);
                 Ok(())
             })
             .unwrap();
@@ -143,7 +150,7 @@ macro_rules! handle_action {
     ($handler:ident, $action:ident, ($( $name:ident ),*)) => {
         $handler
             .add_handled_signal(stringify!($action), |_, handler, data, _| {
-                let ($($name),*,) = deserialize(data)?;
+                let ($($name),*,) = stardust_xr::schemas::flex::deserialize(data)?;
                 handler.lock().$action($(
                     $name
                 ),*);

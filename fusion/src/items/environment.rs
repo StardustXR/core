@@ -1,22 +1,17 @@
-use super::Item;
+use super::ItemAspect;
 use crate::client::Client;
 use crate::node::{Node, NodeError, NodeType};
-use crate::spatial::Spatial;
-use stardust_xr::values::Transform;
-use std::ops::Deref;
+use crate::spatial::{SpatialAspect, Transform};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Item that contains the path to an equirectangular `.hdr` file.
-pub struct EnvironmentItem {
-	spatial: Spatial,
-	pub path: PathBuf,
-}
+pub struct EnvironmentItem(Node);
 
 impl EnvironmentItem {
 	/// Create a new environment item from a file path.
 	pub fn create<P: AsRef<Path>>(
-		spatial_parent: &Spatial,
+		spatial_parent: &impl SpatialAspect,
 		transform: Transform,
 		file_path: P,
 	) -> Result<Self, NodeError> {
@@ -26,59 +21,35 @@ impl EnvironmentItem {
 		}
 
 		let id = nanoid::nanoid!();
-		Ok(EnvironmentItem {
-			spatial: Spatial {
-				node: Node::new(
-					&spatial_parent.node.client()?,
-					"/item",
-					"create_environment_item",
-					"/item/environment/item",
-					true,
-					&id.clone(),
-					(id, spatial_parent.node().get_path()?, transform, path),
-				)?,
-			},
-			path: path.to_path_buf(),
-		})
+		Ok(EnvironmentItem(Node::new(
+			&spatial_parent.node().client()?,
+			"/item",
+			"create_environment_item",
+			"/item/environment/item",
+			true,
+			&id.clone(),
+			(id, spatial_parent.node().get_path()?, transform, path),
+		)?))
 	}
 }
+
 impl NodeType for EnvironmentItem {
 	fn node(&self) -> &Node {
-		&self.spatial.node
+		&self.0
 	}
 
 	fn alias(&self) -> Self {
-		EnvironmentItem {
-			spatial: self.spatial.alias(),
-			path: self.path.clone(),
-		}
+		EnvironmentItem(self.0.alias())
+	}
+
+	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self {
+		EnvironmentItem(Node::from_path(client, path, destroyable))
 	}
 }
-impl Item for EnvironmentItem {
+impl SpatialAspect for EnvironmentItem {}
+impl ItemAspect for EnvironmentItem {
 	type InitData = PathBuf;
 	const TYPE_NAME: &'static str = "environment";
-
-	fn from_path(
-		client: &Arc<Client>,
-		parent_path: impl ToString,
-		name: impl ToString,
-		init_data: &PathBuf,
-	) -> Self {
-		EnvironmentItem {
-			spatial: Spatial {
-				node: Node::from_path(client, parent_path, name, false),
-			},
-			path: init_data.clone(),
-		}
-	}
-	// fn alias
-}
-impl Deref for EnvironmentItem {
-	type Target = Spatial;
-
-	fn deref(&self) -> &Self::Target {
-		&self.spatial
-	}
 }
 
 #[tokio::test]
@@ -89,44 +60,44 @@ async fn fusion_environment_ui() {
 
 	let environment_item = EnvironmentItem::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		file_relative_path!("res/fusion/sky.hdr"),
 	)
 	.unwrap();
 
 	struct EnvironmentUIManager(Arc<Client>);
 	impl crate::items::ItemUIHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn item_created(&mut self, item_uid: &str, _item: EnvironmentItem, path: PathBuf) {
+		fn item_created(&mut self, item_uid: String, _item: EnvironmentItem, path: PathBuf) {
 			println!(
 				"Environment item {item_uid} created with path {}",
 				path.display()
 			);
 		}
-		fn item_captured(&mut self, item_uid: &str, acceptor_uid: &str) {
+		fn item_captured(&mut self, item_uid: String, acceptor_uid: String) {
 			println!("Capturing environment item {item_uid} in acceptor {acceptor_uid}");
 		}
-		fn item_released(&mut self, item_uid: &str, acceptor_uid: &str) {
+		fn item_released(&mut self, item_uid: String, acceptor_uid: String) {
 			println!("Released environment item {item_uid} from acceptor {acceptor_uid}");
 		}
-		fn item_destroyed(&mut self, _item_uid: &str) {}
+		fn item_destroyed(&mut self, _item_uid: String) {}
 		fn acceptor_created(
 			&mut self,
-			_uid: &str,
+			_uid: String,
 			_acceptor: crate::items::ItemAcceptor<EnvironmentItem>,
 			_field: crate::fields::UnknownField,
 		) {
 		}
-		fn acceptor_destroyed(&mut self, _uid: &str) {}
+		fn acceptor_destroyed(&mut self, _uid: String) {}
 	}
 	impl crate::items::ItemAcceptorHandler<EnvironmentItem> for EnvironmentUIManager {
-		fn captured(&mut self, uid: &str, item: EnvironmentItem, path: PathBuf) {
+		fn captured(&mut self, uid: String, item: EnvironmentItem, path: PathBuf) {
 			println!(
 				"Item {uid} accepted sucessfully with path {}!",
 				path.display()
 			);
 			item.release().unwrap();
 		}
-		fn released(&mut self, uid: &str) {
+		fn released(&mut self, uid: String) {
 			println!("Got {uid} released sucessfully!");
 			self.0.stop_loop();
 		}
@@ -142,7 +113,7 @@ async fn fusion_environment_ui() {
 			.unwrap();
 	let item_acceptor = crate::items::ItemAcceptor::create(
 		client.get_root(),
-		Transform::default(),
+		Transform::none(),
 		&item_acceptor_field,
 	)
 	.unwrap()
