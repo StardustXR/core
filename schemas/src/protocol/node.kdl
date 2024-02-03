@@ -1,4 +1,5 @@
 version (u32)1
+description "The aspect that applies to all nodes"
 
 aspect "Node" {
 	description "The aspect that applies to all nodes"

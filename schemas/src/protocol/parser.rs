@@ -5,6 +5,32 @@ use thiserror::Error;
 
 pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 	let version = get_protocol_version(&document)?;
+	let description = get_string_property(
+		document
+			.get("description")
+			.ok_or_else(|| ParseError::MissingProtocolDescription)?,
+		0,
+	)?
+	.to_owned();
+	let interface_path = document
+		.get("interface")
+		.and_then(|n| get_string_property(n, 0).ok())
+		.map(ToString::to_string);
+	if document.nodes().iter().any(|m| check_member(&m)) && interface_path.is_none() {
+		return Err(ParseError::MissingProtocolInterfacePath);
+	}
+	let interface = interface_path
+		.map(|path| {
+			let members = document
+				.nodes()
+				.iter()
+				.filter(check_member)
+				.map(convert_member)
+				.collect::<Result<Vec<_>, ParseError>>()?;
+			Ok(Interface { path, members })
+		})
+		.transpose()?;
+
 	let custom_enums = document
 		.nodes()
 		.iter()
@@ -23,12 +49,7 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 		.filter(|n| n.name().value() == "struct")
 		.map(convert_struct)
 		.collect::<Result<Vec<_>, ParseError>>()?;
-	let interfaces = document
-		.nodes()
-		.iter()
-		.filter(|n| n.name().value() == "interface")
-		.map(convert_interface)
-		.collect::<Result<Vec<_>, ParseError>>()?;
+
 	let nodes = document
 		.nodes()
 		.iter()
@@ -43,10 +64,11 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 		.collect::<Result<Vec<_>, ParseError>>()?;
 	Ok(Protocol {
 		version,
+		description,
+		interface,
 		custom_enums,
 		custom_unions,
 		custom_structs,
-		interfaces,
 		nodes,
 		aspects,
 	})
@@ -115,22 +137,6 @@ fn convert_struct(custom_struct: &KdlNode) -> Result<CustomStruct, ParseError> {
 	})
 }
 
-fn convert_interface(interface: &KdlNode) -> Result<Interface, ParseError> {
-	let nodes = interface.children().unwrap().nodes();
-
-	let path = get_string_property(interface, 0)?.to_string();
-	let description = get_description_node(interface)?;
-	let members = nodes
-		.iter()
-		.filter(check_member)
-		.map(|m| convert_member(m, Some(&path)))
-		.collect::<Result<Vec<_>, ParseError>>()?;
-	Ok(Interface {
-		path,
-		description,
-		members,
-	})
-}
 fn convert_node(node: &KdlNode) -> Result<Node, ParseError> {
 	let nodes = node.children().unwrap().nodes();
 
@@ -144,7 +150,7 @@ fn convert_node(node: &KdlNode) -> Result<Node, ParseError> {
 	let members = nodes
 		.iter()
 		.filter(check_member)
-		.map(|m| convert_member(m, None))
+		.map(convert_member)
 		.collect::<Result<Vec<_>, ParseError>>()?;
 	Ok(Node {
 		name,
@@ -161,7 +167,7 @@ fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 	let members = nodes
 		.iter()
 		.filter(check_member)
-		.map(|m| convert_member(m, None))
+		.map(convert_member)
 		.collect::<Result<Vec<_>, ParseError>>()?;
 	Ok(Aspect {
 		name,
@@ -173,7 +179,7 @@ fn check_member(member: &&KdlNode) -> bool {
 	let name = member.name().value();
 	name == "signal" || name == "method"
 }
-fn convert_member(member: &KdlNode, interface_path: Option<&str>) -> Result<Member, ParseError> {
+fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
 	let nodes = member.children().unwrap().nodes();
 
 	let _type = member.name().value();
@@ -220,7 +226,6 @@ fn convert_member(member: &KdlNode, interface_path: Option<&str>) -> Result<Memb
 		description,
 		side,
 		_type,
-		interface_path: interface_path.map(ToString::to_string),
 		arguments,
 		return_type,
 	})

@@ -29,10 +29,6 @@ pub fn codegen_data_client_protocol(_input: proc_macro::TokenStream) -> proc_mac
 	codegen_client_protocol(DATA_PROTOCOL)
 }
 #[proc_macro]
-pub fn codegen_zone_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ZONE_PROTOCOL)
-}
-#[proc_macro]
 pub fn codegen_audio_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	codegen_client_protocol(AUDIO_PROTOCOL)
 }
@@ -79,13 +75,16 @@ fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
 		.map(generate_node)
 		.reduce(fold_tokens)
 		.unwrap_or_default();
-	let interfaces = protocol
-		.interfaces
-		.iter()
-		.map(generate_interface)
-		.reduce(fold_tokens)
+	let interface = protocol
+		.interface
+		.and_then(|p| {
+			p.members
+				.iter()
+				.map(|m| generate_member(Some(&p.path), m))
+				.reduce(fold_tokens)
+		})
 		.unwrap_or_default();
-	quote!(#custom_enums #custom_unions #custom_structs #aspects #nodes #interfaces).into()
+	quote!(#custom_enums #custom_unions #custom_structs #aspects #nodes #interface).into()
 }
 
 fn generate_custom_enum(custom_enum: &CustomEnum) -> TokenStream {
@@ -178,15 +177,6 @@ fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
 	}
 }
 
-fn generate_interface(interface: &Interface) -> TokenStream {
-	interface
-		.members
-		.iter()
-		.map(generate_member)
-		.reduce(fold_tokens)
-		.unwrap_or_default()
-}
-
 fn generate_node(node: &Node) -> TokenStream {
 	let node_name = Ident::new(&node.name, Span::call_site());
 	let description = &node.description;
@@ -235,7 +225,7 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		Span::call_site(),
 	);
 	let client_side_members = client_members
-		.map(generate_member)
+		.map(|m| generate_member(None, m))
 		.reduce(fold_tokens)
 		.map(|t| {
 			quote! {
@@ -271,7 +261,7 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		Span::call_site(),
 	);
 	let server_side_members = server_members
-		.map(generate_member)
+		.map(|m| generate_member(None, m))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let server_side_members = quote! {
@@ -284,7 +274,7 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 	quote!(#client_side_members #server_side_members)
 }
 
-fn generate_member(member: &Member) -> TokenStream {
+fn generate_member(interface_path: Option<&str>, member: &Member) -> TokenStream {
 	let name_str = &member.name;
 	let name = Ident::new(&member.name.to_case(Case::Snake), Span::call_site());
 	let description = &member.description;
@@ -292,7 +282,7 @@ fn generate_member(member: &Member) -> TokenStream {
 	let side = member.side;
 	let _type = member._type;
 
-	let first_arg = if member.interface_path.is_some() {
+	let first_arg = if interface_path.is_some() {
 		quote!(client: &std::sync::Arc<crate::client::Client>)
 	} else {
 		if member.side == Side::Server {
@@ -321,7 +311,7 @@ fn generate_member(member: &Member) -> TokenStream {
 
 	match (side, _type) {
 		(Side::Server, MemberType::Method) => {
-			let body = if let Some(interface_path) = &member.interface_path {
+			let body = if let Some(interface_path) = &interface_path {
 				quote! {
 					let data = stardust_xr::schemas::flex::serialize(&(#argument_uses))?;
 					let result = client.message_sender_handle.method(#interface_path, #name_str, &data, Vec::new())?.await?;
@@ -340,7 +330,7 @@ fn generate_member(member: &Member) -> TokenStream {
 			}
 		}
 		(Side::Server, MemberType::Signal) => {
-			let mut body = if let Some(interface_path) = &member.interface_path {
+			let mut body = if let Some(interface_path) = &interface_path {
 				quote! {
 					client.message_sender_handle.signal(#interface_path, #name_str, &stardust_xr::schemas::flex::serialize(&(#argument_uses))?, Vec::new())
 				}
@@ -357,7 +347,7 @@ fn generate_member(member: &Member) -> TokenStream {
 				if let Some(return_info) = return_info {
 					let parent = &return_info.parent;
 					let name_argument = Ident::new(&return_info.name_argument, Span::call_site());
-					let get_client = if member.interface_path.is_some() {
+					let get_client = if interface_path.is_some() {
 						quote!(client)
 					} else {
 						quote!(self.node().client()?)

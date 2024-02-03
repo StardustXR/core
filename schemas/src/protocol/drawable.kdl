@@ -1,45 +1,43 @@
 version (u32)1
+interface "/drawable"
+description ""
 
-interface "/drawable" {
-	description ""
+signal "set_sky" side="server" {
+	description "Set the sky lignt/texture to a given HDRI file."
+	
+	argument "tex" type="resource" optional=true 
+	argument "light" type="resource" optional=true 
+}
 
-	signal "set_sky" side="server" {
-		description "Set the sky lignt/texture to a given HDRI file."
-		
-		argument "tex" type="resource" optional=true 
-		argument "light" type="resource" optional=true 
-	}
+signal "create_lines" side="server" {
+	description "Create a lines node"
 
-	signal "create_lines" side="server" {
-		description "Create a lines node"
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "lines" type="vec" member_type="struct" struct="Line"
+	return type="node" node="Lines" parent="/drawable/lines" name_argument="name"
+}
 
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial"
-		argument "transform" type="struct" struct="transform"
-		argument "lines" type="vec" member_type="struct" struct="Line"
-		return type="node" node="Lines" parent="/drawable/lines" name_argument="name"
-	}
+signal "load_model" side="server" {
+	description "Load a GLTF model into a Model node"
 
-	signal "load_model" side="server" {
-		description "Load a GLTF model into a Model node"
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "model" type="resource"
+	return type="node" node="Model" parent="/drawable/model" name_argument="name"
+}
 
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial"
-		argument "transform" type="struct" struct="transform"
-		argument "model" type="resource"
-		return type="node" node="Model" parent="/drawable/model" name_argument="name"
-	}
+signal "create_text" side="server" {
+	description "Create a text node"
 
-	signal "create_text" side="server" {
-		description "Create a text node"
-
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial"
-		argument "transform" type="struct" struct="transform"
-		argument "text" type="string"
-		argument "style" type="struct" struct="TextStyle"
-		return type="node" node="Text" parent="/drawable/text" name_argument="name"
-	}
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "text" type="string"
+	argument "style" type="struct" struct="TextStyle"
+	return type="node" node="Text" parent="/drawable/text" name_argument="name"
 }
 
 

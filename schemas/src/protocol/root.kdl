@@ -1,4 +1,40 @@
 version (u32)1
+interface "/" 
+description "The client's root. The spatial aspect of this is placed where the client is started spatially. There are also some methods that must be handled."
+
+signal "frame" side="client" {
+	description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
+
+	argument "info" type="struct" struct="FrameInfo"
+}
+method "get_state" side="server" {
+	description ""
+
+	return type="struct" struct="ClientState"
+}
+method "save_state" side="client" {
+	description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
+
+	return type="struct" struct="ClientState"
+}
+
+method "get_connection_environment" side="server" {
+	description "Get a hashmap of all the environment variables to connect a given app to the stardust server"
+	
+	return type="map" value_type="string"
+}
+method "client_state_token" side="server" {
+	description r#"
+		Generate a client state token and return it back.
+
+		When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
+		Make sure the environment variable shows in `/proc/{pid}/environ` as that's the only reliable way to pass the value to the server (suggestions welcome).
+	"#
+
+	argument "state" type="struct" struct="ClientState"
+	return type="string"
+}
+
 
 struct "FrameInfo" {
 	description ""
@@ -17,42 +53,5 @@ struct "ClientState" {
 node "Root" {
 	description "The client's root. The spatial aspect of this is placed where the client is started spatially. There are also some methods that must be handled."
 
-	aspect "Root"
 	aspect "Spatial"
-}
-aspect "Root" {
-	description "The client's root. The spatial aspect of this is placed where the client is started spatially. There are also some methods that must be handled."
-
-	signal "frame" side="client" {
-		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
-
-		argument "info" type="struct" struct="FrameInfo"
-	}
-	method "get_state" side="server" {
-		description ""
-
-		return type="struct" struct="ClientState"
-	}
-	method "save_state" side="client" {
-		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
-
-		return type="struct" struct="ClientState"
-	}
-
-	method "get_connection_environment" side="server" {
-		description "Get a hashmap of all the environment variables to connect a given app to the stardust server"
-		
-		return type="map" value_type="string"
-	}
-	method "client_state_token" side="server" {
-		description r#"
-			Generate a client state token and return it back.
-	
-			When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
-			Make sure the environment variable shows in `/proc/{pid}/environ` as that's the only reliable way to pass the value to the server (suggestions welcome).
-		"#
-
-		argument "state" type="struct" struct="ClientState"
-		return type="string"
-	}
 }

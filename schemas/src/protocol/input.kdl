@@ -1,4 +1,26 @@
 version (u32)1
+interface "/input"
+description ""
+
+signal "create_input_method" side="server" {
+	description "Create an input method node"
+
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "initial_data" type="struct" struct="InputDataType"
+	argument "datamap" type="datamap"
+	return type="node" node="InputMethod" parent="/input/method" name_argument="name"
+}
+signal "create_input_handler" side="server" {
+	description "Create an input handler node"
+
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "field" type="node" aspect="Field"
+	return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
+}
 
 struct "Joint" {
 	description ""
@@ -70,30 +92,6 @@ struct "InputData" {
 	field "datamap"  type="datamap" description="Non-spatial data in a map."
 	field "order"    type="uint" description="There are [order] objects that got this input data before this one."
 	field "captured" type="bool" description="Is this input handler capturing this input method?"
-}
-
-interface "/input" {
-	description ""
-
-	signal "create_input_method" side="server" {
-		description "Create an input method node"
-
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial"
-		argument "transform" type="struct" struct="transform"
-		argument "initial_data" type="struct" struct="InputDataType"
-		argument "datamap" type="datamap"
-		return type="node" node="InputMethod" parent="/input/method" name_argument="name"
-	}
-	signal "create_input_handler" side="server" {
-		description "Create an input handler node"
-
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial"
-		argument "transform" type="struct" struct="transform"
-		argument "field" type="node" aspect="Field"
-		return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
-	}
 }
 
 node "InputMethod" {

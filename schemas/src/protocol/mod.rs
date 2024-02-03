@@ -9,7 +9,6 @@ pub const NODE_PROTOCOL: &'static str = include_str!("node.kdl");
 pub const SPATIAL_PROTOCOL: &'static str = include_str!("spatial.kdl");
 pub const FIELD_PROTOCOL: &'static str = include_str!("field.kdl");
 pub const DATA_PROTOCOL: &'static str = include_str!("data.kdl");
-pub const ZONE_PROTOCOL: &'static str = include_str!("zone.kdl");
 pub const AUDIO_PROTOCOL: &'static str = include_str!("audio.kdl");
 pub const DRAWABLE_PROTOCOL: &'static str = include_str!("drawable.kdl");
 // pub const INPUT_PROTOCOL: &'static str = include_str!("input.kdl");
@@ -17,10 +16,11 @@ pub const DRAWABLE_PROTOCOL: &'static str = include_str!("drawable.kdl");
 #[derive(Debug)]
 pub struct Protocol {
 	pub version: u32,
+	pub description: String,
+	pub interface: Option<Interface>,
 	pub custom_enums: Vec<CustomEnum>,
 	pub custom_structs: Vec<CustomStruct>,
 	pub custom_unions: Vec<CustomUnion>,
-	pub interfaces: Vec<Interface>,
 	pub nodes: Vec<Node>,
 	pub aspects: Vec<Aspect>,
 }
@@ -29,6 +29,12 @@ impl Protocol {
 		let parsed: KdlDocument = sbs.parse().map_err(|p: KdlError| ParseError::Kdl(p))?;
 		convert(parsed)
 	}
+}
+
+#[derive(Debug)]
+pub struct Interface {
+	pub path: String,
+	pub members: Vec<Member>,
 }
 
 #[derive(Debug)]
@@ -60,13 +66,6 @@ pub struct UnionOption {
 }
 
 #[derive(Debug)]
-pub struct Interface {
-	pub path: String,
-	pub description: String,
-	pub members: Vec<Member>,
-}
-
-#[derive(Debug)]
 pub struct Node {
 	pub name: String,
 	pub description: String,
@@ -87,7 +86,6 @@ pub struct Member {
 	pub description: String,
 	pub side: Side,
 	pub _type: MemberType,
-	pub interface_path: Option<String>,
 	pub arguments: Vec<Argument>,
 	pub return_type: Option<ArgumentType>,
 }
@@ -149,6 +147,10 @@ pub enum ParseError {
 	Kdl(KdlError),
 	#[error("Missing protocol version")]
 	MissingProtocolVersion,
+	#[error("Missing protocol description")]
+	MissingProtocolDescription,
+	#[error("Missing interface path for signals/methods")]
+	MissingProtocolInterfacePath,
 	#[error("Struct {0} should be of type {1} but is not")]
 	InvalidStructType(String, String),
 	#[error("Field {0} should be present but is not")]

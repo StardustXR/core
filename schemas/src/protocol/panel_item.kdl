@@ -1,4 +1,5 @@
 version (u32)1
+description ""
 
 struct "Geometry" {
 	description "The origin and size of the surface's \"solid\" part."

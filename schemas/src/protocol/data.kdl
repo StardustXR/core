@@ -1,46 +1,45 @@
 version (u32)1
+interface "/data"
+description "Interface to send non-spatial data through space"
 
 struct "NewReceiverInfo" {
 	description ""
 	field "uid" type="string"
 }
 
-interface "/data" {
-	description "Interface to send non-spatial data through space"
-	
-	signal "create_pulse_sender" side="server" {
-		description ""
+signal "create_pulse_sender" side="server" {
+	description ""
 
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial"
-		argument "transform" type="struct" struct="transform"
-		argument "mask" type="datamap"
-		return type="node" node="PulseSender" parent="/data/sender" name_argument="name"
-	}
-	signal "create_pulse_receiver" side="server" {
-		description "Create a pulse receiver node. The field will remain intact even if its node is dropped."
-
-		argument "name" type="string"
-		argument "parent" type="node" aspect="spatial" 
-		argument "transform" type="struct" struct="transform"
-		argument "field" type="node" aspect="field" 
-		argument "mask" type="datamap"
-		return type="node" node="PulseReceiver" parent="/data/receiver" name_argument="name"
-	}
-
-	method "register_keymap" side="server" {
-		description "Register a keymap with the server to easily identify it later"
-
-		argument "keymap" type="string"
-		return type="string"
-	}
-	method "get_keymap" side="server" {
-		description "Get the keymap string representation from an ID"
-
-		argument "keymap_id" type="string"
-		return type="string"
-	}
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "mask" type="datamap"
+	return type="node" node="PulseSender" parent="/data/sender" name_argument="name"
 }
+signal "create_pulse_receiver" side="server" {
+	description "Create a pulse receiver node. The field will remain intact even if its node is dropped."
+
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial" 
+	argument "transform" type="struct" struct="transform"
+	argument "field" type="node" aspect="field" 
+	argument "mask" type="datamap"
+	return type="node" node="PulseReceiver" parent="/data/receiver" name_argument="name"
+}
+
+method "register_keymap" side="server" {
+	description "Register a keymap with the server to easily identify it later"
+
+	argument "keymap" type="string"
+	return type="string"
+}
+method "get_keymap" side="server" {
+	description "Get the keymap string representation from an ID"
+
+	argument "keymap_id" type="string"
+	return type="string"
+}
+
 
 node "PulseSender" {
 	description ""
