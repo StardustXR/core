@@ -9,4 +9,181 @@ interface "/drawable" {
 		argument "tex" type="resource" optional=true 
 		argument "light" type="resource" optional=true 
 	}
+
+	signal "create_lines" side="server" {
+		description "Create a lines node"
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "lines" type="vec" member_type="struct" struct="Line"
+		return type="node" node="Lines" parent="/drawable/lines" name_argument="name"
+	}
+
+	signal "load_model" side="server" {
+		description "Load a GLTF model into a Model node"
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "model" type="resource"
+		return type="node" node="Model" parent="/drawable/model" name_argument="name"
+	}
+
+	signal "create_text" side="server" {
+		description "Create a text node"
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "text" type="string"
+		argument "style" type="struct" struct="TextStyle"
+		return type="node" node="Text" parent="/drawable/text" name_argument="name"
+	}
+}
+
+
+
+
+struct "LinePoint" {
+	description "A single point on a line"
+
+	field "point" type="vec3"
+	field "thickness" type="float"
+	field "color" type="color"
+}
+struct "Line" {
+	description "A single continuous polyline"
+
+	field "points" type="vec" member_type="struct" struct="LinePoint"
+	field "cyclic" type="bool"
+}
+node "Lines" {
+	description "A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Lines"
+}
+aspect "Lines" {
+	description "A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi"
+
+	signal "set_lines" side="server" {
+		description "Replace all polylines with the given lines"
+
+		argument "lines" type="vec" member_type="struct" struct="Line"
+	}
+}
+
+
+
+
+union "MaterialParameter" {
+	description ""
+	
+	option type="bool"
+	option type="int"
+	option type="uint"
+	option type="float"
+	option type="vec2"
+	option type="vec3"
+	option type="color"
+	option type="resource" name="texture"
+}
+node "Model" {
+	description "A GLTF model loaded by the server."
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Model"
+}
+aspect "Model" {
+	description "A GLTF model loaded by the server."
+}
+node "ModelPart" {
+	description "A graphical node in the GLTF heirarchy for the given model. Can be reparented and have material parameters set on."
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "ModelPart"
+}
+aspect "ModelPart" {
+	description "A graphical node in the GLTF heirarchy for the given model. Can be reparented and have material parameters set on."
+
+	signal "apply_holdout_material" side="server" {
+		description "Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object."
+	}
+
+	signal "set_material_parameter" side="server" {
+		description "Set the material parameter with `parameter_name` to `value`"
+
+		argument "parameter_name" type="string"
+		argument "value" type="union" union="MaterialParameter"
+	}
+}
+
+
+
+
+enum "XAlign" {
+	description "X alignment"
+
+	variant "Left"
+	variant "Center"
+	variant "Right"
+}
+enum "YAlign" {
+	description "Y alignment"
+
+	variant "Top"
+	variant "Center"
+	variant "Bottom"
+}
+enum "TextFit" {
+	description "How the text fits in a box of any size"
+
+	variant "Wrap"
+	variant "Clip"
+	variant "Squeeze"
+	variant "Exact"
+	variant "Overflow"
+}
+struct "TextBounds" {
+	description ""
+
+	field "bounds" type="vec2"
+	field "fit" type="enum" enum="TextFit"
+	field "anchor_align_x" type="enum" enum="XAlign"
+	field "anchor_align_y" type="enum" enum="YAlign"
+}
+struct "TextStyle" {
+	description ""
+
+	field "character_height" type="float"
+	field "color" type="color"
+	field "font" type="resource" optional=true
+	field "text_align_x" type="enum" enum="XAlign"
+	field "text_align_y" type="enum" enum="YAlign"
+	field "bounds" type="struct" struct="TextBounds" optional=true
+}
+node "Text" {
+	description "Text rendered to work best in XR"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Text"
+}
+aspect "Text" {
+	description "Text rendered to work best in XR"
+
+	signal "set_character_height" side="server" {
+		description "Set the character height in meters"
+
+		argument "height" type="float"
+	}
+	signal "set_text" side="server" {
+		description "Set the text content"
+
+		argument "text" type="string"
+	}
 }

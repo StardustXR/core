@@ -42,24 +42,6 @@ pub fn codegen_drawable_client_protocol(
 ) -> proc_macro::TokenStream {
 	codegen_client_protocol(DRAWABLE_PROTOCOL)
 }
-#[proc_macro]
-pub fn codegen_drawable_lines_client_protocol(
-	_input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_LINES_PROTOCOL)
-}
-#[proc_macro]
-pub fn codegen_drawable_model_client_protocol(
-	_input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_MODEL_PROTOCOL)
-}
-#[proc_macro]
-pub fn codegen_drawable_text_client_protocol(
-	_input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_TEXT_PROTOCOL)
-}
 // #[proc_macro]
 // pub fn codegen_input_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 // 	codegen_client_protocol(INPUT_PROTOCOL)

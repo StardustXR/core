@@ -12,9 +12,6 @@ pub const DATA_PROTOCOL: &'static str = include_str!("data.kdl");
 pub const ZONE_PROTOCOL: &'static str = include_str!("zone.kdl");
 pub const AUDIO_PROTOCOL: &'static str = include_str!("audio.kdl");
 pub const DRAWABLE_PROTOCOL: &'static str = include_str!("drawable.kdl");
-pub const DRAWABLE_LINES_PROTOCOL: &'static str = include_str!("lines.kdl");
-pub const DRAWABLE_MODEL_PROTOCOL: &'static str = include_str!("model.kdl");
-pub const DRAWABLE_TEXT_PROTOCOL: &'static str = include_str!("text.kdl");
 // pub const INPUT_PROTOCOL: &'static str = include_str!("input.kdl");
 
 #[derive(Debug)]
