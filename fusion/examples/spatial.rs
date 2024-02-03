@@ -1,10 +1,11 @@
 use color::rgba_linear;
 use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
-use stardust_xr::values::Transform;
+use stardust_xr::values::ResourceID;
 use stardust_xr_fusion::{
 	client::{Client, ClientState, FrameInfo, RootHandler},
-	drawable::{MaterialParameter, Model, ModelPart, ResourceID},
+	drawable::{MaterialParameter, Model, ModelPart, ModelPartAspect},
+	spatial::{SpatialAspect, Transform},
 };
 use std::sync::Arc;
 
@@ -33,8 +34,8 @@ struct SpatialDemo {
 impl SpatialDemo {
 	fn new(client: &Arc<Client>) -> Self {
 		let gyro = Model::create(
-			&client.get_root(),
-			Transform::default(),
+			client.get_root(),
+			Transform::none(),
 			&ResourceID::new_namespaced("fusion", "gyro"),
 		)
 		.unwrap();
@@ -60,16 +61,16 @@ impl RootHandler for SpatialDemo {
 			)
 			.unwrap();
 		self.gem
-			.set_rotation(None, Quat::from_rotation_y(elapsed))
+			.set_local_transform(Transform::from_rotation(Quat::from_rotation_y(elapsed)))
 			.unwrap();
 		self.ring_inner
-			.set_rotation(None, Quat::from_rotation_x(elapsed))
+			.set_local_transform(Transform::from_rotation(Quat::from_rotation_x(elapsed)))
 			.unwrap();
 		self.ring_middle
-			.set_rotation(None, Quat::from_rotation_z(elapsed))
+			.set_local_transform(Transform::from_rotation(Quat::from_rotation_z(elapsed)))
 			.unwrap();
 		self.ring_outer
-			.set_rotation(None, Quat::from_rotation_x(elapsed))
+			.set_local_transform(Transform::from_rotation(Quat::from_rotation_x(elapsed)))
 			.unwrap();
 	}
 	fn save_state(&mut self) -> ClientState {
