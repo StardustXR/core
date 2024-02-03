@@ -1,9 +1,8 @@
+use color::{color_space::LinearRgb, Rgba};
+use serde::{Deserialize, Serialize, Serializer};
 use std::path::{Path, PathBuf};
 
 pub use color::rgba_linear;
-use color::{color_space::LinearRgb, Rgba};
-use serde::{Deserialize, Serialize, Serializer};
-
 pub use stardust_xr_schemas::flex::Datamap;
 
 pub type Color = Rgba<f32, LinearRgb>;
