@@ -1,0 +1,159 @@
+version (u32)1
+
+struct "Joint" {
+	description ""
+
+	field "position" type="vec3"
+	field "rotation" type="quat"
+	field "radius"   type="float"
+	field "distance" type="float"
+}
+struct "Finger" {
+	description ""
+
+	field "tip"          type="struct" struct="Joint"
+	field "distal"       type="struct" struct="Joint"
+	field "intermediate" type="struct" struct="Joint"
+	field "proximal"     type="struct" struct="Joint"
+	field "metacarpal"   type="struct" struct="Joint"
+}
+struct "Thumb" {
+	description ""
+
+	field "tip"        type="struct" struct="Joint"
+	field "distal"     type="struct" struct="Joint"
+	field "proximal"   type="struct" struct="Joint"
+	field "metacarpal" type="struct" struct="Joint"
+}
+struct "Pointer" {
+	description ""
+
+	field "origin" type="vec3"
+	field "orientation" type="quat"
+	field "deepest_point" type="vec3" description=r#"
+	The point that is the most inside the input handler's field.
+	Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.
+	"#
+}
+struct "Hand" {
+	description ""
+
+	field "right"  type="bool"
+	field "thumb"  type="struct" struct="Thumb"
+	field "index"  type="struct" struct="Finger"
+	field "middle" type="struct" struct="Finger"
+	field "ring"   type="struct" struct="Finger"
+	field "little" type="struct" struct="Finger"
+	field "palm"   type="struct" struct="Joint"
+	field "wrist"  type="struct" struct="Joint"
+	field "elbow"  type="struct" struct="Joint" optional=true
+}
+struct "Tip" {
+	description ""
+
+	field "origin" type="vec3"
+	field "orientation" type="quat"
+}
+union "InputDataType" {
+	description ""
+
+	option type="struct" struct="Pointer"
+	option type="struct" struct="Hand"
+	option type="struct" struct="Tip"
+}
+struct "InputData" {
+	description ""
+
+	field "uid"      type="string" description="Used to uniquely identify the input method so state can be tracked across input events."
+	field "input"    type="struct" struct="InputDataType" description="All vectors and quaternions are relative to the input handler if deserialized."
+	field "distance" type="float" description="Closest distance from the input handler to the field."
+	field "datamap"  type="datamap" description="Non-spatial data in a map."
+	field "order"    type="uint" description="There are [order] objects that got this input data before this one."
+	field "captured" type="bool" description="Is this input handler capturing this input method?"
+}
+
+interface "/input" {
+	description ""
+
+	signal "create_input_method" side="server" {
+		description "Create an input method node"
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "initial_data" type="struct" struct="InputDataType"
+		argument "datamap" type="datamap"
+		return type="node" node="InputMethod" parent="/input/method" name_argument="name"
+	}
+	signal "create_input_handler" side="server" {
+		description "Create an input handler node"
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "field" type="node" aspect="Field"
+		return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
+	}
+}
+
+node "InputMethod" {
+	description "Node representing a spatial input device"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "InputMethod"
+}
+aspect "InputMethod" {
+	description "Node representing a spatial input device"
+
+	signal "set_input" side="server" {
+		description "Set the spatial input component of this input method"
+
+		argument "input" type="struct" struct="InputDataType"
+	}
+	signal "set_datamap" side="server" {
+		description "Set the datmap of this input method"
+
+		argument "datamap" type="datamap"
+	}
+	signal "set_handler_order" side="server" {
+		description "Manually set the order of handlers to propagate input to, or an empty vector to let the server decide."
+
+		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
+	}
+	signal "capture" side="server" {
+		description "Have the input handler that this method reference came from capture the method for the next frame."
+
+		argument "handler" type="node" aspect="InputHandler"
+	}
+
+	signal "create_handler" side="client" {
+		description ""
+
+		argument "uid" type="string"
+		argument "handler" type="node" aspect="InputMethod"
+	}
+	signal "destroy_handler" side="client" {
+		description ""
+
+		argument "uid" type="string"
+	}
+}
+
+node "InputHandler" {
+	description ""
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "InputHandler"
+}
+aspect "InputHandler" {
+	description "Handle raw input events."
+
+	signal "input" side="client" {
+		description "An input method has sent an input event on this frame."
+
+		argument "method" type="node" aspect="InputMethod"
+		argument "data" type="struct" struct="InputData"
+	}
+}

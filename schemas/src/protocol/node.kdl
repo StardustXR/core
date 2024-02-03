@@ -1,0 +1,13 @@
+version (u32)1
+
+aspect "Node" {
+	description "The aspect that applies to all nodes"
+
+	signal "set_enabled" side="server" {
+		description "Set if this node is enabled or not. Disabled drawables won't render, input handlers won't recieve input, etc."
+		argument "enabled" type="bool" description="Enabled"
+	}
+	signal "destroy" side="server" {
+		description "Destroy this node immediately."
+	}
+}

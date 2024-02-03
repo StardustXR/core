@@ -1,5 +1,3 @@
-pub use flexbuffers;
-
 use flexbuffers::{BitWidth, DeserializationError, FlexBufferType, ReaderError, ReaderIterator};
 use serde::{
 	de::{
@@ -12,6 +10,10 @@ use serde::{
 	Deserialize, Deserializer, Serialize, Serializer,
 };
 use std::{borrow::BorrowMut, cell::RefCell, fmt::Display, marker::PhantomData};
+
+mod datamap;
+pub use datamap::*;
+pub use flexbuffers;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FlexSerializeError {

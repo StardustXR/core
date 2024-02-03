@@ -1,0 +1,45 @@
+version (u32)1
+
+interface "/drawable" {
+	description ""
+
+	signal "create_lines" side="server" {
+		description "Create a lines node"
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "lines" type="vec" member_type="struct" struct="Line"
+		return type="node" node="Lines" parent="/drawable/lines" name_argument="name"
+	}
+}
+
+struct "LinePoint" {
+	description "A single point on a line"
+
+	field "point" type="vec3"
+	field "thickness" type="float"
+	field "color" type="color"
+}
+struct "Line" {
+	description "A single continuous polyline"
+
+	field "points" type="vec" member_type="struct" struct="LinePoint"
+	field "cyclic" type="bool"
+}
+node "Lines" {
+	description "A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Lines"
+}
+aspect "Lines" {
+	description "A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi"
+
+	signal "set_lines" side="server" {
+		description "Replace all polylines with the given lines"
+
+		argument "lines" type="vec" member_type="struct" struct="Line"
+	}
+}

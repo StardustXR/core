@@ -13,3 +13,5 @@ use flat::generated::*;
 
 /// Flexbuffers schemas and exports.
 pub mod flex;
+
+pub mod protocol;

@@ -1,0 +1,33 @@
+version (u32)1
+
+interface "/audio" {
+	description ""
+
+	signal "create_sound" side="server" {
+		description "Create a sound node. WAV and MP3 are supported."
+
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "resource" type="resource"
+		return type="node" node="Sound" parent="/audio/sound" name_argument="name"
+	}
+}
+
+node "Sound" {
+	description "Simple spatial audio source"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Sound"
+}
+aspect "Sound" {
+	description ""
+	
+	signal "play" side="server" {
+		description "Play sound effect"
+	}
+	signal "stop" side="server" {
+		description "Stop sound effect"
+	}
+}

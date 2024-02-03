@@ -1,0 +1,65 @@
+version (u32)1
+
+interface "/spatial" {
+	description r#"
+		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+
+		Equivalent to a Transform in Unity, Spatial in Godot, etc.
+	"#
+	signal "create_zone" side="server" {
+		description r#"Create a zone given a field, this zone will become inactive if the field is dropped."
+
+Keep in mind the zone and its field are different spatials, they can move independently.
+"#		
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "field" type="node" aspect="field"
+		return type="node" node="zone" parent="/spatial/zone" name_argument="name"
+	}
+}
+
+node "Zone" {
+	description r#"
+		Node to manipulate spatial nodes across clients.
+	"#
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Zone"
+}
+
+aspect "Zone" {
+	description r#"
+		Node to manipulate spatial nodes across clients.
+	"#
+
+	signal "update" side="server" {
+		description ""
+	}
+	signal "capture" side="server" {
+		description ""
+		argument "spatial" type="node" aspect="spatial"
+	}
+	signal "release" side="server" {
+		description ""
+		argument "uid" type="string"
+	}
+
+	signal "enter" side="client" {
+		description ""
+		argument "uid" type="string"
+		argument "spatial" type="node" node="spatial"
+	}
+	signal "capture" side="client" {
+		description ""
+		argument "uid" type="string"
+	}
+	signal "release" side="client" {
+		description ""
+		argument "uid" type="string"
+	}
+	signal "leave" side="client" {
+		description ""
+		argument "uid" type="string"
+	}
+}

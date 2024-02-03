@@ -1,0 +1,12 @@
+version (u32)1
+
+interface "/drawable" {
+	description ""
+
+	signal "set_sky" side="server" {
+		description "Set the sky lignt/texture to a given HDRI file."
+		
+		argument "tex" type="resource" optional=true 
+		argument "light" type="resource" optional=true 
+	}
+}

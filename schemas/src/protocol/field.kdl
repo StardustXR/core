@@ -1,0 +1,162 @@
+version (u32)1
+
+struct "RayMarchResult" {
+	description "Information about raymarching a field"
+
+	field "ray_origin" type="vec3"
+	field "ray_direction" type="vec3" 
+	field "min_distance" type="float"
+	field "deepest_point_distance" type="float"
+	field "ray_length" type="float"
+	field "ray_steps" type="uint"
+}
+
+interface "/field" {
+	description r#"
+		Analog SDFs to define boundaries for input, interaction, and behavior.
+	"#
+	
+	signal "create_box_field" side="server" {
+		description "Create a field with the shape of a box"
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "size" type="vec3"
+		return type="node" node="BoxField" parent="/field" name_argument="name"
+	}
+	signal "create_cylinder_field" side="server" {
+		description "Create a field with the shape of a box"
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "length" type="float"
+		argument "radius" type="float"
+		return type="node" node="CylinderField" parent="/field" name_argument="name"
+	}
+	signal "create_sphere_field" side="server" {
+		description "Create a field with the shape of a sphere"
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "position" type="vec3"
+		argument "radius" type="float"
+		return type="node" node="SphereField" parent="/field" name_argument="name"
+	}
+	signal "create_torus_field" side="server" {
+		description "Create a field with the shape of a torus"
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "radius_a" type="float"
+		argument "radius_b" type="float"
+		return type="node" node="TorusField" parent="/field" name_argument="name"
+	}
+}
+node "UnknownField" {
+	description "A field that isn't owned by the client so it's read-only."
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Field"
+}
+aspect "Field" {
+	description "A node that is spatial and contains an SDF"
+
+	method "distance" side="server" {
+		description "Get the distance to the surface of this field relative to the `point` in `space`"
+		argument "space" type="node" aspect="spatial"
+		argument "point" type="vec3"
+		return type="float"
+	}
+
+	method "normal" side="server" {
+		description "Get a vector pointing away from surface of this field relative to the `point` in `space`"
+		argument "space" type="node" aspect="spatial"
+		argument "point" type="vec3"
+		return type="vec3"
+	}
+
+	method "closest_point" side="server" {
+		description "Get the closest point on the surface of this field relative to the `point` in `space`"
+		argument "space" type="node" aspect="spatial"
+		argument "point" type="vec3"
+		return type="vec3"
+	}
+
+	method "ray_march" side="server" {
+		description "Get information from the server raymarching the given ray in `space` through this field such as steps, closest/deepest distance, etc."
+		argument "space" type="node" aspect="spatial" 
+		argument "ray_origin" type="vec3"
+		argument "ray_direction" type="vec3"
+		return type="struct" struct="RayMarchResult"
+	}
+}
+
+node "BoxField" {
+	description "A cuboid field with adjustable size"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Field"
+	aspect "BoxField"
+}
+aspect "BoxField" {
+	description "A cuboid field with adjustable size"
+
+	signal "set_size" side="server" {
+		description "Set the size of this field"
+		argument "size" type="vec3"
+	}
+}
+
+node "CylinderField" {
+	description "A cylinder-shaped field with adjustable size"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Field"
+	aspect "CylinderField"
+}
+aspect "CylinderField" {
+	description "A cylinder-shaped field with adjustable size"
+
+	signal "set_size" side="server" {
+		description "Set the size of this field"
+		argument "length" type="float"
+		argument "radius" type="float"
+	}
+}
+
+node "SphereField" {
+	description "A sphere-shaped field with adjustable size"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Field"
+	aspect "SphereField"
+}
+aspect "SphereField" {
+	description "A sphere-shaped field with adjustable size"
+
+	signal "set_radius" side="server" {
+		description "Set the size of this field"
+		argument "radius" type="float"
+	}
+}
+
+node "TorusField" {
+	description "A torus-shaped field with adjustable size"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "Field"
+	aspect "TorusField"
+}
+aspect "TorusField" {
+	description "A torus-shaped field with adjustable size"
+
+	signal "set_size" side="server" {
+		description "Set the size of this field"
+		argument "radius_a" type="float"
+		argument "radius_b" type="float"
+	}
+}

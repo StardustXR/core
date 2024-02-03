@@ -1,0 +1,96 @@
+version (u32)1
+
+interface "/spatial" {
+	description r#"
+		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+
+		Equivalent to a Transform in Unity, Spatial in Godot, etc.
+	"#
+	signal "create_spatial" side="server" {
+		description "Create a spatial relative to another spatial"
+		argument "name" type="string"
+		argument "parent" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+		argument "zoneable" type="bool"
+		return type="node" node="spatial" parent="/spatial/spatial" name_argument="name"
+	}
+}
+
+struct "BoundingBox" {
+	description ""
+
+	field "center" type="vec3"
+	field "size" type="vec3"
+}
+
+struct "Transform" {
+	description ""
+
+	field "translation" type="vec3" optional=true
+	field "rotation" type="quat" optional=true
+	field "scale" type="vec3" optional=true
+}
+
+node "Spatial" {
+	description r#"
+		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+
+		Equivalent to a Transform in Unity, Spatial in Godot, etc.
+	"#
+	aspect "Node"
+	aspect "Spatial"
+}
+aspect "Spatial" {
+	description r#"
+		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+
+		Equivalent to a Transform in Unity, Spatial in Godot, etc.
+	"#
+
+	method "get_local_bounding_box" side="server" {
+		description "Get the bounding box of this spatial and its children relative to another spatial"
+		return type="struct" struct="BoundingBox"
+	}
+	method "get_relative_bounding_box" side="server" {
+		description "Get the bounding box of this spatial and its children relative to itself"
+		argument "relative_to" type="node" aspect="spatial"
+		return type="struct" struct="BoundingBox"
+	}
+	method "get_transform" side="server" {
+		description "Get the transform relative to some other spatial node."
+		argument "relative_to" type="node" aspect="spatial"
+		return type="struct" struct="transform"
+	}
+	signal "set_local_transform" side="server" {
+		description "Set the transform of this spatial relative to its spatial parent."
+		argument "transform" type="struct" struct="transform"
+	}
+	signal "set_relative_transform" side="server" {
+		description "Set the transform of this spatial relative to another node."
+		argument "relative_to" type="node" aspect="spatial"
+		argument "transform" type="struct" struct="transform"
+	}
+
+	signal "set_spatial_parent" side="server" {
+		description r#"
+			Set the spatial parent with its local transform remaining the same.
+			It will silently error and not set the spatial parent if it is to a child of itself.
+		"#
+		argument "parent" type="node" aspect="spatial"
+	}
+	signal "set_spatial_parent_in_place" side="server" {
+		description r#"
+			Set the spatial parent with its "global" transform remaining the same.
+			It will silently error and not set the spatial parent if it is to a child of itself.
+		"#
+		argument "parent" type="node" aspect="spatial"
+	}
+
+	signal "set_zoneable" side="server" {
+		description r#"
+			Set if this spatial is zoneable or not.
+			You may want to set this to false when being grabbed or interacted with, then back to true when it's floating inert in space.
+		"#
+		argument "zoneable" type="bool"
+	}
+}

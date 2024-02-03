@@ -2,79 +2,10 @@ use super::generated::{
 	self,
 	input::{InputDataRawT, InputDataT},
 };
+use crate::flex::Datamap;
 use ouroboros::self_referencing;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
-
-/// A map that contains non-spatial data associated with the input in flexbuffers format.
-pub struct Datamap(DatamapInner);
-impl Datamap {
-	/// Create a new datamap from a serialized flexbuffer map.
-	pub fn new(raw: Vec<u8>) -> Result<Self, flexbuffers::ReaderError> {
-		Ok(Datamap(DatamapInner::try_new(raw, |raw| {
-			flexbuffers::Reader::get_root(raw.as_slice())?.get_map()
-		})?))
-	}
-
-	/// Get a temporary reference to the map data inside.
-	pub fn with_data<F, O>(&self, f: F) -> O
-	where
-		F: FnOnce(&flexbuffers::MapReader<&[u8]>) -> O,
-	{
-		self.0.with_reader(f)
-	}
-
-	/// Get a reference to the raw binary data
-	pub fn raw(&self) -> &Vec<u8> {
-		self.0.borrow_raw()
-	}
-}
-impl Debug for Datamap {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let mut f = f.debug_struct("Datamap");
-
-		f.field(
-			"raw",
-			&self.with_data(|datamap| {
-				datamap
-					.iter_keys()
-					.zip(datamap.iter_values())
-					.map(|(key, value)| (key.to_string(), value.to_string()))
-					.collect::<Vec<_>>()
-			}),
-		)
-		.finish_non_exhaustive()
-	}
-}
-impl Serialize for Datamap {
-	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-		self.0.serialize(serializer)
-	}
-}
-impl<'de> Deserialize<'de> for Datamap {
-	fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-		Datamap::new(Vec::<u8>::deserialize(deserializer)?).map_err(|e| serde::de::Error::custom(e))
-	}
-}
-
-#[self_referencing]
-struct DatamapInner {
-	raw: Vec<u8>,
-
-	#[borrows(raw)]
-	#[not_covariant]
-	pub reader: flexbuffers::MapReader<&'this [u8]>,
-}
-impl Clone for Datamap {
-	fn clone(&self) -> Self {
-		Self::new(self.0.borrow_raw().clone()).unwrap()
-	}
-}
-impl Serialize for DatamapInner {
-	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-		self.with_raw(|r| r.serialize(serializer))
-	}
-}
 
 /// Input data object struct.
 #[derive(Debug, Clone)]
@@ -107,7 +38,7 @@ impl InputData {
 				_ => return Err("Invalid input type".to_string()),
 			},
 			distance: input.distance,
-			datamap: Datamap::new(datamap).map_err(|e| e.to_string())?,
+			datamap: Datamap::from_raw(datamap).map_err(|e| e.to_string())?,
 			order: input.order,
 			captured: input.captured,
 		})
@@ -121,7 +52,7 @@ impl InputData {
 				InputDataType::Tip(t) => InputDataRawT::Tip(Box::new(t.into())),
 			},
 			distance: self.distance,
-			datamap: Some(self.datamap.0.borrow_raw().clone()),
+			datamap: Some(self.datamap.raw().clone()),
 			order: self.order,
 			captured: self.captured,
 		};

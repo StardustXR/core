@@ -1,0 +1,47 @@
+version (u32)1
+
+struct "Geometry" {
+	description "The origin and size of the surface's \"solid\" part."
+
+	field "origin" type="vec2"
+	field "size" type="vec2"
+}
+
+struct "ToplevelInfo" {
+	description "The state of the panel item's toplevel."
+
+	field "parent" type="string" optional=true description="The UID of the panel item of the parent of this toplevel, if it exists"
+	field "title" type="string" optional=true description="Equivalent to the window title"
+	field "app_id" type="string" optional=true description="Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>"
+	field "size" type="vec2" description="Current size in pixels"
+	field "min_size" type="vec2" optional=true description="Recommended minimum size in pixels"
+	field "max_size" type="vec2" optional=true description="Recommended maximum size in pixels"
+	field "logical_rectangle" type="struct" struct="Geometry" description="Surface geometry"
+}
+
+struct "ChildInfo" {
+	description "The state of the panel item's toplevel."
+
+	field "parent" type="string" optional=true description="The UID of the panel item of the parent of this toplevel, if it exists"
+	field "title" type="string" optional=true description="Equivalent to the window title"
+	field "app_id" type="string" optional=true description="Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>"
+	field "size" type="vec2" description="Current size in pixels"
+	field "min_size" type="vec2" optional=true description="Recommended minimum size in pixels"
+	field "max_size" type="vec2" optional=true description="Recommended maximum size in pixels"
+	field "logical_rectangle" type="struct" struct="Geometry" description="Surface geometry"
+}
+
+node "PanelItem" {
+	description "Simple spatial audio source"
+
+	aspect "Node"
+	aspect "Spatial"
+	aspect "PanelItem"
+}
+aspect "PanelItem" {
+	description ""
+	
+	signal "play" side="server" {
+		description "Play sound effect"
+	}
+}
