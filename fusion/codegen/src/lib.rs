@@ -100,7 +100,8 @@ fn generate_custom_enum(custom_enum: &CustomEnum) -> TokenStream {
 
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+		#[derive(Debug, Clone, Copy, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)]
+		#[repr(u32)]
 		pub enum #name {#argument_decls}
 	}
 }
