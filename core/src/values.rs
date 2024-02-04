@@ -1,6 +1,9 @@
 use color::{color_space::LinearRgb, Rgba};
 use serde::{Deserialize, Serialize, Serializer};
-use std::path::{Path, PathBuf};
+use std::{
+	path::{Path, PathBuf},
+	str::FromStr,
+};
 
 pub use color::rgba_linear;
 pub use stardust_xr_schemas::flex::Datamap;
@@ -29,7 +32,7 @@ pub enum ResourceID {
 		/// Group that this resource is in, generally the client or library's name.
 		namespace: String,
 		/// Path inside the namespace for the exact file. Leave out the extension and ensure no leading slash.
-		path: String,
+		path: PathBuf,
 	},
 }
 impl ResourceID {
@@ -44,17 +47,17 @@ impl ResourceID {
 		}
 		Ok(ResourceID::Direct(path.to_path_buf()))
 	}
-	pub fn new_namespaced(namespace: &str, path: &str) -> Self {
+	pub fn new_namespaced(namespace: &str, path: impl AsRef<Path>) -> Self {
 		ResourceID::Namespaced {
 			namespace: namespace.to_string(),
-			path: path.to_string(),
+			path: path.as_ref().to_path_buf(),
 		}
 	}
 	pub(crate) fn parse(&self) -> String {
 		match self {
 			ResourceID::Direct(p) => p.to_str().unwrap().to_string(),
 			ResourceID::Namespaced { namespace, path } => {
-				format!("{}:{}", namespace, path)
+				format!("{namespace}:{}", path.display())
 			}
 		}
 	}
@@ -74,7 +77,7 @@ impl<'de> Deserialize<'de> for ResourceID {
 		} else if let Some((namespace, path)) = v.split_once(':') {
 			ResourceID::Namespaced {
 				namespace: namespace.to_string(),
-				path: path.to_string(),
+				path: PathBuf::from_str(path).map_err(serde::de::Error::custom)?,
 			}
 		} else {
 			return Err(serde::de::Error::custom("Invalid format for string"));

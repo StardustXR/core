@@ -202,15 +202,19 @@ async fn fusion_zone() {
 		client: std::sync::Arc<crate::client::Client>,
 		root: crate::spatial::Spatial,
 		zone: Zone,
+		zone_spatials: rustc_hash::FxHashMap<String, Spatial>,
 	}
 	impl ZoneHandler for ZoneTest {
 		fn enter(&mut self, uid: String, spatial: crate::spatial::Spatial) {
 			println!("Spatial {} entered zone", uid);
 			self.zone.capture(&spatial).unwrap();
+			self.zone_spatials.insert(uid, spatial);
 		}
 		fn capture(&mut self, uid: String) {
 			println!("Spatial {} was captured", uid);
-			self.zone.release(&uid).unwrap();
+			self.zone
+				.release(&self.zone_spatials.remove(&uid).unwrap())
+				.unwrap();
 		}
 		fn release(&mut self, uid: String) {
 			println!("Spatial {} was released", uid);
@@ -229,6 +233,7 @@ async fn fusion_zone() {
 		client,
 		root: model_parent,
 		zone: zone.alias(),
+		zone_spatials: Default::default(),
 	};
 	let zone = zone.wrap(zone_handler).unwrap();
 	zone.node().update().unwrap();
