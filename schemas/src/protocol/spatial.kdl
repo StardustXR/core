@@ -126,7 +126,7 @@ aspect "Zone" {
 	}
 	signal "release" side="server" {
 		description ""
-		argument "uid" type="string"
+		argument "spatial" type="node" aspect="spatial"
 	}
 
 	signal "enter" side="client" {
