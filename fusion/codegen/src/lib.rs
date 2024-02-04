@@ -167,6 +167,7 @@ fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
 		.fields
 		.iter()
 		.map(|a| generate_argument_decl(a, true))
+		.map(|d| quote!(pub #d))
 		.reduce(|a, b| quote!(#a, #b))
 		.unwrap_or_default();
 
