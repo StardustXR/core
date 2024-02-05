@@ -150,9 +150,7 @@ async fn fusion_pulses() {
 		fn new_receiver(&mut self, uid: String, receiver: PulseReceiver, field: UnknownField) {
 			println!(
 				"New pulse receiver {:?} with field {:?} and uid {:?}",
-				receiver.node().get_path(),
-				field.node().get_path(),
-				uid
+				receiver, field, uid
 			);
 			receiver.send_data(&self.node, &self.data).unwrap();
 		}
