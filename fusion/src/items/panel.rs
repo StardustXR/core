@@ -186,8 +186,9 @@ impl PanelItem {
 	/// Request a resize of the surface (in pixels).
 	///
 	/// The surface's actual size after being resized will be given if the panel item is wrapped as `PanelItemHandler::resize`.
-	pub fn set_toplevel_size(&self, size: Vector2<u32>) -> Result<(), NodeError> {
-		self.node().send_remote_signal("set_toplevel_size", &size)
+	pub fn set_toplevel_size(&self, size: impl Into<Vector2<u32>>) -> Result<(), NodeError> {
+		self.node()
+			.send_remote_signal("set_toplevel_size", &size.into())
 	}
 	pub fn set_toplevel_focused_visuals(&self, focused: bool) -> Result<(), NodeError> {
 		self.node()

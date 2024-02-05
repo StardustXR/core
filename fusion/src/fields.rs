@@ -65,7 +65,7 @@ impl TorusField {
 impl SphereField {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
-		position: mint::Vector3<f32>,
+		position: impl Into<Vector3<f32>>,
 		radius: f32,
 	) -> NodeResult<Self> {
 		create_sphere_field(

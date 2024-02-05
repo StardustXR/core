@@ -478,6 +478,15 @@ fn generate_argument_serialize(
 ) -> TokenStream {
 	let name = Ident::new(&argument_name.to_case(Case::Snake), Span::call_site());
 	match argument_type {
+		ArgumentType::Vec2 => {
+			quote!(#name.into())
+		}
+		ArgumentType::Vec3 => {
+			quote!(#name.into())
+		}
+		ArgumentType::Quat => {
+			quote!(#name.into())
+		}
 		ArgumentType::Node {
 			_type,
 			return_info: _,
@@ -511,9 +520,27 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 		ArgumentType::Int => quote!(i32),
 		ArgumentType::UInt => quote!(u32),
 		ArgumentType::Float => quote!(f32),
-		ArgumentType::Vec2 => quote!(mint::Vector2<f32>),
-		ArgumentType::Vec3 => quote!(mint::Vector3<f32>),
-		ArgumentType::Quat => quote!(mint::Quaternion<f32>),
+		ArgumentType::Vec2 => {
+			if !owned {
+				quote!(impl Into<mint::Vector2<f32>>)
+			} else {
+				quote!(mint::Vector2<f32>)
+			}
+		}
+		ArgumentType::Vec3 => {
+			if !owned {
+				quote!(impl Into<mint::Vector3<f32>>)
+			} else {
+				quote!(mint::Vector3<f32>)
+			}
+		}
+		ArgumentType::Quat => {
+			if !owned {
+				quote!(impl Into<mint::Quaternion<f32>>)
+			} else {
+				quote!(mint::Quaternion<f32>)
+			}
+		}
 		ArgumentType::Color => quote!(stardust_xr::values::Color),
 		ArgumentType::Bytes => {
 			if !owned {
