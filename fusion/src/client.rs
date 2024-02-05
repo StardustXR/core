@@ -165,7 +165,7 @@ impl Client {
 		});
 		let _ = client
 			.root
-			.set(Arc::new(Spatial::from_path(&client, "".to_owned(), false)));
+			.set(Arc::new(Spatial::from_path(&client, "/".to_owned(), false)));
 		let _ = client
 			.hmd
 			.set(Spatial::from_path(&client, "/hmd".to_owned(), false));
