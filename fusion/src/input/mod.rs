@@ -143,12 +143,7 @@ impl<'a> InputHandler {
 		let id = nanoid::nanoid!();
 		let client = spatial_parent.client()?;
 
-		let node = Node::from_parent_name(
-			&spatial_parent.client()?,
-			"/input/method/pointer",
-			&id,
-			true,
-		);
+		let node = Node::from_parent_name(&spatial_parent.client()?, "/input/handler", &id, true);
 		client.message_sender_handle.signal(
 			"/input",
 			"create_input_handler",
