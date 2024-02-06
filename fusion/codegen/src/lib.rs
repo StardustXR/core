@@ -324,6 +324,14 @@ fn generate_member(interface_path: Option<&str>, member: &Member) -> TokenStream
 					self.node().execute_remote_method(#name_str, &(#argument_uses)).await
 				}
 			};
+			if interface_path.is_some() {
+				return quote! {
+					#[doc = #description]
+					pub async fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
+						#body
+					}
+				};
+			}
 			quote! {
 				#[doc = #description]
 				async fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
@@ -368,6 +376,16 @@ fn generate_member(interface_path: Option<&str>, member: &Member) -> TokenStream
 					Ok(#body?)
 				}
 			};
+			if let Some(ArgumentType::Node { .. }) = &member.return_type {
+				if interface_path.is_some() {
+					return quote! {
+						#[doc = #description]
+						pub fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
+							#body
+						}
+					};
+				}
+			}
 			quote! {
 				#[doc = #description]
 				fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
