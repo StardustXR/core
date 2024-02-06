@@ -191,7 +191,7 @@ impl<'a> InputHandler {
 		handler.lock().input(
 			UnknownInputMethod::from_parent_name(
 				&input_handler.client()?,
-				"/input/method",
+				input_handler.node().get_path()?,
 				&data.uid,
 				false,
 			),
