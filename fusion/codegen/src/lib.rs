@@ -376,8 +376,9 @@ fn generate_member(interface_path: Option<&str>, member: &Member) -> TokenStream
 					Ok(#body?)
 				}
 			};
-			if let Some(ArgumentType::Node { .. }) = &member.return_type {
-				if interface_path.is_some() {
+			if interface_path.is_some() {
+				if let Some(ArgumentType::Node { .. }) = &member.return_type {
+				} else {
 					return quote! {
 						#[doc = #description]
 						pub fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {

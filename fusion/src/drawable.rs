@@ -197,7 +197,8 @@ async fn fusion_sky() {
 	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
 	let sky_resource = stardust_xr::values::ResourceID::new_namespaced("fusion", "sky");
 
-	set_sky(&client, Some(&sky_resource), Some(&sky_resource)).unwrap();
+	set_sky_light(&client, &sky_resource).unwrap();
+	set_sky_tex(&client, &sky_resource).unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(5)).await;
 }
