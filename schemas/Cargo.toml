@@ -9,21 +9,21 @@ repository = "https://github.com/StardustXR/core/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
-flatbuffers = "23.1.21"
+flatbuffers = "23.5.26"
 flexbuffers = { version = "2.0.0", features = [
     "serialize_human_readable",
     "deserialize_human_readable",
 ] }
-ouroboros = "0.18.0"
-glam = { version = "0.24.0", features = ["mint"] }
+ouroboros = "0.18.3"
+glam = { version = "0.25.0", features = ["mint"] }
 mint = { version = "0.5.9", features = ["serde"] }
-serde = { version = "1.0.160", features = ["derive"] }
-thiserror = "1.0.40"
+serde = { version = "1.0.196", features = ["derive"] }
+thiserror = "1.0.56"
 kdl = "4.6.0"
 
 [build-dependencies]
-manifest-dir-macros = "0.1.16"
-serde_repr = "0.1.9"
+manifest-dir-macros = "0.1.18"
+serde_repr = "0.1.18"
 
 [dev-dependencies]
-serde_repr = "0.1.9"
+serde_repr = "0.1.18"

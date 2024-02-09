@@ -261,7 +261,9 @@ impl MessageReceiver {
 				let send_handle = self.send_handle.clone();
 				scenegraph.execute_method(path, method, data, fds, response_tx);
 				tokio::task::spawn(async move {
-					let Ok(message) = root_as_message(&raw_message) else {return};
+					let Ok(message) = root_as_message(&raw_message) else {
+						return;
+					};
 					let path = message.object().unwrap_or("unknown");
 					let method = message.method().unwrap_or("unknown");
 					let data = message.data().unwrap_or_default().bytes();
