@@ -61,7 +61,7 @@ impl PulseReceiver {
 }
 
 #[cfg(feature = "keymap")]
-pub use xkb;
+pub use xkbcommon::xkb;
 #[cfg(feature = "keymap")]
 use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
 #[cfg(feature = "keymap")]
