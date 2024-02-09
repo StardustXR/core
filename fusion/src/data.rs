@@ -26,68 +26,6 @@ use crate::{
 use nanoid::nanoid;
 use stardust_xr::values::Datamap;
 
-#[cfg(feature = "keymap")]
-use crate::client::Client;
-#[cfg(feature = "keymap")]
-use stardust_xr::schemas::flex::serialize;
-#[cfg(feature = "keymap")]
-use std::future::Future;
-#[cfg(feature = "keymap")]
-use xkbcommon::xkb::{ffi::XKB_KEYMAP_FORMAT_TEXT_V1, Context, Keymap};
-
-#[cfg(feature = "keymap")]
-impl Client {
-	pub fn register_keymap(
-		&self,
-		keymap: impl AsRef<str>,
-	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
-		let test_keymap = Keymap::new_from_string(
-			&Context::new(0),
-			keymap.as_ref().to_string(),
-			XKB_KEYMAP_FORMAT_TEXT_V1,
-			0,
-		);
-		if test_keymap.is_none() {
-			return Err(NodeError::ReturnedError {
-				e: "Keymap is not valid".to_string(),
-			});
-		};
-		let future = self
-			.message_sender_handle
-			.method(
-				"/data",
-				"register_keymap",
-				&serialize(keymap.as_ref()).map_err(|_| NodeError::Serialization)?,
-				Vec::new(),
-			)
-			.map_err(|e| NodeError::MessengerError { e })?;
-
-		Ok(async move {
-			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
-			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
-		})
-	}
-	pub fn get_keymap_string(
-		&self,
-		keymap_id: &str,
-	) -> Result<impl Future<Output = Result<String, NodeError>>, NodeError> {
-		let future = self
-			.message_sender_handle
-			.method(
-				"/data",
-				"get_keymap",
-				&serialize(keymap_id).map_err(|_| NodeError::Serialization)?,
-				Vec::new(),
-			)
-			.map_err(|e| NodeError::MessengerError { e })?;
-
-		Ok(async move {
-			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
-			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
-		})
-	}
-}
-
 stardust_xr_fusion_codegen::codegen_data_client_protocol!();
 impl PulseSender {
 	pub fn create(
@@ -119,6 +57,30 @@ impl PulseReceiver {
 			field,
 			mask,
 		)
+	}
+}
+
+#[cfg(feature = "keymap")]
+use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
+#[cfg(feature = "keymap")]
+impl crate::client::Client {
+	pub async fn register_xkb_keymap(&self, keymap: &Keymap) -> NodeResult<String> {
+		register_keymap(
+			&self.get_root().client()?,
+			&keymap.get_as_string(FORMAT_TEXT_V1),
+		)
+		.await
+	}
+	pub async fn get_xkb_keymap(&self, keymap_id: &str) -> NodeResult<Keymap> {
+		let keymap_str = get_keymap(&self.get_root().client()?, keymap_id).await?;
+
+		Keymap::new_from_string(
+			&Context::new(0),
+			keymap_str,
+			FORMAT_TEXT_V1,
+			KEYMAP_COMPILE_NO_FLAGS,
+		)
+		.ok_or_else(|| crate::node::NodeError::InvalidPath)
 	}
 }
 
