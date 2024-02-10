@@ -69,7 +69,7 @@ impl crate::client::Client {
 	pub fn register_xkb_keymap(
 		&self,
 		keymap: &Keymap,
-	) -> impl std::future::Future<Output = NodeResult<String>> {
+	) -> impl std::future::Future<Output = NodeResult<String>> + Send + Sync + 'static {
 		let client = self.get_root().client();
 		let keymap_string = keymap.get_as_string(FORMAT_TEXT_V1);
 		async move { register_keymap(&client?, &keymap_string).await }
