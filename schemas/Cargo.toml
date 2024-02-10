@@ -14,7 +14,7 @@ flexbuffers = { version = "2.0.0", features = [
     "serialize_human_readable",
     "deserialize_human_readable",
 ] }
-ouroboros = "0.18.3"
+ouroboros = "0.44.0"
 glam = { version = "0.25.0", features = ["mint"] }
 mint = { version = "0.5.9", features = ["serde"] }
 serde = { version = "1.0.196", features = ["derive"] }
