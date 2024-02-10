@@ -41,6 +41,6 @@ serde_with = "3.4.0"
 stardust-xr-fusion-codegen = { path = "codegen" }
 
 [dev-dependencies]
-glam = { version = "0.25.0", features = ["mint"] }
+glam = { version = "0.24.1", features = ["mint"] }
 manifest-dir-macros = "0.1.17"
 tracing-subscriber = "0.3.17"
