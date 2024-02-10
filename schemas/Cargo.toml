@@ -19,10 +19,7 @@ mint = { version = "0.5.9", features = ["serde"] }
 serde = { version = "1.0.196", features = ["derive"] }
 thiserror = "1.0.56"
 kdl = "4.6.0"
+serde_repr = "0.1.18"
 
 [build-dependencies]
 manifest-dir-macros = "0.1.18"
-serde_repr = "0.1.18"
-
-[dev-dependencies]
-serde_repr = "0.1.18"

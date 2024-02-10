@@ -15,7 +15,6 @@ keymap = ["dep:xkbcommon"]
 
 [dependencies]
 color-rs = "0.8.0"
-flagset = { version = "0.4.3", features = ["serde"] }
 mint = "0.5.9"
 nanoid = "0.4.0"
 parking_lot = "0.12.1"
@@ -34,9 +33,7 @@ tokio = { version = "1", features = [
 ] }
 xkbcommon = { version = "0.5.1", default-features = false, optional = true }
 tracing = "0.1.37"
-enum_dispatch = "0.3.12"
 color-eyre = "0.6.2"
-serde_with = "3.4.0"
 
 stardust-xr = { path = "../core" }
 stardust-xr-fusion-codegen = { path = "codegen" }
