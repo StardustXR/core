@@ -3,7 +3,6 @@ use super::generated::{
 	input::{InputDataRawT, InputDataT},
 };
 use crate::flex::Datamap;
-use ouroboros::self_referencing;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt::Debug, hash::Hash};
 
