@@ -20,7 +20,7 @@
 use crate::{
 	fields::{FieldAspect, UnknownField},
 	node::NodeResult,
-	node::{NodeAspect, NodeType},
+	node::{NodeAspect, NodeError, NodeType},
 	spatial::{SpatialAspect, Transform},
 };
 use nanoid::nanoid;
@@ -68,11 +68,19 @@ use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
 impl crate::client::Client {
 	pub fn register_xkb_keymap(
 		&self,
-		keymap: &Keymap,
-	) -> impl std::future::Future<Output = NodeResult<String>> + Send + Sync + 'static {
+		keymap_string: String,
+	) -> NodeResult<impl std::future::Future<Output = NodeResult<String>> + Send + Sync> {
 		let client = self.get_root().client();
-		let keymap_string = keymap.get_as_string(FORMAT_TEXT_V1);
-		async move { register_keymap(&client?, &keymap_string).await }
+		Keymap::new_from_string(
+			&Context::new(0),
+			keymap_string.clone(),
+			FORMAT_TEXT_V1,
+			KEYMAP_COMPILE_NO_FLAGS,
+		)
+		.ok_or_else(|| NodeError::ReturnedError {
+			e: "Invalid keymap".to_string(),
+		})?;
+		Ok(async move { register_keymap(&client?, &keymap_string).await })
 	}
 	pub async fn get_xkb_keymap(&self, keymap_id: &str) -> NodeResult<Keymap> {
 		let keymap_str = get_keymap(&self.get_root().client()?, keymap_id).await?;
