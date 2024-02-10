@@ -66,12 +66,13 @@ pub use xkbcommon::xkb;
 use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
 #[cfg(feature = "keymap")]
 impl crate::client::Client {
-	pub async fn register_xkb_keymap(&self, keymap: &Keymap) -> NodeResult<String> {
-		register_keymap(
-			&self.get_root().client()?,
-			&keymap.get_as_string(FORMAT_TEXT_V1),
-		)
-		.await
+	pub async fn register_xkb_keymap(
+		&self,
+		keymap: &Keymap,
+	) -> impl std::future::Future<Output = NodeResult<String>> {
+		let client = self.get_root().client();
+		let keymap_string = keymap.get_as_string(FORMAT_TEXT_V1);
+		async move { register_keymap(&client?, &keymap_string).await }
 	}
 	pub async fn get_xkb_keymap(&self, keymap_id: &str) -> NodeResult<Keymap> {
 		let keymap_str = get_keymap(&self.get_root().client()?, keymap_id).await?;
