@@ -20,7 +20,7 @@
 use crate::{
 	fields::{FieldAspect, UnknownField},
 	node::NodeResult,
-	node::{NodeAspect, NodeError, NodeType},
+	node::{NodeAspect, NodeType},
 	spatial::{SpatialAspect, Transform},
 };
 use nanoid::nanoid;
@@ -77,7 +77,7 @@ impl crate::client::Client {
 			FORMAT_TEXT_V1,
 			KEYMAP_COMPILE_NO_FLAGS,
 		)
-		.ok_or_else(|| NodeError::ReturnedError {
+		.ok_or_else(|| crate::node::NodeError::ReturnedError {
 			e: "Invalid keymap".to_string(),
 		})?;
 		Ok(async move { register_keymap(&client?, &keymap_string).await })
