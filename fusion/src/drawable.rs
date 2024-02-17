@@ -29,11 +29,21 @@ impl Default for LinePoint {
 	fn default() -> Self {
 		Self {
 			point: [0.0; 3].into(),
-			thickness: Default::default(),
+			thickness: 0.01,
 			color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
 		}
 	}
 }
+impl Copy for LinePoint {}
+impl Default for Line {
+	fn default() -> Self {
+		Self {
+			points: Default::default(),
+			cyclic: Default::default(),
+		}
+	}
+}
+
 impl Model {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
