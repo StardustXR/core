@@ -140,6 +140,7 @@ async fn fusion_tip_input_method() {
 		select: f32,
 	}
 	struct TipDemo {
+		root: crate::spatial::Spatial,
 		tip: TipInputMethod,
 		cursor: Cursor,
 		datamap: TipData,
@@ -157,11 +158,12 @@ async fn fusion_tip_input_method() {
 				.unwrap();
 		}
 		fn save_state(&mut self) -> crate::client::ClientState {
-			crate::client::ClientState::default()
+			crate::client::ClientState::from_root(&self.root)
 		}
 	}
 
 	let _wrapped_root = client.wrap_root(TipDemo {
+		root: client.get_root().alias(),
 		cursor: Cursor {
 			top: summon_model(
 				&tip,

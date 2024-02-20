@@ -1,9 +1,10 @@
 //! Your connection to the Stardust server and other essentials.
 
-use crate::node::{Node, NodeResult, NodeType};
+use crate::node::{NodeResult, NodeType};
 use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
 
+use color_eyre::eyre::eyre;
 use parking_lot::Mutex;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
@@ -24,39 +25,47 @@ use tokio::sync::{watch, Notify, OnceCell};
 use tokio::task::JoinHandle;
 
 /// The persistent state of a Stardust client.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ClientState {
 	/// Data specific to your client, put anything you like here and it'll be saved/restored intact.
-	pub data: Option<Vec<u8>>,
+	pub data: Vec<u8>,
 	/// The root node of this client.
-	pub root: Option<Spatial>,
+	pub root: Spatial,
 	/// Spatials that will be in the same place you left them.
 	pub spatial_anchors: FxHashMap<String, Spatial>,
 }
 impl ClientState {
-	fn to_internal(&self) -> ClientStateInternal {
-		ClientStateInternal {
+	pub fn default(source_client: &Client) -> Self {
+		ClientState {
+			data: Vec::new(),
+			root: source_client.get_root().alias(),
+			spatial_anchors: Default::default(),
+		}
+	}
+	pub fn from_root(root: &Spatial) -> Self {
+		ClientState {
+			data: Vec::new(),
+			root: root.alias(),
+			spatial_anchors: Default::default(),
+		}
+	}
+	fn to_internal(&self) -> Result<ClientStateInternal, NodeError> {
+		Ok(ClientStateInternal {
 			data: self.data.clone(),
-			root: self
-				.root
-				.as_ref()
-				.map(|r| r.node())
-				.map(Node::get_path)
-				.map(Result::ok)
-				.flatten(),
+			root: self.root.node().get_path()?,
 			spatial_anchors: self
 				.spatial_anchors
 				.iter()
 				.filter_map(|(k, v)| Some((k.clone(), v.node().get_path().ok()?)))
 				.collect(),
-		}
+		})
 	}
 }
 
 #[derive(Default, Serialize, Deserialize)]
 struct ClientStateInternal {
-	data: Option<Vec<u8>>,
-	root: Option<String>,
+	data: Vec<u8>,
+	root: String,
 	spatial_anchors: FxHashMap<String, String>,
 }
 
@@ -78,11 +87,11 @@ pub trait RootHandler: Send + Sync + 'static {
 	/// Client root transform is always saved.
 	fn save_state(&mut self) -> ClientState;
 }
-struct DummyHandler;
+struct DummyHandler(Weak<Client>);
 impl RootHandler for DummyHandler {
 	fn frame(&mut self, _info: FrameInfo) {}
 	fn save_state(&mut self) -> ClientState {
-		ClientState::default()
+		ClientState::default(&self.0.upgrade().unwrap())
 	}
 }
 
@@ -130,7 +139,7 @@ pub struct Client {
 	elapsed_time: Mutex<f64>,
 	life_cycle_handler: Mutex<Weak<Mutex<dyn RootHandler>>>,
 
-	state: watch::Receiver<ClientState>,
+	state: OnceCell<watch::Receiver<ClientState>>,
 }
 
 impl Client {
@@ -147,7 +156,6 @@ impl Client {
 		connection: UnixStream,
 	) -> Result<(Arc<Self>, MessageSender, MessageReceiver), ClientError> {
 		let (message_tx, message_rx) = messenger::create(connection);
-		let (state_tx, state_rx) = watch::channel(ClientState::default());
 		let client = Arc::new(Client {
 			scenegraph: Arc::new(Scenegraph::new()),
 			message_sender_handle: message_tx.handle(),
@@ -161,8 +169,10 @@ impl Client {
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),
 
-			state: state_rx,
+			state: OnceCell::new(),
 		});
+		let (state_tx, state_rx) = watch::channel(ClientState::default(&client));
+		let _ = client.state.set(state_rx);
 		let _ = client
 			.root
 			.set(Arc::new(Spatial::from_path(&client, "/".to_owned(), false)));
@@ -179,7 +189,7 @@ impl Client {
 					let state: ClientStateInternal = deserialize(data)?;
 					let _ = state_tx.send(ClientState {
 						data: state.data,
-						root: Some(client.get_root().alias()),
+						root: client.get_root().alias(),
 						spatial_anchors: state
 							.spatial_anchors
 							.into_iter()
@@ -218,14 +228,12 @@ impl Client {
 		client.get_root().node().add_local_method("save_state", {
 			let client = client.clone();
 			move |_, _| {
-				let state = client
+				let root_handler = client
 					.life_cycle_handler
 					.lock()
 					.upgrade()
-					.map(|h| h.lock().save_state())
-					.as_ref()
-					.map(ClientState::to_internal)
-					.unwrap_or_default();
+					.ok_or_else(|| eyre!("Root is not handled"))?;
+				let state = root_handler.lock().save_state().to_internal()?;
 				Ok(serialize(state).map(|v| (v, vec![]))?)
 			}
 		})?;
@@ -267,8 +275,11 @@ impl Client {
 			}
 		});
 
+		// wait for the state from the server
 		client
 			.state
+			.get()
+			.unwrap()
 			.clone()
 			.changed()
 			.await
@@ -344,6 +355,11 @@ impl Client {
 		})
 	}
 
+	/// Get the client's state. Don't hold this reference over an await point.
+	pub fn state(&self) -> watch::Ref<'_, ClientState> {
+		self.state.get().unwrap().borrow()
+	}
+
 	/// Generate a client state token and return it back.
 	///
 	/// When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
@@ -359,7 +375,7 @@ impl Client {
 	pub async fn state_token(&self, state: &ClientState) -> NodeResult<String> {
 		self.get_root()
 			.node()
-			.execute_remote_method("state_token", &state.to_internal())
+			.execute_remote_method("state_token", &state.to_internal()?)
 			.await
 	}
 
@@ -400,7 +416,7 @@ async fn fusion_client_life_cycle() {
 			self.0.stop_loop();
 		}
 		fn save_state(&mut self) -> ClientState {
-			ClientState::default()
+			ClientState::default(&self.0)
 		}
 	}
 

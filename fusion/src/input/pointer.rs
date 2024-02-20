@@ -104,6 +104,7 @@ async fn fusion_pointer_input_method() {
 		select: f32,
 	}
 	struct PointerDemo {
+		root: crate::spatial::Spatial,
 		pointer: PointerInputMethod,
 		model: Model,
 		datamap: PointerData,
@@ -125,7 +126,7 @@ async fn fusion_pointer_input_method() {
 				.unwrap();
 		}
 		fn save_state(&mut self) -> crate::client::ClientState {
-			crate::client::ClientState::default()
+			crate::client::ClientState::from_root(&self.root)
 		}
 	}
 
@@ -139,6 +140,7 @@ async fn fusion_pointer_input_method() {
 	)
 	.unwrap();
 	let _wrapped_root = client.wrap_root(PointerDemo {
+		root: client.get_root().alias(),
 		pointer,
 		model,
 		datamap: PointerData::default(),
