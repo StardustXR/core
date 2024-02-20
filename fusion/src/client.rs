@@ -171,14 +171,14 @@ impl Client {
 
 			state: OnceCell::new(),
 		});
-		let (state_tx, state_rx) = watch::channel(ClientState::default(&client));
-		let _ = client.state.set(state_rx);
 		let _ = client
 			.root
 			.set(Arc::new(Spatial::from_path(&client, "/".to_owned(), false)));
 		let _ = client
 			.hmd
 			.set(Spatial::from_path(&client, "/hmd".to_owned(), false));
+		let (state_tx, state_rx) = watch::channel(ClientState::default(&client));
+		let _ = client.state.set(state_rx);
 		client
 			.get_root()
 			.node()
