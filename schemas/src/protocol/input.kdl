@@ -23,7 +23,7 @@ signal "create_input_handler" side="server" {
 }
 
 struct "Joint" {
-	description ""
+	description "A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server."
 
 	field "position" type="vec3"
 	field "rotation" type="quat"
@@ -40,7 +40,7 @@ struct "Finger" {
 	field "metacarpal"   type="struct" struct="Joint"
 }
 struct "Thumb" {
-	description ""
+	description "Different than finger to be explicit about number of joints."
 
 	field "tip"        type="struct" struct="Joint"
 	field "distal"     type="struct" struct="Joint"
@@ -48,7 +48,7 @@ struct "Thumb" {
 	field "metacarpal" type="struct" struct="Joint"
 }
 struct "Pointer" {
-	description ""
+	description "A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller."
 
 	field "origin" type="vec3"
 	field "orientation" type="quat"
@@ -58,7 +58,7 @@ struct "Pointer" {
 	"#
 }
 struct "Hand" {
-	description ""
+	description "A fully articulated and tracked hand."
 
 	field "right"  type="bool"
 	field "thumb"  type="struct" struct="Thumb"
@@ -71,20 +71,20 @@ struct "Hand" {
 	field "elbow"  type="struct" struct="Joint" optional=true
 }
 struct "Tip" {
-	description ""
+	description "Represents a controller, pen tip, spatial cursor, etc. that is just a single point."
 
 	field "origin" type="vec3"
 	field "orientation" type="quat"
 }
 union "InputDataType" {
-	description ""
+	description "The special type of an InputMethod."
 
 	option type="struct" struct="Pointer"
 	option type="struct" struct="Hand"
 	option type="struct" struct="Tip"
 }
 struct "InputData" {
-	description ""
+	description "Information about a given input method's state relative to an input handler. All coordinates are relative to the InputHandler."
 
 	field "uid"      type="string" description="Used to uniquely identify the input method so state can be tracked across input events."
 	field "input"    type="struct" struct="InputDataType" description="All vectors and quaternions are relative to the input handler if deserialized."
@@ -105,7 +105,7 @@ aspect "InputMethod" {
 	description "Node representing a spatial input device"
 
 	signal "set_input" side="server" {
-		description "Set the spatial input component of this input method"
+		description "Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing."
 
 		argument "input" type="struct" struct="InputDataType"
 	}
@@ -115,9 +115,9 @@ aspect "InputMethod" {
 		argument "datamap" type="datamap"
 	}
 	signal "set_handler_order" side="server" {
-		description "Manually set the order of handlers to propagate input to, or an empty vector to let the server decide."
+		description "Manually set the order of handlers to propagate input to, or else let the server decide."
 
-		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
+		argument "handlers" type="vec" member_type="node" aspect="InputHandler" optional=true
 	}
 	signal "capture" side="server" {
 		description "Have the input handler that this method reference came from capture the method for the next frame."
@@ -125,21 +125,21 @@ aspect "InputMethod" {
 		argument "handler" type="node" aspect="InputHandler"
 	}
 
-	signal "create_handler" side="client" {
-		description ""
+	signal "new_handler" side="client" {
+		description "A new input handler has just been created."
 
 		argument "uid" type="string"
 		argument "handler" type="node" aspect="InputMethod"
 	}
-	signal "destroy_handler" side="client" {
-		description ""
+	signal "drop_handler" side="client" {
+		description "An input handler has just been destroyed."
 
 		argument "uid" type="string"
 	}
 }
 
 node "InputHandler" {
-	description ""
+	description "A node to get spatial input when interacting in proximity, not globally."
 
 	aspect "Node"
 	aspect "Spatial"
@@ -149,7 +149,7 @@ aspect "InputHandler" {
 	description "Handle raw input events."
 
 	signal "input" side="client" {
-		description "An input method has sent an input event on this frame."
+		description "An input method has sent an input event on this frame. All the inputs are sent by the time `/:frame` is called."
 
 		argument "method" type="node" aspect="InputMethod"
 		argument "data" type="struct" struct="InputData"

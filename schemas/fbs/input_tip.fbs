@@ -1,8 +1,0 @@
-include "common.fbs";
-namespace StardustXR;
-
-table Tip {
-	origin:Vec3 (required);
-	orientation:Quat (required);
-	radius: float;
-}

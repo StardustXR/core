@@ -1,8 +1,0 @@
-include "common.fbs";
-namespace StardustXR;
-
-table Pointer {
-	origin:Vec3 (required);
-	orientation:Quat (required);
-	deepest_point:Vec3 (required);
-}

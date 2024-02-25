@@ -17,7 +17,7 @@ async fn main() {
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 	client.set_base_prefixes(&[directory_relative_path!("res")]);
 
-	let _root = client.wrap_root(SpatialDemo::new(&client));
+	let _root = client.wrap_root(SpatialDemo::new(&client)).unwrap();
 
 	tokio::select! {
 		biased;
@@ -46,7 +46,7 @@ impl SpatialDemo {
 		gyro.set_zoneable(true).unwrap();
 
 		SpatialDemo {
-			t: flexbuffers::from_slice(&client.state().data).unwrap(),
+			t: flexbuffers::from_slice(&client.state().data).unwrap_or_default(),
 			root: client.get_root().alias(),
 			gem: gyro.model_part("Gem").unwrap(),
 			ring_inner: gyro.model_part("OuterRing/MiddleRing/InnerRing").unwrap(),

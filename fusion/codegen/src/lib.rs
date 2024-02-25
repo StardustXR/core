@@ -38,10 +38,10 @@ pub fn codegen_drawable_client_protocol(
 ) -> proc_macro::TokenStream {
 	codegen_client_protocol(DRAWABLE_PROTOCOL)
 }
-// #[proc_macro]
-// pub fn codegen_input_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-// 	codegen_client_protocol(INPUT_PROTOCOL)
-// }
+#[proc_macro]
+pub fn codegen_input_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(INPUT_PROTOCOL)
+}
 
 fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
 	let protocol = Protocol::parse(protocol).unwrap();
@@ -496,6 +496,17 @@ fn generate_argument_serialize(
 	optional: bool,
 ) -> TokenStream {
 	let name = Ident::new(&argument_name.to_case(Case::Snake), Span::call_site());
+	if let ArgumentType::Node { _type, .. } = argument_type {
+		return match optional {
+			true => quote!(#name.map(|n| n.node().get_path()).transpose()?),
+			false => quote!(#name.node().get_path()?),
+		};
+	}
+	if optional {
+		let mapping = generate_argument_serialize("o", argument_type, false);
+		return quote!(#name.map(|o| Ok::<_, crate::node::NodeError>(#mapping)).transpose()?);
+	}
+
 	match argument_type {
 		ArgumentType::Vec2 => {
 			quote!(#name.into())
@@ -506,21 +517,14 @@ fn generate_argument_serialize(
 		ArgumentType::Quat => {
 			quote!(#name.into())
 		}
-		ArgumentType::Node {
-			_type,
-			return_info: _,
-		} => match optional {
-			true => quote!(#name.map(|n| n.node().get_path()).transpose()?),
-			false => quote!(#name.node().get_path()?),
-		},
 		ArgumentType::Color => quote!([#name.c.r, #name.c.g, #name.c.b, #name.a]),
 		ArgumentType::Vec(v) => {
 			let mapping = generate_argument_serialize("a", v, false);
-			quote!(#name.iter().map(|a| Ok(#mapping)).collect::<Result<Vec<_>, crate::node::NodeError>>()?)
+			quote!(#name.iter().map(|a| Ok(#mapping)).collect::<crate::node::NodeResult<Vec<_>>>()?)
 		}
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_serialize("a", v, false);
-			quote!(#name.iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<rustc_hash::FxHashMap<String, _>, crate::node::NodeError>>()?)
+			quote!(#name.iter().map(|(k, a)| Ok((k, #mapping))).collect::<crate::node::NodeResult<rustc_hash::FxHashMap<String, _>>>()?)
 		}
 		_ => quote!(#name),
 	}

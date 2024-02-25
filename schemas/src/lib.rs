@@ -9,7 +9,7 @@
 pub mod flat;
 
 /// To get the files compiling correctly
-use flat::generated::*;
+use flat::*;
 
 /// Flexbuffers schemas and exports.
 pub mod flex;
