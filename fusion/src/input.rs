@@ -19,6 +19,8 @@
 //!
 //! You may want to use the `InputAction`-based structs in molecules for an easy way to parse and react to the raw input.
 
+use std::hash::Hash;
+
 use crate::{
 	fields::FieldAspect,
 	node::{NodeAspect, NodeResult, NodeType},
@@ -124,11 +126,24 @@ impl Default for Tip {
 		}
 	}
 }
+
 impl Pointer {
 	pub fn direction(&self) -> Vector3<f32> {
 		(Quat::from(self.orientation) * vec3a(0.0, 0.0, -1.0)).into()
 	}
 }
+
+impl Hash for InputData {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.uid.hash(state)
+	}
+}
+impl PartialEq for InputData {
+	fn eq(&self, other: &Self) -> bool {
+		self.uid.eq(&other.uid)
+	}
+}
+impl Eq for InputData {}
 
 #[tokio::test]
 async fn fusion_input_handler() {
