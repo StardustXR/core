@@ -24,7 +24,8 @@ use crate::{
 	node::{NodeAspect, NodeResult, NodeType},
 	spatial::{SpatialAspect, Transform},
 };
-use mint::Quaternion;
+use glam::{vec3a, Quat};
+use mint::Vector3;
 use stardust_xr::values::Datamap;
 
 stardust_xr_fusion_codegen::codegen_input_client_protocol!();
@@ -64,10 +65,7 @@ impl Default for Joint {
 	fn default() -> Self {
 		Joint {
 			position: [0.0; 3].into(),
-			rotation: Quaternion {
-				v: [0.0; 3].into(),
-				s: 1.0,
-			},
+			rotation: Quat::IDENTITY.into(),
 			radius: 0.0,
 			distance: 0.0,
 		}
@@ -113,10 +111,7 @@ impl Default for Pointer {
 	fn default() -> Self {
 		Pointer {
 			origin: [0.0; 3].into(),
-			orientation: Quaternion {
-				v: [0.0; 3].into(),
-				s: 1.0,
-			},
+			orientation: Quat::IDENTITY.into(),
 			deepest_point: [0.0; 3].into(),
 		}
 	}
@@ -125,11 +120,13 @@ impl Default for Tip {
 	fn default() -> Self {
 		Tip {
 			origin: [0.0; 3].into(),
-			orientation: Quaternion {
-				v: [0.0; 3].into(),
-				s: 1.0,
-			},
+			orientation: Quat::IDENTITY.into(),
 		}
+	}
+}
+impl Pointer {
+	pub fn direction(&self) -> Vector3<f32> {
+		(Quat::from(self.orientation) * vec3a(0.0, 0.0, -1.0)).into()
 	}
 }
 
