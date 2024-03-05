@@ -51,14 +51,14 @@ node "PulseSender" {
 aspect "PulseSender" {
 	description ""
 
-	signal "new_receiver" side="client" {
+	signal "create_receiver" side="client" {
 		description ""
 
 		argument "uid" type="string"
 		argument "receiver" type="node" node="PulseReceiver"
 		argument "field" type="node" node="UnknownField"
 	}
-	signal "drop_receiver" side="client" {
+	signal "destroy_receiver" side="client" {
 		description ""
 
 		argument "uid" type="string"

@@ -14,36 +14,44 @@ fn fold_tokens(a: TokenStream, b: TokenStream) -> TokenStream {
 // }
 #[proc_macro]
 pub fn codegen_node_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(NODE_PROTOCOL)
+	codegen_client_protocol(NODE_PROTOCOL, false, &[])
 }
 #[proc_macro]
 pub fn codegen_spatial_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(SPATIAL_PROTOCOL)
+	codegen_client_protocol(SPATIAL_PROTOCOL, false, &[])
 }
 #[proc_macro]
 pub fn codegen_field_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(FIELD_PROTOCOL)
+	codegen_client_protocol(FIELD_PROTOCOL, false, &[])
 }
 #[proc_macro]
 pub fn codegen_data_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(DATA_PROTOCOL)
+	codegen_client_protocol(DATA_PROTOCOL, false, &[])
 }
 #[proc_macro]
 pub fn codegen_audio_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(AUDIO_PROTOCOL)
+	codegen_client_protocol(AUDIO_PROTOCOL, false, &[])
 }
 #[proc_macro]
 pub fn codegen_drawable_client_protocol(
 	_input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_PROTOCOL)
+	codegen_client_protocol(DRAWABLE_PROTOCOL, false, &[])
 }
 #[proc_macro]
 pub fn codegen_input_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(INPUT_PROTOCOL)
+	codegen_client_protocol(INPUT_PROTOCOL, false, &[])
+}
+#[proc_macro]
+pub fn codegen_item_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(ITEM_PROTOCOL, true, &["ItemAcceptor", "ItemUI"])
 }
 
-fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
+fn codegen_client_protocol(
+	protocol: &'static str,
+	manual_impl: bool,
+	generic_aspects: &[&'static str],
+) -> proc_macro::TokenStream {
 	let protocol = Protocol::parse(protocol).unwrap();
 	let custom_enums = protocol
 		.custom_enums
@@ -63,16 +71,24 @@ fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
 		.map(generate_custom_struct)
 		.reduce(fold_tokens)
 		.unwrap_or_default();
+	let generic_aspects = generic_aspects
+		.into_iter()
+		.map(|a| a.to_case(Case::Pascal).to_lowercase());
 	let aspects = protocol
 		.aspects
 		.iter()
-		.map(generate_aspect)
+		.map(|a| {
+			let generic = generic_aspects
+				.clone()
+				.any(|ga| a.name.to_case(Case::Pascal).to_lowercase() == ga);
+			generate_aspect(a, generic)
+		})
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let nodes = protocol
 		.nodes
 		.iter()
-		.map(generate_node)
+		.map(|n| generate_node(n, manual_impl))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let interface = protocol
@@ -140,12 +156,13 @@ fn generate_union_option(union_option: &UnionOption) -> TokenStream {
 }
 fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 	match argument_type {
+		ArgumentType::Empty => "Empty".to_string(),
 		ArgumentType::Bool => "Bool".to_string(),
 		ArgumentType::Int => "Int".to_string(),
 		ArgumentType::UInt => "UInt".to_string(),
 		ArgumentType::Float => "Float".to_string(),
-		ArgumentType::Vec2 => "Vec2".to_string(),
-		ArgumentType::Vec3 => "Vec3".to_string(),
+		ArgumentType::Vec2(_) => "Vec2".to_string(),
+		ArgumentType::Vec3(_) => "Vec3".to_string(),
 		ArgumentType::Quat => "Quat".to_string(),
 		ArgumentType::Color => "Color".to_string(),
 		ArgumentType::String => "String".to_string(),
@@ -179,24 +196,32 @@ fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
 	}
 }
 
-fn generate_node(node: &Node) -> TokenStream {
-	let node_name = Ident::new(&node.name, Span::call_site());
+fn generate_node(node: &Node, manual_impl: bool) -> TokenStream {
+	let node_name = Ident::new(&node.name.to_case(Case::Pascal), Span::call_site());
 	let description = &node.description;
 
-	let aspects = node
-		.aspects
-		.iter()
-		.map(|a| {
-			let aspect_name = Ident::new(&format!("{a}Aspect"), Span::call_site());
-			quote!(impl #aspect_name for #node_name {})
-		})
-		.reduce(fold_tokens)
+	let aspects = if manual_impl {
+		quote!()
+	} else {
+		node.aspects
+			.iter()
+			.map(|a| {
+				let aspect_name = Ident::new(&format!("{a}Aspect"), Span::call_site());
+				quote!(impl #aspect_name for #node_name {})
+			})
+			.reduce(fold_tokens)
+			.unwrap_or_default()
+	};
+	let item = node
+		.item
+		.as_ref()
+		.map(|i| generate_item(&node_name, &i))
 		.unwrap_or_default();
 
 	quote! {
 		#[doc = #description]
 		#[derive(Debug)]
-		pub struct #node_name (crate::node::Node);
+		pub struct #node_name (pub(crate) crate::node::Node);
 		impl crate::node::NodeType for #node_name {
 			fn node(&self) -> &crate::node::Node {
 				&self.0
@@ -215,13 +240,35 @@ fn generate_node(node: &Node) -> TokenStream {
 			}
 		}
 		#aspects
+		#item
+	}
+}
+fn generate_item(node_ident: &Ident, item: &Item) -> TokenStream {
+	let init_data_type = generate_argument_type(&item.init_data_type, true);
+	let item_type = &item.name;
+	let item_ident = Ident::new(&item_type.to_case(Case::Pascal), Span::call_site());
+
+	quote! {
+		impl Item for #node_ident {
+			type InitData = #init_data_type;
+			const TYPE_NAME: &'static str = #item_type;
+
+			fn from_unknown(data: UnknownItem) -> Self {
+				#node_ident(data.0)
+			}
+			fn get_item_data(data: InitialItemData) -> Option<Self::InitData> {
+				let InitialItemData:: #item_ident(data) = data else {return None};
+				Some(data)
+			}
+		}
 	}
 }
 
-fn generate_aspect(aspect: &Aspect) -> TokenStream {
+fn generate_aspect(aspect: &Aspect, generic: bool) -> TokenStream {
 	let description = &aspect.description;
 	let (client_members, server_members) = aspect.members.iter().split(|m| m.side == Side::Server);
 
+	let generic_tokens = generic.then_some(quote!(<T>)).unwrap_or_default();
 	let aspect_handler_name = Ident::new(
 		&format!("{}Handler", &aspect.name.to_case(Case::Pascal)),
 		Span::call_site(),
@@ -232,7 +279,7 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		.map(|t| {
 			quote! {
 				#[doc = #description]
-				pub trait #aspect_handler_name: Send + Sync + 'static {
+				pub trait #aspect_handler_name #generic_tokens: Send + Sync + 'static {
 					#t
 				}
 			}
@@ -246,11 +293,11 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		.reduce(fold_tokens).map(|handlers| {
 			quote! {
 				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
-				fn wrap<H: #aspect_handler_name>(self, handler: H) -> NodeResult<crate::HandlerWrapper<Self, H>> {
+				fn wrap<H: #aspect_handler_name #generic_tokens>(self, handler: H) -> NodeResult<crate::HandlerWrapper<Self, H>> {
 					self.wrap_raw(std::sync::Arc::new(parking_lot::Mutex::new(handler)))
 				}
 				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
-				fn wrap_raw<H: #aspect_handler_name>(self, handler: std::sync::Arc<parking_lot::Mutex<H>>) -> NodeResult<crate::HandlerWrapper<Self, H>> {
+				fn wrap_raw<H: #aspect_handler_name #generic_tokens>(self, handler: std::sync::Arc<parking_lot::Mutex<H>>) -> NodeResult<crate::HandlerWrapper<Self, H>> {
 					let handler_wrapper = crate::HandlerWrapper::new_raw(self, handler);
 					#handlers
 					Ok(handler_wrapper)
@@ -268,7 +315,7 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		.unwrap_or_default();
 	let server_side_members = quote! {
 		#[doc = #description]
-		pub trait #aspect_trait_name: crate::node::NodeType {
+		pub trait #aspect_trait_name #generic_tokens: crate::node::NodeType {
 			#aspect_wrap
 			#server_side_members
 		}
@@ -403,7 +450,7 @@ fn generate_member(interface_path: Option<&str>, member: &Member) -> TokenStream
 		(Side::Client, MemberType::Signal) => {
 			quote! {
 				#[doc = #description]
-				fn #name(#argument_decls);
+				fn #name(#argument_decls) {}
 			}
 		}
 	}
@@ -508,10 +555,10 @@ fn generate_argument_serialize(
 	}
 
 	match argument_type {
-		ArgumentType::Vec2 => {
+		ArgumentType::Vec2(_) => {
 			quote!(#name.into())
 		}
-		ArgumentType::Vec3 => {
+		ArgumentType::Vec3(_) => {
 			quote!(#name.into())
 		}
 		ArgumentType::Quat => {
@@ -539,22 +586,25 @@ fn generate_argument_decl(argument: &Argument, returned: bool) -> TokenStream {
 }
 fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStream {
 	match argument_type {
+		ArgumentType::Empty => quote!(()),
 		ArgumentType::Bool => quote!(bool),
 		ArgumentType::Int => quote!(i32),
 		ArgumentType::UInt => quote!(u32),
 		ArgumentType::Float => quote!(f32),
-		ArgumentType::Vec2 => {
+		ArgumentType::Vec2(ty) => {
+			let t = generate_argument_type(&ty, true);
 			if !owned {
-				quote!(impl Into<mint::Vector2<f32>>)
+				quote!(impl Into<mint::Vector2<#t>>)
 			} else {
-				quote!(mint::Vector2<f32>)
+				quote!(mint::Vector2<#t>)
 			}
 		}
-		ArgumentType::Vec3 => {
+		ArgumentType::Vec3(ty) => {
+			let t = generate_argument_type(&ty, true);
 			if !owned {
-				quote!(impl Into<mint::Vector3<f32>>)
+				quote!(impl Into<mint::Vector3<#t>>)
 			} else {
-				quote!(mint::Vector3<f32>)
+				quote!(mint::Vector3<#t>)
 			}
 		}
 		ArgumentType::Quat => {

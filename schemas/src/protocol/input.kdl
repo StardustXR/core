@@ -125,13 +125,13 @@ aspect "InputMethod" {
 		argument "handler" type="node" aspect="InputHandler"
 	}
 
-	signal "new_handler" side="client" {
+	signal "create_handler" side="client" {
 		description "A new input handler has just been created."
 
 		argument "uid" type="string"
 		argument "handler" type="node" aspect="InputMethod"
 	}
-	signal "drop_handler" side="client" {
+	signal "destroy_handler" side="client" {
 		description "An input handler has just been destroyed."
 
 		argument "uid" type="string"

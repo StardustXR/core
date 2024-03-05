@@ -152,12 +152,39 @@ fn convert_node(node: &KdlNode) -> Result<Node, ParseError> {
 		.filter(check_member)
 		.map(convert_member)
 		.collect::<Result<Vec<_>, ParseError>>()?;
+	let item = nodes
+		.iter()
+		.find(|i| i.name().value() == "item")
+		.and_then(convert_item);
 	Ok(Node {
 		name,
 		description,
 		aspects,
 		members,
+		item,
 	})
+}
+fn convert_item(item: &KdlNode) -> Option<Item> {
+	let name = get_string_property(item, 0).ok()?.to_string();
+	let nodes = item.children().unwrap().nodes();
+	let init_data_type = convert_argument_type(item, "init_data_type").ok()?;
+
+	Some(Item {
+		name,
+		init_data_type,
+		aliased_server_signals: convert_item_aliases(nodes, "aliased_server_signals"),
+		aliased_server_methods: convert_item_aliases(nodes, "aliased_server_methods"),
+		aliased_client_signals: convert_item_aliases(nodes, "aliased_client_signals"),
+		aliased_client_methods: convert_item_aliases(nodes, "aliased_client_methods"),
+	})
+}
+fn convert_item_aliases(nodes: &[KdlNode], node_name: &str) -> Vec<String> {
+	nodes
+		.iter()
+		.filter(|n| n.name().value() == node_name)
+		.filter_map(|n| get_string_property(n, 0).ok())
+		.map(ToString::to_string)
+		.collect()
 }
 fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 	let nodes = aspect.children().unwrap().nodes();
@@ -248,12 +275,17 @@ fn convert_argument(argument: &KdlNode) -> Result<Argument, ParseError> {
 }
 fn convert_argument_type(argument: &KdlNode, key: &str) -> Result<ArgumentType, ParseError> {
 	Ok(match get_string_property(argument, key)? {
+		"empty" => ArgumentType::Empty,
 		"bool" => ArgumentType::Bool,
 		"float" => ArgumentType::Float,
 		"int" => ArgumentType::Int,
 		"uint" => ArgumentType::UInt,
-		"vec2" => ArgumentType::Vec2,
-		"vec3" => ArgumentType::Vec3,
+		"vec2" => ArgumentType::Vec2(Box::new(
+			convert_argument_type(argument, "component").unwrap_or(ArgumentType::Float),
+		)),
+		"vec3" => ArgumentType::Vec3(Box::new(
+			convert_argument_type(argument, "component").unwrap_or(ArgumentType::Float),
+		)),
 		"quat" => ArgumentType::Quat,
 		"string" => ArgumentType::String,
 		"color" => ArgumentType::Color,

@@ -12,6 +12,7 @@ pub const DATA_PROTOCOL: &'static str = include_str!("data.kdl");
 pub const AUDIO_PROTOCOL: &'static str = include_str!("audio.kdl");
 pub const DRAWABLE_PROTOCOL: &'static str = include_str!("drawable.kdl");
 pub const INPUT_PROTOCOL: &'static str = include_str!("input.kdl");
+pub const ITEM_PROTOCOL: &'static str = include_str!("item.kdl");
 
 #[derive(Debug)]
 pub struct Protocol {
@@ -71,6 +72,17 @@ pub struct Node {
 	pub description: String,
 	pub aspects: Vec<String>,
 	pub members: Vec<Member>,
+	pub item: Option<Item>,
+}
+
+#[derive(Debug)]
+pub struct Item {
+	pub name: String,
+	pub init_data_type: ArgumentType,
+	pub aliased_server_signals: Vec<String>,
+	pub aliased_server_methods: Vec<String>,
+	pub aliased_client_signals: Vec<String>,
+	pub aliased_client_methods: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -104,12 +116,13 @@ pub enum Side {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgumentType {
+	Empty,
 	Bool,
 	Int,
 	UInt,
 	Float,
-	Vec2,
-	Vec3,
+	Vec2(Box<ArgumentType>),
+	Vec3(Box<ArgumentType>),
 	Quat,
 	Color,
 	String,
