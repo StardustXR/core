@@ -13,7 +13,7 @@ signal "create_item_acceptor" side="server" {
     
     argument "name" type="string"
     argument "parent" type="node" aspect="spatial"
-    argument "transfom" type="struct" struct="transform"
+    argument "transform" type="struct" struct="transform"
     argument "item_type" type="string"
     argument "field" type="node" aspect="field"
 }
