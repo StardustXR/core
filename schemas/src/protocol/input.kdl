@@ -115,23 +115,28 @@ aspect "InputMethod" {
 		argument "datamap" type="datamap"
 	}
 	signal "set_handler_order" side="server" {
-		description "Manually set the order of handlers to propagate input to, or else let the server decide."
+		description "Set the order of handlers to propagate input to."
 
-		argument "handlers" type="vec" member_type="node" aspect="InputHandler" optional=true
+		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
 	}
-	signal "capture" side="server" {
+	signal "request_capture" side="server" {
 		description "Have the input handler that this method reference came from capture the method for the next frame."
 
 		argument "handler" type="node" aspect="InputHandler"
 	}
 
-	signal "new_handler" side="client" {
+	signal "create_handler" side="client" {
 		description "A new input handler has just been created."
 
 		argument "uid" type="string"
 		argument "handler" type="node" aspect="InputHandler"
 	}
-	signal "drop_handler" side="client" {
+	signal "request_capture_handler" side="client" {
+		description "An input handler requests to capture this input method."
+
+		argument "uid" type="string"
+	}
+	signal "destroy_handler" side="client" {
 		description "An input handler has just been destroyed."
 
 		argument "uid" type="string"
