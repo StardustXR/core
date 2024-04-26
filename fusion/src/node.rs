@@ -331,5 +331,5 @@ impl Debug for Node {
 		dbg.finish()
 	}
 }
-stardust_xr_fusion_codegen::codegen_node_client_protocol!();
+stardust_xr_fusion_codegen::codegen_node_protocol!();
 impl NodeAspect for Node {}

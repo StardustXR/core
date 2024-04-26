@@ -1,15 +1,13 @@
 //! Anything the user can see such as lines, models and text.
 
-use crate::{
-	node::{NodeAspect, NodeError, NodeResult, NodeType},
-	spatial::{SpatialAspect, Transform},
-};
+use crate::{impl_aspects, node::{NodeAspect, NodeError, NodeResult, NodeType}, spatial::{SpatialAspect, Transform}};
 use color::rgba_linear;
 use nanoid::nanoid;
 use stardust_xr::values::ResourceID;
 
-stardust_xr_fusion_codegen::codegen_drawable_client_protocol!();
+stardust_xr_fusion_codegen::codegen_drawable_protocol!();
 
+impl_aspects!(Lines: NodeAspect, SpatialAspect);
 impl Lines {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -44,6 +42,8 @@ impl Default for Line {
 	}
 }
 
+impl_aspects!(Model: NodeAspect, SpatialAspect);
+impl_aspects!(ModelPart: NodeAspect, SpatialAspect);
 impl Model {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -72,6 +72,7 @@ impl Model {
 		))
 	}
 }
+impl_aspects!(Text: NodeAspect, SpatialAspect);
 impl Text {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,

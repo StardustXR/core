@@ -2,26 +2,6 @@ version (u32)1
 interface "/input"
 description ""
 
-signal "create_input_method" side="server" {
-	description "Create an input method node"
-
-	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
-	argument "initial_data" type="struct" struct="InputDataType"
-	argument "datamap" type="datamap"
-	return type="node" node="InputMethod" parent="/input/method" name_argument="name"
-}
-signal "create_input_handler" side="server" {
-	description "Create an input handler node"
-
-	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
-	argument "field" type="node" aspect="Field"
-	return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
-}
-
 struct "Joint" {
 	description "A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server."
 
@@ -94,15 +74,19 @@ struct "InputData" {
 	field "captured" type="bool" description="Is this input handler capturing this input method?"
 }
 
-node "InputMethod" {
-	description "Node representing a spatial input device"
+signal "create_input_method" side="server" {
+	description "Create an input method node"
 
-	aspect "Node"
-	aspect "Spatial"
-	aspect "InputMethod"
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "initial_data" type="struct" struct="InputDataType"
+	argument "datamap" type="datamap"
+	return type="node" node="InputMethod" parent="/input/method" name_argument="name"
 }
 aspect "InputMethod" {
 	description "Node representing a spatial input device"
+	inherits "Spatial"
 
 	signal "set_input" side="server" {
 		description "Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing."
@@ -110,7 +94,7 @@ aspect "InputMethod" {
 		argument "input" type="struct" struct="InputDataType"
 	}
 	signal "set_datamap" side="server" {
-		description "Set the datmap of this input method"
+		description "Set the datamap of this input method"
 
 		argument "datamap" type="datamap"
 	}
@@ -130,6 +114,7 @@ aspect "InputMethod" {
 
 		argument "uid" type="string"
 		argument "handler" type="node" aspect="InputHandler"
+	    argument "field" type="node" aspect="Field"
 	}
 	signal "request_capture_handler" side="client" {
 		description "An input handler requests to capture this input method."
@@ -143,15 +128,18 @@ aspect "InputMethod" {
 	}
 }
 
-node "InputHandler" {
-	description "A node to get spatial input when interacting in proximity, not globally."
+signal "create_input_handler" side="server" {
+	description "Create an input handler node"
 
-	aspect "Node"
-	aspect "Spatial"
-	aspect "InputHandler"
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "field" type="node" aspect="Field"
+	return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
 }
 aspect "InputHandler" {
 	description "Handle raw input events."
+	inherits "Spatial"
 
 	signal "input" side="client" {
 		description "An input method has sent an input event on this frame. All the inputs are sent by the time `/:frame` is called."

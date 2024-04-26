@@ -19,9 +19,7 @@
 //! The client that summoned the item (if applicable), item UI, and item acceptor can all call `release()` on the item to instantly release it from any acceptor that captured it.
 
 pub mod camera;
-mod environment;
 pub mod panel;
-pub use environment::*;
 use parking_lot::Mutex;
 
 use super::{
@@ -29,7 +27,7 @@ use super::{
 	node::{Node, NodeError, NodeType},
 };
 use crate::{
-	fields::{FieldAspect, UnknownField},
+	fields::{FieldAspect, Field},
 	node::NodeAspect,
 	spatial::{SpatialAspect, Transform},
 	HandlerWrapper,
@@ -65,7 +63,7 @@ pub trait ItemUIHandler<I: ItemAspect>: Send + Sync + 'static {
 		&mut self,
 		acceptor_uid: String,
 		acceptor: ItemAcceptor<I>,
-		field: UnknownField,
+		field: Field,
 	) {
 	}
 	/// The item acceptor with `uid` has been destroyed.
@@ -208,7 +206,7 @@ impl<I: ItemAspect> ItemUI<I> {
 			false,
 		);
 		let field =
-			UnknownField::from_parent_name(&client, acceptor.node().get_path()?, "field", false);
+			Field::from_parent_name(&client, acceptor.node().get_path()?, "field", false);
 		handler.lock().acceptor_created(uid, acceptor, field);
 		Ok(())
 	}

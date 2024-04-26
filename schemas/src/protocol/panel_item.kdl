@@ -32,15 +32,9 @@ struct "ChildInfo" {
 	field "logical_rectangle" type="struct" struct="Geometry" description="Surface geometry"
 }
 
-node "PanelItem" {
-	description "Simple spatial audio source"
-
-	aspect "Node"
-	aspect "Spatial"
-	aspect "PanelItem"
-}
 aspect "PanelItem" {
 	description ""
+	aspect "Spatial"
 	
 	signal "play" side="server" {
 		description "Play sound effect"

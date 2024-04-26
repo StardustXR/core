@@ -1,12 +1,5 @@
 use super::ItemAspect;
-use crate::{
-	client::Client,
-	drawable::ModelPartAspect,
-	handle_action,
-	node::{Node, NodeError, NodeType},
-	spatial::SpatialAspect,
-	HandlerWrapper,
-};
+use crate::{client::Client, drawable::ModelPartAspect, handle_action, node::{Node, NodeError, NodeAspect, NodeType}, spatial::SpatialAspect, HandlerWrapper, impl_aspects};
 use mint::Vector2;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
@@ -322,7 +315,7 @@ impl NodeType for PanelItem {
 		PanelItem(Node::from_path(client, path, destroyable))
 	}
 }
-impl SpatialAspect for PanelItem {}
+impl_aspects!(PanelItem: NodeAspect, SpatialAspect);
 impl ItemAspect for PanelItem {
 	type InitData = PanelItemInitData;
 	const TYPE_NAME: &'static str = "panel";

@@ -21,7 +21,7 @@ use crate::{
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
 
-stardust_xr_fusion_codegen::codegen_spatial_client_protocol!();
+stardust_xr_fusion_codegen::codegen_spatial_protocol!();
 impl Transform {
 	pub const fn none() -> Self {
 		Transform {
@@ -120,6 +120,7 @@ impl Transform {
 	}
 }
 
+impl NodeAspect for Spatial {}
 impl Spatial {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -135,6 +136,9 @@ impl Spatial {
 		)
 	}
 }
+
+impl NodeAspect for Zone {}
+impl SpatialAspect for Zone {}
 impl Zone {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -176,7 +180,7 @@ async fn fusion_spatial() {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
 		e = event_loop => e.unwrap().unwrap(),
-	};
+	}
 }
 
 #[tokio::test]
@@ -242,5 +246,5 @@ async fn fusion_zone() {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
 		e = event_loop => e.unwrap().unwrap(),
-	};
+	}
 }

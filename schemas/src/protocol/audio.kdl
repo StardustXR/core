@@ -11,16 +11,9 @@ signal "create_sound" side="server" {
 	argument "resource" type="resource"
 	return type="node" node="Sound" parent="/audio/sound" name_argument="name"
 }
-
-node "Sound" {
-	description "Simple spatial audio source"
-
-	aspect "Node"
-	aspect "Spatial"
-	aspect "Sound"
-}
 aspect "Sound" {
-	description ""
+	description "Simple spatial audio source"
+	inherits "Spatial"
 	
 	signal "play" side="server" {
 		description "Play sound effect"

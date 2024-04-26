@@ -2,6 +2,20 @@ version (u32)1
 interface "/" 
 description "The client's root. The spatial aspect of this is placed where the client is started spatially. There are also some methods that must be handled."
 
+struct "FrameInfo" {
+	description ""
+
+	field "delta"   type="float" description="The time between this frame and last frame's display time, in seconds."
+	field "elapsed" type="float" description="The total time in seconds the client has been connected to the server."
+}
+struct "ClientState" {
+	description "The persistent state of a Stardust client."
+
+	field "data"            type="bytes"                                optional=true description="Data specific to your client, put anything you like here and it'll be saved/restored intact."
+	field "root"            type="node" node="spatial"                  optional=true description="The root node of this client."
+	field "spatial_anchors" type="map" value_type="node" node="spatial"               description="Spatials that will be in the same place you left them."
+}
+
 signal "frame" side="client" {
 	description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
 
@@ -35,23 +49,3 @@ method "client_state_token" side="server" {
 	return type="string"
 }
 
-
-struct "FrameInfo" {
-	description ""
-
-	field "delta"   type="float" description="The time between this frame and last frame's display time, in seconds."
-	field "elapsed" type="float" description="The total time in seconds the client has been connected to the server."
-}
-struct "ClientState" {
-	description "The persistent state of a Stardust client."
-
-	field "data"            type="bytes"                                optional=true description="Data specific to your client, put anything you like here and it'll be saved/restored intact."
-	field "root"            type="node" node="spatial"                  optional=true description="The root node of this client."
-	field "spatial_anchors" type="map" value_type="node" node="spatial"               description="Spatials that will be in the same place you left them."
-}
-
-node "Root" {
-	description "The client's root. The spatial aspect of this is placed where the client is started spatially. There are also some methods that must be handled."
-
-	aspect "Spatial"
-}

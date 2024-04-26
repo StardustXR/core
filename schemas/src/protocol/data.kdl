@@ -7,25 +7,6 @@ struct "NewReceiverInfo" {
 	field "uid" type="string"
 }
 
-signal "create_pulse_sender" side="server" {
-	description ""
-
-	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
-	argument "mask" type="datamap"
-	return type="node" node="PulseSender" parent="/data/sender" name_argument="name"
-}
-signal "create_pulse_receiver" side="server" {
-	description "Create a pulse receiver node. The field will remain intact even if its node is dropped."
-
-	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial" 
-	argument "transform" type="struct" struct="transform"
-	argument "field" type="node" aspect="field" 
-	argument "mask" type="datamap"
-	return type="node" node="PulseReceiver" parent="/data/receiver" name_argument="name"
-}
 
 method "register_keymap" side="server" {
 	description "Register a keymap with the server to easily identify it later"
@@ -40,23 +21,25 @@ method "get_keymap" side="server" {
 	return type="string"
 }
 
-
-node "PulseSender" {
+signal "create_pulse_sender" side="server" {
 	description ""
 
-	aspect "Node"
-	aspect "Spatial"
-	aspect "PulseSender"
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "mask" type="datamap"
+	return type="node" node="PulseSender" parent="/data/sender" name_argument="name"
 }
 aspect "PulseSender" {
 	description ""
+	inherits "Spatial"
 
 	signal "new_receiver" side="client" {
 		description ""
 
 		argument "uid" type="string"
 		argument "receiver" type="node" node="PulseReceiver"
-		argument "field" type="node" node="UnknownField"
+		argument "field" type="node" node="Field"
 	}
 	signal "drop_receiver" side="client" {
 		description ""
@@ -65,15 +48,19 @@ aspect "PulseSender" {
 	}
 }
 
-node "PulseReceiver" {
-	description ""
-	
-	aspect "Node"
-	aspect "Spatial"
-	aspect "PulseReceiver"
+signal "create_pulse_receiver" side="server" {
+	description "Create a pulse receiver node. The field will remain intact even if its node is dropped."
+
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "field" type="node" aspect="field"
+	argument "mask" type="datamap"
+	return type="node" node="PulseReceiver" parent="/data/receiver" name_argument="name"
 }
 aspect "PulseReceiver" {
 	description ""
+	inherits "Spatial"
 
 	signal "data" side="client" {
 		description ""

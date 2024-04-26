@@ -128,6 +128,13 @@ impl<N: NodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 }
 
 #[macro_export]
+macro_rules! impl_aspects {
+    ($node:ident: $( $aspect:ident ),+) => {
+		$(impl $aspect for $node {})+
+    }
+}
+
+#[macro_export]
 macro_rules! handle_action {
     ($handler:ident, $action:ident) => {
         $handler

@@ -21,16 +21,14 @@
 
 use std::hash::Hash;
 
-use crate::{
-	fields::FieldAspect,
-	node::{NodeAspect, NodeResult, NodeType},
-	spatial::{SpatialAspect, Transform},
-};
+use crate::{fields::{Field, FieldAspect}, impl_aspects, node::{NodeAspect, NodeResult, NodeType}, spatial::{SpatialAspect, Transform}};
 use glam::{vec3a, Quat};
 use mint::Vector3;
 use stardust_xr::values::Datamap;
 
-stardust_xr_fusion_codegen::codegen_input_client_protocol!();
+stardust_xr_fusion_codegen::codegen_input_protocol!();
+
+impl_aspects!(InputMethod: NodeAspect, SpatialAspect);
 impl InputMethod {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -48,6 +46,7 @@ impl InputMethod {
 		)
 	}
 }
+impl_aspects!(InputHandler: NodeAspect, SpatialAspect);
 impl InputHandler {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -192,7 +191,7 @@ async fn fusion_input_handler() {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
 		e = event_loop => e.unwrap().unwrap(),
-	};
+	}
 }
 
 #[tokio::test]
@@ -268,7 +267,7 @@ async fn fusion_pointer_input_method() {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
 		e = event_loop => e.unwrap().unwrap(),
-	};
+	}
 }
 
 #[tokio::test]
@@ -371,5 +370,5 @@ async fn fusion_tip_input_method() {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),
 		e = event_loop => e.unwrap().unwrap(),
-	};
+	}
 }

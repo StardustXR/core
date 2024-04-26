@@ -13,37 +13,37 @@ fn fold_tokens(a: TokenStream, b: TokenStream) -> TokenStream {
 // 	codegen_client_protocol(ROOT_PROTOCOL)
 // }
 #[proc_macro]
-pub fn codegen_node_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(NODE_PROTOCOL)
+pub fn codegen_node_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(NODE_PROTOCOL, false)
 }
 #[proc_macro]
-pub fn codegen_spatial_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(SPATIAL_PROTOCOL)
+pub fn codegen_spatial_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(SPATIAL_PROTOCOL, true)
 }
 #[proc_macro]
-pub fn codegen_field_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(FIELD_PROTOCOL)
+pub fn codegen_field_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(FIELD_PROTOCOL, true)
 }
 #[proc_macro]
-pub fn codegen_data_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(DATA_PROTOCOL)
+pub fn codegen_data_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(DATA_PROTOCOL, true)
 }
 #[proc_macro]
-pub fn codegen_audio_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(AUDIO_PROTOCOL)
+pub fn codegen_audio_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(AUDIO_PROTOCOL, true)
 }
 #[proc_macro]
-pub fn codegen_drawable_client_protocol(
+pub fn codegen_drawable_protocol(
 	_input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_PROTOCOL)
+	codegen_client_protocol(DRAWABLE_PROTOCOL, true)
 }
 #[proc_macro]
-pub fn codegen_input_client_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(INPUT_PROTOCOL)
+pub fn codegen_input_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(INPUT_PROTOCOL, true)
 }
 
-fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
+fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_macro::TokenStream {
 	let protocol = Protocol::parse(protocol).unwrap();
 	let custom_enums = protocol
 		.custom_enums
@@ -66,13 +66,7 @@ fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
 	let aspects = protocol
 		.aspects
 		.iter()
-		.map(generate_aspect)
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-	let nodes = protocol
-		.nodes
-		.iter()
-		.map(generate_node)
+		.map(|a| generate_aspect(a, generate_node))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let interface = protocol
@@ -84,7 +78,7 @@ fn codegen_client_protocol(protocol: &'static str) -> proc_macro::TokenStream {
 				.reduce(fold_tokens)
 		})
 		.unwrap_or_default();
-	quote!(#custom_enums #custom_unions #custom_structs #aspects #nodes #interface).into()
+	quote!(#custom_enums #custom_unions #custom_structs #aspects #interface).into()
 }
 
 fn generate_custom_enum(custom_enum: &CustomEnum) -> TokenStream {
@@ -179,46 +173,8 @@ fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
 	}
 }
 
-fn generate_node(node: &Node) -> TokenStream {
-	let node_name = Ident::new(&node.name, Span::call_site());
-	let description = &node.description;
-
-	let aspects = node
-		.aspects
-		.iter()
-		.map(|a| {
-			let aspect_name = Ident::new(&format!("{a}Aspect"), Span::call_site());
-			quote!(impl #aspect_name for #node_name {})
-		})
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-
-	quote! {
-		#[doc = #description]
-		#[derive(Debug)]
-		pub struct #node_name (crate::node::Node);
-		impl crate::node::NodeType for #node_name {
-			fn node(&self) -> &crate::node::Node {
-				&self.0
-			}
-			fn alias(&self) -> Self {
-				#node_name(self.0.alias())
-			}
-			fn from_path(client: &std::sync::Arc<crate::client::Client>, path: String, destroyable: bool) -> Self {
-				#node_name(crate::node::Node::from_path(client, path, destroyable))
-			}
-		}
-		impl serde::Serialize for #node_name {
-			fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-				let node_path = self.0.get_path().map_err(|e| serde::ser::Error::custom(e))?;
-				serializer.serialize_str(&node_path)
-			}
-		}
-		#aspects
-	}
-}
-
-fn generate_aspect(aspect: &Aspect) -> TokenStream {
+fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
+	let node_name = Ident::new(&aspect.name, Span::call_site());
 	let description = &aspect.description;
 	let (client_members, server_members) = aspect.members.iter().split(|m| m.side == Side::Server);
 
@@ -226,7 +182,7 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		&format!("{}Handler", &aspect.name.to_case(Case::Pascal)),
 		Span::call_site(),
 	);
-	let client_side_members = client_members
+	let client_side = client_members
 		.map(|m| generate_member(None, m))
 		.reduce(fold_tokens)
 		.map(|t| {
@@ -262,18 +218,46 @@ fn generate_aspect(aspect: &Aspect) -> TokenStream {
 		&format!("{}Aspect", &aspect.name.to_case(Case::Pascal)),
 		Span::call_site(),
 	);
+	let inherit_types = aspect.inherits
+		.iter()
+		.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
+		.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
 	let server_side_members = server_members
 		.map(|m| generate_member(None, m))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
-	let server_side_members = quote! {
+	let node = generate_node.then_some(quote!{
 		#[doc = #description]
-		pub trait #aspect_trait_name: crate::node::NodeType {
+		#[derive(Debug)]
+		pub struct #node_name (crate::node::Node);
+		impl crate::node::NodeType for #node_name {
+			fn node(&self) -> &crate::node::Node {
+				&self.0
+			}
+			fn alias(&self) -> Self {
+				#node_name(self.0.alias())
+			}
+			fn from_path(client: &std::sync::Arc<crate::client::Client>, path: String, destroyable: bool) -> Self {
+				#node_name(crate::node::Node::from_path(client, path, destroyable))
+			}
+		}
+		impl serde::Serialize for #node_name {
+			fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+				let node_path = self.0.get_path().map_err(|e| serde::ser::Error::custom(e))?;
+				serializer.serialize_str(&node_path)
+			}
+		}
+		impl #aspect_trait_name for #node_name {}
+	}).unwrap_or_default();
+	quote! {
+		#node
+		#client_side
+		#[doc = #description]
+		pub trait #aspect_trait_name: #inherit_types {
 			#aspect_wrap
 			#server_side_members
 		}
-	};
-	quote!(#client_side_members #server_side_members)
+	}
 }
 
 fn generate_member(interface_path: Option<&str>, member: &Member) -> TokenStream {

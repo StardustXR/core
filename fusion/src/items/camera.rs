@@ -1,9 +1,10 @@
 use super::ItemAspect;
 use crate::client::Client;
-use crate::node::{Node, NodeError, NodeType};
+use crate::node::{NodeAspect, Node, NodeError, NodeType};
 use crate::spatial::{SpatialAspect, Transform};
 use mint::{RowMatrix4, Vector2};
 use std::sync::Arc;
+use crate::impl_aspects;
 
 /// Item that contains the path to an equirectangular `.hdr` file.
 pub struct CameraItem(Node);
@@ -47,7 +48,7 @@ impl NodeType for CameraItem {
 		CameraItem(Node::from_path(client, path, destroyable))
 	}
 }
-impl SpatialAspect for CameraItem {}
+impl_aspects!(CameraItem: NodeAspect, SpatialAspect);
 impl ItemAspect for CameraItem {
 	type InitData = ();
 	const TYPE_NAME: &'static str = "camera";
@@ -86,7 +87,7 @@ async fn fusion_camera_ui() {
 			&mut self,
 			_uid: String,
 			_acceptor: crate::items::ItemAcceptor<CameraItem>,
-			_field: crate::fields::UnknownField,
+			_field: crate::fields::Field,
 		) {
 		}
 		fn acceptor_destroyed(&mut self, _uid: String) {}

@@ -1,13 +1,12 @@
 //! Create audio!
 
-use crate::{
-	node::{NodeAspect, NodeResult},
-	spatial::{SpatialAspect, Transform},
-};
+use crate::{impl_aspects, node::{NodeAspect, NodeResult}, spatial::{SpatialAspect, Transform}};
 use nanoid::nanoid;
 use stardust_xr::values::ResourceID;
 
-stardust_xr_fusion_codegen::codegen_audio_client_protocol!();
+stardust_xr_fusion_codegen::codegen_audio_protocol!();
+
+impl_aspects!(Sound: NodeAspect, SpatialAspect);
 impl Sound {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,

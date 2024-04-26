@@ -21,7 +21,6 @@ pub struct Protocol {
 	pub custom_enums: Vec<CustomEnum>,
 	pub custom_structs: Vec<CustomStruct>,
 	pub custom_unions: Vec<CustomUnion>,
-	pub nodes: Vec<Node>,
 	pub aspects: Vec<Aspect>,
 }
 impl Protocol {
@@ -66,17 +65,10 @@ pub struct UnionOption {
 }
 
 #[derive(Debug)]
-pub struct Node {
-	pub name: String,
-	pub description: String,
-	pub aspects: Vec<String>,
-	pub members: Vec<Member>,
-}
-
-#[derive(Debug)]
 pub struct Aspect {
 	pub name: String,
 	pub description: String,
+	pub inherits: Vec<String>,
 	pub members: Vec<Member>,
 }
 

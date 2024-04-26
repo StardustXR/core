@@ -50,12 +50,6 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 		.map(convert_struct)
 		.collect::<Result<Vec<_>, ParseError>>()?;
 
-	let nodes = document
-		.nodes()
-		.iter()
-		.filter(|n| n.name().value() == "node")
-		.map(convert_node)
-		.collect::<Result<Vec<_>, ParseError>>()?;
 	let aspects = document
 		.nodes()
 		.iter()
@@ -69,7 +63,6 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 		custom_enums,
 		custom_unions,
 		custom_structs,
-		nodes,
 		aspects,
 	})
 }
@@ -137,33 +130,16 @@ fn convert_struct(custom_struct: &KdlNode) -> Result<CustomStruct, ParseError> {
 	})
 }
 
-fn convert_node(node: &KdlNode) -> Result<Node, ParseError> {
-	let nodes = node.children().unwrap().nodes();
-
-	let name = get_string_property(node, 0)?.to_string();
-	let description = get_description_node(node)?;
-	let aspects = nodes
-		.iter()
-		.filter(|n| n.name().value() == "aspect")
-		.map(|n| get_string_property(n, 0).map(ToString::to_string))
-		.collect::<Result<Vec<_>, ParseError>>()?;
-	let members = nodes
-		.iter()
-		.filter(check_member)
-		.map(convert_member)
-		.collect::<Result<Vec<_>, ParseError>>()?;
-	Ok(Node {
-		name,
-		description,
-		aspects,
-		members,
-	})
-}
 fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 	let nodes = aspect.children().unwrap().nodes();
 
 	let name = get_string_property(aspect, 0)?.to_string();
 	let description = get_description_node(aspect)?;
+	let inherits = nodes
+		.iter()
+		.filter(|n| n.name().value() == "inherits")
+		.map(|n| get_string_property(n, 0).map(ToString::to_string))
+		.collect::<Result<Vec<_>, ParseError>>()?;
 	let members = nodes
 		.iter()
 		.filter(check_member)
@@ -172,6 +148,7 @@ fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 	Ok(Aspect {
 		name,
 		description,
+		inherits,
 		members,
 	})
 }

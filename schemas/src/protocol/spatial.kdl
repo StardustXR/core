@@ -6,26 +6,6 @@ description r#"
 	Equivalent to a Transform in Unity, Spatial in Godot, etc.
 "#
 
-signal "create_spatial" side="server" {
-	description "Create a spatial relative to another spatial"
-	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
-	argument "zoneable" type="bool"
-	return type="node" node="spatial" parent="/spatial/spatial" name_argument="name"
-}
-signal "create_zone" side="server" {
-	description r#"Create a zone given a field, this zone will become inactive if the field is dropped."
-
-Keep in mind the zone and its field are different spatials, they can move independently.
-"#		
-	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
-	argument "field" type="node" aspect="field"
-	return type="node" node="zone" parent="/spatial/zone" name_argument="name"
-}
-
 struct "BoundingBox" {
 	description ""
 
@@ -40,14 +20,13 @@ struct "Transform" {
 	field "scale" type="vec3" optional=true
 }
 
-node "Spatial" {
-	description r#"
-		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
-
-		Equivalent to a Transform in Unity, Spatial in Godot, etc.
-	"#
-	aspect "Node"
-	aspect "Spatial"
+signal "create_spatial" side="server" {
+	description "Create a spatial relative to another spatial"
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "zoneable" type="bool"
+	return type="node" node="spatial" parent="/spatial/spatial" name_argument="name"
 }
 aspect "Spatial" {
 	description r#"
@@ -55,6 +34,7 @@ aspect "Spatial" {
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	"#
+	inherits "Node"
 
 	method "get_local_bounding_box" side="server" {
 		description "Get the bounding box of this spatial and its children relative to another spatial"
@@ -104,18 +84,22 @@ aspect "Spatial" {
 	}
 }
 
-node "Zone" {
+signal "create_zone" side="server" {
 	description r#"
-		Node to manipulate spatial nodes across clients.
-	"#
-	aspect "Node"
-	aspect "Spatial"
-	aspect "Zone"
+	    Create a zone given a field, this zone will become inactive if the field is dropped.
+        Keep in mind the zone and its field are different spatials, they can move independently.
+    "#
+	argument "name" type="string"
+	argument "parent" type="node" aspect="spatial"
+	argument "transform" type="struct" struct="transform"
+	argument "field" type="node" aspect="field"
+	return type="node" node="zone" parent="/spatial/zone" name_argument="name"
 }
 aspect "Zone" {
 	description r#"
 		Node to manipulate spatial nodes across clients.
 	"#
+    inherits "Spatial"
 
 	signal "update" side="server" {
 		description ""

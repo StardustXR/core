@@ -17,16 +17,13 @@
 //! The position/rotation of pulse receivers should be the exact point a visual indicator of connection would connect to, and the forward direction should be away from the body it's part of design-wise.
 //! Pulse receivers cannot see the pulse senders, but any time data is sent to them they get the UID of the sender to allow keymap switching or such.
 
-use crate::{
-	fields::{FieldAspect, UnknownField},
-	node::NodeResult,
-	node::{NodeAspect, NodeType},
-	spatial::{SpatialAspect, Transform},
-};
+use crate::{fields::{FieldAspect, Field}, node::NodeResult, node::{NodeAspect, NodeType}, spatial::{SpatialAspect, Transform}, impl_aspects};
 use nanoid::nanoid;
 use stardust_xr::values::Datamap;
 
-stardust_xr_fusion_codegen::codegen_data_client_protocol!();
+stardust_xr_fusion_codegen::codegen_data_protocol!();
+
+impl_aspects!(PulseSender: NodeAspect, SpatialAspect);
 impl PulseSender {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -42,6 +39,8 @@ impl PulseSender {
 		)
 	}
 }
+
+impl_aspects!(PulseReceiver: NodeAspect, SpatialAspect);
 impl PulseReceiver {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -120,7 +119,7 @@ async fn fusion_pulses() {
 		node: PulseSender,
 	}
 	impl PulseSenderHandler for PulseSenderTest {
-		fn new_receiver(&mut self, uid: String, receiver: PulseReceiver, field: UnknownField) {
+		fn new_receiver(&mut self, uid: String, receiver: PulseReceiver, field: Field) {
 			println!(
 				"New pulse receiver {:?} with field {:?} and uid {:?}",
 				receiver, field, uid
