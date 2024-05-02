@@ -27,9 +27,9 @@ use super::{
 	node::{Node, NodeError, NodeType},
 };
 use crate::{
-	fields::{FieldAspect, Field},
-	node::NodeAspect,
-	spatial::{SpatialAspect, Transform},
+	fields::{Field, FieldAspect},
+	node::OwnedAspect,
+	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 	HandlerWrapper,
 };
 use color_eyre::eyre::Result;
@@ -59,13 +59,7 @@ pub trait ItemUIHandler<I: ItemAspect>: Send + Sync + 'static {
 	/// The item with `uid` has been destroyed.
 	fn item_destroyed(&mut self, item_uid: String) {}
 	/// The item acceptor with `uid` has been created. `acceptor` is an aliased node to the acceptor.
-	fn acceptor_created(
-		&mut self,
-		acceptor_uid: String,
-		acceptor: ItemAcceptor<I>,
-		field: Field,
-	) {
-	}
+	fn acceptor_created(&mut self, acceptor_uid: String, acceptor: ItemAcceptor<I>, field: Field) {}
 	/// The item acceptor with `uid` has been destroyed.
 	fn acceptor_destroyed(&mut self, acceptor_uid: String) {}
 }
@@ -205,8 +199,7 @@ impl<I: ItemAspect> ItemUI<I> {
 			&uid,
 			false,
 		);
-		let field =
-			Field::from_parent_name(&client, acceptor.node().get_path()?, "field", false);
+		let field = Field::from_parent_name(&client, acceptor.node().get_path()?, "field", false);
 		handler.lock().acceptor_created(uid, acceptor, field);
 		Ok(())
 	}
@@ -370,5 +363,6 @@ impl<I: ItemAspect> NodeType for ItemAcceptor<I> {
 		}
 	}
 }
-impl<I: ItemAspect> NodeAspect for ItemAcceptor<I> {}
+impl<I: ItemAspect> OwnedAspect for ItemAcceptor<I> {}
+impl<I: ItemAspect> SpatialRefAspect for ItemAcceptor<I> {}
 impl<I: ItemAspect> SpatialAspect for ItemAcceptor<I> {}

@@ -78,15 +78,26 @@ signal "create_input_method" side="server" {
 	description "Create an input method node"
 
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
+	argument "parent" type="node" aspect="SpatialRef"
+	argument "transform" type="struct" struct="Transform"
 	argument "initial_data" type="struct" struct="InputDataType"
 	argument "datamap" type="datamap"
 	return type="node" node="InputMethod" parent="/input/method" name_argument="name"
 }
+aspect "InputMethodRef" {
+	description "Node representing a spatial input device"
+	inherits "SpatialRef"
+	
+	signal "request_capture" side="server" {
+		description "Have the input handler that this method reference came from capture the method for the next frame."
+
+		argument "handler" type="node" aspect="InputHandler"
+	}
+}
 aspect "InputMethod" {
 	description "Node representing a spatial input device"
 	inherits "Spatial"
+	inherits "InputMethodRef"
 
 	signal "set_input" side="server" {
 		description "Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing."
@@ -102,11 +113,6 @@ aspect "InputMethod" {
 		description "Set the order of handlers to propagate input to."
 
 		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
-	}
-	signal "request_capture" side="server" {
-		description "Have the input handler that this method reference came from capture the method for the next frame."
-
-		argument "handler" type="node" aspect="InputHandler"
 	}
 
 	signal "create_handler" side="client" {
@@ -132,8 +138,8 @@ signal "create_input_handler" side="server" {
 	description "Create an input handler node"
 
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
+	argument "parent" type="node" aspect="SpatialRef"
+	argument "transform" type="struct" struct="Transform"
 	argument "field" type="node" aspect="Field"
 	return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
 }

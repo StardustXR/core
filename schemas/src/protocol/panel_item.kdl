@@ -34,7 +34,7 @@ struct "ChildInfo" {
 
 aspect "PanelItem" {
 	description ""
-	aspect "Spatial"
+	inherits "Spatial"
 	
 	signal "play" side="server" {
 		description "Play sound effect"

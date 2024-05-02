@@ -1,18 +1,22 @@
 //! Analog SDFs to define boundaries for input, interaction, and behavior.
 
-use crate::{impl_aspects, node::{NodeAspect, NodeResult, NodeType}, spatial::{SpatialAspect, Transform}};
+use crate::{
+	impl_aspects,
+	node::{NodeResult, NodeType, OwnedAspect},
+	spatial::{SpatialAspect, SpatialRefAspect, Transform},
+};
 use mint::Vector3;
 use nanoid::nanoid;
 
 stardust_xr_fusion_codegen::codegen_field_protocol!();
 
-impl_aspects!(Field: NodeAspect, SpatialAspect);
+impl_aspects!(Field: SpatialRefAspect);
 impl Field {
 	pub fn alias_field<Fi: FieldAspect>(field: &Fi) -> Self {
 		Field(field.node().alias())
 	}
 }
-impl_aspects!(BoxField: NodeAspect, SpatialAspect, FieldAspect);
+impl_aspects!(BoxField: OwnedAspect, SpatialRefAspect, SpatialAspect, FieldAspect);
 impl BoxField {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -29,7 +33,7 @@ impl BoxField {
 	}
 }
 
-impl_aspects!(CylinderField: NodeAspect, SpatialAspect, FieldAspect);
+impl_aspects!(CylinderField: OwnedAspect, SpatialRefAspect, SpatialAspect, FieldAspect);
 impl CylinderField {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -47,7 +51,7 @@ impl CylinderField {
 		)
 	}
 }
-impl_aspects!(TorusField: NodeAspect, SpatialAspect, FieldAspect);
+impl_aspects!(TorusField: OwnedAspect, SpatialRefAspect, SpatialAspect, FieldAspect);
 impl TorusField {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -65,7 +69,7 @@ impl TorusField {
 		)
 	}
 }
-impl_aspects!(SphereField: NodeAspect, SpatialAspect, FieldAspect);
+impl_aspects!(SphereField: OwnedAspect, SpatialRefAspect, SpatialAspect, FieldAspect);
 impl SphereField {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,

@@ -16,7 +16,8 @@
 
 use crate::{
 	fields::FieldAspect,
-	node::{NodeAspect, NodeResult, NodeType},
+	impl_aspects,
+	node::{NodeResult, NodeType, OwnedAspect},
 };
 use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
@@ -120,7 +121,7 @@ impl Transform {
 	}
 }
 
-impl NodeAspect for Spatial {}
+impl_aspects!(Spatial: OwnedAspect, SpatialRefAspect);
 impl Spatial {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -137,8 +138,7 @@ impl Spatial {
 	}
 }
 
-impl NodeAspect for Zone {}
-impl SpatialAspect for Zone {}
+impl_aspects!(Zone: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Zone {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,

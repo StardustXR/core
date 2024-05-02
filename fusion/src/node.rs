@@ -332,4 +332,3 @@ impl Debug for Node {
 	}
 }
 stardust_xr_fusion_codegen::codegen_node_protocol!();
-impl NodeAspect for Node {}

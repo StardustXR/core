@@ -17,32 +17,32 @@ struct "RayMarchResult" {
 
 aspect "Field" {
 	description "A node that is spatial and contains an SDF"
-	inherits "Spatial"
+	inherits "SpatialRef"
 
 	method "distance" side="server" {
 		description "Get the distance to the surface of this field relative to the `point` in `space`"
-		argument "space" type="node" aspect="spatial"
+		argument "space" type="node" aspect="SpatialRef"
 		argument "point" type="vec3"
 		return type="float"
 	}
 
 	method "normal" side="server" {
 		description "Get a vector pointing away from surface of this field relative to the `point` in `space`"
-		argument "space" type="node" aspect="spatial"
+		argument "space" type="node" aspect="SpatialRef"
 		argument "point" type="vec3"
 		return type="vec3"
 	}
 
 	method "closest_point" side="server" {
 		description "Get the closest point on the surface of this field relative to the `point` in `space`"
-		argument "space" type="node" aspect="spatial"
+		argument "space" type="node" aspect="SpatialRef"
 		argument "point" type="vec3"
 		return type="vec3"
 	}
 
 	method "ray_march" side="server" {
 		description "Get information from the server raymarching the given ray in `space` through this field such as steps, closest/deepest distance, etc."
-		argument "space" type="node" aspect="spatial" 
+		argument "space" type="node" aspect="SpatialRef" 
 		argument "ray_origin" type="vec3"
 		argument "ray_direction" type="vec3"
 		return type="struct" struct="RayMarchResult"
@@ -52,13 +52,14 @@ aspect "Field" {
 signal "create_box_field" side="server" {
 	description "Create a field with the shape of a box"
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
+	argument "parent" type="node" aspect="SpatialRef"
+	argument "transform" type="struct" struct="Transform"
 	argument "size" type="vec3"
 	return type="node" node="BoxField" parent="/field" name_argument="name"
 }
 aspect "BoxField" {
 	description "A cuboid field with adjustable size"
+	inherits "Spatial"
 	inherits "Field"
 
 	signal "set_size" side="server" {
@@ -70,14 +71,15 @@ aspect "BoxField" {
 signal "create_cylinder_field" side="server" {
 	description "Create a field with the shape of a box"
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
+	argument "parent" type="node" aspect="SpatialRef"
+	argument "transform" type="struct" struct="Transform"
 	argument "length" type="float"
 	argument "radius" type="float"
 	return type="node" node="CylinderField" parent="/field" name_argument="name"
 }
 aspect "CylinderField" {
 	description "A cylinder-shaped field with adjustable size"
+	inherits "Spatial"
 	inherits "Field"
 
 	signal "set_size" side="server" {
@@ -90,13 +92,14 @@ aspect "CylinderField" {
 signal "create_sphere_field" side="server" {
 	description "Create a field with the shape of a sphere"
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
+	argument "parent" type="node" aspect="SpatialRef"
 	argument "position" type="vec3"
 	argument "radius" type="float"
 	return type="node" node="SphereField" parent="/field" name_argument="name"
 }
 aspect "SphereField" {
 	description "A sphere-shaped field with adjustable size"
+	inherits "Spatial"
 	inherits "Field"
 
 	signal "set_radius" side="server" {
@@ -108,8 +111,8 @@ aspect "SphereField" {
 signal "create_torus_field" side="server" {
 	description "Create a field with the shape of a torus"
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
+	argument "parent" type="node" aspect="SpatialRef"
+	argument "transform" type="struct" struct="Transform"
 	argument "radius_a" type="float"
 	argument "radius_b" type="float"
 	return type="node" node="TorusField" parent="/field" name_argument="name"

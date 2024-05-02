@@ -1,8 +1,8 @@
 version (u32)1
-description "The aspect that applies to all nodes"
+description "Aspects that apply to all nodes"
 
-aspect "Node" {
-	description "The aspect that applies to all nodes"
+aspect "Owned" {
+	description "This node was created by the current client and can be disabled/destroyed"
 
 	signal "set_enabled" side="server" {
 		description "Set if this node is enabled or not. Disabled drawables won't render, input handlers won't receive input, etc."

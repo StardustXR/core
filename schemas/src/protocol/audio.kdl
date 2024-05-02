@@ -6,8 +6,8 @@ signal "create_sound" side="server" {
 	description "Create a sound node. WAV and MP3 are supported."
 
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
-	argument "transform" type="struct" struct="transform"
+	argument "parent" type="node" aspect="SpatialRef"
+	argument "transform" type="struct" struct="Transform"
 	argument "resource" type="resource"
 	return type="node" node="Sound" parent="/audio/sound" name_argument="name"
 }

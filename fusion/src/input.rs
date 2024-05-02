@@ -21,14 +21,20 @@
 
 use std::hash::Hash;
 
-use crate::{fields::{Field, FieldAspect}, impl_aspects, node::{NodeAspect, NodeResult, NodeType}, spatial::{SpatialAspect, Transform}};
+use crate::{
+	fields::{Field, FieldAspect},
+	impl_aspects,
+	node::{NodeResult, NodeType, OwnedAspect},
+	spatial::{SpatialAspect, SpatialRefAspect, Transform},
+};
 use glam::{vec3a, Quat};
 use mint::Vector3;
 use stardust_xr::values::Datamap;
 
 stardust_xr_fusion_codegen::codegen_input_protocol!();
 
-impl_aspects!(InputMethod: NodeAspect, SpatialAspect);
+impl_aspects!(InputMethodRef: SpatialRefAspect);
+impl_aspects!(InputMethod: OwnedAspect, SpatialRefAspect, SpatialAspect, InputMethodRefAspect);
 impl InputMethod {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
@@ -46,7 +52,7 @@ impl InputMethod {
 		)
 	}
 }
-impl_aspects!(InputHandler: NodeAspect, SpatialAspect);
+impl_aspects!(InputHandler: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl InputHandler {
 	pub fn create(
 		spatial_parent: &impl SpatialAspect,
