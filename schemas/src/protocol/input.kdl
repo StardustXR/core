@@ -114,6 +114,11 @@ aspect "InputMethod" {
 
 		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
 	}
+	signal "set_captures" side="server" {
+		description "Set which handlers are captured."
+		
+		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
+	}
 
 	signal "create_handler" side="client" {
 		description "A new input handler has just been created."
