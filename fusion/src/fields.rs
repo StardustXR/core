@@ -5,8 +5,8 @@ use crate::{
 	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
-use mint::Vector3;
 use nanoid::nanoid;
+use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_field_protocol!();
 

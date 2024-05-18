@@ -33,9 +33,7 @@ pub fn codegen_audio_protocol(_input: proc_macro::TokenStream) -> proc_macro::To
 	codegen_client_protocol(AUDIO_PROTOCOL, true)
 }
 #[proc_macro]
-pub fn codegen_drawable_protocol(
-	_input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
+pub fn codegen_drawable_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	codegen_client_protocol(DRAWABLE_PROTOCOL, true)
 }
 #[proc_macro]
@@ -218,7 +216,8 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		&format!("{}Aspect", &aspect.name.to_case(Case::Pascal)),
 		Span::call_site(),
 	);
-	let inherit_types = aspect.inherits
+	let inherit_types = aspect
+		.inherits
 		.iter()
 		.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
 		.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
@@ -529,23 +528,23 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 		ArgumentType::Float => quote!(f32),
 		ArgumentType::Vec2 => {
 			if !owned {
-				quote!(impl Into<mint::Vector2<f32>>)
+				quote!(impl Into<Vector2<f32>>)
 			} else {
-				quote!(mint::Vector2<f32>)
+				quote!(Vector2<f32>)
 			}
 		}
 		ArgumentType::Vec3 => {
 			if !owned {
-				quote!(impl Into<mint::Vector3<f32>>)
+				quote!(impl Into<Vector3<f32>>)
 			} else {
-				quote!(mint::Vector3<f32>)
+				quote!(Vector3<f32>)
 			}
 		}
 		ArgumentType::Quat => {
 			if !owned {
-				quote!(impl Into<mint::Quaternion<f32>>)
+				quote!(impl Into<Quaternion<f32>>)
 			} else {
-				quote!(mint::Quaternion<f32>)
+				quote!(Quaternion<f32>)
 			}
 		}
 		ArgumentType::Color => quote!(stardust_xr::values::Color),

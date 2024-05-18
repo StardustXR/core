@@ -14,8 +14,6 @@ default = []
 keymap = ["dep:xkbcommon"]
 
 [dependencies]
-color-rs = "0.8.0"
-mint = "0.5.9"
 glam = { version = "0.24.1", features = ["mint"] }
 nanoid = "0.4.0"
 parking_lot = "0.12.1"

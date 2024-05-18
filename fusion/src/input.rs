@@ -28,8 +28,7 @@ use crate::{
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use glam::{vec3a, Quat};
-use mint::Vector3;
-use stardust_xr::values::Datamap;
+use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_input_protocol!();
 

@@ -1,14 +1,13 @@
-use color::{color_space::LinearRgb, Rgba};
 use serde::{Deserialize, Serialize, Serializer};
 use std::{
 	path::{Path, PathBuf},
 	str::FromStr,
 };
 
-pub use color::rgba_linear;
+pub use color;
+pub use mint::*;
 pub use stardust_xr_schemas::flex::Datamap;
-
-pub type Color = Rgba<f32, LinearRgb>;
+pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// An identifier to a resource, such as a sound or

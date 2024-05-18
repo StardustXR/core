@@ -1,11 +1,10 @@
+use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
+use stardust_xr::scenegraph::{self, ScenegraphError};
 use std::{
 	os::fd::OwnedFd,
 	sync::{Arc, Weak},
 };
-
-use parking_lot::Mutex;
-use rustc_hash::FxHashMap;
-use stardust_xr::scenegraph::{self, ScenegraphError};
 use tokio::sync::oneshot;
 
 use crate::node::NodeInternals;

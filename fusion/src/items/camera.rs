@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::impl_aspects;
 use crate::node::{Node, NodeError, NodeType, OwnedAspect};
 use crate::spatial::{SpatialAspect, SpatialRefAspect, Transform};
-use mint::{RowMatrix4, Vector2};
+use stardust_xr::values::*;
 use std::sync::Arc;
 
 /// Item that contains the path to an equirectangular `.hdr` file.

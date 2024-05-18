@@ -6,7 +6,7 @@ use crate::{
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use nanoid::nanoid;
-use stardust_xr::values::ResourceID;
+use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_audio_protocol!();
 

@@ -19,8 +19,8 @@ use crate::{
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
 };
-use mint::{Quaternion, Vector3};
 use nanoid::nanoid;
+use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_spatial_protocol!();
 impl Transform {

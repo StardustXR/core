@@ -7,7 +7,6 @@ use crate::{
 	spatial::{SpatialAspect, SpatialRefAspect},
 	HandlerWrapper,
 };
-use mint::Vector2;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
 use serde::{
@@ -15,6 +14,7 @@ use serde::{
 	ser::Serializer,
 	Deserialize,
 };
+use stardust_xr::values::*;
 use std::sync::Arc;
 
 #[allow(unused_variables)]

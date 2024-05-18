@@ -25,7 +25,7 @@ use crate::{
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use nanoid::nanoid;
-use stardust_xr::values::Datamap;
+use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_data_protocol!();
 

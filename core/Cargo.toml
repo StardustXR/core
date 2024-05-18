@@ -10,8 +10,6 @@ homepage = "https://stardustxr.org"
 
 [dependencies]
 cluFlock = "1.2.7"
-color-rs = "0.8.0"
-mint = { version = "0.5.9", features = ["serde"] }
 nix = { version = "0.27.1", features = ["socket", "uio", "fs"] }
 parking_lot = "0.12.1"
 serde = { version = "1.0.196", features = ["derive"] }
@@ -28,5 +26,9 @@ tokio = { version = "1.36.0", features = [
 tracing = "0.1.40"
 dirs = "5.0.1"
 global_counter = "0.2.2"
+
+# values
+color-rs = { git = "https://github.com/arturoc/color-rs.git" }
+mint = { version = "0.5.9", features = ["serde"] }
 
 stardust-xr-schemas = { path = "../schemas" }

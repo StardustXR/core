@@ -5,9 +5,8 @@ use crate::{
 	node::{NodeError, NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
-use color::rgba_linear;
 use nanoid::nanoid;
-use stardust_xr::values::ResourceID;
+use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_drawable_protocol!();
 
@@ -32,7 +31,7 @@ impl Default for LinePoint {
 		Self {
 			point: [0.0; 3].into(),
 			thickness: 0.01,
-			color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
+			color: color::rgba_linear!(1.0, 1.0, 1.0, 1.0),
 		}
 	}
 }
@@ -99,7 +98,7 @@ impl Default for TextStyle {
 	fn default() -> Self {
 		Self {
 			character_height: 0.01,
-			color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
+			color: color::rgba_linear!(1.0, 1.0, 1.0, 1.0),
 			font: Default::default(),
 			text_align_x: XAlign::Left,
 			text_align_y: YAlign::Top,
@@ -117,7 +116,7 @@ async fn fusion_lines() {
 
 	let points = vec![
 		LinePoint {
-			point: mint::Vector3 {
+			point: Vector3 {
 				x: 1.0,
 				y: 0.0,
 				z: 0.0,
@@ -130,7 +129,7 @@ async fn fusion_lines() {
 			..Default::default()
 		},
 		LinePoint {
-			point: mint::Vector3 {
+			point: Vector3 {
 				x: 0.0,
 				y: 1.0,
 				z: 0.0,
