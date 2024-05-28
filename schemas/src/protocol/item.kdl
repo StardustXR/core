@@ -296,13 +296,11 @@ aspect "PanelItem" {
     }
     signal "touch_move" side="server" {
         description "Move an existing touch point."
-        argument "surface" type="struct" struct="SurfaceID"
         argument "uid" type="uint"
         argument "position" type="vec2" member_type="float"
     }
     signal "touch_up" side="server" {
         description "Release a touch from its surface."
-        argument "surface" type="struct" struct="SurfaceID"
         argument "uid" type="uint"
     }
     signal "reset_input" side="server" {
