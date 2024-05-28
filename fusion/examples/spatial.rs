@@ -1,7 +1,6 @@
-use color::rgba_linear;
 use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
-use stardust_xr::values::ResourceID;
+use stardust_xr::values::{color::rgba_linear, ResourceID};
 use stardust_xr_fusion::{
 	client::{Client, ClientState, FrameInfo, RootHandler},
 	core::schemas::flex::flexbuffers,

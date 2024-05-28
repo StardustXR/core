@@ -125,7 +125,7 @@ aspect "Zone" {
 	signal "enter" side="client" {
 		description ""
 		argument "uid" type="string"
-		argument "spatial" type="node" aspect="SpatialRef"
+		argument "spatial" type="node" aspect="Spatial"
 	}
 	signal "capture" side="client" {
 		description ""

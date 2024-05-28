@@ -19,6 +19,7 @@
 #![allow(dead_code)]
 
 pub use stardust_xr as core;
+pub use stardust_xr::values;
 
 #[macro_use]
 pub mod node;

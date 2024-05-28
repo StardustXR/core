@@ -157,9 +157,7 @@ async fn fusion_input_handler() {
 		.await
 		.expect("Couldn't connect");
 
-	let field =
-		super::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
-			.unwrap();
+	let field = super::fields::SphereField::create(client.get_root(), [0.0; 3], 0.1).unwrap();
 
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
@@ -235,11 +233,7 @@ async fn fusion_pointer_input_method() {
 		fn frame(&mut self, info: FrameInfo) {
 			let (sin, cos) = (info.elapsed as f32).sin_cos();
 			self.pointer
-				.set_local_transform(Transform::from_translation(mint::Vector3::from([
-					sin * 0.1,
-					0.0,
-					cos * 0.1,
-				])))
+				.set_local_transform(Transform::from_translation([sin * 0.1, 0.0, cos * 0.1]))
 				.unwrap();
 
 			self.datamap.grab = sin;

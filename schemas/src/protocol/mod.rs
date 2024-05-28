@@ -12,6 +12,7 @@ pub const DATA_PROTOCOL: &'static str = include_str!("data.kdl");
 pub const AUDIO_PROTOCOL: &'static str = include_str!("audio.kdl");
 pub const DRAWABLE_PROTOCOL: &'static str = include_str!("drawable.kdl");
 pub const INPUT_PROTOCOL: &'static str = include_str!("input.kdl");
+pub const ITEM_PROTOCOL: &'static str = include_str!("item.kdl");
 
 #[derive(Debug)]
 pub struct Protocol {

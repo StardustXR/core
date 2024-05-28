@@ -40,6 +40,10 @@ pub fn codegen_drawable_protocol(_input: proc_macro::TokenStream) -> proc_macro:
 pub fn codegen_input_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	codegen_client_protocol(INPUT_PROTOCOL, true)
 }
+#[proc_macro]
+pub fn codegen_item_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(ITEM_PROTOCOL, true)
+}
 
 fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_macro::TokenStream {
 	let protocol = Protocol::parse(protocol).unwrap();
@@ -180,6 +184,11 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		&format!("{}Handler", &aspect.name.to_case(Case::Pascal)),
 		Span::call_site(),
 	);
+	let aspect_trait_name = Ident::new(
+		&format!("{}Aspect", &aspect.name.to_case(Case::Pascal)),
+		Span::call_site(),
+	);
+
 	let client_side = client_members
 		.map(|m| generate_member(None, m))
 		.reduce(fold_tokens)
@@ -201,7 +210,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 			quote! {
 				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 				fn wrap<H: #aspect_handler_name>(self, handler: H) -> NodeResult<crate::HandlerWrapper<Self, H>> {
-					self.wrap_raw(std::sync::Arc::new(parking_lot::Mutex::new(handler)))
+					#aspect_trait_name::wrap_raw(self, std::sync::Arc::new(parking_lot::Mutex::new(handler)))
 				}
 				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 				fn wrap_raw<H: #aspect_handler_name>(self, handler: std::sync::Arc<parking_lot::Mutex<H>>) -> NodeResult<crate::HandlerWrapper<Self, H>> {
@@ -212,10 +221,6 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 			}
 		}).unwrap_or_default();
 
-	let aspect_trait_name = Ident::new(
-		&format!("{}Aspect", &aspect.name.to_case(Case::Pascal)),
-		Span::call_site(),
-	);
 	let inherit_types = aspect
 		.inherits
 		.iter()

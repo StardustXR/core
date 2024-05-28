@@ -137,9 +137,12 @@ async fn fusion_pulses() {
 		}
 	}
 
-	let field =
-		super::fields::SphereField::create(client.get_root(), mint::Vector3::from([0.0; 3]), 0.1)
-			.unwrap();
+	let field = super::fields::SphereField::create(
+		client.get_root(),
+		stardust_xr::values::Vector3::from([0.0; 3]),
+		0.1,
+	)
+	.unwrap();
 
 	let data = Datamap::from_typed(Test::default()).unwrap();
 	let pulse_sender = PulseSender::create(client.get_root(), Transform::none(), &data).unwrap();

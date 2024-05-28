@@ -9,7 +9,7 @@ repository = "https://github.com/StardustXR/core/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
-flatbuffers = "23.5.26"
+flatbuffers = "24.3.25"
 flexbuffers = { version = "2.0.0", features = [
     "serialize_human_readable",
     "deserialize_human_readable",
@@ -21,3 +21,6 @@ serde_repr = "0.1.18"
 
 [build-dependencies]
 manifest-dir-macros = "0.1.18"
+
+[dev-dependencies]
+mint = { version = "0.5.9", features = ["serde"] }
