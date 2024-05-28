@@ -148,8 +148,8 @@ union "SurfaceID" {
 struct "Geometry" {
     description "The origin and size of the surface's \"solid\" part."
 
-    field "origin" type="vec2" component="int"
-    field "size" type="vec2" component="uint"
+    field "origin" type="vec2" member_type="int"
+    field "size" type="vec2" member_type="uint"
 }
 struct "ToplevelInfo" {
     description "The state of the panel item's toplevel."
@@ -157,7 +157,7 @@ struct "ToplevelInfo" {
     field "parent" type="string" optional=true description="The UID of the panel item of the parent of this toplevel, if it exists"
     field "title" type="string"  optional=true description="Equivalent to the window title"
     field "app_id" type="string" optional=true description="Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>"
-    field "size" type="vec2" component="uint"  description="Current size in pixels"
+    field "size" type="vec2" member_type="uint"  description="Current size in pixels"
     field "min_size" type="vec2" optional=true description="Recommended minimum size in pixels"
     field "max_size" type="vec2" optional=true description="Recommended maximum size in pixels"
     field "logical_rectangle" type="struct" struct="Geometry" description="Surface geometry"
@@ -202,7 +202,7 @@ aspect "PanelItem" {
     }
     signal "set_toplevel_size" side="server" {
         description "Request a resize of the surface (in pixels)."
-        argument "size" type="vec2" component="uint"
+        argument "size" type="vec2" member_type="uint"
     }
     signal "set_toplevel_focused_visuals" side="server" {
         description "Tell the toplevel to appear focused visually if true, or unfocused if false."
@@ -236,7 +236,7 @@ aspect "PanelItem" {
     }
     signal "toplevel_size_changed" side="client" {
         description "The size of the top-level surface changed."
-        argument "size" type="vec2" component="uint"
+        argument "size" type="vec2" member_type="uint"
     }
     
     signal "set_cursor" side="client" {
@@ -264,7 +264,7 @@ aspect "PanelItem" {
     signal "pointer_motion" side="server" {
         description "Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer."
         argument "surface" type="struct" struct="SurfaceID"
-        argument "position" type="vec2" component="uint"
+        argument "position" type="vec2" member_type="uint"
     }
     signal "pointer_button" side="server" {
         description "Send an event to set a pointer button's state if the pointer's active. The `button` is from the `input_event_codes` crate (e.g. BTN_LEFT for left click)."
@@ -275,8 +275,8 @@ aspect "PanelItem" {
     signal "pointer_scroll" side="server" {
         description "Send an event to scroll the pointer if it's active.\nScroll distance is a value in pixels corresponding to the `distance` the surface should be scrolled.\nScroll steps is a value in columns/rows corresponding to the wheel clicks of a mouse or such. This also supports fractions of a wheel click."
         argument "surface" type="struct" struct="SurfaceID"
-        argument "scroll_distance" type="vec2" component="float"
-        argument "scroll_steps" type="vec2" component="float"
+        argument "scroll_distance" type="vec2" member_type="float"
+        argument "scroll_steps" type="vec2" member_type="float"
     }
     signal "pointer_stop_scroll" side="server" {
         description "Send an event to stop scrolling the pointer."
@@ -292,13 +292,13 @@ aspect "PanelItem" {
         description "Put a touch down on this surface with the unique ID `uid` at `position` (in pixels) from top left corner of the surface."
         argument "surface" type="struct" struct="SurfaceID"
         argument "uid" type="uint"
-        argument "position" type="vec2" component="float"
+        argument "position" type="vec2" member_type="float"
     }
     signal "touch_move" side="server" {
         description "Move an existing touch point."
         argument "surface" type="struct" struct="SurfaceID"
         argument "uid" type="uint"
-        argument "position" type="vec2" component="float"
+        argument "position" type="vec2" member_type="float"
     }
     signal "touch_up" side="server" {
         description "Release a touch from its surface."
