@@ -13,7 +13,7 @@ description ""
     
 //     argument "name" type="string"
 //     argument "parent" type="node" aspect="spatial"
-//     argument "transfom" type="struct" struct="transform"
+//     argument "transform" type="struct" struct="transform"
 //     argument "item_type" type="string"
 //     argument "field" type="node" aspect="field"
 // }
@@ -111,11 +111,11 @@ aspect "ItemUi" {
 // }
 
 // signal "create_camera_item_acceptor" side="server" {
-//     description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/<item_type>/acceptor/<name>`."
+//     description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/camera/acceptor/<name>`."
     
 //     argument "name" type="string"
 //     argument "parent" type="node" aspect="spatial"
-//     argument "transfom" type="struct" struct="transform"
+//     argument "transform" type="struct" struct="transform"
 //     argument "item_type" type="string"
 //     argument "field" type="node" aspect="field"
 // 	return type="node" node="CameraItemAcceptor" parent="/item/camera/acceptor" name_argument="name"
@@ -331,12 +331,11 @@ aspect "PanelItemUi" {
     }
 }
 signal "create_panel_item_acceptor" side="server" {
-    description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/<item_type>/acceptor/<name>`."
+    description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/panel/acceptor/<name>`."
     
     argument "name" type="string"
     argument "parent" type="node" aspect="spatial"
-    argument "transfom" type="struct" struct="transform"
-    argument "item_type" type="string"
+    argument "transform" type="struct" struct="transform"
     argument "field" type="node" aspect="field"
 	return type="node" node="PanelItemAcceptor" parent="/item/panel/acceptor" name_argument="name"
 }
