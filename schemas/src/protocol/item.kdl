@@ -142,8 +142,8 @@ aspect "ItemUi" {
 union "SurfaceID" {
 	description ""
 	
-	variant type="empty" name="toplevel"
-	variant type="string" name="child"
+	option type="empty" name="toplevel"
+	option type="string" name="child"
 }
 struct "Geometry" {
     description "The origin and size of the surface's \"solid\" part."

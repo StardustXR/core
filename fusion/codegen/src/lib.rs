@@ -136,6 +136,7 @@ fn generate_union_option(union_option: &UnionOption) -> TokenStream {
 }
 fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 	match argument_type {
+		ArgumentType::Empty => "Empty".to_string(),
 		ArgumentType::Bool => "Bool".to_string(),
 		ArgumentType::Int => "Int".to_string(),
 		ArgumentType::UInt => "UInt".to_string(),
@@ -527,6 +528,7 @@ fn generate_argument_decl(argument: &Argument, returned: bool) -> TokenStream {
 }
 fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStream {
 	match argument_type {
+		ArgumentType::Empty => quote!(()),
 		ArgumentType::Bool => quote!(bool),
 		ArgumentType::Int => quote!(i32),
 		ArgumentType::UInt => quote!(u32),

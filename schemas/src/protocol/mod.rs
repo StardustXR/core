@@ -97,6 +97,7 @@ pub enum Side {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgumentType {
+	Empty,
 	Bool,
 	Int,
 	UInt,

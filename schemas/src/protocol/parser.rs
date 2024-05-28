@@ -225,6 +225,7 @@ fn convert_argument(argument: &KdlNode) -> Result<Argument, ParseError> {
 }
 fn convert_argument_type(argument: &KdlNode, key: &str) -> Result<ArgumentType, ParseError> {
 	Ok(match get_string_property(argument, key)? {
+		"empty" => ArgumentType::Empty,
 		"bool" => ArgumentType::Bool,
 		"int" => ArgumentType::Int,
 		"uint" => ArgumentType::UInt,
