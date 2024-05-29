@@ -141,8 +141,8 @@ fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 		ArgumentType::Int => "Int".to_string(),
 		ArgumentType::UInt => "UInt".to_string(),
 		ArgumentType::Float => "Float".to_string(),
-		ArgumentType::Vec2 => "Vec2".to_string(),
-		ArgumentType::Vec3 => "Vec3".to_string(),
+		ArgumentType::Vec2(_) => "Vec2".to_string(),
+		ArgumentType::Vec3(_) => "Vec3".to_string(),
 		ArgumentType::Quat => "Quat".to_string(),
 		ArgumentType::Color => "Color".to_string(),
 		ArgumentType::String => "String".to_string(),
@@ -497,10 +497,10 @@ fn generate_argument_serialize(
 	}
 
 	match argument_type {
-		ArgumentType::Vec2 => {
+		ArgumentType::Vec2(_) => {
 			quote!(#name.into())
 		}
-		ArgumentType::Vec3 => {
+		ArgumentType::Vec3(_) => {
 			quote!(#name.into())
 		}
 		ArgumentType::Quat => {
@@ -533,18 +533,20 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 		ArgumentType::Int => quote!(i32),
 		ArgumentType::UInt => quote!(u32),
 		ArgumentType::Float => quote!(f32),
-		ArgumentType::Vec2 => {
+		ArgumentType::Vec2(t) => {
+			let t = generate_argument_type(&t, true);
 			if !owned {
-				quote!(impl Into<Vector2<f32>>)
+				quote!(impl Into<Vector2<#t>>)
 			} else {
-				quote!(Vector2<f32>)
+				quote!(Vector2<#t>)
 			}
 		}
-		ArgumentType::Vec3 => {
+		ArgumentType::Vec3(t) => {
+			let t = generate_argument_type(&t, true);
 			if !owned {
-				quote!(impl Into<Vector3<f32>>)
+				quote!(impl Into<Vector3<#t>>)
 			} else {
-				quote!(Vector3<f32>)
+				quote!(Vector3<#t>)
 			}
 		}
 		ArgumentType::Quat => {
