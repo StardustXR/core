@@ -1,0 +1,213 @@
+version (u32)1
+interface "/item/panel"
+description ""
+
+union "SurfaceID" {
+	description ""
+	
+	option type="empty" name="toplevel"
+	option type="string" name="child"
+}
+struct "Geometry" {
+    description "The origin and size of the surface's \"solid\" part."
+
+    field "origin" type="vec2" component_type="int"
+    field "size" type="vec2" component_type="uint"
+}
+struct "ToplevelInfo" {
+    description "The state of the panel item's toplevel."
+
+    field "parent" type="string" optional=true description="The UID of the panel item of the parent of this toplevel, if it exists"
+    field "title" type="string"  optional=true description="Equivalent to the window title"
+    field "app_id" type="string" optional=true description="Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>"
+    field "size" type="vec2" component_type="uint"  description="Current size in pixels"
+    field "min_size" type="vec2" optional=true description="Recommended minimum size in pixels"
+    field "max_size" type="vec2" optional=true description="Recommended maximum size in pixels"
+    field "logical_rectangle" type="struct" struct="Geometry" description="Surface geometry"
+}
+struct "ChildInfo" {
+    description "Data on positioning a child."
+
+    field "parent" type="struct" struct="SurfaceID"
+    field "geometry" type="struct" struct="Geometry"
+}
+struct "PanelItemInitData" {
+    description "The init data for the panel item."
+    
+    field "cursor" type="struct" struct="Geometry" optional=true
+    field "toplevel" type="struct" struct="ToplevelInfo"
+    field "children" type="map" value_type="struct" struct="ChildInfo"
+    field "pointer_grab" type="struct" struct="SurfaceID" optional=true description="The surface, if any, that has exclusive input to the pointer."
+    field "keyboard_grab" type="struct" struct="SurfaceID" optional=true description="The surface, if any, that has exclusive input to the keyboard."
+}
+
+aspect "PanelItem" {
+    description "An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.)."
+    inherits "Item"
+    
+    signal "apply_cursor_material" side="server" {
+        description "Apply the cursor as a material to a model."
+        argument "model_part" type="node" aspect="ModelPart"
+    }
+    signal "apply_surface_material" side="server" {
+        description "Apply a surface's visuals as a material to a model."
+        argument "surface" type="struct" struct="SurfaceID"
+        argument "model_part" type="node" aspect="ModelPart"
+    }
+    
+    signal "close_toplevel" side="server" {
+        description "Try to close the toplevel.
+        
+        The panel item UI handler or panel item acceptor will drop the panel item if this succeeds."
+    }
+    signal "auto_size_toplevel" side="server" {
+        description "Request a resize of the surface to whatever size the 2D app wants."
+    }
+    signal "set_toplevel_size" side="server" {
+        description "Request a resize of the surface (in pixels)."
+        argument "size" type="vec2" component_type="uint"
+    }
+    signal "set_toplevel_focused_visuals" side="server" {
+        description "Tell the toplevel to appear focused visually if true, or unfocused if false."
+        argument "focused" type="bool"
+    }
+    signal "toplevel_parent_changed" side="client" {
+        description "This is invoked when the parent of the top-level surface changes."
+        argument "parent_uid" type="string"
+    }
+    signal "toplevel_title_changed" side="client" {
+        description "The title of the top-level surface was changed."
+        argument "title" type="string"
+    }
+    signal "toplevel_app_id_changed" side="client" {
+        description "The app id of the top-level surface was updated."
+        argument "app_id" type="string"
+    }
+    signal "toplevel_fullscreen_active" side="client" {
+        description "The fullscreen state of the top-level surface was updated. The parameter 'active' indicates whether fullscreen is now active or not."
+        argument "active" type="bool"
+    }
+    signal "toplevel_move_request" side="client" {
+        description "This receives a request to move the top-level surface."
+    }
+    signal "toplevel_resize_request" side="client" {
+        description "This is invoked when there is a request to resize the top-level surface. The parameters up, down, left and right indicate which edges are supposed to resize."
+        argument "up" type="bool"
+        argument "down" type="bool"
+        argument "left" type="bool"
+        argument "right" type="bool"
+    }
+    signal "toplevel_size_changed" side="client" {
+        description "The size of the top-level surface changed."
+        argument "size" type="vec2" component_type="uint"
+    }
+    
+    signal "set_cursor" side="client" {
+        description "The cursor should be shown and its material will automatically update -- you just need to account for the new size/hotspot. The hotspot is the offset in the geometry."
+        argument "geometry" type="struct" struct="geometry"
+    }
+    signal "hide_cursor" side="client" {
+        description "The cursor should be hidden."
+    }
+    signal "create_child" side="client" {
+        description "A new child was created. Children are drawn independently for efficiency or to exceed the boundaries of the toplevel."
+        argument "uid" type="string"
+        argument "info" type="struct" struct="ChildInfo"
+    }
+    signal "reposition_child" side="client" {
+        description "The child has moved or resized itself, update your UI accordingly."
+        argument "uid" type="string"
+        argument "geometry" type="struct" struct="geometry"
+    }
+    signal "destroy_child" side="client" {
+        description "The child was destroyed."
+        argument "uid" type="string"
+    }
+    
+    signal "pointer_motion" side="server" {
+        description "Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer."
+        argument "surface" type="struct" struct="SurfaceID"
+        argument "position" type="vec2" component_type="float"
+    }
+    signal "pointer_button" side="server" {
+        description "Send an event to set a pointer button's state if the pointer's active. The `button` is from the `input_event_codes` crate (e.g. BTN_LEFT for left click)."
+        argument "surface" type="struct" struct="SurfaceID"
+        argument "button" type="uint"
+        argument "pressed" type="bool"
+    }
+    signal "pointer_scroll" side="server" {
+        description "Send an event to scroll the pointer if it's active.\nScroll distance is a value in pixels corresponding to the `distance` the surface should be scrolled.\nScroll steps is a value in columns/rows corresponding to the wheel clicks of a mouse or such. This also supports fractions of a wheel click."
+        argument "surface" type="struct" struct="SurfaceID"
+        argument "scroll_distance" type="vec2" component_type="float"
+        argument "scroll_steps" type="vec2" component_type="float"
+    }
+    signal "pointer_stop_scroll" side="server" {
+        description "Send an event to stop scrolling the pointer."
+        argument "surface" type="struct" struct="SurfaceID"
+    }
+    signal "keyboard_keys" side="server" {
+        description "Send a series of key presses and releases (positive keycode for pressed, negative for released)."
+        argument "surface" type="struct" struct="SurfaceID"
+        argument "keymap_id" type="string"
+        argument "keys" type="vec" member_type="int"
+    }
+    signal "touch_down" side="server" {
+        description "Put a touch down on this surface with the unique ID `uid` at `position` (in pixels) from top left corner of the surface."
+        argument "surface" type="struct" struct="SurfaceID"
+        argument "uid" type="uint"
+        argument "position" type="vec2" component_type="float"
+    }
+    signal "touch_move" side="server" {
+        description "Move an existing touch point."
+        argument "uid" type="uint"
+        argument "position" type="vec2" component_type="float"
+    }
+    signal "touch_up" side="server" {
+        description "Release a touch from its surface."
+        argument "uid" type="uint"
+    }
+    signal "reset_input" side="server" {
+        description "Reset all input, such as pressed keys and pointer clicks and touches. Useful for when it's newly captured into an item acceptor to make sure no input gets stuck."
+    }
+}
+
+// please dear god refactor this to be not monomorphized somehow
+signal "register_panel_item_ui" side="server" {
+    description "Register this client to manage the items of a certain type and create default 3D UI for them."
+}
+aspect "PanelItemUi" {
+    description ""
+    
+    signal "create_item" side="client" {
+        description ""
+        argument "uid" type="string"
+        argument "item" type="node" node="PanelItem"
+        argument "initial_data" type="union" union="PanelItemInitData"
+    }
+    signal "create_acceptor" side="client" {
+        description ""
+        argument "uid" type="string"
+        argument "acceptor" type="node" node="PanelItemAcceptor"
+        argument "acceptor_field" type="node" node="Field"
+    }
+}
+signal "create_panel_item_acceptor" side="server" {
+    description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/panel/acceptor/<name>`."
+    
+    argument "name" type="string"
+    argument "parent" type="node" aspect="SpatialRef"
+    argument "transform" type="struct" struct="transform"
+    argument "field" type="node" aspect="field"
+	return type="node" node="PanelItemAcceptor" parent="/item/panel/acceptor" name_argument="name"
+}
+aspect "PanelItemAcceptor" {
+    description ""
+    inherits "ItemAcceptor"
+    
+    signal "capture_item" side="client" {
+        description ""
+        argument "uid" type="string"
+        argument "item" type="node" node="PanelItem"
+        argument "initial_data" type="union" union="PanelItemInitData"
+    }
+}

@@ -23,7 +23,7 @@ struct "Transform" {
 signal "create_spatial" side="server" {
 	description "Create a spatial relative to another spatial"
 	argument "name" type="string"
-	argument "parent" type="node" aspect="spatial"
+	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="transform"
 	argument "zoneable" type="bool"
 	return type="node" aspect="Spatial" parent="/spatial/spatial" name_argument="name"

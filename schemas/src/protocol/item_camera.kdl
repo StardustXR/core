@@ -1,0 +1,55 @@
+version (u32)1
+interface "/item/camera"
+description ""
+
+signal "create_camera_item" side="server" {
+    description "Create a camera item at a specific location"
+    
+    argument "name" type="string"
+    argument "parent" type="node" aspect="SpatialRef"
+    argument "transform" type="struct" struct="transform"
+	return type="node" node="CameraItem" parent="/item/camera" name_argument="name"
+}
+aspect "CameraItem" {
+    description ""
+    inherits "Item"
+}
+
+signal "register_camera_item_ui" side="server" {
+    description "Register this client to manage camera items and create default 3D UI for them."
+}
+aspect "CameraItemUi" {
+    description ""
+    
+    signal "create_item" side="client" {
+        description ""
+        argument "uid" type="string"
+        argument "item" type="node" node="CameraItem"
+    }
+    signal "create_acceptor" side="client" {
+        description ""
+        argument "uid" type="string"
+        argument "acceptor" type="node" node="CameraItemAcceptor"
+        argument "acceptor_field" type="node" node="Field"
+    }
+}
+
+signal "create_camera_item_acceptor" side="server" {
+    description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/camera/acceptor/<name>`."
+    
+    argument "name" type="string"
+    argument "parent" type="node" aspect="SpatialRef"
+    argument "transform" type="struct" struct="transform"
+    argument "field" type="node" aspect="field"
+	return type="node" node="CameraItemAcceptor" parent="/item/camera/acceptor" name_argument="name"
+}
+aspect "CameraItemAcceptor" {
+    description ""
+    inherits "ItemAcceptor"
+    
+    signal "capture_item" side="client" {
+        description ""
+        argument "uid" type="string"
+        argument "item" type="node" node="CameraItem"
+    }
+}

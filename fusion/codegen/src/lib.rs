@@ -44,6 +44,14 @@ pub fn codegen_input_protocol(_input: proc_macro::TokenStream) -> proc_macro::To
 pub fn codegen_item_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	codegen_client_protocol(ITEM_PROTOCOL, true)
 }
+#[proc_macro]
+pub fn codegen_item_camera_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(ITEM_CAMERA_PROTOCOL, true)
+}
+#[proc_macro]
+pub fn codegen_item_panel_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+	codegen_client_protocol(ITEM_PANEL_PROTOCOL, true)
+}
 
 fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_macro::TokenStream {
 	let protocol = Protocol::parse(protocol).unwrap();
