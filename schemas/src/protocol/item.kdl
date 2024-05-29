@@ -264,7 +264,7 @@ aspect "PanelItem" {
     signal "pointer_motion" side="server" {
         description "Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer."
         argument "surface" type="struct" struct="SurfaceID"
-        argument "position" type="vec2" component_type="uint"
+        argument "position" type="vec2" component_type="float"
     }
     signal "pointer_button" side="server" {
         description "Send an event to set a pointer button's state if the pointer's active. The `button` is from the `input_event_codes` crate (e.g. BTN_LEFT for left click)."
