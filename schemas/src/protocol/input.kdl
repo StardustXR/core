@@ -1,5 +1,5 @@
 version (u32)1
-interface "/input"
+interface (u64)3
 description ""
 
 struct "Joint" {
@@ -77,12 +77,12 @@ struct "InputData" {
 signal "create_input_method" side="server" {
 	description "Create an input method node"
 
-	argument "name" type="string"
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "initial_data" type="struct" struct="InputDataType"
 	argument "datamap" type="datamap"
-	return type="node" node="InputMethod" parent="/input/method" name_argument="name"
+	return type="node" node="InputMethod" id_argument="id"
 }
 aspect "InputMethodRef" {
 	description "Node representing a spatial input device"
@@ -141,12 +141,12 @@ aspect "InputMethod" {
 
 signal "create_input_handler" side="server" {
 	description "Create an input handler node"
-
-	argument "name" type="string"
+    
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "field" type="node" aspect="Field"
-	return type="node" node="InputHandler" parent="/input/handler" name_argument="name"
+	return type="node" node="InputHandler" id_argument="id"
 }
 aspect "InputHandler" {
 	description "Handle raw input events."

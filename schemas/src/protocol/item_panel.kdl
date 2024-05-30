@@ -1,5 +1,5 @@
 version (u32)1
-interface "/item/panel"
+interface (u64)12
 description ""
 
 union "SurfaceID" {
@@ -194,11 +194,11 @@ aspect "PanelItemUi" {
 signal "create_panel_item_acceptor" side="server" {
     description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/panel/acceptor/<name>`."
     
-    argument "name" type="string"
+    argument "id" type="id"
     argument "parent" type="node" aspect="SpatialRef"
     argument "transform" type="struct" struct="transform"
     argument "field" type="node" aspect="field"
-	return type="node" node="PanelItemAcceptor" parent="/item/panel/acceptor" name_argument="name"
+	return type="node" node="PanelItemAcceptor" id_argument="id"
 }
 aspect "PanelItemAcceptor" {
     description ""

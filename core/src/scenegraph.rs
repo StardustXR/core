@@ -23,15 +23,15 @@ pub enum ScenegraphError {
 pub trait Scenegraph {
 	fn send_signal(
 		&self,
-		path: &str,
-		method: &str,
+		node: u64,
+		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), ScenegraphError>;
 	fn execute_method(
 		&self,
-		path: &str,
-		method: &str,
+		node: u64,
+		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,

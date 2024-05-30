@@ -19,7 +19,6 @@ use crate::{
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
 };
-use nanoid::nanoid;
 use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_spatial_protocol!();
@@ -124,13 +123,14 @@ impl Transform {
 impl_aspects!(Spatial: OwnedAspect, SpatialRefAspect);
 impl Spatial {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		zoneable: bool,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_spatial(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			zoneable,
@@ -141,13 +141,14 @@ impl Spatial {
 impl_aspects!(Zone: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Zone {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		field: &impl FieldAspect,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_zone(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			field,

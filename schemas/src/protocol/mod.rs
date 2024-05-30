@@ -4,7 +4,7 @@ use thiserror::Error;
 
 mod parser;
 
-// pub const ROOT_PROTOCOL: &'static str = include_str!("root.kdl");
+pub const ROOT_PROTOCOL: &'static str = include_str!("root.kdl");
 pub const NODE_PROTOCOL: &'static str = include_str!("node.kdl");
 pub const SPATIAL_PROTOCOL: &'static str = include_str!("spatial.kdl");
 pub const FIELD_PROTOCOL: &'static str = include_str!("field.kdl");
@@ -35,7 +35,7 @@ impl Protocol {
 
 #[derive(Debug)]
 pub struct Interface {
-	pub path: String,
+	pub node_id: u64,
 	pub members: Vec<Member>,
 }
 
@@ -78,6 +78,7 @@ pub struct Aspect {
 #[derive(Debug)]
 pub struct Member {
 	pub name: String,
+	pub opcode: u64, // FNV hash (https://crates.io/crates/fnv) of the aspect/interface and the member name
 	pub description: String,
 	pub side: Side,
 	pub _type: MemberType,
@@ -113,6 +114,7 @@ pub enum ArgumentType {
 	Bytes,
 	Vec(Box<ArgumentType>),
 	Map(Box<ArgumentType>),
+	NodeID,
 	Datamap,
 	ResourceID,
 	Enum(String),
@@ -120,14 +122,8 @@ pub enum ArgumentType {
 	Struct(String),
 	Node {
 		_type: String,
-		return_info: Option<NodeReturnInfo>,
+		return_id_parameter_name: Option<String>,
 	},
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NodeReturnInfo {
-	pub parent: String,
-	pub name_argument: String,
 }
 
 #[derive(Debug)]

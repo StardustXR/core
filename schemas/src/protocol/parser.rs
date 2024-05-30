@@ -1,6 +1,10 @@
 use super::*;
+use fnv::FnvHasher;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue, NodeKey};
-use std::fmt::Display;
+use std::{
+	fmt::Display,
+	hash::{DefaultHasher, Hash, Hasher},
+};
 use thiserror::Error;
 
 pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
@@ -14,20 +18,19 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 	.to_owned();
 	let interface_path = document
 		.get("interface")
-		.and_then(|n| get_string_property(n, 0).ok())
-		.map(ToString::to_string);
+		.and_then(|n| get_int_property(n, 0).ok().map(|i| i as u64));
 	if document.nodes().iter().any(|m| check_member(&m)) && interface_path.is_none() {
 		return Err(ParseError::MissingProtocolInterfacePath);
 	}
 	let interface = interface_path
-		.map(|path| {
+		.map(|node_id| {
 			let members = document
 				.nodes()
 				.iter()
 				.filter(check_member)
-				.map(convert_member)
+				.map(|m| convert_member(m, FnvHasher::default()))
 				.collect::<Result<Vec<_>, ParseError>>()?;
-			Ok(Interface { path, members })
+			Ok(Interface { node_id, members })
 		})
 		.transpose()?;
 
@@ -143,7 +146,13 @@ fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 	let members = nodes
 		.iter()
 		.filter(check_member)
-		.map(convert_member)
+		.map(|m| {
+			convert_member(m, {
+				let mut hasher = FnvHasher::default();
+				name.hash(&mut hasher);
+				hasher
+			})
+		})
 		.collect::<Result<Vec<_>, ParseError>>()?;
 	Ok(Aspect {
 		name,
@@ -156,7 +165,7 @@ fn check_member(member: &&KdlNode) -> bool {
 	let name = member.name().value();
 	name == "signal" || name == "method"
 }
-fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
+fn convert_member(member: &KdlNode, mut hasher: FnvHasher) -> Result<Member, ParseError> {
 	let nodes = member.children().unwrap().nodes();
 
 	let _type = member.name().value();
@@ -183,6 +192,7 @@ fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
 	};
 
 	let name = get_string_property(member, 0)?.to_string();
+	name.hash(&mut hasher);
 	let description = get_description_node(member)?;
 	let arguments = nodes
 		.iter()
@@ -200,6 +210,7 @@ fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
 		.transpose()?;
 	Ok(Member {
 		name,
+		opcode: hasher.finish(),
 		description,
 		side,
 		_type,
@@ -243,6 +254,7 @@ fn convert_argument_type(argument: &KdlNode, key: &str) -> Result<ArgumentType, 
 		"bytes" => ArgumentType::Bytes,
 		"vec" => ArgumentType::Vec(Box::new(convert_argument_type(argument, "member_type")?)),
 		"map" => ArgumentType::Map(Box::new(convert_argument_type(argument, "value_type")?)),
+		"id" => ArgumentType::NodeID,
 		"datamap" => ArgumentType::Datamap,
 		"resource" => ArgumentType::ResourceID,
 		"enum" => ArgumentType::Enum(get_string_property(argument, "enum")?.to_string()),
@@ -252,13 +264,9 @@ fn convert_argument_type(argument: &KdlNode, key: &str) -> Result<ArgumentType, 
 			_type: get_string_property(argument, "aspect")
 				.or_else(|_| get_string_property(argument, "node"))?
 				.to_string(),
-			return_info: get_string_property(argument, "parent")
-				.ok()
-				.zip(get_string_property(argument, "name_argument").ok())
-				.map(|(parent, name_argument)| NodeReturnInfo {
-					parent: parent.to_string(),
-					name_argument: name_argument.to_string(),
-				}),
+			return_id_parameter_name: get_string_property(argument, "id_argument")
+				.map(ToString::to_string)
+				.ok(),
 		},
 		t => {
 			return Err(ParseError::InvalidPropertyType {

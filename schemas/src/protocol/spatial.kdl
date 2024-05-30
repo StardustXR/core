@@ -1,5 +1,5 @@
 version (u32)1
-interface "/spatial" 
+interface (u64)1
 description r#"
 	A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
 
@@ -22,11 +22,12 @@ struct "Transform" {
 
 signal "create_spatial" side="server" {
 	description "Create a spatial relative to another spatial"
-	argument "name" type="string"
+
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="transform"
 	argument "zoneable" type="bool"
-	return type="node" aspect="Spatial" parent="/spatial/spatial" name_argument="name"
+	return type="node" aspect="Spatial" id_argument="id"
 }
 aspect "SpatialRef" {
 	description r#"
@@ -98,11 +99,12 @@ signal "create_zone" side="server" {
 	    Create a zone given a field, this zone will become inactive if the field is dropped.
         Keep in mind the zone and its field are different spatials, they can move independently.
     "#
-	argument "name" type="string"
+    
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "field" type="node" aspect="field"
-	return type="node" node="zone" parent="/spatial/zone" name_argument="name"
+	return type="node" node="zone" id_argument="id"
 }
 aspect "Zone" {
 	description r#"

@@ -1,5 +1,5 @@
 version (u32)1
-interface "/field"
+interface (u64)2
 description r#"
 	Analog SDFs to define boundaries for input, interaction, and behavior.
 "#
@@ -51,11 +51,12 @@ aspect "Field" {
 
 signal "create_box_field" side="server" {
 	description "Create a field with the shape of a box"
-	argument "name" type="string"
+    
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "size" type="vec3"
-	return type="node" node="BoxField" parent="/field" name_argument="name"
+	return type="node" node="BoxField" id_argument="id"
 }
 aspect "BoxField" {
 	description "A cuboid field with adjustable size"
@@ -70,12 +71,13 @@ aspect "BoxField" {
 
 signal "create_cylinder_field" side="server" {
 	description "Create a field with the shape of a box"
-	argument "name" type="string"
+    
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "length" type="float"
 	argument "radius" type="float"
-	return type="node" node="CylinderField" parent="/field" name_argument="name"
+	return type="node" node="CylinderField" id_argument="id"
 }
 aspect "CylinderField" {
 	description "A cylinder-shaped field with adjustable size"
@@ -91,11 +93,12 @@ aspect "CylinderField" {
 
 signal "create_sphere_field" side="server" {
 	description "Create a field with the shape of a sphere"
-	argument "name" type="string"
+    
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "position" type="vec3"
 	argument "radius" type="float"
-	return type="node" node="SphereField" parent="/field" name_argument="name"
+	return type="node" node="SphereField" id_argument="id"
 }
 aspect "SphereField" {
 	description "A sphere-shaped field with adjustable size"
@@ -110,12 +113,13 @@ aspect "SphereField" {
 
 signal "create_torus_field" side="server" {
 	description "Create a field with the shape of a torus"
-	argument "name" type="string"
+    
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "radius_a" type="float"
 	argument "radius_b" type="float"
-	return type="node" node="TorusField" parent="/field" name_argument="name"
+	return type="node" node="TorusField" id_argument="id"
 }
 aspect "TorusField" {
 	description "A torus-shaped field with adjustable size"

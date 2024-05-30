@@ -19,6 +19,8 @@ use std::{
 };
 use thiserror::Error;
 
+stardust_xr_fusion_codegen::codegen_node_protocol!();
+
 pub type MethodResult<T> = color_eyre::eyre::Result<T>;
 
 #[derive(Error, Debug)]
@@ -72,24 +74,15 @@ impl From<String> for NodeError {
 pub trait NodeType: Sized + Send + Sync + 'static {
 	/// Get a reference to the node.
 	fn node(&self) -> &Node;
-	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Self;
-	/// Create a node of this type from a parent node path and name
-	fn from_parent_name(
-		client: &Arc<Client>,
-		parent: impl AsRef<str>,
-		name: impl AsRef<str>,
-		destroyable: bool,
-	) -> Self {
-		let path = format!("{}/{}", parent.as_ref(), name.as_ref());
-		Self::from_path(client, path, destroyable)
-	}
+	fn from_id(client: &Arc<Client>, id: u64, destroyable: bool) -> Self;
 	/// Try to get the client
 	fn client(&self) -> NodeResult<Arc<Client>> {
 		self.node().client()
 	}
 	/// Set whether the node is active or not. This has different effects depending on the node.
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.node().send_remote_signal("set_enabled", &enabled)
+		self.node()
+			.send_remote_signal(OWNED_SET_ENABLED_SERVER_OPCODE, &enabled)
 	}
 	/// Create an alias of this node.
 	/// Not the same as node scenegraph aliases,
@@ -111,21 +104,23 @@ pub type NodeResult<O> = Result<O, NodeError>;
 pub struct NodeInternals {
 	client: Weak<Client>,
 	self_ref: Weak<NodeInternals>,
-	pub(crate) path: String,
-	pub(crate) local_signals: Mutex<FxHashMap<String, Arc<Signal>>>,
-	pub(crate) local_methods: Mutex<FxHashMap<String, Arc<Method>>>,
+	pub(crate) id: u64,
+	pub(crate) local_signals: Mutex<FxHashMap<u64, Arc<Signal>>>,
+	pub(crate) local_methods: Mutex<FxHashMap<u64, Arc<Method>>>,
 	pub(crate) destroyable: bool,
 }
-
 impl Drop for NodeInternals {
 	fn drop(&mut self) {
 		if let Some(client) = self.client.upgrade() {
 			if self.destroyable {
-				let _ = client
-					.message_sender_handle
-					.signal(&self.path, "destroy", &[], Vec::new());
+				let _ = client.message_sender_handle.signal(
+					self.id,
+					OWNED_DESTROY_SERVER_OPCODE,
+					&[],
+					Vec::new(),
+				);
 			}
-			client.scenegraph.remove_node(&self.path);
+			client.scenegraph.remove_node(self.id);
 		}
 	}
 }
@@ -136,44 +131,20 @@ pub enum Node {
 	Aliased(Weak<NodeInternals>),
 }
 impl Node {
-	pub(crate) fn new<'a, S: Serialize>(
-		client: &Arc<Client>,
-		interface_path: &'a str,
-		interface_method: &'a str,
-		parent_path: &'a str,
-		destroyable: bool,
-		id: &str,
-		data: S,
-	) -> Result<Node, NodeError> {
-		let node = Node::from_parent_name(client, parent_path, id, destroyable);
-
-		client
-			.message_sender_handle
-			.signal(
-				interface_path,
-				interface_method,
-				&serialize(data).map_err(|_| NodeError::Serialization)?,
-				Vec::new(),
-			)
-			.map_err(|e| NodeError::MessengerError { e })?;
-
-		Ok(node)
-	}
-
 	/// Add a signal to the node so that the server can send a message to it. Not needed unless implementing functionality Fusion does not already have.
-	pub fn add_local_signal<F>(&self, name: impl ToString, signal: F) -> Result<(), NodeError>
+	pub fn add_local_signal<F>(&self, id: u64, signal: F) -> Result<(), NodeError>
 	where
 		F: Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<()> + Send + Sync + 'static,
 	{
 		self.internals()?
 			.local_signals
 			.lock()
-			.insert(name.to_string(), Arc::new(signal));
+			.insert(id, Arc::new(signal));
 		Ok(())
 	}
 
 	/// Add a signal to the node so that the server can send a message to it and get a response back. Not needed unless implementing functionality Fusion does not already have.
-	pub fn add_local_method<F>(&self, name: impl ToString, method: F) -> Result<(), NodeError>
+	pub fn add_local_method<F>(&self, id: u64, method: F) -> Result<(), NodeError>
 	where
 		F: Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, Vec<OwnedFd>)>
 			+ Send
@@ -183,7 +154,7 @@ impl Node {
 		self.internals()?
 			.local_methods
 			.lock()
-			.insert(name.to_string(), Arc::new(method));
+			.insert(id, Arc::new(method));
 		Ok(())
 	}
 
@@ -203,8 +174,8 @@ impl Node {
 	}
 
 	/// Get the entire path of the node including the name.
-	pub fn get_path(&self) -> Result<String, NodeError> {
-		Ok(self.internals()?.path.clone())
+	pub fn get_id(&self) -> Result<u64, NodeError> {
+		Ok(self.internals()?.id)
 	}
 
 	/// Check if this node is still alive.
@@ -216,13 +187,9 @@ impl Node {
 	}
 
 	/// Send a signal to the node on the server. Not needed unless implementing functionality Fusion does not already have.
-	pub fn send_remote_signal<S: Serialize>(
-		&self,
-		signal_name: &str,
-		data: &S,
-	) -> Result<(), NodeError> {
+	pub fn send_remote_signal<S: Serialize>(&self, signal: u64, data: &S) -> Result<(), NodeError> {
 		self.send_remote_signal_raw(
-			signal_name,
+			signal,
 			&serialize(data).map_err(|_| NodeError::Serialization)?,
 			Vec::new(),
 		)
@@ -230,37 +197,37 @@ impl Node {
 	/// Send a signal to the node on the server with raw data (like when sending flatbuffers over). Not needed unless implementing functionality Fusion does not already have.
 	pub fn send_remote_signal_raw(
 		&self,
-		signal_name: &str,
+		signal: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), NodeError> {
 		self.client()?
 			.message_sender_handle
-			.signal(&self.get_path()?, signal_name, data, fds)
+			.signal(self.get_id()?, signal, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
 	pub async fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
 		&self,
-		method_name: &str,
+		method: u64,
 		send_data: &S,
 	) -> Result<D, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(method_name, &send_data, Vec::new())?;
+		let future = self.execute_remote_method_raw(method, &send_data, Vec::new())?;
 		let data = future.await?;
 		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
 	}
 	/// Execute a method on the node on the server with raw data (like when sending over flatbuffers). Not needed unless implementing functionality Fusion does not already have.
 	pub fn execute_remote_method_raw(
 		&self,
-		method_name: &str,
+		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<impl Future<Output = Result<Message, NodeError>>, NodeError> {
 		let future = self
 			.client()?
 			.message_sender_handle
-			.method(&self.get_path()?, method_name, data, fds)
+			.method(self.get_id()?, method, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
@@ -278,11 +245,11 @@ impl NodeType for Node {
 		}
 	}
 
-	fn from_path(client: &Arc<Client>, path: String, destroyable: bool) -> Node {
+	fn from_id(client: &Arc<Client>, id: u64, destroyable: bool) -> Node {
 		let node = Arc::new_cyclic(|self_ref| NodeInternals {
 			client: Arc::downgrade(client),
 			self_ref: self_ref.clone(),
-			path: path.to_string(),
+			id,
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
 			destroyable,
@@ -293,11 +260,11 @@ impl NodeType for Node {
 }
 impl serde::Serialize for Node {
 	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-		let node_path = self
+		let node_id = self
 			.node()
-			.get_path()
+			.get_id()
 			.map_err(|e| serde::ser::Error::custom(e))?;
-		serializer.serialize_str(&node_path)
+		serializer.serialize_u64(node_id)
 	}
 }
 impl Debug for Node {
@@ -305,7 +272,7 @@ impl Debug for Node {
 		let mut dbg = f.debug_struct("Node");
 
 		if let Ok(internals) = self.internals() {
-			dbg.field("path", &internals.path)
+			dbg.field("id", &internals.id)
 				.field(
 					"local_signals",
 					&internals
@@ -331,4 +298,3 @@ impl Debug for Node {
 		dbg.finish()
 	}
 }
-stardust_xr_fusion_codegen::codegen_node_protocol!();

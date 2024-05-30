@@ -36,7 +36,7 @@ impl<'a> flatbuffers::Follow<'a> for Message<'a> {
 impl<'a> Message<'a> {
   pub const VT_TYPE_: flatbuffers::VOffsetT = 4;
   pub const VT_ID: flatbuffers::VOffsetT = 6;
-  pub const VT_OBJECT: flatbuffers::VOffsetT = 8;
+  pub const VT_NODE: flatbuffers::VOffsetT = 8;
   pub const VT_METHOD: flatbuffers::VOffsetT = 10;
   pub const VT_ERROR: flatbuffers::VOffsetT = 12;
   pub const VT_DATA: flatbuffers::VOffsetT = 14;
@@ -55,11 +55,11 @@ impl<'a> Message<'a> {
     args: &'args MessageArgs<'args>
   ) -> flatbuffers::WIPOffset<Message<'bldr>> {
     let mut builder = MessageBuilder::new(_fbb);
+    builder.add_method(args.method);
+    builder.add_node(args.node);
     builder.add_id(args.id);
     if let Some(x) = args.data { builder.add_data(x); }
     if let Some(x) = args.error { builder.add_error(x); }
-    if let Some(x) = args.method { builder.add_method(x); }
-    if let Some(x) = args.object { builder.add_object(x); }
     builder.add_type_(args.type_);
     builder.finish()
   }
@@ -67,12 +67,8 @@ impl<'a> Message<'a> {
   pub fn unpack(&self) -> MessageT {
     let type_ = self.type_();
     let id = self.id();
-    let object = self.object().map(|x| {
-      x.to_string()
-    });
-    let method = self.method().map(|x| {
-      x.to_string()
-    });
+    let node = self.node();
+    let method = self.method();
     let error = self.error().map(|x| {
       x.to_string()
     });
@@ -82,7 +78,7 @@ impl<'a> Message<'a> {
     MessageT {
       type_,
       id,
-      object,
+      node,
       method,
       error,
       data,
@@ -104,18 +100,18 @@ impl<'a> Message<'a> {
     unsafe { self._tab.get::<u64>(Message::VT_ID, Some(0)).unwrap()}
   }
   #[inline]
-  pub fn object(&self) -> Option<&'a str> {
+  pub fn node(&self) -> u64 {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_OBJECT, None)}
+    unsafe { self._tab.get::<u64>(Message::VT_NODE, Some(0)).unwrap()}
   }
   #[inline]
-  pub fn method(&self) -> Option<&'a str> {
+  pub fn method(&self) -> u64 {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_METHOD, None)}
+    unsafe { self._tab.get::<u64>(Message::VT_METHOD, Some(0)).unwrap()}
   }
   #[inline]
   pub fn error(&self) -> Option<&'a str> {
@@ -142,8 +138,8 @@ impl flatbuffers::Verifiable for Message<'_> {
     v.visit_table(pos)?
      .visit_field::<u8>("type_", Self::VT_TYPE_, false)?
      .visit_field::<u64>("id", Self::VT_ID, false)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("object", Self::VT_OBJECT, false)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("method", Self::VT_METHOD, false)?
+     .visit_field::<u64>("node", Self::VT_NODE, false)?
+     .visit_field::<u64>("method", Self::VT_METHOD, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("error", Self::VT_ERROR, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, u8>>>("data", Self::VT_DATA, false)?
      .finish();
@@ -153,8 +149,8 @@ impl flatbuffers::Verifiable for Message<'_> {
 pub struct MessageArgs<'a> {
     pub type_: u8,
     pub id: u64,
-    pub object: Option<flatbuffers::WIPOffset<&'a str>>,
-    pub method: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub node: u64,
+    pub method: u64,
     pub error: Option<flatbuffers::WIPOffset<&'a str>>,
     pub data: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, u8>>>,
 }
@@ -164,8 +160,8 @@ impl<'a> Default for MessageArgs<'a> {
     MessageArgs {
       type_: 0,
       id: 0,
-      object: None,
-      method: None,
+      node: 0,
+      method: 0,
       error: None,
       data: None,
     }
@@ -186,12 +182,12 @@ impl<'a: 'b, 'b> MessageBuilder<'a, 'b> {
     self.fbb_.push_slot::<u64>(Message::VT_ID, id, 0);
   }
   #[inline]
-  pub fn add_object(&mut self, object: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_OBJECT, object);
+  pub fn add_node(&mut self, node: u64) {
+    self.fbb_.push_slot::<u64>(Message::VT_NODE, node, 0);
   }
   #[inline]
-  pub fn add_method(&mut self, method: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_METHOD, method);
+  pub fn add_method(&mut self, method: u64) {
+    self.fbb_.push_slot::<u64>(Message::VT_METHOD, method, 0);
   }
   #[inline]
   pub fn add_error(&mut self, error: flatbuffers::WIPOffset<&'b  str>) {
@@ -221,7 +217,7 @@ impl core::fmt::Debug for Message<'_> {
     let mut ds = f.debug_struct("Message");
       ds.field("type_", &self.type_());
       ds.field("id", &self.id());
-      ds.field("object", &self.object());
+      ds.field("node", &self.node());
       ds.field("method", &self.method());
       ds.field("error", &self.error());
       ds.field("data", &self.data());
@@ -233,8 +229,8 @@ impl core::fmt::Debug for Message<'_> {
 pub struct MessageT {
   pub type_: u8,
   pub id: u64,
-  pub object: Option<String>,
-  pub method: Option<String>,
+  pub node: u64,
+  pub method: u64,
   pub error: Option<String>,
   pub data: Option<Vec<u8>>,
 }
@@ -243,8 +239,8 @@ impl Default for MessageT {
     Self {
       type_: 0,
       id: 0,
-      object: None,
-      method: None,
+      node: 0,
+      method: 0,
       error: None,
       data: None,
     }
@@ -257,12 +253,8 @@ impl MessageT {
   ) -> flatbuffers::WIPOffset<Message<'b>> {
     let type_ = self.type_;
     let id = self.id;
-    let object = self.object.as_ref().map(|x|{
-      _fbb.create_string(x)
-    });
-    let method = self.method.as_ref().map(|x|{
-      _fbb.create_string(x)
-    });
+    let node = self.node;
+    let method = self.method;
     let error = self.error.as_ref().map(|x|{
       _fbb.create_string(x)
     });
@@ -272,7 +264,7 @@ impl MessageT {
     Message::create(_fbb, &MessageArgs{
       type_,
       id,
-      object,
+      node,
       method,
       error,
       data,

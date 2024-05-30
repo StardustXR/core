@@ -1,5 +1,5 @@
 version (u32)1
-interface "/data"
+interface (u64)7
 description "Interface to send non-spatial data through space"
 
 struct "NewReceiverInfo" {
@@ -24,11 +24,11 @@ method "get_keymap" side="server" {
 signal "create_pulse_sender" side="server" {
 	description ""
 
-	argument "name" type="string"
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "mask" type="datamap"
-	return type="node" node="PulseSender" parent="/data/sender" name_argument="name"
+	return type="node" node="PulseSender" id_argument="id"
 }
 aspect "PulseSender" {
 	description ""
@@ -51,12 +51,12 @@ aspect "PulseSender" {
 signal "create_pulse_receiver" side="server" {
 	description "Create a pulse receiver node. The field will remain intact even if its node is dropped."
 
-	argument "name" type="string"
+    argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"
 	argument "field" type="node" aspect="Field"
 	argument "mask" type="datamap"
-	return type="node" node="PulseReceiver" parent="/data/receiver" name_argument="name"
+	return type="node" node="PulseReceiver" id_argument="id"
 }
 aspect "PulseReceiver" {
 	description ""

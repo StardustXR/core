@@ -2,10 +2,9 @@
 
 use crate::{
 	impl_aspects,
-	node::{NodeError, NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
-use nanoid::nanoid;
 use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_drawable_protocol!();
@@ -13,13 +12,14 @@ stardust_xr_fusion_codegen::codegen_drawable_protocol!();
 impl_aspects!(Lines: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Lines {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		lines: &[Line],
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_lines(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			lines,
@@ -50,43 +50,36 @@ impl_aspects!(Model: OwnedAspect, SpatialRefAspect);
 impl_aspects!(ModelPart: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Model {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		model: &ResourceID,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		load_model(
-			&spatial_parent.client()?,
-			&nanoid::nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			model,
 		)
 	}
-
-	/// Set a property of a material on this model.
-	pub fn model_part(&self, relative_path: &str) -> NodeResult<ModelPart> {
-		if relative_path.starts_with('/') {
-			return Err(NodeError::InvalidPath);
-		}
-		Ok(ModelPart::from_parent_name(
-			&self.client()?,
-			&self.node().get_path()?,
-			relative_path,
-			false,
-		))
+	pub fn part(&self, relative_path: &str) -> NodeResult<ModelPart> {
+		let client = self.client()?;
+		self.bind_model_part(client.generate_id(), relative_path)
 	}
 }
 impl_aspects!(Text: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Text {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		text: &str,
 		style: TextStyle,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_text(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			text,
@@ -158,7 +151,7 @@ async fn fusion_model() {
 	let gyro_resource = ResourceID::new_namespaced("fusion", "gyro");
 	let gyro_model = Model::create(client.get_root(), Transform::none(), &gyro_resource).unwrap();
 	gyro_model
-		.model_part("Gem")
+		.part("Gem")
 		.unwrap()
 		.set_material_parameter(
 			"color",
@@ -174,7 +167,7 @@ async fn fusion_model() {
 	)
 	.unwrap();
 	spike_model
-		.model_part("Cone")
+		.part("Cone")
 		.unwrap()
 		.apply_holdout_material()
 		.unwrap();

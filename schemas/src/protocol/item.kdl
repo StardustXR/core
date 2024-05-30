@@ -1,5 +1,5 @@
 version (u32)1
-interface "/item"
+interface (u64)10
 description ""
 
 aspect "Item" {
@@ -14,7 +14,7 @@ aspect "Item" {
 // signal "create_item_acceptor" side="server" {
 //     description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/<item_type>/acceptor/<name>`."
     
-//     argument "name" type="string"
+//     argument "id" type="id"
 //     argument "parent" type="node" aspect="SpatialRef"
 //     argument "transform" type="struct" struct="transform"
 //     argument "item_type" type="string"

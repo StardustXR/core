@@ -24,7 +24,6 @@ use crate::{
 	node::{NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
-use nanoid::nanoid;
 use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_data_protocol!();
@@ -32,13 +31,14 @@ stardust_xr_fusion_codegen::codegen_data_protocol!();
 impl_aspects!(PulseSender: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl PulseSender {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		mask: &Datamap,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_pulse_sender(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			mask,
@@ -49,14 +49,15 @@ impl PulseSender {
 impl_aspects!(PulseReceiver: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl PulseReceiver {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		field: &impl FieldAspect,
 		mask: &Datamap,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_pulse_receiver(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			field,

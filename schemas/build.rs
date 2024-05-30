@@ -1,5 +1,5 @@
 use manifest_dir_macros::{directory_relative_path, path};
-use std::fmt::Write;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -10,8 +10,7 @@ fn main() {
 	}
 
 	println!("cargo:rerun-if-changed=fbs");
-	let out_dir = PathBuf::from_str(path!("src/flat/generated")).unwrap();
-	let _ = fs::remove_dir_all(&out_dir);
+	let out_dir = PathBuf::from_str(path!("src/flat")).unwrap();
 	fs::create_dir_all(&out_dir).unwrap();
 
 	let files: Vec<_> = fs::read_dir(directory_relative_path!("fbs"))
@@ -21,6 +20,13 @@ fn main() {
 		.filter(|p| p.extension().unwrap_or_default() == "fbs")
 		.collect();
 
+	for file in &files {
+		let file_name = file.with_extension("rs");
+		let Some(file_name) = file_name.file_name().and_then(OsStr::to_str) else {
+			continue;
+		};
+		let _ = fs::remove_file(out_dir.join(file_name));
+	}
 	let args: Vec<_> = [
 		"--rust",
 		"--gen-mutable",
@@ -44,20 +50,4 @@ fn main() {
 	if !output.status.success() {
 		panic!("{}", String::from_utf8_lossy(&output.stdout));
 	}
-
-	let mut buf = String::with_capacity(files.len() * 150);
-	for file in files {
-		let stem = file.file_stem().unwrap().to_str().unwrap();
-		let rs_file = file.with_extension("rs");
-		let name = rs_file.file_name().unwrap().to_str().unwrap();
-
-		write!(
-			buf,
-			"pub mod {} {{ \n\tpub use self::stardust_xr::*;\n\tinclude!(\"{}\"); \n}}\n",
-			stem, name
-		)
-		.unwrap();
-	}
-
-	fs::write(path!("src/flat/generated/mod.rs"), buf).unwrap();
 }

@@ -5,7 +5,6 @@ use crate::{
 	node::{NodeResult, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
-use nanoid::nanoid;
 use stardust_xr::values::*;
 
 stardust_xr_fusion_codegen::codegen_audio_protocol!();
@@ -13,13 +12,14 @@ stardust_xr_fusion_codegen::codegen_audio_protocol!();
 impl_aspects!(Sound: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Sound {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		resource: &ResourceID,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_sound(
-			&spatial_parent.client()?,
-			&nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			resource,

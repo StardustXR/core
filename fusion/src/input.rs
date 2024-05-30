@@ -36,14 +36,15 @@ impl_aspects!(InputMethodRef: SpatialRefAspect);
 impl_aspects!(InputMethod: OwnedAspect, SpatialRefAspect, SpatialAspect, InputMethodRefAspect);
 impl InputMethod {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		input_type: InputDataType,
 		datamap: &Datamap,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_input_method(
-			&spatial_parent.client()?,
-			&nanoid::nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			input_type,
@@ -54,13 +55,14 @@ impl InputMethod {
 impl_aspects!(InputHandler: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl InputHandler {
 	pub fn create(
-		spatial_parent: &impl SpatialAspect,
+		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
 		field: &impl FieldAspect,
 	) -> NodeResult<Self> {
+		let client = spatial_parent.client()?;
 		create_input_handler(
-			&spatial_parent.client()?,
-			&nanoid::nanoid!(),
+			&client,
+			client.generate_id(),
 			spatial_parent,
 			transform,
 			field,

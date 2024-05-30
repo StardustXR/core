@@ -5,6 +5,7 @@ use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
 
 use color_eyre::eyre::eyre;
+use global_counter::primitive::exact::CounterU64;
 use parking_lot::Mutex;
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,11 @@ use thiserror::Error;
 use tokio::net::UnixStream;
 use tokio::sync::{watch, Notify, OnceCell};
 use tokio::task::JoinHandle;
+
+mod root {
+	use crate::node::NodeResult;
+	stardust_xr_fusion_codegen::codegen_root_protocol!();
+}
 
 /// The persistent state of a Stardust client.
 #[derive(Debug)]
@@ -52,11 +58,11 @@ impl ClientState {
 	fn to_internal(&self) -> Result<ClientStateInternal, NodeError> {
 		Ok(ClientStateInternal {
 			data: self.data.clone(),
-			root: self.root.node().get_path()?,
+			root: self.root.node().get_id()?,
 			spatial_anchors: self
 				.spatial_anchors
 				.iter()
-				.filter_map(|(k, v)| Some((k.clone(), v.node().get_path().ok()?)))
+				.filter_map(|(k, v)| Some((k.clone(), v.node().get_id().ok()?)))
 				.collect(),
 		})
 	}
@@ -65,8 +71,8 @@ impl ClientState {
 #[derive(Default, Serialize, Deserialize)]
 struct ClientStateInternal {
 	data: Vec<u8>,
-	root: String,
-	spatial_anchors: FxHashMap<String, String>,
+	root: u64,
+	spatial_anchors: FxHashMap<String, u64>,
 }
 
 /// Information on the frame.
@@ -136,6 +142,7 @@ pub struct Client {
 	hmd: OnceCell<Spatial>,
 	pub(crate) registered_item_uis: Mutex<FxHashSet<TypeId>>,
 
+	id_counter: CounterU64,
 	elapsed_time: Mutex<f64>,
 	life_cycle_handler: Mutex<Weak<Mutex<dyn RootHandler>>>,
 
@@ -166,6 +173,7 @@ impl Client {
 			hmd: OnceCell::new(),
 			registered_item_uis: Mutex::new(FxHashSet::default()),
 
+			id_counter: CounterU64::new(u64::MAX / 2),
 			elapsed_time: Mutex::new(0.0),
 			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),
 
@@ -173,16 +181,14 @@ impl Client {
 		});
 		let _ = client
 			.root
-			.set(Arc::new(Spatial::from_path(&client, "/".to_owned(), false)));
-		let _ = client
-			.hmd
-			.set(Spatial::from_path(&client, "/hmd".to_owned(), false));
+			.set(Arc::new(Spatial::from_id(&client, 0, false)));
+		let _ = client.hmd.set(Spatial::from_id(&client, 1, false)); // fix this ID later
 		let (state_tx, state_rx) = watch::channel(ClientState::default(&client));
 		let _ = client.state.set(state_rx);
 		client
 			.get_root()
 			.node()
-			.add_local_signal("restore_state", {
+			.add_local_signal(root::ROOT_GET_STATE_SERVER_OPCODE, {
 				let client = client.clone();
 
 				move |data, _| {
@@ -193,50 +199,51 @@ impl Client {
 						spatial_anchors: state
 							.spatial_anchors
 							.into_iter()
-							.map(|(k, v)| {
-								(
-									k,
-									Spatial::from_parent_name(&client, "/spatial/anchor", v, true),
-								)
-							})
+							.map(|(k, v)| (k, Spatial::from_id(&client, v, true)))
 							.collect(),
 					});
 					Ok(())
 				}
 			})?;
-		client.get_root().node().add_local_signal("frame", {
-			let client = client.clone();
-			move |data, _| {
-				if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
-					#[derive(Deserialize)]
-					struct LogicStepInfoInternal {
-						delta: f64,
-					}
+		client
+			.get_root()
+			.node()
+			.add_local_signal(root::ROOT_FRAME_CLIENT_OPCODE, {
+				let client = client.clone();
+				move |data, _| {
+					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
+						#[derive(Deserialize)]
+						struct LogicStepInfoInternal {
+							delta: f64,
+						}
 
-					let info_internal: LogicStepInfoInternal = deserialize(data)?;
-					let mut elapsed = client.elapsed_time.lock();
-					(*elapsed) += info_internal.delta;
-					let info = FrameInfo {
-						delta: info_internal.delta,
-						elapsed: *elapsed,
-					};
-					handler.lock().frame(info);
+						let info_internal: LogicStepInfoInternal = deserialize(data)?;
+						let mut elapsed = client.elapsed_time.lock();
+						(*elapsed) += info_internal.delta;
+						let info = FrameInfo {
+							delta: info_internal.delta,
+							elapsed: *elapsed,
+						};
+						handler.lock().frame(info);
+					}
+					Ok(())
 				}
-				Ok(())
-			}
-		})?;
-		client.get_root().node().add_local_method("save_state", {
-			let client = client.clone();
-			move |_, _| {
-				let root_handler = client
-					.life_cycle_handler
-					.lock()
-					.upgrade()
-					.ok_or_else(|| eyre!("Root is not handled"))?;
-				let state = root_handler.lock().save_state().to_internal()?;
-				Ok(serialize(state).map(|v| (v, vec![]))?)
-			}
-		})?;
+			})?;
+		client
+			.get_root()
+			.node()
+			.add_local_method(root::ROOT_SAVE_STATE_CLIENT_OPCODE, {
+				let client = client.clone();
+				move |_, _| {
+					let root_handler = client
+						.life_cycle_handler
+						.lock()
+						.upgrade()
+						.ok_or_else(|| eyre!("Root is not handled"))?;
+					let state = root_handler.lock().save_state().to_internal()?;
+					Ok(serialize(state).map(|v| (v, vec![]))?)
+				}
+			})?;
 
 		Ok((client, message_tx, message_rx))
 	}
@@ -299,9 +306,6 @@ impl Client {
 	/// Wrap the root in a handler and return an `Arc` to the handler.
 	#[must_use = "Dropping this handler wrapper would immediately drop the handler, and you want to check for errors too"]
 	pub fn wrap_root<H: RootHandler>(&self, wrapped: H) -> Result<Arc<Mutex<H>>, NodeError> {
-		self.get_root()
-			.node()
-			.send_remote_signal_raw("subscribe_frame", &[], Vec::new())?;
 		let wrapped = Arc::new(Mutex::new(wrapped));
 		*self.life_cycle_handler.lock() =
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
@@ -309,9 +313,6 @@ impl Client {
 	}
 	/// Wrap the root in an already wrapped handler
 	pub fn wrap_root_raw<H: RootHandler>(&self, wrapped: &Arc<Mutex<H>>) -> Result<(), NodeError> {
-		self.get_root()
-			.node()
-			.send_remote_signal_raw("subscribe_frame", &[], Vec::new())?;
 		*self.life_cycle_handler.lock() =
 			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
 		Ok(())
@@ -333,8 +334,8 @@ impl Client {
 
 		self.message_sender_handle
 			.signal(
-				"/",
-				"set_base_prefixes",
+				0,
+				root::ROOT_SET_BASE_PREFIXES_SERVER_OPCODE,
 				&serialize(prefix_vec).unwrap(),
 				Vec::new(),
 			)
@@ -346,13 +347,22 @@ impl Client {
 	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
 		let future = self
 			.message_sender_handle
-			.method("/", "get_connection_environment", &[], Vec::new())
+			.method(
+				0,
+				root::ROOT_GET_CONNECTION_ENVIRONMENT_SERVER_OPCODE,
+				&[],
+				Vec::new(),
+			)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move {
 			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
 			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
 		})
+	}
+
+	pub fn generate_id(&self) -> u64 {
+		self.id_counter.inc()
 	}
 
 	/// Get the client's state. Don't hold this reference over an await point.
@@ -375,7 +385,10 @@ impl Client {
 	pub async fn state_token(&self, state: &ClientState) -> NodeResult<String> {
 		self.get_root()
 			.node()
-			.execute_remote_method("state_token", &state.to_internal()?)
+			.execute_remote_method(
+				root::ROOT_CLIENT_STATE_TOKEN_SERVER_OPCODE,
+				&state.to_internal()?,
+			)
 			.await
 	}
 
@@ -387,9 +400,12 @@ impl Client {
 impl Drop for Client {
 	fn drop(&mut self) {
 		self.stop_loop();
-		let _ = self
-			.message_sender_handle
-			.signal("/", "disconnect", &[0_u8; 0], Vec::new());
+		let _ = self.message_sender_handle.signal(
+			0,
+			root::ROOT_GET_STATE_SERVER_OPCODE,
+			&[0_u8; 0],
+			Vec::new(),
+		);
 	}
 }
 

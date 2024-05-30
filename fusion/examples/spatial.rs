@@ -47,10 +47,10 @@ impl SpatialDemo {
 		SpatialDemo {
 			t: flexbuffers::from_slice(&client.state().data).unwrap_or_default(),
 			root: client.get_root().alias(),
-			gem: gyro.model_part("Gem").unwrap(),
-			ring_inner: gyro.model_part("OuterRing/MiddleRing/InnerRing").unwrap(),
-			ring_middle: gyro.model_part("OuterRing/MiddleRing").unwrap(),
-			ring_outer: gyro.model_part("OuterRing").unwrap(),
+			gem: gyro.part("Gem").unwrap(),
+			ring_inner: gyro.part("OuterRing/MiddleRing/InnerRing").unwrap(),
+			ring_middle: gyro.part("OuterRing/MiddleRing").unwrap(),
+			ring_outer: gyro.part("OuterRing").unwrap(),
 			_gyro: gyro,
 		}
 	}

@@ -1,16 +1,16 @@
 version (u32)1
-interface "/item/camera"
+interface (u64)11
 description ""
 
 signal "create_camera_item" side="server" {
     description "Create a camera item at a specific location"
     
-    argument "name" type="string"
+    argument "id" type="id"
     argument "parent" type="node" aspect="SpatialRef"
     argument "transform" type="struct" struct="transform"
     argument "proj_matrix" type="mat4"
     argument "px_size" type="vec2" component_type="uint"
-	return type="node" node="CameraItem" parent="/item/camera" name_argument="name"
+	return type="node" node="CameraItem" id_argument="id"
 }
 aspect "CameraItem" {
     description ""
@@ -39,11 +39,11 @@ aspect "CameraItemUi" {
 signal "create_camera_item_acceptor" side="server" {
     description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/camera/acceptor/<name>`."
     
-    argument "name" type="string"
+    argument "id" type="id"
     argument "parent" type="node" aspect="SpatialRef"
     argument "transform" type="struct" struct="transform"
     argument "field" type="node" aspect="field"
-	return type="node" node="CameraItemAcceptor" parent="/item/camera/acceptor" name_argument="name"
+	return type="node" node="CameraItemAcceptor" id_argument="id"
 }
 aspect "CameraItemAcceptor" {
     description ""

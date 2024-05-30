@@ -93,12 +93,12 @@ impl<N: NodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 
 	pub(crate) fn add_handled_signal(
 		&self,
-		name: &str,
+		id: u64,
 		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8], Vec<OwnedFd>) -> Result<()>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
-		self.node.node().add_local_signal(name, move |data, fds| {
+		self.node.node().add_local_signal(id, move |data, fds| {
 			let Some(node) = node.upgrade() else {
 				return Err(anyhow!("Node broken"));
 			};
@@ -111,12 +111,12 @@ impl<N: NodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 	// #[allow(clippy::type_complexity)]
 	pub(crate) fn add_handled_method(
 		&self,
-		name: &str,
+		id: u64,
 		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8], Vec<OwnedFd>) -> Result<(Vec<u8>, Vec<OwnedFd>)>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
-		self.node.node().add_local_method(name, move |data, fds| {
+		self.node.node().add_local_method(id, move |data, fds| {
 			let Some(node) = node.upgrade() else {
 				return Err(anyhow!("Node broken"));
 			};

@@ -15,7 +15,7 @@ keymap = ["dep:xkbcommon"]
 
 [dependencies]
 glam = { version = "0.24.1", features = ["mint"] }
-nanoid = "0.4.0"
+global_counter = "=0.2.2"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
 serde = "1.0.177"
