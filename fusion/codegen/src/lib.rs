@@ -228,7 +228,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 					#aspect_trait_name::add_handlers(&handler_wrapper)?;
 					Ok(handler_wrapper)
 				}
-				fn add_handlers<H: #aspect_handler_name>(handler_wrapper: &crate::HandlerWrapper<Self, H>) -> NodeResult<()> {
+				fn add_handlers<N: crate::node::NodeType, H: #aspect_handler_name>(handler_wrapper: &crate::HandlerWrapper<N, H>) -> NodeResult<()> {
 					#handlers
 					Ok(())
 				}
