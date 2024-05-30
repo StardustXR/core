@@ -225,7 +225,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
 				fn wrap_raw<H: #aspect_handler_name>(self, handler: std::sync::Arc<parking_lot::Mutex<H>>) -> NodeResult<crate::HandlerWrapper<Self, H>> {
 					let handler_wrapper = crate::HandlerWrapper::new_raw(self, handler);
-					#aspect_trait_name::add_handlers(&handler_wrapper)?;
+					<Self as #aspect_trait_name>::add_handlers(&handler_wrapper)?;
 					Ok(handler_wrapper)
 				}
 				fn add_handlers<N: crate::node::NodeType, H: #aspect_handler_name>(handler_wrapper: &crate::HandlerWrapper<N, H>) -> NodeResult<()> {
