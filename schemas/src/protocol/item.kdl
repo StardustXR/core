@@ -24,16 +24,17 @@ aspect "ItemAcceptor" {
     description ""
     inherits "Spatial"
     
+    
+    // signal "capture_item" side="server" {
+    //     description ""
+    //     argument "item" type="node" node="UnknownItem"
+    // }
     // signal "capture_item" side="client" {
     //     description ""
     //     argument "uid" type="string"
-    //     argument "item" type="node" node="PanelItem"
-    //     argument "initial_data" type="union" union="PanelItemInitData"
+    //     argument "item" type="node" node="UnknownItem"
+    //     argument "initial_data" type="union" union="UnknownItemInitData"
     // }
-    signal "release_item" side="client" {
-        description ""
-        argument "uid" type="string"
-    }
 }
 
 // signal "register_item_ui" side="server" {

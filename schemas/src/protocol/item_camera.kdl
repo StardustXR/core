@@ -47,6 +47,10 @@ aspect "CameraItemAcceptor" {
     description ""
     inherits "ItemAcceptor"
     
+    signal "capture_item" side="server" {
+        description ""
+        argument "item" type="node" node="CameraItem"
+    }
     signal "capture_item" side="client" {
         description ""
         argument "uid" type="string"
