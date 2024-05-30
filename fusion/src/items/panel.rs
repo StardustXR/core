@@ -7,7 +7,6 @@ use crate::{
 	node::{Node, NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
-use stardust_xr::values::*;
 use std::sync::Arc;
 
 stardust_xr_fusion_codegen::codegen_item_panel_protocol!();

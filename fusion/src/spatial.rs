@@ -61,7 +61,7 @@ impl Transform {
 			scale: None,
 		}
 	}
-	pub fn from_rotation(rotation: impl Into<Quaternion<f32>>) -> Self {
+	pub fn from_rotation(rotation: impl Into<Quaternion>) -> Self {
 		Transform {
 			translation: None,
 			rotation: Some(rotation.into()),
@@ -78,7 +78,7 @@ impl Transform {
 
 	pub fn from_translation_rotation(
 		translation: impl Into<Vector3<f32>>,
-		rotation: impl Into<Quaternion<f32>>,
+		rotation: impl Into<Quaternion>,
 	) -> Self {
 		Transform {
 			translation: Some(translation.into()),
@@ -87,7 +87,7 @@ impl Transform {
 		}
 	}
 	pub fn from_rotation_scale(
-		rotation: impl Into<Quaternion<f32>>,
+		rotation: impl Into<Quaternion>,
 		scale: impl Into<Vector3<f32>>,
 	) -> Self {
 		Transform {
@@ -110,7 +110,7 @@ impl Transform {
 
 	pub fn from_translation_rotation_scale(
 		translation: impl Into<Vector3<f32>>,
-		rotation: impl Into<Quaternion<f32>>,
+		rotation: impl Into<Quaternion>,
 		scale: impl Into<Vector3<f32>>,
 	) -> Self {
 		Transform {

@@ -6,6 +6,7 @@ use crate::{
 	node::{Node, NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
+use stardust_xr::values::*;
 use std::sync::Arc;
 
 stardust_xr_fusion_codegen::codegen_item_camera_protocol!();
@@ -16,8 +17,17 @@ impl CameraItem {
 		client: &Arc<Client>,
 		parent: &impl SpatialRefAspect,
 		transform: Transform,
+		proj_matrix: Mat4,
+		px_size: Vector2<u32>,
 	) -> NodeResult<CameraItem> {
-		create_camera_item(client, &nanoid::nanoid!(), parent, transform)
+		create_camera_item(
+			client,
+			&nanoid::nanoid!(),
+			parent,
+			transform,
+			proj_matrix,
+			px_size,
+		)
 	}
 }
 

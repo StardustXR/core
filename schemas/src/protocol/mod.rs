@@ -107,6 +107,7 @@ pub enum ArgumentType {
 	Vec2(Box<ArgumentType>),
 	Vec3(Box<ArgumentType>),
 	Quat,
+	Mat4,
 	Color,
 	String,
 	Bytes,

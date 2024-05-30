@@ -5,9 +5,12 @@ use std::{
 };
 
 pub use color;
-pub use mint::*;
+pub use mint::{Vector2, Vector3};
+pub type Quaternion = mint::Quaternion<f32>;
+pub type Mat4 = mint::ColumnMatrix4<f32>;
 pub use stardust_xr_schemas::flex::Datamap;
 pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;
+pub use rustc_hash::FxHashMap as Map;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// An identifier to a resource, such as a sound or

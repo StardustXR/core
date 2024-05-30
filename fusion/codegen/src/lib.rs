@@ -152,6 +152,7 @@ fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 		ArgumentType::Vec2(_) => "Vec2".to_string(),
 		ArgumentType::Vec3(_) => "Vec3".to_string(),
 		ArgumentType::Quat => "Quat".to_string(),
+		ArgumentType::Mat4 => "Mat4".to_string(),
 		ArgumentType::Color => "Color".to_string(),
 		ArgumentType::String => "String".to_string(),
 		ArgumentType::Bytes => "Bytes".to_string(),
@@ -514,6 +515,9 @@ fn generate_argument_serialize(
 		ArgumentType::Quat => {
 			quote!(#name.into())
 		}
+		ArgumentType::Mat4 => {
+			quote!(#name.into())
+		}
 		ArgumentType::Color => quote!([#name.c.r, #name.c.g, #name.c.b, #name.a]),
 		ArgumentType::Vec(v) => {
 			let mapping = generate_argument_serialize("a", v, false);
@@ -544,24 +548,31 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 		ArgumentType::Vec2(t) => {
 			let t = generate_argument_type(&t, true);
 			if !owned {
-				quote!(impl Into<Vector2<#t>>)
+				quote!(impl Into<stardust_xr::values::Vector2<#t>>)
 			} else {
-				quote!(Vector2<#t>)
+				quote!(stardust_xr::values::Vector2<#t>)
 			}
 		}
 		ArgumentType::Vec3(t) => {
 			let t = generate_argument_type(&t, true);
 			if !owned {
-				quote!(impl Into<Vector3<#t>>)
+				quote!(impl Into<stardust_xr::values::Vector3<#t>>)
 			} else {
-				quote!(Vector3<#t>)
+				quote!(stardust_xr::values::Vector3<#t>)
 			}
 		}
 		ArgumentType::Quat => {
 			if !owned {
-				quote!(impl Into<Quaternion<f32>>)
+				quote!(impl Into<stardust_xr::values::Quaternion>)
 			} else {
-				quote!(Quaternion<f32>)
+				quote!(stardust_xr::values::Quaternion)
+			}
+		}
+		ArgumentType::Mat4 => {
+			if !owned {
+				quote!(impl Into<stardust_xr::values::Mat4>)
+			} else {
+				quote!(stardust_xr::values::Mat4)
 			}
 		}
 		ArgumentType::Color => quote!(stardust_xr::values::Color),
@@ -591,9 +602,9 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			let t = generate_argument_type(&t, true);
 
 			if !owned {
-				quote!(&rustc_hash::FxHashMap<String, #t>)
+				quote!(&stardust_xr::values::Map<String, #t>)
 			} else {
-				quote!(rustc_hash::FxHashMap<String, #t>)
+				quote!(stardust_xr::values::Map<String, #t>)
 			}
 		}
 		ArgumentType::Datamap => {

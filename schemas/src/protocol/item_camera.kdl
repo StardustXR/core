@@ -8,6 +8,8 @@ signal "create_camera_item" side="server" {
     argument "name" type="string"
     argument "parent" type="node" aspect="SpatialRef"
     argument "transform" type="struct" struct="transform"
+    argument "proj_matrix" type="mat4"
+    argument "px_size" type="vec2" component_type="uint"
 	return type="node" node="CameraItem" parent="/item/camera" name_argument="name"
 }
 aspect "CameraItem" {
