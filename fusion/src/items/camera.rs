@@ -31,7 +31,6 @@ impl CameraItem {
 	}
 }
 
-impl_aspects!(CameraItemUi: ItemUiAspect);
 impl CameraItemUi {
 	pub fn register(client: &Arc<Client>) -> NodeResult<Self> {
 		register_camera_item_ui(client)?;
