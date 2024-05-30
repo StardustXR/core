@@ -35,6 +35,10 @@ aspect "ItemAcceptor" {
     //     argument "item" type="node" node="UnknownItem"
     //     argument "initial_data" type="union" union="UnknownItemInitData"
     // }
+    signal "release_item" side="client" {
+        description ""
+        argument "item_uid" type="string"
+    }
 }
 
 // signal "register_item_ui" side="server" {
