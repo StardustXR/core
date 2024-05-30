@@ -25,12 +25,10 @@ aspect "CameraItemUi" {
     
     signal "create_item" side="client" {
         description ""
-        argument "uid" type="string"
         argument "item" type="node" node="CameraItem"
     }
     signal "create_acceptor" side="client" {
         description ""
-        argument "uid" type="string"
         argument "acceptor" type="node" node="CameraItemAcceptor"
         argument "acceptor_field" type="node" node="Field"
     }
@@ -55,7 +53,6 @@ aspect "CameraItemAcceptor" {
     }
     signal "capture_item" side="client" {
         description ""
-        argument "uid" type="string"
         argument "item" type="node" node="CameraItem"
     }
 }

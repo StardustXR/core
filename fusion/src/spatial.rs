@@ -205,29 +205,30 @@ async fn fusion_zone() {
 		client: std::sync::Arc<crate::client::Client>,
 		root: crate::spatial::Spatial,
 		zone: Zone,
-		zone_spatials: rustc_hash::FxHashMap<String, Spatial>,
+		zone_spatials: rustc_hash::FxHashMap<u64, Spatial>,
 	}
 	impl ZoneHandler for ZoneTest {
-		fn enter(&mut self, uid: String, spatial: crate::spatial::Spatial) {
-			println!("Spatial {} entered zone", uid);
+		fn enter(&mut self, spatial: crate::spatial::Spatial) {
+			println!("Spatial {spatial:?} entered zone");
 			self.zone.capture(&spatial).unwrap();
-			self.zone_spatials.insert(uid, spatial);
+			self.zone_spatials
+				.insert(spatial.node().get_id().unwrap(), spatial);
 		}
-		fn capture(&mut self, uid: String) {
-			println!("Spatial {} was captured", uid);
+		fn capture(&mut self, id: u64) {
+			println!("Spatial {id} was captured");
 			self.zone
-				.release(&self.zone_spatials.remove(&uid).unwrap())
+				.release(&self.zone_spatials.remove(&id).unwrap())
 				.unwrap();
 		}
-		fn release(&mut self, uid: String) {
-			println!("Spatial {} was released", uid);
+		fn release(&mut self, id: u64) {
+			println!("Spatial {id} was released");
 			self.root
 				.set_local_transform(Transform::from_translation([0.0, 1.0, 0.0]))
 				.unwrap();
 			self.zone.update().unwrap();
 		}
-		fn leave(&mut self, uid: String) {
-			println!("Spatial {} left zone", uid);
+		fn leave(&mut self, id: u64) {
+			println!("Spatial {id} left zone");
 			self.client.stop_loop();
 		}
 	}

@@ -66,7 +66,7 @@ union "InputDataType" {
 struct "InputData" {
 	description "Information about a given input method's state relative to an input handler. All coordinates are relative to the InputHandler."
 
-	field "uid"      type="string" description="Used to uniquely identify the input method so state can be tracked across input events."
+	field "id"       type="id" description="Used to uniquely identify the input method so state can be tracked across input events."
 	field "input"    type="struct" struct="InputDataType" description="All vectors and quaternions are relative to the input handler if deserialized."
 	field "distance" type="float" description="Closest distance from the input handler to the field."
 	field "datamap"  type="datamap" description="Non-spatial data in a map."
@@ -123,19 +123,18 @@ aspect "InputMethod" {
 	signal "create_handler" side="client" {
 		description "A new input handler has just been created."
 
-		argument "uid" type="string"
 		argument "handler" type="node" aspect="InputHandler"
 	    argument "field" type="node" aspect="Field"
 	}
 	signal "request_capture_handler" side="client" {
 		description "An input handler requests to capture this input method."
 
-		argument "uid" type="string"
+		argument "id" type="id"
 	}
 	signal "destroy_handler" side="client" {
 		description "An input handler has just been destroyed."
 
-		argument "uid" type="string"
+		argument "id" type="id"
 	}
 }
 

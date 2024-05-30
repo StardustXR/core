@@ -73,7 +73,7 @@ aspect "PanelItem" {
     }
     signal "toplevel_parent_changed" side="client" {
         description "This is invoked when the parent of the top-level surface changes."
-        argument "parent_uid" type="string"
+        argument "parent_id" type="id"
     }
     signal "toplevel_title_changed" side="client" {
         description "The title of the top-level surface was changed."
@@ -111,17 +111,14 @@ aspect "PanelItem" {
     }
     signal "create_child" side="client" {
         description "A new child was created. Children are drawn independently for efficiency or to exceed the boundaries of the toplevel."
-        argument "uid" type="string"
         argument "info" type="struct" struct="ChildInfo"
     }
     signal "reposition_child" side="client" {
         description "The child has moved or resized itself, update your UI accordingly."
-        argument "uid" type="string"
         argument "geometry" type="struct" struct="geometry"
     }
     signal "destroy_child" side="client" {
         description "The child was destroyed."
-        argument "uid" type="string"
     }
     
     signal "pointer_motion" side="server" {
@@ -180,13 +177,11 @@ aspect "PanelItemUi" {
     
     signal "create_item" side="client" {
         description ""
-        argument "uid" type="string"
         argument "item" type="node" node="PanelItem"
         argument "initial_data" type="union" union="PanelItemInitData"
     }
     signal "create_acceptor" side="client" {
         description ""
-        argument "uid" type="string"
         argument "acceptor" type="node" node="PanelItemAcceptor"
         argument "acceptor_field" type="node" node="Field"
     }
@@ -210,7 +205,6 @@ aspect "PanelItemAcceptor" {
     }
     signal "capture_item" side="client" {
         description ""
-        argument "uid" type="string"
         argument "item" type="node" node="PanelItem"
         argument "initial_data" type="union" union="PanelItemInitData"
     }

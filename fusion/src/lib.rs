@@ -49,10 +49,10 @@ use std::{os::fd::OwnedFd, sync::Arc};
 ///
 /// struct ZoneHandlerTest;
 /// impl ZoneHandler for ZoneHandlerTest {
-/// 	fn enter(&mut self, uid: &str, spatial: Spatial) {}
-/// 	fn capture(&mut self, uid: &str, spatial: Spatial) {}
-/// 	fn release(&mut self, uid: &str) {}
-/// 	fn leave(&mut self, uid: &str) {}
+/// 	fn enter(&mut self, spatial: Spatial) {}
+/// 	fn capture(&mut self, spatial: Spatial) {}
+/// 	fn release(&mut self, id: u64) {}
+/// 	fn leave(&mut self, id: u64) {}
 /// }
 ///
 /// let sphere_field = SphereField::create(client.get_root(), Transform::none(), 0.5).unwrap();

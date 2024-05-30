@@ -2,22 +2,16 @@ version (u32)1
 interface (u64)7
 description "Interface to send non-spatial data through space"
 
-struct "NewReceiverInfo" {
-	description ""
-	field "uid" type="string"
-}
-
-
 method "register_keymap" side="server" {
 	description "Register a keymap with the server to easily identify it later"
 
 	argument "keymap" type="string"
-	return type="string"
+	return type="id"
 }
 method "get_keymap" side="server" {
 	description "Get the keymap string representation from an ID"
 
-	argument "keymap_id" type="string"
+	argument "keymap_id" type="id"
 	return type="string"
 }
 
@@ -37,14 +31,13 @@ aspect "PulseSender" {
 	signal "new_receiver" side="client" {
 		description ""
 
-		argument "uid" type="string"
 		argument "receiver" type="node" node="PulseReceiver"
 		argument "field" type="node" node="Field"
 	}
 	signal "drop_receiver" side="client" {
 		description ""
 
-		argument "uid" type="string"
+		argument "id" type="id"
 	}
 }
 
@@ -64,7 +57,7 @@ aspect "PulseReceiver" {
 
 	signal "data" side="client" {
 		description ""
-		argument "sender_uid" type="string"
+		argument "sender" type="node" aspect="SpatialRef"
 		argument "data" type="datamap" 
 	}
 	signal "send_data" side="server" {

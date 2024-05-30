@@ -141,12 +141,12 @@ impl Pointer {
 
 impl Hash for InputData {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.uid.hash(state)
+		self.id.hash(state)
 	}
 }
 impl PartialEq for InputData {
 	fn eq(&self, other: &Self) -> bool {
-		self.uid.eq(&other.uid)
+		self.id.eq(&other.id)
 	}
 }
 impl Eq for InputData {}
@@ -164,7 +164,7 @@ async fn fusion_input_handler() {
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
 		fn input(&mut self, _input: InputMethod, data: InputData) {
-			dbg!(data.uid);
+			dbg!(data.id);
 			dbg!(data.distance);
 			match &data.input {
 				InputDataType::Pointer(_) => {

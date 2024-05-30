@@ -22,7 +22,7 @@ use crate::{
 	impl_aspects,
 	node::NodeResult,
 	node::{NodeType, OwnedAspect},
-	spatial::{SpatialAspect, SpatialRefAspect, Transform},
+	spatial::{SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
 
@@ -75,7 +75,7 @@ impl crate::client::Client {
 	pub fn register_xkb_keymap(
 		&self,
 		keymap_string: String,
-	) -> NodeResult<impl std::future::Future<Output = NodeResult<String>> + Send + Sync> {
+	) -> NodeResult<impl std::future::Future<Output = NodeResult<u64>> + Send + Sync> {
 		let client = self.get_root().client();
 		Keymap::new_from_string(
 			&Context::new(0),
@@ -88,7 +88,7 @@ impl crate::client::Client {
 		})?;
 		Ok(async move { register_keymap(&client?, &keymap_string).await })
 	}
-	pub async fn get_xkb_keymap(&self, keymap_id: &str) -> NodeResult<Keymap> {
+	pub async fn get_xkb_keymap(&self, keymap_id: u64) -> NodeResult<Keymap> {
 		let keymap_str = get_keymap(&self.get_root().client()?, keymap_id).await?;
 
 		Keymap::new_from_string(
@@ -116,8 +116,8 @@ async fn fusion_pulses() {
 
 	struct PulseReceiverTest(std::sync::Arc<Client>);
 	impl PulseReceiverHandler for PulseReceiverTest {
-		fn data(&mut self, uid: String, data: Datamap) {
-			println!("Pulse sender {uid} sent {data:?}");
+		fn data(&mut self, sender: SpatialRef, data: Datamap) {
+			println!("Pulse sender {sender:?} sent {data:?}");
 			self.0.stop_loop();
 		}
 	}
@@ -126,15 +126,12 @@ async fn fusion_pulses() {
 		node: PulseSender,
 	}
 	impl PulseSenderHandler for PulseSenderTest {
-		fn new_receiver(&mut self, uid: String, receiver: PulseReceiver, field: Field) {
-			println!(
-				"New pulse receiver {:?} with field {:?} and uid {:?}",
-				receiver, field, uid
-			);
+		fn new_receiver(&mut self, receiver: PulseReceiver, field: Field) {
+			println!("New pulse receiver {:?} with field {:?}", receiver, field);
 			receiver.send_data(&self.node, &self.data).unwrap();
 		}
-		fn drop_receiver(&mut self, uid: String) {
-			println!("Pulse receiver {} dropped", uid);
+		fn drop_receiver(&mut self, id: u64) {
+			println!("Pulse receiver {} dropped", id);
 		}
 	}
 

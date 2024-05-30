@@ -126,19 +126,18 @@ aspect "Zone" {
 
 	signal "enter" side="client" {
 		description ""
-		argument "uid" type="string"
 		argument "spatial" type="node" aspect="Spatial"
 	}
 	signal "capture" side="client" {
 		description ""
-		argument "uid" type="string"
+		argument "id" type="id"
 	}
 	signal "release" side="client" {
 		description ""
-		argument "uid" type="string"
+		argument "id" type="id"
 	}
 	signal "leave" side="client" {
 		description ""
-		argument "uid" type="string"
+		argument "id" type="id"
 	}
 }

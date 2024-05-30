@@ -31,13 +31,13 @@ aspect "ItemAcceptor" {
     // }
     // signal "capture_item" side="client" {
     //     description ""
-    //     argument "uid" type="string"
+    //     argument "id" type="string"
     //     argument "item" type="node" node="UnknownItem"
     //     argument "initial_data" type="union" union="UnknownItemInitData"
     // }
     signal "release_item" side="client" {
         description ""
-        argument "item_uid" type="string"
+        argument "item_id" type="id"
     }
 }
 
@@ -52,33 +52,33 @@ aspect "ItemUi" {
     
     // signal "create_item" side="client" {
     //     description ""
-    //     argument "uid" type="string"
+    //     argument "id" type="id"
     //     argument "item" type="node" node="UnknownItem"
     //     argument "initial_data" type="node" node="InitialItemData"
     // }
     signal "capture_item" side="client" {
         description ""
-        argument "item_uid" type="string"
-        argument "acceptor_uid" type="string"
+        argument "item_id" type="id"
+        argument "acceptor_id" type="id"
     }
     signal "release_item" side="client" {
         description ""
-        argument "item_uid" type="string"
-        argument "acceptor_uid" type="string"
+        argument "item_id" type="id"
+        argument "acceptor_id" type="id"
     }
     signal "destroy_item" side="client" {
         description ""
-        argument "uid" type="string"
+        argument "id" type="id"
     }
     
     // signal "create_acceptor" side="client" {
     //     description ""
-    //     argument "uid" type="string"
+    //     argument "id" type="id"
     //     argument "acceptor" type="node" node="UnknownItemAcceptor"
     //     argument "acceptor_field" type="node" aspect="Field"
     // }
     signal "destroy_acceptor" side="client" {
         description ""
-        argument "uid" type="string"
+        argument "id" type="string"
     }
 }
