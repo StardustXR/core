@@ -91,7 +91,7 @@ fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_
 		.unwrap_or_default();
 	let interface = protocol
 		.interface
-		.map(|p| {
+		.and_then(|p| {
 			p.members
 				.iter()
 				.map(|m| {

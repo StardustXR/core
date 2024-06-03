@@ -17,7 +17,7 @@ struct "Geometry" {
 struct "ToplevelInfo" {
     description "The state of the panel item's toplevel."
 
-    field "parent" type="string" optional=true description="The UID of the panel item of the parent of this toplevel, if it exists"
+    field "parent" type="id"     optional=true description="The UID of the panel item of the parent of this toplevel, if it exists"
     field "title" type="string"  optional=true description="Equivalent to the window title"
     field "app_id" type="string" optional=true description="Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>"
     field "size" type="vec2" component_type="uint"  description="Current size in pixels"
@@ -111,14 +111,17 @@ aspect "PanelItem" {
     }
     signal "create_child" side="client" {
         description "A new child was created. Children are drawn independently for efficiency or to exceed the boundaries of the toplevel."
+        argument "uid" type="id"
         argument "info" type="struct" struct="ChildInfo"
     }
     signal "reposition_child" side="client" {
         description "The child has moved or resized itself, update your UI accordingly."
+        argument "uid" type="id"
         argument "geometry" type="struct" struct="geometry"
     }
     signal "destroy_child" side="client" {
         description "The child was destroyed."
+        argument "uid" type="id"
     }
     
     signal "pointer_motion" side="server" {
