@@ -148,7 +148,7 @@ aspect "PanelItem" {
     signal "keyboard_keys" side="server" {
         description "Send a series of key presses and releases (positive keycode for pressed, negative for released)."
         argument "surface" type="struct" struct="SurfaceID"
-        argument "keymap_id" type="string"
+        argument "keymap_id" type="id"
         argument "keys" type="vec" member_type="int"
     }
     signal "touch_down" side="server" {
