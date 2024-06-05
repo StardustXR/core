@@ -28,6 +28,7 @@ struct "ToplevelInfo" {
 struct "ChildInfo" {
     description "Data on positioning a child."
 
+    field "id" type="id"
     field "parent" type="struct" struct="SurfaceID"
     field "geometry" type="struct" struct="Geometry"
 }
@@ -36,7 +37,7 @@ struct "PanelItemInitData" {
     
     field "cursor" type="struct" struct="Geometry" optional=true
     field "toplevel" type="struct" struct="ToplevelInfo"
-    field "children" type="map" value_type="struct" struct="ChildInfo"
+    field "children" type="vec" member_type="struct" struct="ChildInfo"
     field "pointer_grab" type="struct" struct="SurfaceID" optional=true description="The surface, if any, that has exclusive input to the pointer."
     field "keyboard_grab" type="struct" struct="SurfaceID" optional=true description="The surface, if any, that has exclusive input to the keyboard."
 }
