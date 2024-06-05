@@ -17,6 +17,7 @@ struct "ClientState" {
 
 aspect "Root" {
 	description ""
+	inherits "SpatialRef"
 
 	signal "frame" side="client" {
 		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
@@ -27,6 +28,11 @@ aspect "Root" {
 		description ""
 	
 		return type="struct" struct="ClientState"
+	}
+	signal "restore_state" side="client" {
+		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
+	
+		argument "state" type="struct" struct="ClientState"
 	}
 	method "save_state" side="client" {
 		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
@@ -51,9 +57,13 @@ aspect "Root" {
 		return type="string"
 	}
 	
-	method "set_base_prefixes" side="server" {
+	signal "set_base_prefixes" side="server" {
 		description "Set initial list of folders to look for namespaced resources in"
 		
 		argument "prefixes" type="vec" member_type="string"
+	}
+	
+	signal "disconnect" side="server" {
+		description "Cleanly disconnect from the server"
 	}
 }

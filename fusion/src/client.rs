@@ -1,105 +1,25 @@
 //! Your connection to the Stardust server and other essentials.
 
 use crate::node::{NodeResult, NodeType};
+use crate::root::{Root, RootAspect};
 use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
-
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::Result;
 use global_counter::primitive::exact::CounterU64;
 use parking_lot::Mutex;
-use rustc_hash::{FxHashMap, FxHashSet};
-use serde::{Deserialize, Serialize};
+use rustc_hash::FxHashSet;
 use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
 use stardust_xr::{
 	client,
 	messenger::{self, MessengerError},
 	messenger::{MessageReceiver, MessageSender, MessageSenderHandle},
-	schemas::flex::{deserialize, serialize},
 };
 use std::any::TypeId;
-use std::future::Future;
-use std::path::Path;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 use thiserror::Error;
 use tokio::net::UnixStream;
-use tokio::sync::{watch, Notify, OnceCell};
+use tokio::sync::{Notify, OnceCell};
 use tokio::task::JoinHandle;
-
-mod root {
-	use crate::node::NodeResult;
-	stardust_xr_fusion_codegen::codegen_root_protocol!();
-}
-
-/// The persistent state of a Stardust client.
-#[derive(Debug)]
-pub struct ClientState {
-	/// Data specific to your client, put anything you like here and it'll be saved/restored intact.
-	pub data: Vec<u8>,
-	/// The root node of this client.
-	pub root: Spatial,
-	/// Spatials that will be in the same place you left them.
-	pub spatial_anchors: FxHashMap<String, Spatial>,
-}
-impl ClientState {
-	pub fn default(source_client: &Client) -> Self {
-		ClientState {
-			data: Vec::new(),
-			root: source_client.get_root().alias(),
-			spatial_anchors: Default::default(),
-		}
-	}
-	pub fn from_root(root: &Spatial) -> Self {
-		ClientState {
-			data: Vec::new(),
-			root: root.alias(),
-			spatial_anchors: Default::default(),
-		}
-	}
-	fn to_internal(&self) -> Result<ClientStateInternal, NodeError> {
-		Ok(ClientStateInternal {
-			data: self.data.clone(),
-			root: self.root.node().get_id()?,
-			spatial_anchors: self
-				.spatial_anchors
-				.iter()
-				.filter_map(|(k, v)| Some((k.clone(), v.node().get_id().ok()?)))
-				.collect(),
-		})
-	}
-}
-
-#[derive(Default, Serialize, Deserialize)]
-struct ClientStateInternal {
-	data: Vec<u8>,
-	root: u64,
-	spatial_anchors: FxHashMap<String, u64>,
-}
-
-/// Information on the frame.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct FrameInfo {
-	/// The time between this frame and last frame's display time, in seconds.
-	pub delta: f64,
-	/// The total time in seconds the client has been connected to the server.
-	pub elapsed: f64,
-}
-
-/// Handle the events that apply to the whole client.
-pub trait RootHandler: Send + Sync + 'static {
-	/// Runs every frame with information about the current frame, for animations and motion and a consistent update.
-	fn frame(&mut self, _info: FrameInfo);
-	/// The server needs your client to save its state so that it can be restored (through Client::get_state) on relaunch. This may happen for any reason.
-	///
-	/// Client root transform is always saved.
-	fn save_state(&mut self) -> ClientState;
-}
-struct DummyHandler(Weak<Client>);
-impl RootHandler for DummyHandler {
-	fn frame(&mut self, _info: FrameInfo) {}
-	fn save_state(&mut self) -> ClientState {
-		ClientState::default(&self.0.upgrade().unwrap())
-	}
-}
 
 #[derive(Error, Debug)]
 pub enum ClientError {
@@ -138,15 +58,12 @@ pub struct Client {
 
 	stop_notifier: Notify,
 
-	root: OnceCell<Arc<Spatial>>,
+	root: OnceCell<Root>,
 	hmd: OnceCell<Spatial>,
 	pub(crate) registered_item_uis: Mutex<FxHashSet<TypeId>>,
 
 	id_counter: CounterU64,
 	elapsed_time: Mutex<f64>,
-	life_cycle_handler: Mutex<Weak<Mutex<dyn RootHandler>>>,
-
-	state: OnceCell<watch::Receiver<ClientState>>,
 }
 
 impl Client {
@@ -175,75 +92,9 @@ impl Client {
 
 			id_counter: CounterU64::new(u64::MAX / 2),
 			elapsed_time: Mutex::new(0.0),
-			life_cycle_handler: Mutex::new(Weak::<Mutex<DummyHandler>>::new()),
-
-			state: OnceCell::new(),
 		});
-		let _ = client
-			.root
-			.set(Arc::new(Spatial::from_id(&client, 0, false)));
+		let _ = client.root.set(Root::from_id(&client, 0, false));
 		let _ = client.hmd.set(Spatial::from_id(&client, 1, false)); // fix this ID later
-		let (state_tx, state_rx) = watch::channel(ClientState::default(&client));
-		let _ = client.state.set(state_rx);
-		client
-			.get_root()
-			.node()
-			.add_local_signal(root::ROOT_GET_STATE_SERVER_OPCODE, {
-				let client = client.clone();
-
-				move |data, _| {
-					let state: ClientStateInternal = deserialize(data)?;
-					let _ = state_tx.send(ClientState {
-						data: state.data,
-						root: client.get_root().alias(),
-						spatial_anchors: state
-							.spatial_anchors
-							.into_iter()
-							.map(|(k, v)| (k, Spatial::from_id(&client, v, true)))
-							.collect(),
-					});
-					Ok(())
-				}
-			})?;
-		client
-			.get_root()
-			.node()
-			.add_local_signal(root::ROOT_FRAME_CLIENT_OPCODE, {
-				let client = client.clone();
-				move |data, _| {
-					if let Some(handler) = client.life_cycle_handler.lock().upgrade() {
-						#[derive(Deserialize)]
-						struct LogicStepInfoInternal {
-							delta: f64,
-						}
-
-						let info_internal: LogicStepInfoInternal = deserialize(data)?;
-						let mut elapsed = client.elapsed_time.lock();
-						(*elapsed) += info_internal.delta;
-						let info = FrameInfo {
-							delta: info_internal.delta,
-							elapsed: *elapsed,
-						};
-						handler.lock().frame(info);
-					}
-					Ok(())
-				}
-			})?;
-		client
-			.get_root()
-			.node()
-			.add_local_method(root::ROOT_SAVE_STATE_CLIENT_OPCODE, {
-				let client = client.clone();
-				move |_, _| {
-					let root_handler = client
-						.life_cycle_handler
-						.lock()
-						.upgrade()
-						.ok_or_else(|| eyre!("Root is not handled"))?;
-					let state = root_handler.lock().save_state().to_internal()?;
-					Ok(serialize(state).map(|v| (v, vec![]))?)
-				}
-			})?;
 
 		Ok((client, message_tx, message_rx))
 	}
@@ -282,20 +133,11 @@ impl Client {
 			}
 		});
 
-		// wait for the state from the server
-		client
-			.state
-			.get()
-			.unwrap()
-			.clone()
-			.changed()
-			.await
-			.map_err(|_| ClientError::ConnectionFailure)?;
 		Ok((client, event_loop))
 	}
 
 	/// Get a reference to the client's root node, a spatial that exists where the client was spawned.
-	pub fn get_root(&self) -> &Spatial {
+	pub fn get_root(&self) -> &Root {
 		self.root.get().as_ref().unwrap()
 	}
 	/// Get a reference to the head mounted display's spatial.
@@ -303,93 +145,25 @@ impl Client {
 		self.hmd.get().as_ref().unwrap()
 	}
 
-	/// Wrap the root in a handler and return an `Arc` to the handler.
-	#[must_use = "Dropping this handler wrapper would immediately drop the handler, and you want to check for errors too"]
-	pub fn wrap_root<H: RootHandler>(&self, wrapped: H) -> Result<Arc<Mutex<H>>, NodeError> {
-		let wrapped = Arc::new(Mutex::new(wrapped));
-		*self.life_cycle_handler.lock() =
-			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
-		Ok(wrapped)
-	}
-	/// Wrap the root in an already wrapped handler
-	pub fn wrap_root_raw<H: RootHandler>(&self, wrapped: &Arc<Mutex<H>>) -> Result<(), NodeError> {
-		*self.life_cycle_handler.lock() =
-			Arc::downgrade(&(wrapped.clone() as Arc<Mutex<dyn RootHandler>>));
-		Ok(())
-	}
-
 	/// Set the prefixes for any `NamespacedResource`s.
-	pub fn set_base_prefixes<H: AsRef<Path>>(&self, prefixes: &[H]) {
-		let env_prefixes = option_env!("STARDUST_RES_PREFIXES");
+	pub fn set_base_prefixes(&self, prefixes: &[&str]) -> NodeResult<()> {
+		let mut prefixes = prefixes
+			.into_iter()
+			.map(ToString::to_string)
+			.collect::<Vec<String>>();
 
-		let prefix_vec: Vec<&Path> = if let Some(env_prefixes) = env_prefixes {
-			env_prefixes.split(":").map(|p| Path::new(p)).collect()
-		} else {
-			prefixes
-				.iter()
-				.map(|p| p.as_ref())
-				.filter(|p| p.is_absolute() && p.exists())
-				.collect()
-		};
+		let env_prefixes = option_env!("STARDUST_RES_PREFIXES").map(ToString::to_string);
+		if let Some(env_prefixes) = env_prefixes {
+			for prefix in env_prefixes.split(":") {
+				prefixes.push(prefix.to_string().into());
+			}
+		}
 
-		self.message_sender_handle
-			.signal(
-				0,
-				root::ROOT_SET_BASE_PREFIXES_SERVER_OPCODE,
-				&serialize(prefix_vec).unwrap(),
-				Vec::new(),
-			)
-			.unwrap();
-	}
-
-	pub fn get_connection_environment(
-		&self,
-	) -> Result<impl Future<Output = Result<FxHashMap<String, String>, NodeError>>, NodeError> {
-		let future = self
-			.message_sender_handle
-			.method(
-				0,
-				root::ROOT_GET_CONNECTION_ENVIRONMENT_SERVER_OPCODE,
-				&[],
-				Vec::new(),
-			)
-			.map_err(|e| NodeError::MessengerError { e })?;
-
-		Ok(async move {
-			let result = future.await.map_err(|e| NodeError::ReturnedError { e })?;
-			deserialize(&result.into_message()).map_err(|e| NodeError::Deserialization { e })
-		})
+		self.get_root().set_base_prefixes(&prefixes)
 	}
 
 	pub fn generate_id(&self) -> u64 {
 		self.id_counter.inc()
-	}
-
-	/// Get the client's state. Don't hold this reference over an await point.
-	pub fn state(&self) -> watch::Ref<'_, ClientState> {
-		self.state.get().unwrap().borrow()
-	}
-
-	/// Generate a client state token and return it back.
-	///
-	/// When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
-	/// Make sure the environment variable shows in `/proc/{pid}/environ` as that's the only reliable way to pass the value to the server (suggestions welcome).
-	///
-	/// # Example
-	/// ```
-	/// let state_token = client.state_token(ClientState::default()).unwrap().await.unwrap();
-	///
-	/// std::env::set_var("STARDUST_STARTUP_TOKEN", state_token); // to make sure it ends up in `/proc/{pid}/environ` of the new process
-	/// nix::unistd::execvp(ustr(&program).as_cstr(), &args).unwrap(); // make sure to use execv here to get the environment variable there properly.
-	/// ```
-	pub async fn state_token(&self, state: &ClientState) -> NodeResult<String> {
-		self.get_root()
-			.node()
-			.execute_remote_method(
-				root::ROOT_CLIENT_STATE_TOKEN_SERVER_OPCODE,
-				&state.to_internal()?,
-			)
-			.await
 	}
 
 	/// Stop the event loop if created with async loop. Equivalent to a graceful disconnect.
@@ -399,13 +173,8 @@ impl Client {
 }
 impl Drop for Client {
 	fn drop(&mut self) {
+		let _ = self.get_root().disconnect();
 		self.stop_loop();
-		let _ = self.message_sender_handle.signal(
-			0,
-			root::ROOT_GET_STATE_SERVER_OPCODE,
-			&[0_u8; 0],
-			Vec::new(),
-		);
 	}
 }
 
@@ -423,6 +192,7 @@ async fn fusion_client_connect() {
 
 #[tokio::test]
 async fn fusion_client_life_cycle() {
+	use crate::root::*;
 	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
@@ -431,8 +201,9 @@ async fn fusion_client_life_cycle() {
 		fn frame(&mut self, _info: FrameInfo) {
 			self.0.stop_loop();
 		}
-		fn save_state(&mut self) -> ClientState {
-			ClientState::default(&self.0)
+		fn restore_state(&mut self, state: ClientState) {}
+		fn save_state(&mut self) -> Result<ClientState> {
+			Ok(ClientStateParsed::default(&self.0))
 		}
 	}
 

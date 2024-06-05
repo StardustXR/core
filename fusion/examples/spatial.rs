@@ -1,12 +1,14 @@
+use color_eyre::eyre::Result;
 use glam::Quat;
 use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::{color::rgba_linear, ResourceID};
 use stardust_xr_fusion::{
-	client::{Client, ClientState, FrameInfo, RootHandler},
+	client::Client,
 	core::schemas::flex::flexbuffers,
 	drawable::{MaterialParameter, Model, ModelPart, ModelPartAspect},
 	node::NodeType,
-	spatial::{Spatial, SpatialAspect, Transform},
+	root::{ClientState, ClientStateParsed, FrameInfo, Root, RootAspect, RootHandler},
+	spatial::{SpatialAspect, Transform},
 };
 use std::sync::Arc;
 
@@ -14,9 +16,15 @@ use std::sync::Arc;
 async fn main() {
 	tracing_subscriber::fmt::init();
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
-	client.set_base_prefixes(&[directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[directory_relative_path!("res")])
+		.unwrap();
 
-	let _root = client.wrap_root(SpatialDemo::new(&client)).unwrap();
+	let _root = client
+		.get_root()
+		.alias()
+		.wrap(SpatialDemo::new(&client))
+		.unwrap();
 
 	tokio::select! {
 		biased;
@@ -27,7 +35,7 @@ async fn main() {
 
 struct SpatialDemo {
 	t: f32,
-	root: Spatial,
+	root: Root,
 	_gyro: Model,
 	gem: ModelPart,
 	ring_inner: ModelPart,
@@ -45,7 +53,7 @@ impl SpatialDemo {
 		gyro.set_zoneable(true).unwrap();
 
 		SpatialDemo {
-			t: flexbuffers::from_slice(&client.state().data).unwrap_or_default(),
+			t: Default::default(),
 			root: client.get_root().alias(),
 			gem: gyro.part("Gem").unwrap(),
 			ring_inner: gyro.part("OuterRing/MiddleRing/InnerRing").unwrap(),
@@ -78,11 +86,14 @@ impl RootHandler for SpatialDemo {
 			.set_local_transform(Transform::from_rotation(Quat::from_rotation_x(self.t)))
 			.unwrap();
 	}
-	fn save_state(&mut self) -> ClientState {
-		ClientState {
-			data: flexbuffers::to_vec(self.t).unwrap(),
-			root: self.root.alias(),
-			spatial_anchors: Default::default(),
-		}
+	fn save_state(&mut self) -> Result<ClientState> {
+		Ok(ClientStateParsed::from_data_root(Some(self.t), &self.root).serialize()?)
+	}
+	fn restore_state(&mut self, state: ClientState) {
+		let Some(data) = state.data else { return };
+		let Ok(deserialized) = flexbuffers::from_slice(&data) else {
+			return;
+		};
+		self.t = deserialized;
 	}
 }

@@ -243,8 +243,8 @@ async fn fusion_pointer_input_method() {
 				.set_datamap(&Datamap::from_typed(&self.datamap).unwrap())
 				.unwrap();
 		}
-		fn save_state(&mut self) -> crate::client::ClientState {
-			crate::client::ClientState::from_root(&self.root)
+		fn save_state(&mut self) -> crate::client::ClientStateParsed {
+			crate::client::ClientStateParsed::from_root(&self.root)
 		}
 	}
 
@@ -330,8 +330,8 @@ async fn fusion_tip_input_method() {
 				.set_datamap(&Datamap::from_typed(&self.datamap).unwrap())
 				.unwrap();
 		}
-		fn save_state(&mut self) -> crate::client::ClientState {
-			crate::client::ClientState::from_root(&self.root)
+		fn save_state(&mut self) -> crate::client::ClientStateParsed {
+			crate::client::ClientStateParsed::from_root(&self.root)
 		}
 	}
 
