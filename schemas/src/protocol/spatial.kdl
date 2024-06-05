@@ -126,11 +126,11 @@ aspect "Zone" {
 
 	signal "enter" side="client" {
 		description ""
-		argument "spatial" type="node" aspect="Spatial"
+		argument "spatial" type="node" aspect="SpatialRef"
 	}
 	signal "capture" side="client" {
 		description ""
-		argument "id" type="id"
+		argument "spatial" type="node" aspect="Spatial"
 	}
 	signal "release" side="client" {
 		description ""
