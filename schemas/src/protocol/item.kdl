@@ -31,7 +31,7 @@ aspect "ItemAcceptor" {
     // }
     // signal "capture_item" side="client" {
     //     description ""
-    //     argument "id" type="string"
+    //     argument "id" type="id"
     //     argument "item" type="node" node="UnknownItem"
     //     argument "initial_data" type="union" union="UnknownItemInitData"
     // }
@@ -79,6 +79,6 @@ aspect "ItemUi" {
     // }
     signal "destroy_acceptor" side="client" {
         description ""
-        argument "id" type="string"
+        argument "id" type="id"
     }
 }
