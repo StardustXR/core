@@ -6,7 +6,7 @@ union "SurfaceID" {
 	description ""
 	
 	option type="empty" name="toplevel"
-	option type="string" name="child"
+	option type="id" name="child"
 }
 struct "Geometry" {
     description "The origin and size of the surface's \"solid\" part."
