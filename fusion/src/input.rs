@@ -162,7 +162,7 @@ async fn fusion_input_handler() {
 
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
-		fn input(&mut self, _input: InputMethod, data: InputData) {
+		fn input(&mut self, _methods: Vec<InputMethodRef>, data: Vec<InputData>) {
 			dbg!(data.id);
 			dbg!(data.distance);
 			match &data.input {

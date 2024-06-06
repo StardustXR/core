@@ -152,9 +152,9 @@ aspect "InputHandler" {
 	inherits "Spatial"
 
 	signal "input" side="client" {
-		description "An input method has sent an input event on this frame. All the inputs are sent by the time `/:frame` is called."
+		description "The new state of all the input methods that are sending data to this handler."
 
-		argument "method" type="node" aspect="InputMethod"
-		argument "data" type="struct" struct="InputData"
+		argument "methods" type="vec" member_type="node" aspect="InputMethodRef"
+		argument "data" type="vec" member_type="struct" struct="InputData"
 	}
 }

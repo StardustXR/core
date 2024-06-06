@@ -542,11 +542,11 @@ fn generate_argument_deserialize(
 		ArgumentType::Color => quote!(color::rgba_linear!(#name[0], #name[1], #name[2], #name[3])),
 		ArgumentType::Vec(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
-			quote!(#name.iter().map(|a| Ok(#mapping)).collect::<Result<Vec<_>, crate::node::NodeError>>()?)
+			quote!(#name.into_iter().map(|a| Ok(#mapping)).collect::<Result<Vec<_>, crate::node::NodeError>>()?)
 		}
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
-			quote!(#name.iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<rustc_hash::FxHashMap<String, _>, crate::node::NodeError>>()?)
+			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<rustc_hash::FxHashMap<String, _>, crate::node::NodeError>>()?)
 		}
 		_ => quote!(#name),
 	}
@@ -554,6 +554,12 @@ fn generate_argument_deserialize(
 fn convert_deserializeable_argument_type(argument_type: &ArgumentType) -> ArgumentType {
 	match argument_type {
 		ArgumentType::Node { .. } => ArgumentType::NodeID,
+		ArgumentType::Vec(v) => {
+			ArgumentType::Vec(Box::new(convert_deserializeable_argument_type(v)))
+		}
+		ArgumentType::Map(v) => {
+			ArgumentType::Map(Box::new(convert_deserializeable_argument_type(v)))
+		}
 		f => f.clone(),
 	}
 }
