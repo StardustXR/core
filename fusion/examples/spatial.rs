@@ -7,7 +7,7 @@ use stardust_xr_fusion::{
 	core::schemas::flex::flexbuffers,
 	drawable::{MaterialParameter, Model, ModelPart, ModelPartAspect},
 	node::NodeType,
-	root::{ClientState, ClientStateParsed, FrameInfo, Root, RootAspect, RootHandler},
+	root::{ClientState, FrameInfo, Root, RootAspect, RootHandler},
 	spatial::{SpatialAspect, Transform},
 };
 use std::sync::Arc;
@@ -87,7 +87,7 @@ impl RootHandler for SpatialDemo {
 			.unwrap();
 	}
 	fn save_state(&mut self) -> Result<ClientState> {
-		Ok(ClientStateParsed::from_data_root(Some(self.t), &self.root).serialize()?)
+		ClientState::from_data_root(Some(self.t), &self.root)
 	}
 	fn restore_state(&mut self, state: ClientState) {
 		let Some(data) = state.data else { return };

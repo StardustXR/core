@@ -28,11 +28,13 @@ impl Sound {
 }
 #[tokio::test]
 async fn fusion_sound() {
-	color_eyre::install().unwrap();
+
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 
 	let lightspeed_resource = ResourceID::new_namespaced("fusion", "kittn_lightspeed");
 	let sound = Sound::create(client.get_root(), Transform::none(), &lightspeed_resource).unwrap();

@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use crate::client::Client;
 use crate::impl_aspects;
 use crate::node::{NodeResult, NodeType};
 use crate::spatial::{SpatialRef, SpatialRefAspect};
@@ -11,50 +14,58 @@ stardust_xr_fusion_codegen::codegen_root_protocol!();
 impl_aspects!(Root: SpatialRefAspect);
 
 /// The persistent state of a Stardust client.
-#[derive(Debug)]
-pub struct ClientStateParsed<T: Serialize + DeserializeOwned> {
-	/// Data specific to your client, put anything you like here and it'll be saved/restored intact.
-	pub data: Option<T>,
-	/// The root node of this client.
-	pub root: SpatialRef,
-	/// Spatials that will be in the same place you left them.
-	pub spatial_anchors: FxHashMap<String, SpatialRef>,
-}
-impl ClientStateParsed<()> {
-	pub fn from_root_anchors(
-		root: &impl SpatialRefAspect,
-		spatial_anchors: FxHashMap<String, &impl SpatialRefAspect>,
-	) -> Self {
-		Self::new(None::<()>, root, spatial_anchors)
+impl Default for ClientState {
+	fn default() -> Self {
+		ClientState {
+			data: None,
+			root: 0,
+			spatial_anchors: Default::default(),
+		}
 	}
 }
-impl<T: Serialize + DeserializeOwned> ClientStateParsed<T> {
-	pub fn new(
+impl ClientState {
+	pub fn new<T: Serialize>(
 		data: Option<T>,
 		root: &impl SpatialRefAspect,
 		spatial_anchors: FxHashMap<String, &impl SpatialRefAspect>,
-	) -> Self {
-		ClientStateParsed {
-			data,
-			root: SpatialRef(root.node().alias()),
+	) -> Result<Self> {
+		Ok(ClientState {
+			data: data.map(flexbuffers::to_vec).transpose()?,
+			root: root.node().get_id()?,
 			spatial_anchors: spatial_anchors
 				.into_iter()
-				.map(|(k, v)| (k, SpatialRef(v.node().alias())))
-				.collect(),
-		}
-	}
-	pub fn from_data_root(data: Option<T>, root: &impl SpatialRefAspect) -> Self {
-		Self::new(data, root, FxHashMap::<String, &SpatialRef>::default())
-	}
-	pub fn serialize(&self) -> NodeResult<ClientState> {
-		Ok(ClientState {
-			data: self.data.as_ref().and_then(|d| flexbuffers::to_vec(d).ok()),
-			root: self.root.node().get_id()?,
-			spatial_anchors: self
-				.spatial_anchors
-				.iter()
-				.filter_map(|(k, v)| Some((k.clone(), v.node().get_id().ok()?)))
+				.filter_map(|(k, v)| Some((k, v.node().get_id().ok()?)))
 				.collect(),
 		})
+	}
+	pub fn from_data_root<T: Serialize>(
+		data: Option<T>,
+		root: &impl SpatialRefAspect,
+	) -> Result<Self> {
+		Self::new(data, root, FxHashMap::<String, &SpatialRef>::default())
+	}
+	pub fn from_root_anchors(
+		root: &impl SpatialRefAspect,
+		spatial_anchors: FxHashMap<String, &impl SpatialRefAspect>,
+	) -> Result<Self> {
+		Self::new(None::<()>, root, spatial_anchors)
+	}
+	pub fn from_root(root: &impl SpatialRefAspect) -> Result<Self> {
+		Self::from_data_root(None::<()>, root)
+	}
+
+	pub fn data<T: DeserializeOwned>(&self) -> Option<Result<T>> {
+		self.data
+			.as_ref()
+			.map(|b| Ok(flexbuffers::from_buffer(&b.as_slice())?))
+	}
+	pub fn root(&self, client: &Arc<Client>) -> SpatialRef {
+		SpatialRef::from_id(client, self.root, false)
+	}
+	pub fn spatial_anchors(&self, client: &Arc<Client>) -> FxHashMap<String, SpatialRef> {
+		self.spatial_anchors
+			.iter()
+			.map(|(k, v)| (k.to_string(), SpatialRef::from_id(client, *v, false)))
+			.collect()
 	}
 }

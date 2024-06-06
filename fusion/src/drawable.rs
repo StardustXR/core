@@ -102,7 +102,7 @@ impl Default for TextStyle {
 
 #[tokio::test]
 async fn fusion_lines() {
-	color_eyre::install().unwrap();
+
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
@@ -142,11 +142,13 @@ async fn fusion_lines() {
 
 #[tokio::test]
 async fn fusion_model() {
-	color_eyre::install().unwrap();
+
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 
 	let gyro_resource = ResourceID::new_namespaced("fusion", "gyro");
 	let gyro_model = Model::create(client.get_root(), Transform::none(), &gyro_resource).unwrap();
@@ -176,11 +178,13 @@ async fn fusion_model() {
 }
 #[tokio::test]
 async fn fusion_text() {
-	color_eyre::install().unwrap();
+
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 
 	let style: TextStyle = TextStyle {
 		font: Some(stardust_xr::values::ResourceID::new_namespaced(
@@ -198,11 +202,13 @@ async fn fusion_text() {
 
 #[tokio::test]
 async fn fusion_sky() {
-	color_eyre::install().unwrap();
+
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 	let sky_resource = stardust_xr::values::ResourceID::new_namespaced("fusion", "sky");
 
 	set_sky_light(&client, &sky_resource).unwrap();

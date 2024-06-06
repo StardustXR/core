@@ -158,7 +158,6 @@ impl Zone {
 
 #[tokio::test]
 async fn fusion_spatial() {
-	color_eyre::install().unwrap();
 	use super::client::Client;
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
@@ -186,11 +185,12 @@ async fn fusion_spatial() {
 
 #[tokio::test]
 async fn fusion_zone() {
-	color_eyre::install().unwrap();
 	let (client, event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 
 	let model_parent =
 		crate::spatial::Spatial::create(client.get_root(), Transform::none(), true).unwrap();
@@ -205,20 +205,18 @@ async fn fusion_zone() {
 		client: std::sync::Arc<crate::client::Client>,
 		root: crate::spatial::Spatial,
 		zone: Zone,
-		zone_spatials: rustc_hash::FxHashMap<u64, Spatial>,
+		zone_spatials: rustc_hash::FxHashMap<u64, SpatialRef>,
 	}
 	impl ZoneHandler for ZoneTest {
-		fn enter(&mut self, spatial: crate::spatial::Spatial) {
+		fn enter(&mut self, spatial: SpatialRef) {
 			println!("Spatial {spatial:?} entered zone");
 			self.zone.capture(&spatial).unwrap();
 			self.zone_spatials
 				.insert(spatial.node().get_id().unwrap(), spatial);
 		}
-		fn capture(&mut self, id: u64) {
-			println!("Spatial {id} was captured");
-			self.zone
-				.release(&self.zone_spatials.remove(&id).unwrap())
-				.unwrap();
+		fn capture(&mut self, spatial: Spatial) {
+			println!("Spatial {spatial:?} was captured");
+			self.zone.release(&spatial).unwrap();
 		}
 		fn release(&mut self, id: u64) {
 			println!("Spatial {id} was released");
@@ -242,6 +240,7 @@ async fn fusion_zone() {
 	let zone = zone.wrap(zone_handler).unwrap();
 	zone.node().update().unwrap();
 
+	tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 	tokio::select! {
 		biased;
 		_ = tokio::signal::ctrl_c() => (),

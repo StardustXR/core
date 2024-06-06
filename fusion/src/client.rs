@@ -180,7 +180,6 @@ impl Drop for Client {
 
 #[tokio::test]
 async fn fusion_client_connect() {
-	color_eyre::install().unwrap();
 	let (_client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
 	tokio::select! {
@@ -193,7 +192,6 @@ async fn fusion_client_connect() {
 #[tokio::test]
 async fn fusion_client_life_cycle() {
 	use crate::root::*;
-	color_eyre::install().unwrap();
 	let (client, event_loop) = Client::connect_with_async_loop().await.unwrap();
 
 	struct RootHandlerDummy(Arc<Client>);
@@ -201,13 +199,17 @@ async fn fusion_client_life_cycle() {
 		fn frame(&mut self, _info: FrameInfo) {
 			self.0.stop_loop();
 		}
-		fn restore_state(&mut self, state: ClientState) {}
-		fn save_state(&mut self) -> Result<ClientState> {
-			Ok(ClientStateParsed::default(&self.0))
+		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
+			Ok(ClientState::default())
 		}
+		fn restore_state(&mut self, _state: ClientState) {}
 	}
 
-	let _wrapper = client.wrap_root(RootHandlerDummy(client.clone())).unwrap();
+	let _wrapper = client
+		.get_root()
+		.alias()
+		.wrap(RootHandlerDummy(client.clone()))
+		.unwrap();
 
 	tokio::select! {
 		biased;

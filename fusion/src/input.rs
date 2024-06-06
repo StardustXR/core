@@ -19,8 +19,6 @@
 //!
 //! You may want to use the `InputAction`-based structs in molecules for an easy way to parse and react to the raw input.
 
-use std::hash::Hash;
-
 use crate::{
 	fields::{Field, FieldAspect},
 	impl_aspects,
@@ -29,6 +27,7 @@ use crate::{
 };
 use glam::{vec3a, Quat};
 use stardust_xr::values::*;
+use std::hash::Hash;
 
 stardust_xr_fusion_codegen::codegen_input_protocol!();
 
@@ -154,7 +153,7 @@ impl Eq for InputData {}
 #[tokio::test]
 async fn fusion_input_handler() {
 	use super::client::Client;
-	color_eyre::install().unwrap();
+
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
@@ -201,14 +200,17 @@ async fn fusion_input_handler() {
 
 #[tokio::test]
 async fn fusion_pointer_input_method() {
-	use crate::client::{Client, FrameInfo};
+	use crate::client::Client;
 	use crate::drawable::Model;
+	use crate::root::*;
 
-	color_eyre::install().unwrap();
+
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 
 	let mut fbb = stardust_xr::schemas::flex::flexbuffers::Builder::default();
 	fbb.start_map();
@@ -226,12 +228,11 @@ async fn fusion_pointer_input_method() {
 		select: f32,
 	}
 	struct PointerDemo {
-		root: crate::spatial::Spatial,
 		pointer: InputMethod,
 		model: Model,
 		datamap: PointerData,
 	}
-	impl crate::client::RootHandler for PointerDemo {
+	impl RootHandler for PointerDemo {
 		fn frame(&mut self, info: FrameInfo) {
 			let (sin, cos) = (info.elapsed as f32).sin_cos();
 			self.pointer
@@ -243,9 +244,10 @@ async fn fusion_pointer_input_method() {
 				.set_datamap(&Datamap::from_typed(&self.datamap).unwrap())
 				.unwrap();
 		}
-		fn save_state(&mut self) -> crate::client::ClientStateParsed {
-			crate::client::ClientStateParsed::from_root(&self.root)
+		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
+			Ok(ClientState::default())
 		}
+		fn restore_state(&mut self, _state: ClientState) {}
 	}
 
 	let model = Model::create(
@@ -257,12 +259,15 @@ async fn fusion_pointer_input_method() {
 		&stardust_xr::values::ResourceID::new_namespaced("fusion", "cursor_spike"),
 	)
 	.unwrap();
-	let _wrapped_root = client.wrap_root(PointerDemo {
-		root: client.get_root().alias(),
-		pointer,
-		model,
-		datamap: PointerData::default(),
-	});
+	let _wrapped_root = client
+		.get_root()
+		.alias()
+		.wrap(PointerDemo {
+			pointer,
+			model,
+			datamap: PointerData::default(),
+		})
+		.unwrap();
 
 	tokio::select! {
 		biased;
@@ -273,14 +278,17 @@ async fn fusion_pointer_input_method() {
 
 #[tokio::test]
 async fn fusion_tip_input_method() {
-	use crate::client::{Client, FrameInfo};
+	use crate::client::Client;
 	use crate::drawable::Model;
+	use crate::root::*;
 
-	color_eyre::install().unwrap();
+
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
-	client.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")]);
+	client
+		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
+		.unwrap();
 
 	let tip = InputMethod::create(
 		client.get_root(),
@@ -313,12 +321,11 @@ async fn fusion_tip_input_method() {
 		select: f32,
 	}
 	struct TipDemo {
-		root: crate::spatial::Spatial,
 		tip: InputMethod,
 		cursor: Cursor,
 		datamap: TipData,
 	}
-	impl crate::client::RootHandler for TipDemo {
+	impl RootHandler for TipDemo {
 		fn frame(&mut self, info: FrameInfo) {
 			let (sin, cos) = (info.elapsed as f32).sin_cos();
 			self.tip
@@ -330,13 +337,13 @@ async fn fusion_tip_input_method() {
 				.set_datamap(&Datamap::from_typed(&self.datamap).unwrap())
 				.unwrap();
 		}
-		fn save_state(&mut self) -> crate::client::ClientStateParsed {
-			crate::client::ClientStateParsed::from_root(&self.root)
+		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
+			Ok(ClientState::default())
 		}
+		fn restore_state(&mut self, _state: ClientState) {}
 	}
 
-	let _wrapped_root = client.wrap_root(TipDemo {
-		root: client.get_root().alias(),
+	let _wrapped_root = client.get_root().alias().wrap(TipDemo {
 		cursor: Cursor {
 			top: summon_model(
 				&tip,

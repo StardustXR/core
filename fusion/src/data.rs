@@ -104,7 +104,7 @@ impl crate::client::Client {
 #[tokio::test]
 async fn fusion_pulses() {
 	use super::client::Client;
-	color_eyre::install().unwrap();
+
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
