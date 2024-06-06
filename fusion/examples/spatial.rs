@@ -4,7 +4,6 @@ use manifest_dir_macros::directory_relative_path;
 use stardust_xr::values::{color::rgba_linear, ResourceID};
 use stardust_xr_fusion::{
 	client::Client,
-	core::schemas::flex::flexbuffers,
 	drawable::{MaterialParameter, Model, ModelPart, ModelPartAspect},
 	node::NodeType,
 	root::{ClientState, FrameInfo, Root, RootAspect, RootHandler},
@@ -53,7 +52,7 @@ impl SpatialDemo {
 		gyro.set_zoneable(true).unwrap();
 
 		SpatialDemo {
-			t: Default::default(),
+			t: client.get_state().data().unwrap_or_default(),
 			root: client.get_root().alias(),
 			gem: gyro.part("Gem").unwrap(),
 			ring_inner: gyro.part("OuterRing/MiddleRing/InnerRing").unwrap(),
@@ -88,12 +87,5 @@ impl RootHandler for SpatialDemo {
 	}
 	fn save_state(&mut self) -> Result<ClientState> {
 		ClientState::from_data_root(Some(self.t), &self.root)
-	}
-	fn restore_state(&mut self, state: ClientState) {
-		let Some(data) = state.data else { return };
-		let Ok(deserialized) = flexbuffers::from_slice(&data) else {
-			return;
-		};
-		self.t = deserialized;
 	}
 }

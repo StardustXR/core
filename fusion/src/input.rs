@@ -204,7 +204,6 @@ async fn fusion_pointer_input_method() {
 	use crate::drawable::Model;
 	use crate::root::*;
 
-
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
@@ -247,7 +246,6 @@ async fn fusion_pointer_input_method() {
 		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
 			Ok(ClientState::default())
 		}
-		fn restore_state(&mut self, _state: ClientState) {}
 	}
 
 	let model = Model::create(
@@ -281,7 +279,6 @@ async fn fusion_tip_input_method() {
 	use crate::client::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
-
 
 	let (client, event_loop) = Client::connect_with_async_loop()
 		.await
@@ -340,7 +337,6 @@ async fn fusion_tip_input_method() {
 		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
 			Ok(ClientState::default())
 		}
-		fn restore_state(&mut self, _state: ClientState) {}
 	}
 
 	let _wrapped_root = client.get_root().alias().wrap(TipDemo {

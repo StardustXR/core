@@ -1,7 +1,7 @@
 //! Your connection to the Stardust server and other essentials.
 
 use crate::node::{NodeResult, NodeType};
-use crate::root::{Root, RootAspect};
+use crate::root::{ClientState, Root, RootAspect};
 use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
 use color_eyre::eyre::Result;
@@ -61,6 +61,7 @@ pub struct Client {
 	root: OnceCell<Root>,
 	hmd: OnceCell<Spatial>,
 	pub(crate) registered_item_uis: Mutex<FxHashSet<TypeId>>,
+	state: OnceCell<ClientState>,
 
 	id_counter: CounterU64,
 	elapsed_time: Mutex<f64>,
@@ -89,6 +90,7 @@ impl Client {
 			root: OnceCell::new(),
 			hmd: OnceCell::new(),
 			registered_item_uis: Mutex::new(FxHashSet::default()),
+			state: OnceCell::new(),
 
 			id_counter: CounterU64::new(u64::MAX / 2),
 			elapsed_time: Mutex::new(0.0),
@@ -132,6 +134,9 @@ impl Client {
 				}
 			}
 		});
+		let _ = client
+			.state
+			.set(client.get_root().get_state().await.unwrap_or_default());
 
 		Ok((client, event_loop))
 	}
@@ -143,6 +148,9 @@ impl Client {
 	/// Get a reference to the head mounted display's spatial.
 	pub fn get_hmd(&self) -> &Spatial {
 		self.hmd.get().as_ref().unwrap()
+	}
+	pub fn get_state(&self) -> &ClientState {
+		self.state.get().unwrap()
 	}
 
 	/// Set the prefixes for any `NamespacedResource`s.
@@ -202,7 +210,6 @@ async fn fusion_client_life_cycle() {
 		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
 			Ok(ClientState::default())
 		}
-		fn restore_state(&mut self, _state: ClientState) {}
 	}
 
 	let _wrapper = client

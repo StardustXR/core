@@ -25,14 +25,9 @@ aspect "Root" {
 		argument "info" type="struct" struct="FrameInfo"
 	}
 	method "get_state" side="server" {
-		description ""
+		description "Get the current state. Useful to check the state before you initialize your application!"
 	
 		return type="struct" struct="ClientState"
-	}
-	signal "restore_state" side="client" {
-		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
-	
-		argument "state" type="struct" struct="ClientState"
 	}
 	method "save_state" side="client" {
 		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
@@ -40,12 +35,7 @@ aspect "Root" {
 		return type="struct" struct="ClientState"
 	}
 	
-	method "get_connection_environment" side="server" {
-		description "Get a hashmap of all the environment variables to connect a given app to the stardust server"
-		
-		return type="map" value_type="string"
-	}
-	method "client_state_token" side="server" {
+	method "generate_state_token" side="server" {
 		description r#"
 			Generate a client state token and return it back.
 	
@@ -55,6 +45,11 @@ aspect "Root" {
 	
 		argument "state" type="struct" struct="ClientState"
 		return type="string"
+	}
+	method "get_connection_environment" side="server" {
+		description "Get a hashmap of all the environment variables to connect a given app to the stardust server"
+		
+		return type="map" value_type="string"
 	}
 	
 	signal "set_base_prefixes" side="server" {

@@ -54,10 +54,8 @@ impl ClientState {
 		Self::from_data_root(None::<()>, root)
 	}
 
-	pub fn data<T: DeserializeOwned>(&self) -> Option<Result<T>> {
-		self.data
-			.as_ref()
-			.map(|b| Ok(flexbuffers::from_buffer(&b.as_slice())?))
+	pub fn data<T: DeserializeOwned>(&self) -> Option<T> {
+		flexbuffers::from_buffer(&self.data.as_ref()?.as_slice()).ok()
 	}
 	pub fn root(&self, client: &Arc<Client>) -> SpatialRef {
 		SpatialRef::from_id(client, self.root, false)
