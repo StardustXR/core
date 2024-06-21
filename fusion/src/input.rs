@@ -158,29 +158,36 @@ async fn fusion_input_handler() {
 		.await
 		.expect("Couldn't connect");
 
-	let field = super::fields::SphereField::create(client.get_root(), [0.0; 3], 0.1).unwrap();
+	let field = super::fields::Field::create(
+		client.get_root(),
+		Transform::identity(),
+		crate::fields::Shape::Sphere(0.1),
+	)
+	.unwrap();
 
 	struct InputHandlerTest;
 	impl InputHandlerHandler for InputHandlerTest {
 		fn input(&mut self, _methods: Vec<InputMethodRef>, data: Vec<InputData>) {
-			dbg!(data.id);
-			dbg!(data.distance);
-			match &data.input {
-				InputDataType::Pointer(_) => {
-					println!("Pointer input");
-				}
-				InputDataType::Hand(_) => {
-					println!("Hand input");
-					let _ = data.datamap.with_data(|datamap| {
-						dbg!(datamap
-							.iter_keys()
-							.zip(datamap.iter_values())
-							.collect::<Vec<_>>());
-						let _ = dbg!(datamap.idx("right").get_bool());
-					});
-				}
-				InputDataType::Tip(_) => {
-					println!("Tip input");
+			for data in data {
+				dbg!(data.id);
+				dbg!(data.distance);
+				match &data.input {
+					InputDataType::Pointer(_) => {
+						println!("Pointer input");
+					}
+					InputDataType::Hand(_) => {
+						println!("Hand input");
+						let _ = data.datamap.with_data(|datamap| {
+							dbg!(datamap
+								.iter_keys()
+								.zip(datamap.iter_values())
+								.collect::<Vec<_>>());
+							let _ = dbg!(datamap.idx("right").get_bool());
+						});
+					}
+					InputDataType::Tip(_) => {
+						println!("Tip input");
+					}
 				}
 			}
 		}

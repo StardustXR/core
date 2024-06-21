@@ -135,10 +135,10 @@ async fn fusion_pulses() {
 		}
 	}
 
-	let field = super::fields::SphereField::create(
+	let field = super::fields::Field::create(
 		client.get_root(),
-		stardust_xr::values::Vector3::from([0.0; 3]),
-		0.1,
+		Transform::identity(),
+		crate::fields::Shape::Sphere(0.1),
 	)
 	.unwrap();
 

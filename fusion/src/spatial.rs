@@ -199,7 +199,12 @@ async fn fusion_zone() {
 	let _model =
 		crate::drawable::Model::create(&model_parent, Transform::none(), &gyro_gem).unwrap();
 
-	let field = crate::fields::SphereField::create(client.get_root(), [0.0; 3], 0.1).unwrap();
+	let field = crate::fields::Field::create(
+		client.get_root(),
+		Transform::identity(),
+		crate::fields::Shape::Sphere(0.1),
+	)
+	.unwrap();
 
 	struct ZoneTest {
 		client: std::sync::Arc<crate::client::Client>,
