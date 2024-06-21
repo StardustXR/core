@@ -71,9 +71,9 @@ struct "TorusShape" {
 union "Shape" {
 	description "The shape of a given field."
 	
-	option name="Box" type="vec3"
+	option name="Box" type="vec3" description="Box with a given size in meters"
 	option name="Cylinder" type="struct" struct="CylinderShape"
-	option name="Sphere" type="float"
+	option name="Sphere" type="float" description="Sphere with a given radius in meters"
 	option name="Torus" type="struct" struct="TorusShape"
 }
 
