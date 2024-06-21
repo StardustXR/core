@@ -13,7 +13,7 @@ cluFlock = "1.2.7"
 nix = { version = "0.27.1", features = ["socket", "uio", "fs"] }
 parking_lot = "0.12.1"
 serde = { version = "1.0.196", features = ["derive"] }
-rustc-hash = "1.1.0"
+rustc-hash = "2.0.0"
 thiserror = "1.0.56"
 tokio = { version = "1.36.0", features = [
     "sync",
@@ -28,7 +28,7 @@ dirs = "5.0.1"
 global_counter = "0.2.2"
 
 # values
-color-rs = { git = "https://github.com/arturoc/color-rs.git" }
+shiva-color-rs = "0.0.1"
 mint = { version = "0.5.9", features = ["serde"] }
 
 stardust-xr-schemas = { path = "../schemas" }
