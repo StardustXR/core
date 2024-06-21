@@ -342,7 +342,7 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 	let _type = member._type;
 
 	let first_arg = if interface_node_id.is_some() {
-		quote!(client: &std::sync::Arc<crate::client::Client>)
+		quote!(_client: &std::sync::Arc<crate::client::Client>)
 	} else {
 		if member.side == Side::Server {
 			quote!(&self)
@@ -371,10 +371,17 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 	match (side, _type) {
 		(Side::Server, MemberType::Method) => {
 			let body = if let Some(interface_node_id) = &interface_node_id {
+				let argument_type = member.return_type.clone().unwrap_or(ArgumentType::Empty);
+				let deserializeable_type = generate_argument_type(
+					&convert_deserializeable_argument_type(&argument_type),
+					true,
+				);
+				let deserialize = generate_argument_deserialize("result", &argument_type, false);
 				quote! {
 					let data = stardust_xr::schemas::flex::serialize(&(#argument_uses))?;
-					let result = client.message_sender_handle.method(#interface_node_id, #opcode, &data, Vec::new())?.await?;
-					Ok(stardust_xr::schemas::flex::deserialize(&result.into_message())?)
+					let message = _client.message_sender_handle.method(#interface_node_id, #opcode, &data, Vec::new())?.await?.into_message();
+					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
+					Ok(#deserialize)
 				}
 			} else {
 				quote! {
@@ -399,7 +406,7 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 		(Side::Server, MemberType::Signal) => {
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					client.message_sender_handle.signal(#interface_node_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#argument_uses))?, Vec::new())
+					_client.message_sender_handle.signal(#interface_node_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#argument_uses))?, Vec::new())
 				}
 			} else {
 				quote! {
@@ -414,7 +421,7 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 				if let Some(return_id_parameter_name) = return_id_parameter_name {
 					let id_argument = Ident::new(&return_id_parameter_name, Span::call_site());
 					let get_client = if interface_node_id.is_some() {
-						quote!(client)
+						quote!(_client)
 					} else {
 						quote!(self.node().client()?)
 					};
