@@ -14,5 +14,6 @@ use flat::*;
 /// Flexbuffers schemas and exports.
 pub mod flex;
 
+pub use zbus;
 pub mod dbus;
 pub mod protocol;
