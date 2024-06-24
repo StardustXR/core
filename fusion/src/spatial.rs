@@ -14,7 +14,10 @@
 //! Zones can capture spatials, temporarily parenting them to the zone until they are released.
 //! Zones can see zoneable spatials if they're closer to the surface of the field than any zone that captured them, so no zones can steal and hoard them.
 
+use std::sync::Arc;
+
 use crate::{
+	client::Client,
 	fields::FieldAspect,
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
@@ -119,6 +122,20 @@ impl Transform {
 		}
 	}
 }
+impl PartialEq for Transform {
+	fn eq(&self, other: &Self) -> bool {
+		self.translation == other.translation
+			&& self.rotation == other.rotation
+			&& self.scale == other.scale
+	}
+}
+impl Eq for Transform {}
+
+impl SpatialRef {
+	pub async fn import(client: &Arc<Client>, uid: u64) -> NodeResult<Self> {
+		import_spatial_ref(client, uid).await
+	}
+}
 
 impl_aspects!(Spatial: OwnedAspect, SpatialRefAspect);
 impl Spatial {
@@ -156,10 +173,12 @@ impl Zone {
 	}
 }
 
+// TODO: write tests to ensure transform order and such is correct
+
 #[tokio::test]
 async fn fusion_spatial() {
 	use super::client::Client;
-	let (client, event_loop) = Client::connect_with_async_loop()
+	let (client, _) = Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");
 	let spatial = Spatial::create(
@@ -174,13 +193,24 @@ async fn fusion_spatial() {
 		.unwrap();
 	assert_eq!(bounding_box.center, [1.0, 0.5, 0.1].into());
 	assert_eq!(bounding_box.size, [0.0; 3].into());
-	drop(spatial);
+}
 
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		e = event_loop => e.unwrap().unwrap(),
-	}
+#[tokio::test]
+async fn fusion_spatial_import_export() {
+	use super::client::Client;
+	let (client, _) = Client::connect_with_async_loop()
+		.await
+		.expect("Couldn't connect");
+	let exported = Spatial::create(
+		client.get_root(),
+		Transform::from_translation_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
+		false,
+	)
+	.unwrap();
+	let uid = exported.export_spatial().await.unwrap();
+	let imported = SpatialRef::import(&client, uid).await.unwrap();
+	let relative_transform = imported.get_transform(&exported).await.unwrap();
+	assert_eq!(relative_transform, Transform::identity());
 }
 
 #[tokio::test]

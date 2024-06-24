@@ -1,6 +1,9 @@
 //! Analog SDFs to define boundaries for input, interaction, and behavior.
 
+use std::sync::Arc;
+
 use crate::{
+	client::Client,
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
@@ -10,8 +13,8 @@ stardust_xr_fusion_codegen::codegen_field_protocol!();
 
 impl_aspects!(FieldRef: SpatialRefAspect);
 impl FieldRef {
-	pub fn alias_field<Fi: FieldRefAspect>(field: &Fi) -> Self {
-		FieldRef(field.node().alias())
+	pub async fn import(client: &Arc<Client>, uid: u64) -> NodeResult<Self> {
+		import_field_ref(client, uid).await
 	}
 }
 impl_aspects!(Field: OwnedAspect, SpatialRefAspect, SpatialAspect, FieldRefAspect);
@@ -31,3 +34,5 @@ impl Field {
 		)
 	}
 }
+
+// TODO: write proper tests for each field shape and setting shape
