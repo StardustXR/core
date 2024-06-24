@@ -15,3 +15,4 @@ use flat::*;
 pub mod flex;
 
 pub mod protocol;
+pub use zbus;

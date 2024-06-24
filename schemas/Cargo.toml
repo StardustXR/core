@@ -19,6 +19,7 @@ serde_repr = "0.1.18"
 kdl = "4.6.0"
 fnv = "1.0.7"
 thiserror = "1.0.56"
+zbus = "4.3.0"
 
 [build-dependencies]
 manifest-dir-macros = "0.1.18"
