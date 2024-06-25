@@ -31,6 +31,7 @@ pub mod drawable;
 pub mod fields;
 pub mod input;
 pub mod items;
+pub mod objects;
 pub mod root;
 mod scenegraph;
 pub mod spatial;
