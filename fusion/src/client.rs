@@ -2,19 +2,15 @@
 
 use crate::node::{NodeResult, NodeType};
 use crate::root::{ClientState, Root, RootAspect};
-use crate::spatial::Spatial;
 use crate::{node::NodeError, scenegraph::Scenegraph};
 use color_eyre::eyre::Result;
 use global_counter::primitive::exact::CounterU64;
-use parking_lot::Mutex;
-use rustc_hash::FxHashSet;
 use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
 use stardust_xr::{
 	client,
 	messenger::{self, MessengerError},
 	messenger::{MessageReceiver, MessageSender, MessageSenderHandle},
 };
-use std::any::TypeId;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::net::UnixStream;
@@ -51,20 +47,14 @@ impl From<DeserializationError> for ClientError {
 
 /// Your connection to the Stardust server.
 pub struct Client {
-	/// A handle to the messenger, allows you to send messages to nodes on the server.
 	pub message_sender_handle: MessageSenderHandle,
-	/// A reference to the scenegraph.
 	pub scenegraph: Arc<Scenegraph>,
 
+	id_counter: CounterU64,
 	stop_notifier: Notify,
 
 	root: OnceCell<Root>,
-	hmd: OnceCell<Spatial>,
-	pub(crate) registered_item_uis: Mutex<FxHashSet<TypeId>>,
 	state: OnceCell<ClientState>,
-
-	id_counter: CounterU64,
-	elapsed_time: Mutex<f64>,
 }
 
 impl Client {
@@ -85,18 +75,13 @@ impl Client {
 			scenegraph: Arc::new(Scenegraph::new()),
 			message_sender_handle: message_tx.handle(),
 
+			id_counter: CounterU64::new(u64::MAX / 2),
 			stop_notifier: Default::default(),
 
 			root: OnceCell::new(),
-			hmd: OnceCell::new(),
-			registered_item_uis: Mutex::new(FxHashSet::default()),
 			state: OnceCell::new(),
-
-			id_counter: CounterU64::new(u64::MAX / 2),
-			elapsed_time: Mutex::new(0.0),
 		});
 		let _ = client.root.set(Root::from_id(&client, 0, false));
-		let _ = client.hmd.set(Spatial::from_id(&client, 1, false)); // fix this ID later
 
 		Ok((client, message_tx, message_rx))
 	}
@@ -144,10 +129,6 @@ impl Client {
 	/// Get a reference to the client's root node, a spatial that exists where the client was spawned.
 	pub fn get_root(&self) -> &Root {
 		self.root.get().as_ref().unwrap()
-	}
-	/// Get a reference to the head mounted display's spatial.
-	pub fn get_hmd(&self) -> &Spatial {
-		self.hmd.get().as_ref().unwrap()
 	}
 	pub fn get_state(&self) -> &ClientState {
 		self.state.get().unwrap()
