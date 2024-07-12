@@ -129,10 +129,10 @@ impl<'b> Serializer for FlexSerializer<'b> {
 		Ok(())
 	}
 
-	fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_some<T: Serialize + ?Sized>(
+		self,
+		value: &T,
+	) -> Result<Self::Ok, FlexSerializeError> {
 		value.serialize(self)
 	}
 
@@ -154,27 +154,21 @@ impl<'b> Serializer for FlexSerializer<'b> {
 		self.serialize_u32(variant_index)
 	}
 
-	fn serialize_newtype_struct<T: ?Sized>(
+	fn serialize_newtype_struct<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		value.serialize(self)
 	}
 
-	fn serialize_newtype_variant<T: ?Sized>(
+	fn serialize_newtype_variant<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		_variant_index: u32,
 		_variant: &'static str,
 		value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		// TODO: actually store variant type too
 		value.serialize(self)
 	}
@@ -219,7 +213,7 @@ impl<'b> Serializer for FlexSerializer<'b> {
 			fmb: self.fbb.start_map(),
 			key: FlexMapKeySerializer {
 				key: String::new(),
-				phantom: PhantomData::default(),
+				phantom: PhantomData,
 			},
 		})
 	}
@@ -340,10 +334,10 @@ impl<'parent, 'fvb> Serializer for FlexVecSerializerWrapper<'parent, 'fvb> {
 		Ok(())
 	}
 
-	fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_some<T: Serialize + ?Sized>(
+		self,
+		value: &T,
+	) -> Result<Self::Ok, FlexSerializeError> {
 		value.serialize(self)
 	}
 
@@ -365,27 +359,21 @@ impl<'parent, 'fvb> Serializer for FlexVecSerializerWrapper<'parent, 'fvb> {
 		self.serialize_u32(variant_index)
 	}
 
-	fn serialize_newtype_struct<T: ?Sized>(
+	fn serialize_newtype_struct<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		value.serialize(self)
 	}
 
-	fn serialize_newtype_variant<T: ?Sized>(
+	fn serialize_newtype_variant<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		_variant_index: u32,
 		_variant: &'static str,
 		value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		// TODO: actually store variant type too
 		value.serialize(self)
 	}
@@ -430,7 +418,7 @@ impl<'parent, 'fvb> Serializer for FlexVecSerializerWrapper<'parent, 'fvb> {
 			fmb: self.0.start_map(),
 			key: FlexMapKeySerializer {
 				key: String::new(),
-				phantom: PhantomData::default(),
+				phantom: PhantomData,
 			},
 		})
 	}
@@ -462,10 +450,10 @@ impl<'b> SerializeSeq for FlexVecSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_element<T: Serialize + ?Sized>(
+		&mut self,
+		value: &T,
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexVecSerializerWrapper(&mut self.fvb))
 	}
 
@@ -477,10 +465,10 @@ impl<'b> SerializeTuple for FlexVecSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_element<T: Serialize + ?Sized>(
+		&mut self,
+		value: &T,
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexVecSerializerWrapper(&mut self.fvb))
 	}
 
@@ -492,10 +480,10 @@ impl<'b> SerializeTupleStruct for FlexVecSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_field<T: Serialize + ?Sized>(
+		&mut self,
+		value: &T,
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexVecSerializerWrapper(&mut self.fvb))
 	}
 
@@ -507,10 +495,10 @@ impl<'b> SerializeTupleVariant for FlexVecSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_field<T: Serialize + ?Sized>(
+		&mut self,
+		value: &T,
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexVecSerializerWrapper(&mut self.fvb))
 	}
 
@@ -522,14 +510,11 @@ impl<'b> SerializeStruct for FlexVecSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_field<T: ?Sized>(
+	fn serialize_field<T: Serialize + ?Sized>(
 		&mut self,
 		_key: &'static str,
 		value: &T,
-	) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexVecSerializerWrapper(&mut self.fvb))
 	}
 
@@ -542,14 +527,11 @@ impl<'b> SerializeStructVariant for FlexVecSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_field<T: ?Sized>(
+	fn serialize_field<T: Serialize + ?Sized>(
 		&mut self,
 		_key: &'static str,
 		value: &T,
-	) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexVecSerializerWrapper(&mut self.fvb))
 	}
 
@@ -636,10 +618,10 @@ impl<'b> Serializer for &mut FlexMapKeySerializer<'b> {
 		Err(FlexSerializeError::MapKeyNotString)
 	}
 
-	fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_some<T: Serialize + ?Sized>(
+		self,
+		_value: &T,
+	) -> Result<Self::Ok, FlexSerializeError> {
 		Err(FlexSerializeError::MapKeyNotString)
 	}
 
@@ -660,27 +642,21 @@ impl<'b> Serializer for &mut FlexMapKeySerializer<'b> {
 		Err(FlexSerializeError::MapKeyNotString)
 	}
 
-	fn serialize_newtype_struct<T: ?Sized>(
+	fn serialize_newtype_struct<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		_value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		Err(FlexSerializeError::MapKeyNotString)
 	}
 
-	fn serialize_newtype_variant<T: ?Sized>(
+	fn serialize_newtype_variant<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		_variant_index: u32,
 		_variant: &'static str,
 		_value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		Err(FlexSerializeError::MapKeyNotString)
 	}
 
@@ -829,10 +805,10 @@ impl<'parent, 'fvb> Serializer for FlexMapSerializerWrapper<'parent, 'fvb> {
 		Ok(())
 	}
 
-	fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_some<T: Serialize + ?Sized>(
+		self,
+		value: &T,
+	) -> Result<Self::Ok, FlexSerializeError> {
 		value.serialize(self)
 	}
 
@@ -854,27 +830,21 @@ impl<'parent, 'fvb> Serializer for FlexMapSerializerWrapper<'parent, 'fvb> {
 		self.serialize_u32(variant_index)
 	}
 
-	fn serialize_newtype_struct<T: ?Sized>(
+	fn serialize_newtype_struct<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		value.serialize(self)
 	}
 
-	fn serialize_newtype_variant<T: ?Sized>(
+	fn serialize_newtype_variant<T: Serialize + ?Sized>(
 		self,
 		_name: &'static str,
 		_variant_index: u32,
 		_variant: &'static str,
 		value: &T,
-	) -> Result<Self::Ok, FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	) -> Result<Self::Ok, FlexSerializeError> {
 		// TODO: actually store variant type too
 		value.serialize(self)
 	}
@@ -919,7 +889,7 @@ impl<'parent, 'fvb> Serializer for FlexMapSerializerWrapper<'parent, 'fvb> {
 			fmb: self.1.start_map(&self.0.key),
 			key: FlexMapKeySerializer {
 				key: String::new(),
-				phantom: PhantomData::default(),
+				phantom: PhantomData,
 			},
 		})
 	}
@@ -952,17 +922,14 @@ impl<'b> SerializeMap for FlexMapSerializer<'b> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
-	fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_key<T: Serialize + ?Sized>(&mut self, key: &T) -> Result<(), FlexSerializeError> {
 		key.serialize(&mut self.key)
 	}
 
-	fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), FlexSerializeError>
-	where
-		T: Serialize,
-	{
+	fn serialize_value<T: Serialize + ?Sized>(
+		&mut self,
+		value: &T,
+	) -> Result<(), FlexSerializeError> {
 		value.serialize(FlexMapSerializerWrapper(&mut self.key, &mut self.fmb))
 	}
 

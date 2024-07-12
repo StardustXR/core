@@ -4,17 +4,17 @@ use thiserror::Error;
 
 mod parser;
 
-pub const ROOT_PROTOCOL: &'static str = include_str!("root.kdl");
-pub const NODE_PROTOCOL: &'static str = include_str!("node.kdl");
-pub const SPATIAL_PROTOCOL: &'static str = include_str!("spatial.kdl");
-pub const FIELD_PROTOCOL: &'static str = include_str!("field.kdl");
-pub const DATA_PROTOCOL: &'static str = include_str!("data.kdl");
-pub const AUDIO_PROTOCOL: &'static str = include_str!("audio.kdl");
-pub const DRAWABLE_PROTOCOL: &'static str = include_str!("drawable.kdl");
-pub const INPUT_PROTOCOL: &'static str = include_str!("input.kdl");
-pub const ITEM_PROTOCOL: &'static str = include_str!("item.kdl");
-pub const ITEM_CAMERA_PROTOCOL: &'static str = include_str!("item_camera.kdl");
-pub const ITEM_PANEL_PROTOCOL: &'static str = include_str!("item_panel.kdl");
+pub const ROOT_PROTOCOL: &str = include_str!("root.kdl");
+pub const NODE_PROTOCOL: &str = include_str!("node.kdl");
+pub const SPATIAL_PROTOCOL: &str = include_str!("spatial.kdl");
+pub const FIELD_PROTOCOL: &str = include_str!("field.kdl");
+pub const DATA_PROTOCOL: &str = include_str!("data.kdl");
+pub const AUDIO_PROTOCOL: &str = include_str!("audio.kdl");
+pub const DRAWABLE_PROTOCOL: &str = include_str!("drawable.kdl");
+pub const INPUT_PROTOCOL: &str = include_str!("input.kdl");
+pub const ITEM_PROTOCOL: &str = include_str!("item.kdl");
+pub const ITEM_CAMERA_PROTOCOL: &str = include_str!("item_camera.kdl");
+pub const ITEM_PANEL_PROTOCOL: &str = include_str!("item_panel.kdl");
 
 #[derive(Debug)]
 pub struct Protocol {

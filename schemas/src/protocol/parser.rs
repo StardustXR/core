@@ -12,7 +12,7 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 	let description = get_string_property(
 		document
 			.get("description")
-			.ok_or_else(|| ParseError::MissingProtocolDescription)?,
+			.ok_or(ParseError::MissingProtocolDescription)?,
 		0,
 	)?
 	.to_owned();
@@ -304,8 +304,8 @@ fn get_description_node(node: &KdlNode) -> Result<String, ParseError> {
 		.ok_or_else(|| ParseError::MissingProperty("description".to_string()))?
 }
 
-fn get_bool_property<'a>(
-	node: &'a KdlNode,
+fn get_bool_property(
+	node: &KdlNode,
 	key: impl Into<NodeKey> + Display + Clone,
 ) -> Result<bool, ParseError> {
 	get_property(node, key)?
@@ -315,8 +315,8 @@ fn get_bool_property<'a>(
 			field_type: "bool".to_string(),
 		})
 }
-fn get_int_property<'a>(
-	node: &'a KdlNode,
+fn get_int_property(
+	node: &KdlNode,
 	key: impl Into<NodeKey> + Display + Clone,
 ) -> Result<i64, ParseError> {
 	get_property(node, key)?
@@ -326,10 +326,10 @@ fn get_int_property<'a>(
 			field_type: "int".to_string(),
 		})
 }
-fn get_string_property<'a>(
-	node: &'a KdlNode,
+fn get_string_property(
+	node: &KdlNode,
 	key: impl Into<NodeKey> + Display + Clone,
-) -> Result<&'a str, ParseError> {
+) -> Result<&str, ParseError> {
 	get_property(node, key)?
 		.as_string()
 		.ok_or_else(|| ParseError::InvalidPropertyType {
@@ -337,10 +337,10 @@ fn get_string_property<'a>(
 			field_type: "string".to_string(),
 		})
 }
-fn get_property<'a>(
-	node: &'a KdlNode,
+fn get_property(
+	node: &KdlNode,
 	key: impl Into<NodeKey> + Display + Clone,
-) -> Result<&'a KdlValue, ParseError> {
+) -> Result<&KdlValue, ParseError> {
 	node.get(key.clone())
 		.map(KdlEntry::value)
 		.ok_or_else(|| ParseError::MissingProperty(key.to_string()))
