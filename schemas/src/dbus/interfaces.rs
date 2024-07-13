@@ -27,10 +27,13 @@ pub trait PlaySpace {
 	// fn set_bounds(&self, bounds: Vec<(f64, f64)>) -> Result<()>;
 }
 
-#[zbus::proxy(interface = "org.stardustxr.KeyAcceptor")]
-// this is associated with the `SpatialRef` at the same paath, all points are relative to it`
-pub trait KeyAcceptor {
+#[zbus::proxy(interface = "org.stardustxr.XKBv1")]
+// this is associated with the `SpatialRef` at the same path (as a connection point), and the `FieldRef` at this path for boundaries`
+pub trait RawKeyAcceptor {
+	#[zbus(no_reply)]
 	fn keymap(&self, keymap: &str) -> Result<()>;
+	#[zbus(no_reply)]
 	fn key_pressed(&self, key: u32) -> Result<()>;
+	#[zbus(no_reply)]
 	fn key_released(&self, key: u32) -> Result<()>;
 }
