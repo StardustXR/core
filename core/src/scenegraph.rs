@@ -20,6 +20,7 @@ pub enum ScenegraphError {
 }
 
 /// Handles node signals and method calls for the messenger.
+pub type MethodResponse = oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>;
 pub trait Scenegraph {
 	fn send_signal(
 		&self,
@@ -34,6 +35,6 @@ pub trait Scenegraph {
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,
+		response: MethodResponse,
 	);
 }

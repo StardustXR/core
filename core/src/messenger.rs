@@ -177,27 +177,26 @@ impl MessageReceiver {
 		let header = Header::from_bytes(header_buffer);
 
 		let mut body: Vec<u8> = std::vec::from_elem(0_u8, header.body_length as usize);
-		let fds: Vec<OwnedFd>;
+		
 		let iov = &mut [IoSliceMut::new(body.as_mut_slice())];
 
 		// 253 is the Linux value for SCM_MAX_FD (max FDs in a cmsg)
 		let mut cmsgs = cmsg_space!([RawFd; 253]);
 
 		let stream = self.read.as_ref();
-		fds = stream
+		let fds: Vec<OwnedFd> = stream
 			.async_io(Interest::READABLE, || {
 				match recvmsg::<()>(stream.as_raw_fd(), iov, Some(&mut cmsgs), MsgFlags::empty()) {
 					Ok(recv_msg) => {
 						let fds = recv_msg
 							.cmsgs()
-							.map(|cmsg| {
+							.flat_map(|cmsg| {
 								if let ControlMessageOwned::ScmRights(fds) = cmsg {
 									fds
 								} else {
 									Vec::new()
 								}
 							})
-							.flatten()
 							.filter_map(|fd| match fcntl(fd, FcntlArg::F_GETFD) {
 								Err(nix::errno::Errno::EBADF) => None,
 								_ => unsafe { Some(OwnedFd::from_raw_fd(fd)) }, // Consider non-EBADF errors as valid
