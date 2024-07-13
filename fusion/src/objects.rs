@@ -1,6 +1,7 @@
 #![allow(async_fn_in_trait)]
 
 use crate::{client::Client, spatial::SpatialRef};
+pub use stardust_xr::schemas::dbus::*;
 use stardust_xr::{
 	schemas::{
 		dbus::interfaces::{PlaySpaceProxy, SpatialRefProxy},
@@ -10,9 +11,6 @@ use stardust_xr::{
 };
 use std::sync::Arc;
 
-async fn connection() -> Option<Connection> {
-	Connection::session().await.ok()
-}
 pub trait SpatialRefProxyExt {
 	async fn import(&self, stardust_client: &Arc<Client>) -> Option<SpatialRef>;
 }
@@ -25,7 +23,7 @@ impl SpatialRefProxyExt for SpatialRefProxy<'_> {
 
 pub async fn hmd(client: &Arc<Client>) -> Option<SpatialRef> {
 	SpatialRefProxy::new(
-		&connection().await?,
+		&Connection::session().await.ok()?,
 		"org.stardustxr.HMD",
 		"/org/stardustxr/HMD",
 	)
@@ -40,7 +38,7 @@ pub struct PlaySpace {
 	pub bounds_polygon: Vec<Vector2<f32>>,
 }
 pub async fn play_space(client: &Arc<Client>) -> Option<PlaySpace> {
-	let connection = connection().await?;
+	let connection = Connection::session().await.ok()?;
 	let spatial_proxy = SpatialRefProxy::new(
 		&connection,
 		"org.stardustxr.PlaySpace",

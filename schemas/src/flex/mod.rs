@@ -9,7 +9,7 @@ use serde::{
 	},
 	Deserialize, Deserializer, Serialize, Serializer,
 };
-use std::{borrow::BorrowMut, cell::RefCell, fmt::Display, marker::PhantomData};
+use std::{borrow::BorrowMut, cell::RefCell, f32::consts::PI, fmt::Display, marker::PhantomData};
 
 mod datamap;
 pub use datamap::*;
@@ -1220,7 +1220,7 @@ fn round_trip_flex_serialize() {
 		test_vec2: Vector2::from([0.7; 2]),
 		test_vec3: Vector3::from([0.63; 3]),
 		test_quat: Quaternion {
-			v: Vector3::from([3.14; 3]),
+			v: Vector3::from([PI; 3]),
 			s: 12.0,
 		},
 		string: "Test Test".to_string(),

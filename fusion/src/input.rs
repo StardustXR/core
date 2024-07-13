@@ -177,7 +177,7 @@ async fn fusion_input_handler() {
 					}
 					InputDataType::Hand(_) => {
 						println!("Hand input");
-						let _ = data.datamap.with_data(|datamap| {
+						data.datamap.with_data(|datamap| {
 							dbg!(datamap
 								.iter_keys()
 								.zip(datamap.iter_values())
@@ -240,7 +240,7 @@ async fn fusion_pointer_input_method() {
 	}
 	impl RootHandler for PointerDemo {
 		fn frame(&mut self, info: FrameInfo) {
-			let (sin, cos) = (info.elapsed as f32).sin_cos();
+			let (sin, cos) = info.elapsed.sin_cos();
 			self.pointer
 				.set_local_transform(Transform::from_translation([sin * 0.1, 0.0, cos * 0.1]))
 				.unwrap();
@@ -331,7 +331,7 @@ async fn fusion_tip_input_method() {
 	}
 	impl RootHandler for TipDemo {
 		fn frame(&mut self, info: FrameInfo) {
-			let (sin, cos) = (info.elapsed as f32).sin_cos();
+			let (sin, cos) = info.elapsed.sin_cos();
 			self.tip
 				.set_local_transform(Transform::from_translation([sin * 0.1, 0.0, cos * 0.1]))
 				.unwrap();
