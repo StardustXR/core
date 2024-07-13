@@ -1,6 +1,12 @@
 #![allow(async_fn_in_trait)]
 
-use crate::{client::Client, spatial::SpatialRef};
+use crate::{
+	client::Client,
+	fields::{Field, FieldRef},
+	node::NodeResult,
+	spatial::{Spatial, SpatialAspect, SpatialRef},
+};
+use interfaces::FieldRefProxy;
 pub use stardust_xr::schemas::dbus::*;
 use stardust_xr::{
 	schemas::{
@@ -20,6 +26,42 @@ impl SpatialRefProxyExt for SpatialRefProxy<'_> {
 		SpatialRef::import(stardust_client, uid).await.ok()
 	}
 }
+pub struct SpatialObject(u64, Spatial);
+impl SpatialObject {
+	pub async fn new(spatial: Spatial) -> NodeResult<Self> {
+		Ok(Self(spatial.export_spatial().await?, spatial))
+	}
+}
+#[zbus::interface(name = "org.stardustxr.SpatialRef")]
+impl SpatialObject {
+	#[zbus(property)]
+	async fn uid(&self) -> u64 {
+		self.0
+	}
+}
+
+pub trait FieldRefProxyExt {
+	async fn import(&self, stardust_client: &Arc<Client>) -> Option<FieldRef>;
+}
+impl FieldRefProxyExt for FieldRefProxy<'_> {
+	async fn import(&self, stardust_client: &Arc<Client>) -> Option<FieldRef> {
+		let uid = self.uid().await.ok()?;
+		FieldRef::import(stardust_client, uid).await.ok()
+	}
+}
+pub struct FieldObject(u64, Field);
+impl FieldObject {
+	pub async fn new(field: Field) -> NodeResult<Self> {
+		Ok(Self(field.export_spatial().await?, field))
+	}
+}
+#[zbus::interface(name = "org.stardustxr.FieldRef")]
+impl FieldObject {
+	#[zbus(property)]
+	async fn uid(&self) -> u64 {
+		self.0
+	}
+}
 
 pub async fn hmd(client: &Arc<Client>) -> Option<SpatialRef> {
 	SpatialRefProxy::new(
@@ -31,6 +73,15 @@ pub async fn hmd(client: &Arc<Client>) -> Option<SpatialRef> {
 	.ok()?
 	.import(client)
 	.await
+}
+
+#[tokio::test]
+async fn fusion_objects_hmd() {
+	use crate::spatial::SpatialRefAspect;
+
+	let (client, _) = Client::connect_with_async_loop().await.unwrap();
+	let hmd = hmd(&client).await.unwrap();
+	assert!(hmd.get_transform(client.get_root()).await.is_ok())
 }
 
 pub struct PlaySpace {
