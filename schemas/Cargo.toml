@@ -16,13 +16,22 @@ flexbuffers = { version = "2.0.0", features = [
 ] }
 serde = { version = "1.0.196", features = ["derive"] }
 serde_repr = "0.1.18"
+
+# stardust protocol
 kdl = "4.6.0"
 fnv = "1.0.7"
 thiserror = "1.0.56"
+
+#dbus stuff
 zbus = "4.3.0"
+nanoid = "0.4.0"
+tokio = { version = "1.38.0", features = ["rt", "sync"] }
+futures-util = "0.3.30"
 
 [build-dependencies]
 manifest-dir-macros = "0.1.18"
 
 [dev-dependencies]
 mint = { version = "0.5.9", features = ["serde"] }
+#dbus stuff
+tokio = { version = "1.38.0", features = ["macros", "time"] }
