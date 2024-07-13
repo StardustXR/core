@@ -28,7 +28,6 @@ impl Sound {
 }
 #[tokio::test]
 async fn fusion_sound() {
-
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();

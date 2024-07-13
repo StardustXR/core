@@ -3,7 +3,7 @@
 use crate::{client::Client, spatial::SpatialRef};
 use stardust_xr::{
 	schemas::{
-		dbus::{PlaySpaceProxy, SpatialRefProxy},
+		dbus::interfaces::{PlaySpaceProxy, SpatialRefProxy},
 		zbus::Connection,
 	},
 	values::Vector2,

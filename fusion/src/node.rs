@@ -260,10 +260,7 @@ impl NodeType for Node {
 }
 impl serde::Serialize for Node {
 	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-		let node_id = self
-			.node()
-			.get_id()
-			.map_err(|e| serde::ser::Error::custom(e))?;
+		let node_id = self.node().get_id().map_err(serde::ser::Error::custom)?;
 		serializer.serialize_u64(node_id)
 	}
 }

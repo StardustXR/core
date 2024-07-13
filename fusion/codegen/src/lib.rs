@@ -185,8 +185,8 @@ fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 		ArgumentType::Color => "Color".to_string(),
 		ArgumentType::String => "String".to_string(),
 		ArgumentType::Bytes => "Bytes".to_string(),
-		ArgumentType::Vec(v) => format!("{}Vector", argument_type_option_name(&v)),
-		ArgumentType::Map(m) => format!("{}Map", argument_type_option_name(&m)),
+		ArgumentType::Vec(v) => format!("{}Vector", argument_type_option_name(v)),
+		ArgumentType::Map(m) => format!("{}Map", argument_type_option_name(m)),
 		ArgumentType::NodeID => "Node ID".to_string(),
 		ArgumentType::Datamap => "Datamap".to_string(),
 		ArgumentType::ResourceID => "ResourceID".to_string(),
@@ -343,12 +343,10 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 
 	let first_arg = if interface_node_id.is_some() {
 		quote!(_client: &std::sync::Arc<crate::client::Client>)
+	} else if member.side == Side::Server {
+		quote!(&self)
 	} else {
-		if member.side == Side::Server {
-			quote!(&self)
-		} else {
-			quote!(&mut self)
-		}
+		quote!(&mut self)
 	};
 	let argument_decls = member
 		.arguments
@@ -365,7 +363,7 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 	let return_type = member
 		.return_type
 		.as_ref()
-		.map(|r| generate_argument_type(&r, true))
+		.map(|r| generate_argument_type(r, true))
 		.unwrap_or_else(|| quote!(()));
 
 	match (side, _type) {
@@ -415,24 +413,18 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 			};
 			body = if let Some(ArgumentType::Node {
 				_type: _,
-				return_id_parameter_name,
+				return_id_parameter_name: Some(return_id_parameter_name),
 			}) = &member.return_type
 			{
-				if let Some(return_id_parameter_name) = return_id_parameter_name {
-					let id_argument = Ident::new(&return_id_parameter_name, Span::call_site());
-					let get_client = if interface_node_id.is_some() {
-						quote!(_client)
-					} else {
-						quote!(self.node().client()?)
-					};
-					quote! {
-						#body?;
-						Ok(<#return_type as crate::node::NodeType>::from_id(&#get_client, #id_argument, true))
-					}
+				let id_argument = Ident::new(return_id_parameter_name, Span::call_site());
+				let get_client = if interface_node_id.is_some() {
+					quote!(_client)
 				} else {
-					quote! {
-						Ok(#body?)
-					}
+					quote!(self.node().client()?)
+				};
+				quote! {
+					#body?;
+					Ok(<#return_type as crate::node::NodeType>::from_id(&#get_client, #id_argument, true))
 				}
 			} else {
 				quote! {
@@ -474,7 +466,7 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 fn generate_handler(member: &Member) -> TokenStream {
 	let name = &member.name;
 	let opcode = member.opcode;
-	let name_ident = Ident::new(&name, Span::call_site());
+	let name_ident = Ident::new(name, Span::call_site());
 
 	let argument_names = member
 		.arguments
@@ -629,7 +621,7 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 		ArgumentType::UInt => quote!(u32),
 		ArgumentType::Float => quote!(f32),
 		ArgumentType::Vec2(t) => {
-			let t = generate_argument_type(&t, true);
+			let t = generate_argument_type(t, true);
 			if !owned {
 				quote!(impl Into<stardust_xr::values::Vector2<#t>>)
 			} else {
@@ -637,7 +629,7 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			}
 		}
 		ArgumentType::Vec3(t) => {
-			let t = generate_argument_type(&t, true);
+			let t = generate_argument_type(t, true);
 			if !owned {
 				quote!(impl Into<stardust_xr::values::Vector3<#t>>)
 			} else {
@@ -674,7 +666,7 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			}
 		}
 		ArgumentType::Vec(t) => {
-			let t = generate_argument_type(&t, true);
+			let t = generate_argument_type(t, true);
 			if !owned {
 				quote!(&[#t])
 			} else {
@@ -682,7 +674,7 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			}
 		}
 		ArgumentType::Map(t) => {
-			let t = generate_argument_type(&t, true);
+			let t = generate_argument_type(t, true);
 
 			if !owned {
 				quote!(&stardust_xr::values::Map<String, #t>)

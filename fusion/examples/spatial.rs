@@ -64,7 +64,7 @@ impl SpatialDemo {
 }
 impl RootHandler for SpatialDemo {
 	fn frame(&mut self, info: FrameInfo) {
-		self.t += info.delta as f32;
+		self.t += info.delta;
 
 		self.gem
 			.set_material_parameter(

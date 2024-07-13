@@ -137,14 +137,14 @@ impl Client {
 	/// Set the prefixes for any `NamespacedResource`s.
 	pub fn set_base_prefixes(&self, prefixes: &[&str]) -> NodeResult<()> {
 		let mut prefixes = prefixes
-			.into_iter()
+			.iter()
 			.map(ToString::to_string)
 			.collect::<Vec<String>>();
 
 		let env_prefixes = option_env!("STARDUST_RES_PREFIXES").map(ToString::to_string);
 		if let Some(env_prefixes) = env_prefixes {
-			for prefix in env_prefixes.split(":") {
-				prefixes.push(prefix.to_string().into());
+			for prefix in env_prefixes.split(':') {
+				prefixes.push(prefix.to_string());
 			}
 		}
 
