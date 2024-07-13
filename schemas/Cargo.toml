@@ -25,7 +25,7 @@ thiserror = "1.0.56"
 #dbus stuff
 zbus = "4.3.0"
 nanoid = "0.4.0"
-tokio = { version = "1.38.0", features = ["rt", "sync"] }
+tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
 futures-util = "0.3.30"
 
 [build-dependencies]
@@ -33,5 +33,3 @@ manifest-dir-macros = "0.1.18"
 
 [dev-dependencies]
 mint = { version = "0.5.9", features = ["serde"] }
-#dbus stuff
-tokio = { version = "1.38.0", features = ["macros", "time"] }
