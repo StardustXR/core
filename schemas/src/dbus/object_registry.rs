@@ -145,7 +145,7 @@ impl ObjectRegistry {
 		}
 	}
 
-	pub async fn get_objects(&self, interface: &OwnedInterfaceName) -> HashSet<ObjectInfo> {
+	pub fn get_objects(&self, interface: &OwnedInterfaceName) -> HashSet<ObjectInfo> {
 		self.objects_rx
 			.borrow()
 			.get(interface)
