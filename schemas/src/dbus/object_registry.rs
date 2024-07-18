@@ -180,14 +180,11 @@ async fn object_registry_test() -> Result<()> {
 
 	// Set up connections and registry
 	let registry_connection = Connection::session().await?;
-	let registry = std::sync::Arc::new(tokio::sync::Mutex::new(
-		ObjectRegistry::new(&registry_connection).await?,
-	));
+	let registry = ObjectRegistry::new(&registry_connection).await?;
 
 	// Start monitoring for changes
-	let registry_clone = std::sync::Arc::clone(&registry);
+	let mut watch = registry.get_watch().clone();
 	let monitor_task = tokio::spawn(async move {
-		let mut watch = registry_clone.lock().await.get_watch().clone();
 		while watch.changed().await.is_ok() {
 			println!("Objects updated: {:?}", watch.borrow().clone());
 		}
@@ -203,12 +200,12 @@ async fn object_registry_test() -> Result<()> {
 
 	// Wait for service to register and verify presence
 	tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-	assert!(registry_contains_test_service(&*registry.lock().await));
+	assert!(registry_contains_test_service(&registry));
 
 	// Simulate service disappearance and verify removal
 	drop(test_connection);
 	tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-	assert!(!registry_contains_test_service(&*registry.lock().await));
+	assert!(!registry_contains_test_service(&registry));
 
 	// Clean up
 	monitor_task.abort();
