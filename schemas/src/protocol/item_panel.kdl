@@ -4,7 +4,7 @@ description ""
 
 union "SurfaceID" {
 	description ""
-	
+
 	option type="empty" name="toplevel"
 	option type="id" name="child"
 }
@@ -31,10 +31,11 @@ struct "ChildInfo" {
     field "id" type="id"
     field "parent" type="struct" struct="SurfaceID"
     field "geometry" type="struct" struct="Geometry"
+    field "z_order" type="int" description="Relative to parent. 0 is same level, -1 is below, 1 is above, etc."
 }
 struct "PanelItemInitData" {
     description "The init data for the panel item."
-    
+
     field "cursor" type="struct" struct="Geometry" optional=true
     field "toplevel" type="struct" struct="ToplevelInfo"
     field "children" type="vec" member_type="struct" struct="ChildInfo"
@@ -45,7 +46,7 @@ struct "PanelItemInitData" {
 aspect "PanelItem" {
     description "An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.)."
     inherits "Item"
-    
+
     signal "apply_cursor_material" side="server" {
         description "Apply the cursor as a material to a model."
         argument "model_part" type="node" aspect="ModelPart"
@@ -55,10 +56,10 @@ aspect "PanelItem" {
         argument "surface" type="struct" struct="SurfaceID"
         argument "model_part" type="node" aspect="ModelPart"
     }
-    
+
     signal "close_toplevel" side="server" {
         description "Try to close the toplevel.
-        
+
         The panel item UI handler or panel item acceptor will drop the panel item if this succeeds."
     }
     signal "auto_size_toplevel" side="server" {
@@ -102,7 +103,7 @@ aspect "PanelItem" {
         description "The size of the top-level surface changed."
         argument "size" type="vec2" component_type="uint"
     }
-    
+
     signal "set_cursor" side="client" {
         description "The cursor should be shown and its material will automatically update -- you just need to account for the new size/hotspot. The hotspot is the offset in the geometry."
         argument "geometry" type="struct" struct="geometry"
@@ -124,7 +125,7 @@ aspect "PanelItem" {
         description "The child was destroyed."
         argument "uid" type="id"
     }
-    
+
     signal "pointer_motion" side="server" {
         description "Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer."
         argument "surface" type="struct" struct="SurfaceID"
@@ -178,7 +179,7 @@ signal "register_panel_item_ui" side="server" {
 }
 aspect "PanelItemUi" {
     description ""
-    
+
     signal "create_item" side="client" {
         description ""
         argument "item" type="node" node="PanelItem"
@@ -192,7 +193,7 @@ aspect "PanelItemUi" {
 }
 signal "create_panel_item_acceptor" side="server" {
     description "Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/panel/acceptor/<name>`."
-    
+
     argument "id" type="id"
     argument "parent" type="node" aspect="SpatialRef"
     argument "transform" type="struct" struct="transform"
@@ -202,7 +203,7 @@ signal "create_panel_item_acceptor" side="server" {
 aspect "PanelItemAcceptor" {
     description ""
     inherits "ItemAcceptor"
-    
+
     signal "capture_item" side="server" {
         description ""
         argument "item" type="node" node="PanelItem"
