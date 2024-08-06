@@ -32,6 +32,7 @@ struct "ChildInfo" {
     field "parent" type="struct" struct="SurfaceID"
     field "geometry" type="struct" struct="Geometry"
     field "z_order" type="int" description="Relative to parent. 0 is same level, -1 is below, 1 is above, etc."
+    field "receives_input" type="bool" description="Whether this child receives input or is purely visual."
 }
 struct "PanelItemInitData" {
     description "The init data for the panel item."
