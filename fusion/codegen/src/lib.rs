@@ -300,7 +300,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		.then_some(quote! {
 			#[doc = #description]
 			#[derive(Debug)]
-			pub struct #node_name (pub(crate) crate::node::Node);
+			pub struct #node_name (pub crate::node::Node);
 			impl crate::node::NodeType for #node_name {
 				fn node(&self) -> &crate::node::Node {
 					&self.0
