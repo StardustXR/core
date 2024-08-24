@@ -1,5 +1,7 @@
 //! Anything the user can see such as lines, models and text.
 
+use std::hash::Hash;
+
 use crate::{
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
@@ -36,12 +38,32 @@ impl Default for LinePoint {
 	}
 }
 impl Copy for LinePoint {}
+impl Hash for LinePoint {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.color.c.r.to_bits().hash(state);
+		self.color.c.g.to_bits().hash(state);
+		self.color.c.b.to_bits().hash(state);
+		self.color.a.to_bits().hash(state);
+
+		self.point.x.to_bits().hash(state);
+		self.point.y.to_bits().hash(state);
+		self.point.z.to_bits().hash(state);
+
+		self.thickness.to_bits().hash(state);
+	}
+}
 impl Default for Line {
 	fn default() -> Self {
 		Self {
 			points: Default::default(),
 			cyclic: Default::default(),
 		}
+	}
+}
+impl Hash for Line {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.cyclic.hash(state);
+		self.points.hash(state);
 	}
 }
 
@@ -102,7 +124,6 @@ impl Default for TextStyle {
 
 #[tokio::test]
 async fn fusion_lines() {
-
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
@@ -142,7 +163,6 @@ async fn fusion_lines() {
 
 #[tokio::test]
 async fn fusion_model() {
-
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
@@ -178,7 +198,6 @@ async fn fusion_model() {
 }
 #[tokio::test]
 async fn fusion_text() {
-
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.unwrap();
@@ -202,7 +221,6 @@ async fn fusion_text() {
 
 #[tokio::test]
 async fn fusion_sky() {
-
 	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
 		.await
 		.expect("Couldn't connect");

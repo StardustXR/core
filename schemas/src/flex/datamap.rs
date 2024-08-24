@@ -2,7 +2,7 @@ use flexbuffers::{DeserializationError, Reader, ReaderError};
 use serde::{Deserialize, Serialize};
 
 /// A map that contains non-spatial data in a map in flexbuffers format.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Datamap(Vec<u8>);
 impl Datamap {
 	/// Create a new datamap from a serialized flexbuffer map

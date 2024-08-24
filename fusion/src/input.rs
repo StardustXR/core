@@ -143,11 +143,6 @@ impl Hash for InputData {
 		self.id.hash(state)
 	}
 }
-impl PartialEq for InputData {
-	fn eq(&self, other: &Self) -> bool {
-		self.id.eq(&other.id)
-	}
-}
 impl Eq for InputData {}
 
 #[tokio::test]

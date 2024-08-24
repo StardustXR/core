@@ -143,14 +143,6 @@ impl Hash for Transform {
 		}
 	}
 }
-impl PartialEq for Transform {
-	fn eq(&self, other: &Self) -> bool {
-		self.translation == other.translation
-			&& self.rotation == other.rotation
-			&& self.scale == other.scale
-	}
-}
-impl Eq for Transform {}
 
 impl SpatialRef {
 	pub async fn import(client: &Arc<Client>, uid: u64) -> NodeResult<Self> {

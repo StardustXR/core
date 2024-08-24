@@ -133,7 +133,7 @@ fn generate_custom_enum(custom_enum: &CustomEnum) -> TokenStream {
 
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, Copy, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)]
+		#[derive(Debug, Clone, Copy, Hash, PartialEq, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)]
 		#[repr(u32)]
 		pub enum #name {#argument_decls}
 	}
@@ -151,7 +151,7 @@ fn generate_custom_union(custom_union: &CustomUnion) -> TokenStream {
 
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+		#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 		#[serde(untagged)]
 		pub enum #name {#option_decls}
 	}
@@ -210,7 +210,7 @@ fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
 
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+		#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
 		pub struct #name {#argument_decls}
 	}
 }
