@@ -121,6 +121,31 @@ impl Default for TextStyle {
 		}
 	}
 }
+impl Hash for TextBounds {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.bounds.x.to_bits().hash(state);
+		self.bounds.y.to_bits().hash(state);
+
+		self.fit.hash(state);
+		self.anchor_align_x.hash(state);
+		self.anchor_align_y.hash(state);
+	}
+}
+impl Hash for TextStyle {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.character_height.to_bits().hash(state);
+
+		self.color.c.r.to_bits().hash(state);
+		self.color.c.g.to_bits().hash(state);
+		self.color.c.b.to_bits().hash(state);
+		self.color.a.to_bits().hash(state);
+
+		self.font.hash(state);
+		self.text_align_x.hash(state);
+		self.text_align_y.hash(state);
+		self.bounds.hash(state);
+	}
+}
 
 #[tokio::test]
 async fn fusion_lines() {
