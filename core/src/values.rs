@@ -12,7 +12,7 @@ pub use stardust_xr_schemas::flex::Datamap;
 pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;
 pub use rustc_hash::FxHashMap as Map;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// An identifier to a resource, such as a sound or
 pub enum ResourceID {
 	/// An absolute path to a resource, not themed at all.

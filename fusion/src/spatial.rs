@@ -14,7 +14,7 @@
 //! Zones can capture spatials, temporarily parenting them to the zone until they are released.
 //! Zones can see zoneable spatials if they're closer to the surface of the field than any zone that captured them, so no zones can steal and hoard them.
 
-use std::sync::Arc;
+use std::{hash::Hash, sync::Arc};
 
 use crate::{
 	client::Client,
@@ -119,6 +119,27 @@ impl Transform {
 			translation: Some(translation.into()),
 			rotation: Some(rotation.into()),
 			scale: Some(scale.into()),
+		}
+	}
+}
+impl Copy for Transform {}
+impl Hash for Transform {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		if let Some(translation) = &self.translation {
+			translation.x.to_bits().hash(state);
+			translation.y.to_bits().hash(state);
+			translation.z.to_bits().hash(state);
+		}
+		if let Some(rotation) = &self.rotation {
+			rotation.v.x.to_bits().hash(state);
+			rotation.v.y.to_bits().hash(state);
+			rotation.v.z.to_bits().hash(state);
+			rotation.s.to_bits().hash(state);
+		}
+		if let Some(scale) = &self.scale {
+			scale.x.to_bits().hash(state);
+			scale.y.to_bits().hash(state);
+			scale.z.to_bits().hash(state);
 		}
 	}
 }
