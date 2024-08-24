@@ -16,7 +16,7 @@ impl_aspects!(PanelItem: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAspec
 impl PanelItemUi {
 	pub fn register(client: &Arc<Client>) -> NodeResult<Self> {
 		register_panel_item_ui(client)?;
-		Ok(PanelItemUi(Node::from_id(client, INTERFACE_NODE_ID, false)))
+		Ok(PanelItemUi(Node::from_id(client, INTERFACE_NODE_ID, true)))
 	}
 }
 

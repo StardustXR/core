@@ -34,11 +34,7 @@ impl CameraItem {
 impl CameraItemUi {
 	pub fn register(client: &Arc<Client>) -> NodeResult<Self> {
 		register_camera_item_ui(client)?;
-		Ok(CameraItemUi(Node::from_id(
-			client,
-			INTERFACE_NODE_ID,
-			false,
-		)))
+		Ok(CameraItemUi(Node::from_id(client, INTERFACE_NODE_ID, true)))
 	}
 }
 

@@ -308,8 +308,8 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 				fn alias(&self) -> Self {
 					#node_name(self.0.alias())
 				}
-				fn from_id(client: &std::sync::Arc<crate::client::Client>, id: u64, destroyable: bool) -> Self {
-					#node_name(crate::node::Node::from_id(client, id, destroyable))
+				fn from_id(client: &std::sync::Arc<crate::client::Client>, id: u64, owned: bool) -> Self {
+					#node_name(crate::node::Node::from_id(client, id, owned))
 				}
 			}
 			impl serde::Serialize for #node_name {

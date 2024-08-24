@@ -74,7 +74,7 @@ impl From<String> for NodeError {
 pub trait NodeType: Sized + Send + Sync + 'static {
 	/// Get a reference to the node.
 	fn node(&self) -> &Node;
-	fn from_id(client: &Arc<Client>, id: u64, destroyable: bool) -> Self;
+	fn from_id(client: &Arc<Client>, id: u64, owned: bool) -> Self;
 	/// Try to get the client
 	fn client(&self) -> NodeResult<Arc<Client>> {
 		self.node().client()
@@ -107,12 +107,12 @@ pub struct NodeInternals {
 	pub(crate) id: u64,
 	pub(crate) local_signals: Mutex<FxHashMap<u64, Arc<Signal>>>,
 	pub(crate) local_methods: Mutex<FxHashMap<u64, Arc<Method>>>,
-	pub(crate) destroyable: bool,
+	pub(crate) owned: bool,
 }
 impl Drop for NodeInternals {
 	fn drop(&mut self) {
 		if let Some(client) = self.client.upgrade() {
-			if self.destroyable {
+			if self.owned {
 				let _ = client.message_sender_handle.signal(
 					self.id,
 					OWNED_DESTROY_SERVER_OPCODE,
@@ -245,16 +245,18 @@ impl NodeType for Node {
 		}
 	}
 
-	fn from_id(client: &Arc<Client>, id: u64, destroyable: bool) -> Node {
+	fn from_id(client: &Arc<Client>, id: u64, owned: bool) -> Node {
 		let node = Arc::new_cyclic(|self_ref| NodeInternals {
 			client: Arc::downgrade(client),
 			self_ref: self_ref.clone(),
 			id,
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
-			destroyable,
+			owned,
 		});
-		client.scenegraph.add_node(&node);
+		if owned {
+			client.scenegraph.add_node(&node);
+		}
 		Node::Owned(node)
 	}
 }

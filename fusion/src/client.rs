@@ -81,7 +81,7 @@ impl Client {
 			root: OnceCell::new(),
 			state: OnceCell::new(),
 		});
-		let _ = client.root.set(Root::from_id(&client, 0, false));
+		let _ = client.root.set(Root::from_id(&client, 0, true));
 
 		Ok((client, message_tx, message_rx))
 	}
