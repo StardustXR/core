@@ -10,50 +10,54 @@ fn fold_tokens(a: TokenStream, b: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn codegen_root_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ROOT_PROTOCOL, true)
+	codegen_client_protocol(ROOT_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_node_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(NODE_PROTOCOL, false)
+	codegen_client_protocol(NODE_PROTOCOL, false, true)
 }
 #[proc_macro]
 pub fn codegen_spatial_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(SPATIAL_PROTOCOL, true)
+	codegen_client_protocol(SPATIAL_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_field_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(FIELD_PROTOCOL, true)
+	codegen_client_protocol(FIELD_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_data_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(DATA_PROTOCOL, true)
+	codegen_client_protocol(DATA_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_audio_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(AUDIO_PROTOCOL, true)
+	codegen_client_protocol(AUDIO_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_drawable_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_PROTOCOL, true)
+	codegen_client_protocol(DRAWABLE_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_input_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(INPUT_PROTOCOL, true)
+	codegen_client_protocol(INPUT_PROTOCOL, true, false)
 }
 #[proc_macro]
 pub fn codegen_item_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ITEM_PROTOCOL, true)
+	codegen_client_protocol(ITEM_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_item_camera_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ITEM_CAMERA_PROTOCOL, true)
+	codegen_client_protocol(ITEM_CAMERA_PROTOCOL, true, true)
 }
 #[proc_macro]
 pub fn codegen_item_panel_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ITEM_PANEL_PROTOCOL, true)
+	codegen_client_protocol(ITEM_PANEL_PROTOCOL, true, true)
 }
 
-fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_macro::TokenStream {
+fn codegen_client_protocol(
+	protocol: &'static str,
+	generate_node: bool,
+	partial_eq: bool,
+) -> proc_macro::TokenStream {
 	let protocol = Protocol::parse(protocol).unwrap();
 	let protocol_version = protocol.version;
 	let protocol_version = quote!(pub(crate) const INTERFACE_VERSION: u32 = #protocol_version;);
@@ -68,19 +72,19 @@ fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_
 	let custom_enums = protocol
 		.custom_enums
 		.iter()
-		.map(generate_custom_enum)
+		.map(|e| generate_custom_enum(e, partial_eq))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let custom_unions = protocol
 		.custom_unions
 		.iter()
-		.map(generate_custom_union)
+		.map(|u| generate_custom_union(u, partial_eq))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let custom_structs = protocol
 		.custom_structs
 		.iter()
-		.map(generate_custom_struct)
+		.map(|s| generate_custom_struct(s, partial_eq))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let aspects = protocol
@@ -120,7 +124,7 @@ fn codegen_client_protocol(protocol: &'static str, generate_node: bool) -> proc_
 		.into()
 }
 
-fn generate_custom_enum(custom_enum: &CustomEnum) -> TokenStream {
+fn generate_custom_enum(custom_enum: &CustomEnum, generate_partial_eq: bool) -> TokenStream {
 	let name = Ident::new(&custom_enum.name.to_case(Case::Pascal), Span::call_site());
 	let description = &custom_enum.description;
 
@@ -131,14 +135,19 @@ fn generate_custom_enum(custom_enum: &CustomEnum) -> TokenStream {
 		.reduce(|a, b| quote!(#a, #b))
 		.unwrap_or_default();
 
+	let derive = if generate_partial_eq {
+		quote!( #[derive(Debug, Clone, Copy, Hash, PartialEq, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)] )
+	} else {
+		quote!( #[derive(Debug, Clone, Copy, Hash, serde::Deserialize, serde::Serialize)] )
+	};
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, Copy, Hash, PartialEq, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)]
+		#derive
 		#[repr(u32)]
 		pub enum #name {#argument_decls}
 	}
 }
-fn generate_custom_union(custom_union: &CustomUnion) -> TokenStream {
+fn generate_custom_union(custom_union: &CustomUnion, generate_partial_eq: bool) -> TokenStream {
 	let name = Ident::new(&custom_union.name.to_case(Case::Pascal), Span::call_site());
 	let description = &custom_union.description;
 
@@ -149,9 +158,14 @@ fn generate_custom_union(custom_union: &CustomUnion) -> TokenStream {
 		.reduce(|a, b| quote!(#a, #b))
 		.unwrap_or_default();
 
+	let derive = if generate_partial_eq {
+		quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+	} else {
+		quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+	};
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+		#derive
 		#[serde(untagged)]
 		pub enum #name {#option_decls}
 	}
@@ -196,7 +210,7 @@ fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 		ArgumentType::Node { _type, .. } => _type.clone(),
 	}
 }
-fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
+fn generate_custom_struct(custom_struct: &CustomStruct, generate_partial_eq: bool) -> TokenStream {
 	let name = Ident::new(&custom_struct.name.to_case(Case::Pascal), Span::call_site());
 	let description = &custom_struct.description;
 
@@ -208,9 +222,14 @@ fn generate_custom_struct(custom_struct: &CustomStruct) -> TokenStream {
 		.reduce(|a, b| quote!(#a, #b))
 		.unwrap_or_default();
 
+	let derive = if generate_partial_eq {
+		quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+	} else {
+		quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+	};
 	quote! {
 		#[doc = #description]
-		#[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+		#derive
 		pub struct #name {#argument_decls}
 	}
 }
