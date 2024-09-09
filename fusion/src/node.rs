@@ -103,7 +103,6 @@ pub type NodeResult<O> = Result<O, NodeError>;
 
 pub struct NodeInternals {
 	client: Weak<Client>,
-	self_ref: Weak<NodeInternals>,
 	pub(crate) id: u64,
 	pub(crate) local_signals: Mutex<FxHashMap<u64, Arc<Signal>>>,
 	pub(crate) local_methods: Mutex<FxHashMap<u64, Arc<Method>>>,
@@ -246,17 +245,14 @@ impl NodeType for Node {
 	}
 
 	fn from_id(client: &Arc<Client>, id: u64, owned: bool) -> Node {
-		let node = Arc::new_cyclic(|self_ref| NodeInternals {
+		let node = Arc::new(NodeInternals {
 			client: Arc::downgrade(client),
-			self_ref: self_ref.clone(),
 			id,
 			local_signals: Mutex::new(FxHashMap::default()),
 			local_methods: Mutex::new(FxHashMap::default()),
 			owned,
 		});
-		if owned {
-			client.scenegraph.add_node(&node);
-		}
+		client.scenegraph.add_node(&node);
 		Node::Owned(node)
 	}
 }

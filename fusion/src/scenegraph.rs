@@ -22,7 +22,8 @@ impl Scenegraph {
 	pub fn add_node(&self, node_internals: &Arc<NodeInternals>) {
 		self.nodes
 			.lock()
-			.insert(node_internals.id, Arc::downgrade(node_internals));
+			.entry(node_internals.id)
+			.or_insert(Arc::downgrade(node_internals));
 	}
 
 	pub fn remove_node(&self, id: u64) {
