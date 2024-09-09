@@ -20,6 +20,7 @@ impl Scenegraph {
 	}
 
 	pub fn add_node(&self, node_internals: &Arc<NodeInternals>) {
+		// really this should NOT be necessary, we so need to upgrade to a stream-based instead of method-based API
 		self.nodes
 			.lock()
 			.entry(node_internals.id)
