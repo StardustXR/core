@@ -111,7 +111,7 @@ fn codegen_client_protocol(
 					);
 					let opcode = m.opcode;
 
-					let member = generate_member(Some(p.node_id), m);
+					let member = generate_member(Some(p.node_id), 0, m);
 					quote! {
 						pub(crate) const #name: u64 = #opcode;
 						#member
@@ -239,6 +239,15 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 	let description = &aspect.description;
 	let (client_members, server_members) = aspect.members.iter().split(|m| m.side == Side::Server);
 
+	let aspect_opcode = {
+		let name = Ident::new(
+			&format!("{}_ASPECT_ID", aspect.name.to_case(Case::ScreamingSnake)),
+			Span::call_site(),
+		);
+		let opcode = aspect.id;
+		quote!(pub(crate) const #name: u64 = #opcode;)
+	};
+
 	let aspect_handler_name = Ident::new(
 		&format!("{}Handler", &aspect.name.to_case(Case::Pascal)),
 		Span::call_site(),
@@ -271,7 +280,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		.unwrap_or_default();
 
 	let client_side = client_members
-		.map(|m| generate_member(None, m))
+		.map(|m| generate_member(None, aspect.id, m))
 		.reduce(fold_tokens)
 		.map(|t| {
 			quote! {
@@ -286,7 +295,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		.members
 		.iter()
 		.filter(|m| m.side == Side::Client)
-		.map(generate_handler)
+		.map(|m| generate_handler(aspect.id, m))
 		.reduce(fold_tokens).map(|handlers| {
 			quote! {
 				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
@@ -312,7 +321,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
 		.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
 	let server_side_members = server_members
-		.map(|m| generate_member(None, m))
+		.map(|m| generate_member(None, aspect.id, m))
 		.reduce(fold_tokens)
 		.unwrap_or_default();
 	let node = generate_node
@@ -342,6 +351,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		.unwrap_or_default();
 	quote! {
 		#node
+		#aspect_opcode
 		#opcodes
 		#client_side
 		#[doc = #description]
@@ -352,7 +362,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 	}
 }
 
-fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStream {
+fn generate_member(interface_node_id: Option<u64>, aspect_id: u64, member: &Member) -> TokenStream {
 	let opcode = member.opcode;
 	let name = Ident::new(&member.name.to_case(Case::Snake), Span::call_site());
 	let description = &member.description;
@@ -396,13 +406,13 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 				let deserialize = generate_argument_deserialize("result", &argument_type, false);
 				quote! {
 					let data = stardust_xr::schemas::flex::serialize(&(#argument_uses))?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #opcode, &data, Vec::new())?.await?.into_message();
+					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, Vec::new())?.await?.into_message();
 					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
 					Ok(#deserialize)
 				}
 			} else {
 				quote! {
-					self.node().execute_remote_method(#opcode, &(#argument_uses)).await
+					self.node().execute_remote_method(#aspect_id, #opcode, &(#argument_uses)).await
 				}
 			};
 			if interface_node_id.is_some() {
@@ -423,11 +433,11 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 		(Side::Server, MemberType::Signal) => {
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					_client.message_sender_handle.signal(#interface_node_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#argument_uses))?, Vec::new())
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#argument_uses))?, Vec::new())
 				}
 			} else {
 				quote! {
-					self.node().send_remote_signal(#opcode, &(#argument_uses))
+					self.node().send_remote_signal(#aspect_id, #opcode, &(#argument_uses))
 				}
 			};
 			body = if let Some(ArgumentType::Node {
@@ -482,7 +492,7 @@ fn generate_member(interface_node_id: Option<u64>, member: &Member) -> TokenStre
 		}
 	}
 }
-fn generate_handler(member: &Member) -> TokenStream {
+fn generate_handler(aspect_id: u64, member: &Member) -> TokenStream {
 	let name = &member.name;
 	let opcode = member.opcode;
 	let name_ident = Ident::new(name, Span::call_site());
@@ -514,7 +524,7 @@ fn generate_handler(member: &Member) -> TokenStream {
 		.fold(TokenStream::default(), |a, b| quote!(#a, #b));
 	match member._type {
 		MemberType::Signal => quote! {
-			handler_wrapper.add_handled_signal(#opcode, |_node, _handler, _data, _fds| {
+			handler_wrapper.add_handled_signal(#aspect_id, #opcode, |_node, _handler, _data, _fds| {
 				#deserialize
 				let _client = _node.client()?;
 				let mut _handler_lock = _handler.lock();
@@ -525,7 +535,7 @@ fn generate_handler(member: &Member) -> TokenStream {
 			let serialize =
 				generate_argument_serialize("value", member.return_type.as_ref().unwrap(), false);
 			quote! {
-				handler_wrapper.add_handled_method(#opcode, |_node, _handler, _data, _fds| {
+				handler_wrapper.add_handled_method(#aspect_id, #opcode, |_node, _handler, _data, _fds| {
 					#deserialize
 					let _client = _node.client()?;
 					let mut _handler_lock = _handler.lock();

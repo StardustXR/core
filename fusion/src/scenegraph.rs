@@ -40,7 +40,8 @@ impl scenegraph::Scenegraph for Scenegraph {
 	fn send_signal(
 		&self,
 		id: u64,
-		method: u64,
+		aspect: u64,
+		signal: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), ScenegraphError> {
@@ -50,9 +51,12 @@ impl scenegraph::Scenegraph for Scenegraph {
 			.get(&id)
 			.and_then(Weak::upgrade)
 			.ok_or(ScenegraphError::NodeNotFound)?;
-		let local_signals = node.local_signals.lock();
-		let signal = local_signals
-			.get(&method)
+		let aspects = node.aspects.lock();
+		let signal = aspects
+			.get(&aspect)
+			.ok_or(ScenegraphError::SignalNotFound)?
+			.local_signals
+			.get(&signal)
 			.ok_or(ScenegraphError::SignalNotFound)?
 			.clone();
 		signal(data, fds).map_err(|e| ScenegraphError::SignalError {
@@ -62,6 +66,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 	fn execute_method(
 		&self,
 		id: u64,
+		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
@@ -74,8 +79,11 @@ impl scenegraph::Scenegraph for Scenegraph {
 				.get(&id)
 				.and_then(Weak::upgrade)
 				.ok_or(ScenegraphError::NodeNotFound)?;
-			let local_methods = node.local_methods.lock();
-			let method = local_methods
+			let aspects = node.aspects.lock();
+			let method = aspects
+				.get(&aspect)
+				.ok_or(ScenegraphError::MethodNotFound)?
+				.local_methods
 				.get(&method)
 				.ok_or(ScenegraphError::MethodNotFound)?
 				.clone();

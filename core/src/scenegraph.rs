@@ -24,14 +24,16 @@ pub type MethodResponse = oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), Sceneg
 pub trait Scenegraph {
 	fn send_signal(
 		&self,
-		node: u64,
+		node_id: u64,
+		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), ScenegraphError>;
 	fn execute_method(
 		&self,
-		node: u64,
+		node_id: u64,
+		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,

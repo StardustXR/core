@@ -70,6 +70,7 @@ pub struct UnionOption {
 #[derive(Debug)]
 pub struct Aspect {
 	pub name: String,
+	pub id: u64, // FNV hash (https://crates.io/crates/fnv) of the aspect name
 	pub description: String,
 	pub inherits: Vec<String>,
 	pub members: Vec<Member>,
@@ -78,7 +79,7 @@ pub struct Aspect {
 #[derive(Debug)]
 pub struct Member {
 	pub name: String,
-	pub opcode: u64, // FNV hash (https://crates.io/crates/fnv) of the aspect/interface and the member name
+	pub opcode: u64, // FNV hash (https://crates.io/crates/fnv) of the member name
 	pub description: String,
 	pub side: Side,
 	pub _type: MemberType,

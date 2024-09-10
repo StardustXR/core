@@ -2,8 +2,9 @@ namespace StardustXR;
 
 table Message {
 	type: ubyte;
-	id: uint64;
-	node: uint64;
+	message_id: uint64;
+	node_id: uint64;
+	aspect: uint64;
 	method: uint64;
 	error: string;
 	data:[ubyte];

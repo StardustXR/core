@@ -20,11 +20,13 @@ use tokio::net::UnixStream;
 use tokio::sync::{mpsc, oneshot};
 use tracing::instrument;
 
+#[allow(clippy::too_many_arguments)]
 fn trace_call(
 	incoming: bool,
 	call_type: u8,
 	message_id: u64,
-	node: u64,
+	node_id: u64,
+	aspect: u64,
 	method: u64,
 	err: Option<&str>,
 	data: &[u8],
@@ -55,7 +57,8 @@ fn trace_call(
 						false => "local",
 					},
 					message_id,
-					node,
+					node_id,
+					aspect,
 					method,
 					err,
 					data,
@@ -70,7 +73,8 @@ fn trace_call(
 					},
 					call_type,
 					message_id,
-					node,
+					node_id,
+					aspect,
 					method,
 					err,
 					data,
@@ -177,7 +181,7 @@ impl MessageReceiver {
 		let header = Header::from_bytes(header_buffer);
 
 		let mut body: Vec<u8> = std::vec::from_elem(0_u8, header.body_length as usize);
-		
+
 		let iov = &mut [IoSliceMut::new(body.as_mut_slice())];
 
 		// 253 is the Linux value for SCM_MAX_FD (max FDs in a cmsg)
@@ -227,30 +231,32 @@ impl MessageReceiver {
 		trace_call(
 			true,
 			message_type,
-			message.id(),
-			message.node(),
+			message.message_id(),
+			message.node_id(),
+			message.aspect(),
 			message.method(),
 			message.error(),
 			message.data().map(|d| d.bytes()).unwrap_or(&[]),
 		);
-		let id = message.id();
-		let node = message.node();
+		let message_id = message.message_id();
+		let node_id = message.node_id();
+		let aspect = message.aspect();
 		let method = message.method();
 		let data = message.data().unwrap_or_default().bytes();
 		match message_type {
 			// Errors
 			0 => {
-				let future_opt = self.pending_futures.remove(&message.id());
+				let future_opt = self.pending_futures.remove(&message_id);
 				if let Some(future) = future_opt {
 					let _ = future.send(Err(message.error().unwrap_or("unknown").to_string()));
 				}
 			}
 			// Signals
 			1 => {
-				let signal_status = scenegraph.send_signal(node, method, data, fds);
+				let signal_status = scenegraph.send_signal(node_id, aspect, method, data, fds);
 				if let Err(e) = signal_status {
 					self.send_handle
-						.error(message.id(), node, method, e, data)?;
+						.error(message_id, node_id, aspect, method, e, data)?;
 				}
 			}
 			// Method called
@@ -258,7 +264,7 @@ impl MessageReceiver {
 				let (response_tx, response_rx) =
 					oneshot::channel::<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>();
 				let send_handle = self.send_handle.clone();
-				scenegraph.execute_method(node, method, data, fds, response_tx);
+				scenegraph.execute_method(node_id, method, aspect, data, fds, response_tx);
 				tokio::task::spawn(async move {
 					let Ok(message) = root_as_message(&raw_message) else {
 						return;
@@ -267,22 +273,17 @@ impl MessageReceiver {
 					if let Ok(result) = response_rx.await {
 						let _ = match result {
 							Ok((data, fds)) => send_handle.send(serialize_call(
-								3,
-								message.id(),
-								node,
-								method,
-								None,
-								&data,
-								fds,
+								3, message_id, node_id, aspect, method, None, &data, fds,
 							)),
 							Err(error) => {
-								send_handle.error(message.id(), node, method, error, data)
+								send_handle.error(message_id, node_id, aspect, method, error, data)
 							}
 						};
 					} else {
 						let _ = send_handle.error(
-							message.id(),
-							node,
+							message_id,
+							node_id,
+							aspect,
 							method,
 							"Internal: method did not return a response",
 							data,
@@ -292,12 +293,13 @@ impl MessageReceiver {
 			}
 			// Method return
 			3 => {
-				let future_opt = self.pending_futures.remove(&id);
+				let future_opt = self.pending_futures.remove(&message_id);
 				match future_opt {
 					None => {
 						self.send_handle.error(
-							message.id(),
-							node,
+							message_id,
+							node_id,
+							aspect,
 							method,
 							"Method return without method call".to_string(),
 							data,
@@ -320,7 +322,8 @@ impl MessageReceiver {
 /// Generate an error message from arguments.
 pub fn serialize_error<T: std::fmt::Display>(
 	message_id: u64,
-	node: u64,
+	node_id: u64,
+	aspect: u64,
 	method: u64,
 	err: T,
 	data: &[u8],
@@ -329,7 +332,8 @@ pub fn serialize_error<T: std::fmt::Display>(
 	serialize_call(
 		0,
 		message_id,
-		node,
+		node_id,
+		aspect,
 		method,
 		Some(error.as_str()),
 		data,
@@ -338,35 +342,41 @@ pub fn serialize_error<T: std::fmt::Display>(
 }
 /// Generate a signal message from arguments.
 pub fn serialize_signal_call(
-	id: u64,
-	node: u64,
+	message_id: u64,
+	node_id: u64,
+	aspect: u64,
 	method: u64,
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	serialize_call(1, id, node, method, None, data, fds)
+	serialize_call(1, message_id, node_id, aspect, method, None, data, fds)
 }
 /// Generate a method message from arguments.
 pub fn serialize_method_call(
-	id: u64,
-	node: u64,
+	message_id: u64,
+	node_id: u64,
+	aspect: u64,
 	method: u64,
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	serialize_call(2, id, node, method, None, data, fds)
+	serialize_call(2, message_id, node_id, aspect, method, None, data, fds)
 }
+#[allow(clippy::too_many_arguments)]
 #[instrument(level = "trace", skip_all)]
 fn serialize_call(
 	call_type: u8,
-	id: u64,
-	node: u64,
+	message_id: u64,
+	node_id: u64,
+	aspect: u64,
 	method: u64,
 	err: Option<&str>,
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	trace_call(false, call_type, id, node, method, err, data);
+	trace_call(
+		false, call_type, message_id, node_id, aspect, method, err, data,
+	);
 
 	let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 	let flex_err = err.map(|s| fbb.create_string(s));
@@ -376,8 +386,9 @@ fn serialize_call(
 		&mut fbb,
 		&MessageArgs {
 			type_: call_type,
-			id,
-			node,
+			message_id,
+			node_id,
+			aspect,
 			method,
 			error: flex_err,
 			data: Some(flex_data),
@@ -462,19 +473,23 @@ impl MessageSender {
 	/// Send a signal immediately, await until sent.
 	pub async fn signal(
 		&mut self,
-		node: u64,
+		node_id: u64,
+		aspect: u64,
 		signal: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
 		let id = self.message_counter.inc();
-		self.send(serialize_signal_call(id, node, signal, data, fds))
-			.await
+		self.send(serialize_signal_call(
+			id, node_id, aspect, signal, data, fds,
+		))
+		.await
 	}
 	/// Call a method immediately, await until other side sends back a response or the message fails to send.
 	pub async fn method(
 		&mut self,
-		node: u64,
+		node_id: u64,
+		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
@@ -484,8 +499,10 @@ impl MessageSender {
 		self.pending_future_tx
 			.send((id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
-		self.send(serialize_method_call(id, node, method, data, fds))
-			.await?;
+		self.send(serialize_method_call(
+			id, node_id, aspect, method, data, fds,
+		))
+		.await?;
 		rx.await.map_err(|_| MessengerError::ReceiverDropped)
 	}
 }
@@ -501,39 +518,48 @@ impl MessageSenderHandle {
 	/// Queue up an error to be sent.
 	pub fn error<E: std::fmt::Display>(
 		&self,
-		id: u64,
-		node: u64,
+		message_id: u64,
+		node_id: u64,
+		aspect: u64,
 		method: u64,
 		err: E,
 		data: &[u8],
 	) -> Result<(), MessengerError> {
-		self.send(serialize_error(id, node, method, err, data))
+		self.send(serialize_error(
+			message_id, node_id, aspect, method, err, data,
+		))
 	}
 	/// Queue up a signal to be sent.
 	pub fn signal(
 		&self,
-		node: u64,
+		node_id: u64,
+		aspect: u64,
 		signal: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), MessengerError> {
-		let id = self.message_counter.inc();
-		self.send(serialize_signal_call(id, node, signal, data, fds))
+		let message_id = self.message_counter.inc();
+		self.send(serialize_signal_call(
+			message_id, node_id, aspect, signal, data, fds,
+		))
 	}
 	/// Queue up a method to be sent and get back a future for when a response is returned.
 	pub fn method(
 		&self,
-		node: u64,
+		node_id: u64,
+		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<impl Future<Output = Result<Message, String>>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
-		let id = self.message_counter.inc();
+		let message_id = self.message_counter.inc();
 		self.pending_future_tx
-			.send((id, tx))
+			.send((message_id, tx))
 			.map_err(|_| MessengerError::ReceiverDropped)?;
-		self.send(serialize_method_call(id, node, method, data, fds))?;
+		self.send(serialize_method_call(
+			message_id, node_id, aspect, method, data, fds,
+		))?;
 		Ok(async move { rx.await.map_err(|e| e.to_string())? })
 	}
 
