@@ -28,7 +28,7 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 				.nodes()
 				.iter()
 				.filter(check_member)
-				.map(|m| convert_member(m, FnvHasher::default()))
+				.map(convert_member)
 				.collect::<Result<Vec<_>, ParseError>>()?;
 			Ok(Interface { node_id, members })
 		})
@@ -146,16 +146,16 @@ fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 	let members = nodes
 		.iter()
 		.filter(check_member)
-		.map(|m| {
-			convert_member(m, {
-				let mut hasher = FnvHasher::default();
-				name.hash(&mut hasher);
-				hasher
-			})
-		})
+		.map(convert_member)
 		.collect::<Result<Vec<_>, ParseError>>()?;
+	let id = {
+		let mut hasher = FnvHasher::default();
+		name.hash(&mut hasher);
+		hasher.finish()
+	};
 	Ok(Aspect {
 		name,
+		id,
 		description,
 		inherits,
 		members,
@@ -165,7 +165,7 @@ fn check_member(member: &&KdlNode) -> bool {
 	let name = member.name().value();
 	name == "signal" || name == "method"
 }
-fn convert_member(member: &KdlNode, mut hasher: FnvHasher) -> Result<Member, ParseError> {
+fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
 	let nodes = member.children().unwrap().nodes();
 
 	let _type = member.name().value();
@@ -192,6 +192,7 @@ fn convert_member(member: &KdlNode, mut hasher: FnvHasher) -> Result<Member, Par
 	};
 
 	let name = get_string_property(member, 0)?.to_string();
+	let mut hasher = FnvHasher::default();
 	name.hash(&mut hasher);
 	let description = get_description_node(member)?;
 	let arguments = nodes

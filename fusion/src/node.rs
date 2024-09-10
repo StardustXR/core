@@ -82,7 +82,7 @@ pub trait NodeType: Sized + Send + Sync + 'static {
 	/// Set whether the node is active or not. This has different effects depending on the node.
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
 		self.node()
-			.send_remote_signal(OWNED_SET_ENABLED_SERVER_OPCODE, &enabled)
+			.send_remote_signal(OWNED_ASPECT_ID, OWNED_SET_ENABLED_SERVER_OPCODE, &enabled)
 	}
 	/// Create an alias of this node.
 	/// Not the same as node scenegraph aliases,
@@ -101,11 +101,32 @@ type Method = dyn Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, 
 
 pub type NodeResult<O> = Result<O, NodeError>;
 
+#[derive(Default)]
+pub(crate) struct AspectInternals {
+	pub(crate) local_signals: FxHashMap<u64, Arc<Signal>>,
+	pub(crate) local_methods: FxHashMap<u64, Arc<Method>>,
+}
+impl Debug for AspectInternals {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let mut dbg = f.debug_struct("Aspect");
+
+		dbg.field(
+			"local_signals",
+			&self.local_signals.keys().collect::<Vec<_>>(),
+		)
+		.field(
+			"local_methods",
+			&self.local_methods.keys().collect::<Vec<_>>(),
+		);
+
+		dbg.finish()
+	}
+}
+
 pub struct NodeInternals {
 	client: Weak<Client>,
 	pub(crate) id: u64,
-	pub(crate) local_signals: Mutex<FxHashMap<u64, Arc<Signal>>>,
-	pub(crate) local_methods: Mutex<FxHashMap<u64, Arc<Method>>>,
+	pub(crate) aspects: Mutex<FxHashMap<u64, AspectInternals>>,
 	pub(crate) owned: bool,
 }
 impl Drop for NodeInternals {
@@ -114,6 +135,7 @@ impl Drop for NodeInternals {
 			if self.owned {
 				let _ = client.message_sender_handle.signal(
 					self.id,
+					OWNED_ASPECT_ID,
 					OWNED_DESTROY_SERVER_OPCODE,
 					&[],
 					Vec::new(),
@@ -131,19 +153,32 @@ pub enum Node {
 }
 impl Node {
 	/// Add a signal to the node so that the server can send a message to it. Not needed unless implementing functionality Fusion does not already have.
-	pub fn add_local_signal<F>(&self, id: u64, signal: F) -> Result<(), NodeError>
+	pub fn add_local_signal<F>(
+		&self,
+		aspect_id: u64,
+		signal_id: u64,
+		signal: F,
+	) -> Result<(), NodeError>
 	where
 		F: Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<()> + Send + Sync + 'static,
 	{
 		self.internals()?
-			.local_signals
+			.aspects
 			.lock()
-			.insert(id, Arc::new(signal));
+			.entry(aspect_id)
+			.or_insert_with(AspectInternals::default)
+			.local_signals
+			.insert(signal_id, Arc::new(signal));
 		Ok(())
 	}
 
 	/// Add a signal to the node so that the server can send a message to it and get a response back. Not needed unless implementing functionality Fusion does not already have.
-	pub fn add_local_method<F>(&self, id: u64, method: F) -> Result<(), NodeError>
+	pub fn add_local_method<F>(
+		&self,
+		aspect_id: u64,
+		method_id: u64,
+		method: F,
+	) -> Result<(), NodeError>
 	where
 		F: Fn(&[u8], Vec<OwnedFd>) -> color_eyre::eyre::Result<(Vec<u8>, Vec<OwnedFd>)>
 			+ Send
@@ -151,9 +186,12 @@ impl Node {
 			+ 'static,
 	{
 		self.internals()?
-			.local_methods
+			.aspects
 			.lock()
-			.insert(id, Arc::new(method));
+			.entry(aspect_id)
+			.or_insert_with(AspectInternals::default)
+			.local_methods
+			.insert(method_id, Arc::new(method));
 		Ok(())
 	}
 
@@ -186,8 +224,14 @@ impl Node {
 	}
 
 	/// Send a signal to the node on the server. Not needed unless implementing functionality Fusion does not already have.
-	pub fn send_remote_signal<S: Serialize>(&self, signal: u64, data: &S) -> Result<(), NodeError> {
+	pub fn send_remote_signal<S: Serialize>(
+		&self,
+		aspect: u64,
+		signal: u64,
+		data: &S,
+	) -> Result<(), NodeError> {
 		self.send_remote_signal_raw(
+			aspect,
 			signal,
 			&serialize(data).map_err(|_| NodeError::Serialization)?,
 			Vec::new(),
@@ -196,29 +240,32 @@ impl Node {
 	/// Send a signal to the node on the server with raw data (like when sending flatbuffers over). Not needed unless implementing functionality Fusion does not already have.
 	pub fn send_remote_signal_raw(
 		&self,
+		aspect: u64,
 		signal: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), NodeError> {
 		self.client()?
 			.message_sender_handle
-			.signal(self.get_id()?, signal, data, fds)
+			.signal(self.get_id()?, aspect, signal, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
 	pub async fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
 		&self,
+		aspect: u64,
 		method: u64,
 		send_data: &S,
 	) -> Result<D, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(method, &send_data, Vec::new())?;
+		let future = self.execute_remote_method_raw(aspect, method, &send_data, Vec::new())?;
 		let data = future.await?;
 		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
 	}
 	/// Execute a method on the node on the server with raw data (like when sending over flatbuffers). Not needed unless implementing functionality Fusion does not already have.
 	pub fn execute_remote_method_raw(
 		&self,
+		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
@@ -226,7 +273,7 @@ impl Node {
 		let future = self
 			.client()?
 			.message_sender_handle
-			.method(self.get_id()?, method, data, fds)
+			.method(self.get_id()?, aspect, method, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
@@ -248,8 +295,7 @@ impl NodeType for Node {
 		let node = Arc::new(NodeInternals {
 			client: Arc::downgrade(client),
 			id,
-			local_signals: Mutex::new(FxHashMap::default()),
-			local_methods: Mutex::new(FxHashMap::default()),
+			aspects: Mutex::new(FxHashMap::default()),
 			owned,
 		});
 		client.scenegraph.add_node(&node);
@@ -268,24 +314,7 @@ impl Debug for Node {
 
 		if let Ok(internals) = self.internals() {
 			dbg.field("id", &internals.id)
-				.field(
-					"local_signals",
-					&internals
-						.local_signals
-						.lock()
-						.iter()
-						.map(|(key, _)| key)
-						.collect::<Vec<_>>(),
-				)
-				.field(
-					"local_methods",
-					&internals
-						.local_methods
-						.lock()
-						.iter()
-						.map(|(key, _)| key)
-						.collect::<Vec<_>>(),
-				);
+				.field("local_signals", &internals.aspects);
 		} else {
 			dbg.field("node", &"broken");
 		}

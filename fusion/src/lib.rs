@@ -65,38 +65,44 @@ impl<N: NodeType, H: Send + Sync + 'static> HandlerWrapper<N, H> {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn add_handled_signal(
 		&self,
-		id: u64,
+		aspect_id: u64,
+		signal_id: u64,
 		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8], Vec<OwnedFd>) -> Result<()>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
-		self.node.node().add_local_signal(id, move |data, fds| {
-			let Some(node) = node.upgrade() else {
-				return Err(anyhow!("Node broken"));
-			};
-			let Some(handler) = handler.upgrade() else {
-				return Err(anyhow!("Handler broken"));
-			};
-			parse(node, handler, data, fds)
-		})
+		self.node
+			.node()
+			.add_local_signal(aspect_id, signal_id, move |data, fds| {
+				let Some(node) = node.upgrade() else {
+					return Err(anyhow!("Node broken"));
+				};
+				let Some(handler) = handler.upgrade() else {
+					return Err(anyhow!("Handler broken"));
+				};
+				parse(node, handler, data, fds)
+			})
 	}
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn add_handled_method(
 		&self,
-		id: u64,
+		aspect_id: u64,
+		method_id: u64,
 		parse: fn(Arc<N>, Arc<Mutex<H>>, &[u8], Vec<OwnedFd>) -> Result<(Vec<u8>, Vec<OwnedFd>)>,
 	) -> Result<(), NodeError> {
 		let node = Arc::downgrade(&self.node);
 		let handler = Arc::downgrade(&self.wrapped);
-		self.node.node().add_local_method(id, move |data, fds| {
-			let Some(node) = node.upgrade() else {
-				return Err(anyhow!("Node broken"));
-			};
-			let Some(handler) = handler.upgrade() else {
-				return Err(anyhow!("Handler broken"));
-			};
-			parse(node, handler, data, fds)
-		})
+		self.node
+			.node()
+			.add_local_method(aspect_id, method_id, move |data, fds| {
+				let Some(node) = node.upgrade() else {
+					return Err(anyhow!("Node broken"));
+				};
+				let Some(handler) = handler.upgrade() else {
+					return Err(anyhow!("Handler broken"));
+				};
+				parse(node, handler, data, fds)
+			})
 	}
 }
 
