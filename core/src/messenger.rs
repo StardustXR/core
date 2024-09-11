@@ -240,7 +240,7 @@ impl MessageReceiver {
 		);
 		let message_id = message.message_id();
 		let node_id = message.node_id();
-		let aspect = message.aspect();
+		let aspect_id = message.aspect();
 		let method = message.method();
 		let data = message.data().unwrap_or_default().bytes();
 		match message_type {
@@ -253,10 +253,10 @@ impl MessageReceiver {
 			}
 			// Signals
 			1 => {
-				let signal_status = scenegraph.send_signal(node_id, aspect, method, data, fds);
+				let signal_status = scenegraph.send_signal(node_id, aspect_id, method, data, fds);
 				if let Err(e) = signal_status {
 					self.send_handle
-						.error(message_id, node_id, aspect, method, e, data)?;
+						.error(message_id, node_id, aspect_id, method, e, data)?;
 				}
 			}
 			// Method called
@@ -264,7 +264,7 @@ impl MessageReceiver {
 				let (response_tx, response_rx) =
 					oneshot::channel::<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>();
 				let send_handle = self.send_handle.clone();
-				scenegraph.execute_method(node_id, method, aspect, data, fds, response_tx);
+				scenegraph.execute_method(node_id, aspect_id, method, data, fds, response_tx);
 				tokio::task::spawn(async move {
 					let Ok(message) = root_as_message(&raw_message) else {
 						return;
@@ -273,17 +273,16 @@ impl MessageReceiver {
 					if let Ok(result) = response_rx.await {
 						let _ = match result {
 							Ok((data, fds)) => send_handle.send(serialize_call(
-								3, message_id, node_id, aspect, method, None, &data, fds,
+								3, message_id, node_id, aspect_id, method, None, &data, fds,
 							)),
-							Err(error) => {
-								send_handle.error(message_id, node_id, aspect, method, error, data)
-							}
+							Err(error) => send_handle
+								.error(message_id, node_id, aspect_id, method, error, data),
 						};
 					} else {
 						let _ = send_handle.error(
 							message_id,
 							node_id,
-							aspect,
+							aspect_id,
 							method,
 							"Internal: method did not return a response",
 							data,
@@ -299,7 +298,7 @@ impl MessageReceiver {
 						self.send_handle.error(
 							message_id,
 							node_id,
-							aspect,
+							aspect_id,
 							method,
 							"Method return without method call".to_string(),
 							data,
