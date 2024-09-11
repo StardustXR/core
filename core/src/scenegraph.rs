@@ -11,6 +11,8 @@ pub enum ScenegraphError {
 	BrokenAlias,
 	#[error("Signal not found")]
 	SignalNotFound,
+	#[error("Aspect not found")]
+	AspectNotFound,
 	#[error("Method not found")]
 	MethodNotFound,
 	#[error("Signal error: {error}")]

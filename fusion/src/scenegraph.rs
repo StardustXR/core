@@ -54,7 +54,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 		let aspects = node.aspects.lock();
 		let signal = aspects
 			.get(&aspect)
-			.ok_or(ScenegraphError::SignalNotFound)?
+			.ok_or(ScenegraphError::AspectNotFound)?
 			.local_signals
 			.get(&signal)
 			.ok_or(ScenegraphError::SignalNotFound)?
@@ -82,7 +82,7 @@ impl scenegraph::Scenegraph for Scenegraph {
 			let aspects = node.aspects.lock();
 			let method = aspects
 				.get(&aspect)
-				.ok_or(ScenegraphError::MethodNotFound)?
+				.ok_or(ScenegraphError::AspectNotFound)?
 				.local_methods
 				.get(&method)
 				.ok_or(ScenegraphError::MethodNotFound)?
