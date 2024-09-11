@@ -239,7 +239,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 	let description = &aspect.description;
 	let (client_members, server_members) = aspect.members.iter().split(|m| m.side == Side::Server);
 
-	let aspect_opcode = {
+	let aspect_id = {
 		let name = Ident::new(
 			&format!("{}_ASPECT_ID", aspect.name.to_case(Case::ScreamingSnake)),
 			Span::call_site(),
@@ -351,7 +351,7 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 		.unwrap_or_default();
 	quote! {
 		#node
-		#aspect_opcode
+		#aspect_id
 		#opcodes
 		#client_side
 		#[doc = #description]
