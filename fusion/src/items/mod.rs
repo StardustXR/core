@@ -3,7 +3,7 @@ pub mod panel;
 
 use crate::{
 	impl_aspects,
-	node::{NodeResult, OwnedAspect},
+	node::OwnedAspect,
 	spatial::{SpatialAspect, SpatialRefAspect},
 };
 

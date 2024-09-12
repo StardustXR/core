@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-	client::Client,
+	client::ClientHandle,
 	fields::{Field, FieldAspect},
 	impl_aspects,
 	node::{Node, NodeResult, NodeType, OwnedAspect},
@@ -32,7 +32,7 @@ impl CameraItem {
 }
 
 impl CameraItemUi {
-	pub fn register(client: &Arc<Client>) -> NodeResult<Self> {
+	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_camera_item_ui(client)?;
 		Ok(CameraItemUi(Node::from_id(client, INTERFACE_NODE_ID, true)))
 	}

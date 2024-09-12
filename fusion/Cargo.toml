@@ -22,13 +22,13 @@ serde = "1.0.177"
 serde_repr = "0.1.16"
 thiserror = "1.0.38"
 tokio = { version = "1", features = [
-    "sync",
-    "macros",
-    "rt",
-    "time",
-    "net",
-    "io-util",
-    "signal",
+	"sync",
+	"macros",
+	"rt",
+	"time",
+	"net",
+	"io-util",
+	"signal",
 ] }
 xkbcommon = { version = "0.5.1", default-features = false, optional = true }
 tracing = "0.1.37"
@@ -37,8 +37,9 @@ zbus = "4.3.0"
 
 stardust-xr = { path = "../core" }
 stardust-xr-fusion-codegen = { path = "codegen" }
+split-iter = "0.1.0"
+dashmap = "6.1.0"
 
 [dev-dependencies]
 glam = { version = "0.24.1", features = ["mint"] }
-manifest-dir-macros = "0.1.17"
 tracing-subscriber = "0.3.17"

@@ -1,3 +1,5 @@
+use color_eyre::Report;
+use stardust_xr_schemas::flex::flexbuffers::DeserializationError;
 use std::os::unix::io::OwnedFd;
 use thiserror::Error;
 use tokio::sync::oneshot;
@@ -9,16 +11,26 @@ pub enum ScenegraphError {
 	NodeNotFound,
 	#[error("Alias has broken")]
 	BrokenAlias,
-	#[error("Signal not found")]
-	SignalNotFound,
 	#[error("Aspect not found")]
 	AspectNotFound,
-	#[error("Method not found")]
-	MethodNotFound,
-	#[error("Signal error: {error}")]
-	SignalError { error: String },
-	#[error("Method error: {error}")]
-	MethodError { error: String },
+	#[error("Signal/method not found")]
+	MemberNotFound,
+	#[error("Signal/method error: {error}")]
+	MemberError { error: String },
+}
+impl From<DeserializationError> for ScenegraphError {
+	fn from(value: DeserializationError) -> Self {
+		Self::MemberError {
+			error: format!("Deserialization error: {value:?}"),
+		}
+	}
+}
+impl From<Report> for ScenegraphError {
+	fn from(value: Report) -> Self {
+		Self::MemberError {
+			error: value.to_string(),
+		}
+	}
 }
 
 /// Handles node signals and method calls for the messenger.

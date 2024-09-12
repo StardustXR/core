@@ -3,9 +3,9 @@
 use std::sync::Arc;
 
 use crate::{
-	client::Client,
+	client::ClientHandle,
 	impl_aspects,
-	node::{NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 
@@ -13,7 +13,7 @@ stardust_xr_fusion_codegen::codegen_field_protocol!();
 
 impl_aspects!(FieldRef: SpatialRefAspect);
 impl FieldRef {
-	pub async fn import(client: &Arc<Client>, uid: u64) -> NodeResult<Self> {
+	pub async fn import(client: &Arc<ClientHandle>, uid: u64) -> NodeResult<Self> {
 		import_field_ref(client, uid).await
 	}
 }

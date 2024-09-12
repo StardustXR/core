@@ -1,7 +1,7 @@
 #![allow(async_fn_in_trait)]
 
 use crate::{
-	client::Client,
+	client::ClientHandle,
 	fields::{Field, FieldRef},
 	node::NodeResult,
 	spatial::{Spatial, SpatialAspect, SpatialRef},
@@ -18,10 +18,10 @@ use stardust_xr::{
 use std::sync::Arc;
 
 pub trait SpatialRefProxyExt {
-	async fn import(&self, stardust_client: &Arc<Client>) -> Option<SpatialRef>;
+	async fn import(&self, stardust_client: &Arc<ClientHandle>) -> Option<SpatialRef>;
 }
 impl SpatialRefProxyExt for SpatialRefProxy<'_> {
-	async fn import(&self, stardust_client: &Arc<Client>) -> Option<SpatialRef> {
+	async fn import(&self, stardust_client: &Arc<ClientHandle>) -> Option<SpatialRef> {
 		let uid = self.uid().await.ok()?;
 		SpatialRef::import(stardust_client, uid).await.ok()
 	}
@@ -41,10 +41,10 @@ impl SpatialObject {
 }
 
 pub trait FieldRefProxyExt {
-	async fn import(&self, stardust_client: &Arc<Client>) -> Option<FieldRef>;
+	async fn import(&self, stardust_client: &Arc<ClientHandle>) -> Option<FieldRef>;
 }
 impl FieldRefProxyExt for FieldRefProxy<'_> {
-	async fn import(&self, stardust_client: &Arc<Client>) -> Option<FieldRef> {
+	async fn import(&self, stardust_client: &Arc<ClientHandle>) -> Option<FieldRef> {
 		let uid = self.uid().await.ok()?;
 		FieldRef::import(stardust_client, uid).await.ok()
 	}
@@ -63,7 +63,7 @@ impl FieldObject {
 	}
 }
 
-pub async fn hmd(client: &Arc<Client>) -> Option<SpatialRef> {
+pub async fn hmd(client: &Arc<ClientHandle>) -> Option<SpatialRef> {
 	SpatialRefProxy::new(
 		&Connection::session().await.ok()?,
 		"org.stardustxr.HMD",
@@ -79,8 +79,8 @@ pub async fn hmd(client: &Arc<Client>) -> Option<SpatialRef> {
 async fn fusion_objects_hmd() {
 	use crate::spatial::SpatialRefAspect;
 
-	let (client, _) = Client::connect_with_async_loop().await.unwrap();
-	let hmd = hmd(&client).await.unwrap();
+	let client = crate::Client::connect().await.unwrap();
+	let hmd = hmd(&client.handle()).await.unwrap();
 	assert!(hmd.get_transform(client.get_root()).await.is_ok())
 }
 
@@ -88,7 +88,7 @@ pub struct PlaySpace {
 	pub spatial: SpatialRef,
 	pub bounds_polygon: Vec<Vector2<f32>>,
 }
-pub async fn play_space(client: &Arc<Client>) -> Option<PlaySpace> {
+pub async fn play_space(client: &Arc<ClientHandle>) -> Option<PlaySpace> {
 	let connection = Connection::session().await.ok()?;
 	let spatial_proxy = SpatialRefProxy::new(
 		&connection,

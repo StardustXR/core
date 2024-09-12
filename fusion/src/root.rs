@@ -1,14 +1,13 @@
-use std::sync::Arc;
-
-use crate::client::Client;
+use crate::client::ClientHandle;
 use crate::impl_aspects;
-use crate::node::{NodeResult, NodeType};
+use crate::node::NodeType;
 use crate::spatial::{SpatialRef, SpatialRefAspect};
 use color_eyre::eyre::Result;
 use rustc_hash::FxHashMap;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use stardust_xr::schemas::flex::flexbuffers;
+use std::sync::Arc;
 
 stardust_xr_fusion_codegen::codegen_root_protocol!();
 impl_aspects!(Root: SpatialRefAspect);
@@ -57,10 +56,10 @@ impl ClientState {
 	pub fn data<T: DeserializeOwned>(&self) -> Option<T> {
 		flexbuffers::from_buffer(&self.data.as_ref()?.as_slice()).ok()
 	}
-	pub fn root(&self, client: &Arc<Client>) -> SpatialRef {
+	pub fn root(&self, client: &Arc<ClientHandle>) -> SpatialRef {
 		SpatialRef::from_id(client, self.root, false)
 	}
-	pub fn spatial_anchors(&self, client: &Arc<Client>) -> FxHashMap<String, SpatialRef> {
+	pub fn spatial_anchors(&self, client: &Arc<ClientHandle>) -> FxHashMap<String, SpatialRef> {
 		self.spatial_anchors
 			.iter()
 			.map(|(k, v)| (k.to_string(), SpatialRef::from_id(client, *v, false)))

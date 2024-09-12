@@ -4,10 +4,6 @@ use quote::{quote, ToTokens};
 use split_iter::Splittable;
 use stardust_xr_schemas::protocol::*;
 
-fn fold_tokens(a: TokenStream, b: TokenStream) -> TokenStream {
-	quote!(#a #b)
-}
-
 #[proc_macro]
 pub fn codegen_root_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	codegen_client_protocol(ROOT_PROTOCOL, true, true)
@@ -53,137 +49,154 @@ pub fn codegen_item_panel_protocol(_input: proc_macro::TokenStream) -> proc_macr
 	codegen_client_protocol(ITEM_PANEL_PROTOCOL, true, true)
 }
 
+trait Tokenize {
+	fn tokenize(&self, generate_node: bool, partial_eq: bool) -> TokenStream;
+}
+
 fn codegen_client_protocol(
 	protocol: &'static str,
 	generate_node: bool,
 	partial_eq: bool,
 ) -> proc_macro::TokenStream {
-	let protocol = Protocol::parse(protocol).unwrap();
-	let protocol_version = protocol.version;
-	let protocol_version = quote!(pub(crate) const INTERFACE_VERSION: u32 = #protocol_version;);
-	let interface_node_id = protocol
-		.interface
-		.as_ref()
-		.map(|i| {
-			let id = i.node_id;
-			quote!(pub(crate) const INTERFACE_NODE_ID: u64 = #id;)
-		})
-		.unwrap_or_default();
-	let custom_enums = protocol
-		.custom_enums
-		.iter()
-		.map(|e| generate_custom_enum(e, partial_eq))
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-	let custom_unions = protocol
-		.custom_unions
-		.iter()
-		.map(|u| generate_custom_union(u, partial_eq))
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-	let custom_structs = protocol
-		.custom_structs
-		.iter()
-		.map(|s| generate_custom_struct(s, partial_eq))
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-	let aspects = protocol
-		.aspects
-		.iter()
-		.map(|a| generate_aspect(a, generate_node))
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-	let interface = protocol
-		.interface
-		.and_then(|p| {
-			p.members
-				.iter()
-				.map(|m| {
-					let member_name = m.name.to_case(Case::ScreamingSnake);
-					let name_type = if m.side == Side::Client {
-						"CLIENT"
-					} else {
-						"SERVER"
-					};
-					let name = Ident::new(
-						&format!("INTERFACE_{member_name}_{name_type}_OPCODE"),
-						Span::call_site(),
-					);
-					let opcode = m.opcode;
-
-					let member = generate_member(Some(p.node_id), 0, m);
-					quote! {
-						pub(crate) const #name: u64 = #opcode;
-						#member
-					}
-				})
-				.reduce(fold_tokens)
-		})
-		.unwrap_or_default();
-	quote!(#protocol_version #interface_node_id #custom_enums #custom_unions #custom_structs #aspects #interface)
+	Protocol::parse(protocol)
+		.unwrap()
+		.tokenize(generate_node, partial_eq)
 		.into()
 }
+impl Tokenize for Protocol {
+	fn tokenize(&self, generate_node: bool, partial_eq: bool) -> TokenStream {
+		let protocol_version = self.version;
+		let protocol_version = quote!(pub(crate) const INTERFACE_VERSION: u32 = #protocol_version;);
+		let interface_node_id = self
+			.interface
+			.as_ref()
+			.map(|i| {
+				let id = i.node_id;
+				quote!(pub(crate) const INTERFACE_NODE_ID: u64 = #id;)
+			})
+			.unwrap_or_default();
+		let custom_enums = self
+			.custom_enums
+			.iter()
+			.map(|e| e.tokenize(generate_node, partial_eq));
+		let custom_unions = self
+			.custom_unions
+			.iter()
+			.map(|u| u.tokenize(generate_node, partial_eq));
+		let custom_structs = self
+			.custom_structs
+			.iter()
+			.map(|s| s.tokenize(generate_node, partial_eq));
+		let aspects = self
+			.aspects
+			.iter()
+			.map(|a| a.tokenize(generate_node, partial_eq));
+		let interface = self
+			.interface
+			.as_ref()
+			.map(|p| {
+				p.members
+					.iter()
+					.map(|m| {
+						let member_name = m.name.to_case(Case::ScreamingSnake);
+						let name_type = if m.side == Side::Client {
+							"CLIENT"
+						} else {
+							"SERVER"
+						};
+						let name = Ident::new(
+							&format!("INTERFACE_{member_name}_{name_type}_OPCODE"),
+							Span::call_site(),
+						);
+						let opcode = m.opcode;
 
-fn generate_custom_enum(custom_enum: &CustomEnum, generate_partial_eq: bool) -> TokenStream {
-	let name = Ident::new(&custom_enum.name.to_case(Case::Pascal), Span::call_site());
-	let description = &custom_enum.description;
-
-	let argument_decls = custom_enum
-		.variants
-		.iter()
-		.map(|a| Ident::new(&a.to_case(Case::Pascal), Span::call_site()).to_token_stream())
-		.reduce(|a, b| quote!(#a, #b))
-		.unwrap_or_default();
-
-	let derive = if generate_partial_eq {
-		quote!( #[derive(Debug, Clone, Copy, Hash, PartialEq, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)] )
-	} else {
-		quote!( #[derive(Debug, Clone, Copy, Hash, serde::Deserialize, serde::Serialize)] )
-	};
-	quote! {
-		#[doc = #description]
-		#derive
-		#[repr(u32)]
-		pub enum #name {#argument_decls}
+						let member = generate_server_member(Some(p.node_id), 0, m);
+						quote! {
+							pub(crate) const #name: u64 = #opcode;
+							#member
+						}
+					})
+					.reduce(|a, b| quote!(#a #b))
+					.unwrap_or_default()
+			})
+			.unwrap_or_default();
+		quote!(
+			#protocol_version
+			#interface_node_id
+			#(#custom_enums)*
+			#(#custom_unions)*
+			#(#custom_structs)*
+			#(#aspects)*
+			#interface
+		)
 	}
 }
-fn generate_custom_union(custom_union: &CustomUnion, generate_partial_eq: bool) -> TokenStream {
-	let name = Ident::new(&custom_union.name.to_case(Case::Pascal), Span::call_site());
-	let description = &custom_union.description;
+impl Tokenize for CustomEnum {
+	fn tokenize(&self, _generate_node: bool, partial_eq: bool) -> TokenStream {
+		let name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
+		let description = &self.description;
 
-	let option_decls = custom_union
-		.options
-		.iter()
-		.map(generate_union_option)
-		.reduce(|a, b| quote!(#a, #b))
-		.unwrap_or_default();
+		let argument_decls = self
+			.variants
+			.iter()
+			.map(|a| Ident::new(&a.to_case(Case::Pascal), Span::call_site()).to_token_stream());
 
-	let derive = if generate_partial_eq {
-		quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
-	} else {
-		quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
-	};
-	quote! {
-		#[doc = #description]
-		#derive
-		#[serde(untagged)]
-		pub enum #name {#option_decls}
+		let derive = if partial_eq {
+			quote!( #[derive(Debug, Clone, Copy, Hash, PartialEq, serde_repr::Deserialize_repr, serde_repr::Serialize_repr)] )
+		} else {
+			quote!( #[derive(Debug, Clone, Copy, Hash, serde::Deserialize, serde::Serialize)] )
+		};
+		quote! {
+			#[doc = #description]
+			#derive
+			#[repr(u32)]
+			pub enum #name {
+				#(#argument_decls),*
+			}
+		}
 	}
 }
-fn generate_union_option(union_option: &UnionOption) -> TokenStream {
-	let name = union_option
-		.name
-		.as_ref()
-		.map(|n| n.to_case(Case::Pascal))
-		.unwrap_or_else(|| argument_type_option_name(&union_option._type));
-	let description = union_option
-		.description
-		.as_ref()
-		.map(|d| quote!(#[doc = #d]))
-		.unwrap_or_default();
-	let identifier = Ident::new(&name, Span::call_site());
-	let _type = generate_argument_type(&union_option._type, true);
-	quote! (#description #identifier(#_type))
+impl Tokenize for CustomUnion {
+	fn tokenize(&self, _generate_node: bool, partial_eq: bool) -> TokenStream {
+		let name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
+		let description = &self.description;
+
+		let option_decls = self
+			.options
+			.iter()
+			.map(|e| e.tokenize(_generate_node, partial_eq));
+
+		let derive = if partial_eq {
+			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+		} else {
+			quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+		};
+		quote! {
+			#[doc = #description]
+			#derive
+			#[serde(untagged)]
+			pub enum #name {
+				#(#option_decls),*
+			}
+		}
+	}
+}
+impl Tokenize for UnionOption {
+	fn tokenize(&self, _generate_node: bool, _partial_eq: bool) -> TokenStream {
+		let name = self
+			.name
+			.as_ref()
+			.map(|n| n.to_case(Case::Pascal))
+			.unwrap_or_else(|| argument_type_option_name(&self._type));
+		let description = self
+			.description
+			.as_ref()
+			.map(|d| quote!(#[doc = #d]))
+			.unwrap_or_default();
+		let identifier = Ident::new(&name, Span::call_site());
+		let _type = generate_argument_type(&self._type, true);
+		quote! (#description #identifier(#_type))
+	}
 }
 fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 	match argument_type {
@@ -210,58 +223,60 @@ fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 		ArgumentType::Node { _type, .. } => _type.clone(),
 	}
 }
-fn generate_custom_struct(custom_struct: &CustomStruct, generate_partial_eq: bool) -> TokenStream {
-	let name = Ident::new(&custom_struct.name.to_case(Case::Pascal), Span::call_site());
-	let description = &custom_struct.description;
 
-	let argument_decls = custom_struct
-		.fields
-		.iter()
-		.map(|a| generate_argument_decl(a, true))
-		.map(|d| quote!(pub #d))
-		.reduce(|a, b| quote!(#a, #b))
-		.unwrap_or_default();
+impl Tokenize for CustomStruct {
+	fn tokenize(&self, _generate_node: bool, partial_eq: bool) -> TokenStream {
+		let name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
+		let description = &self.description;
 
-	let derive = if generate_partial_eq {
-		quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
-	} else {
-		quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
-	};
-	quote! {
-		#[doc = #description]
-		#derive
-		pub struct #name {#argument_decls}
+		let argument_decls = self
+			.fields
+			.iter()
+			.map(|a| generate_argument_decl(a, true))
+			.map(|d| quote!(pub #d));
+
+		let derive = if partial_eq {
+			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+		} else {
+			quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+		};
+		quote! {
+			#[doc = #description]
+			#derive
+			pub struct #name {
+				#(#argument_decls),*
+			}
+		}
 	}
 }
 
-fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
-	let node_name = Ident::new(&aspect.name, Span::call_site());
-	let description = &aspect.description;
-	let (client_members, server_members) = aspect.members.iter().split(|m| m.side == Side::Server);
+impl Tokenize for Aspect {
+	fn tokenize(&self, generate_node: bool, _partial_eq: bool) -> TokenStream {
+		let node_name = Ident::new(&self.name, Span::call_site());
+		let description = &self.description;
+		let opcode = self.id;
+		let (client_members, server_members) =
+			self.members.iter().split(|m| m.side == Side::Server);
 
-	let aspect_id = {
-		let name = Ident::new(
-			&format!("{}_ASPECT_ID", aspect.name.to_case(Case::ScreamingSnake)),
+		let aspect_id = {
+			let name = Ident::new(
+				&format!("{}_ASPECT_ID", self.name.to_case(Case::ScreamingSnake)),
+				Span::call_site(),
+			);
+			quote!(pub(crate) const #name: u64 = #opcode;)
+		};
+
+		let aspect_handler_name = Ident::new(
+			&format!("{}Handler", &self.name.to_case(Case::Pascal)),
 			Span::call_site(),
 		);
-		let opcode = aspect.id;
-		quote!(pub(crate) const #name: u64 = #opcode;)
-	};
+		let aspect_trait_name = Ident::new(
+			&format!("{}Aspect", &self.name.to_case(Case::Pascal)),
+			Span::call_site(),
+		);
 
-	let aspect_handler_name = Ident::new(
-		&format!("{}Handler", &aspect.name.to_case(Case::Pascal)),
-		Span::call_site(),
-	);
-	let aspect_trait_name = Ident::new(
-		&format!("{}Aspect", &aspect.name.to_case(Case::Pascal)),
-		Span::call_site(),
-	);
-
-	let opcodes = aspect
-		.members
-		.iter()
-		.map(|m| {
-			let aspect_name = aspect.name.to_case(Case::ScreamingSnake);
+		let opcodes = self.members.iter().map(|m| {
+			let aspect_name = self.name.to_case(Case::ScreamingSnake);
 			let member_name = m.name.to_case(Case::ScreamingSnake);
 			let name_type = if m.side == Side::Client {
 				"CLIENT"
@@ -275,107 +290,223 @@ fn generate_aspect(aspect: &Aspect, generate_node: bool) -> TokenStream {
 			let opcode = m.opcode;
 
 			quote!(pub(crate) const #name: u64 = #opcode;)
-		})
-		.reduce(fold_tokens)
-		.unwrap_or_default();
+		});
 
-	let client_side = client_members
-		.map(|m| generate_member(None, aspect.id, m))
-		.reduce(fold_tokens)
-		.map(|t| {
+		let client_side = client_members
+			.map(|m| generate_server_member(None, self.id, m))
+			.collect::<Vec<_>>();
+		let client_side = if !client_side.is_empty() {
 			quote! {
 				#[doc = #description]
 				pub trait #aspect_handler_name: Send + Sync + 'static {
-					#t
+					#(#client_side)*
 				}
 			}
-		})
-		.unwrap_or_default();
-	let aspect_wrap = aspect
-		.members
-		.iter()
-		.filter(|m| m.side == Side::Client)
-		.map(|m| generate_handler(aspect.id, m))
-		.reduce(fold_tokens).map(|handlers| {
-			quote! {
-				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
-				fn wrap<H: #aspect_handler_name>(self, handler: H) -> NodeResult<crate::HandlerWrapper<Self, H>> {
-					#aspect_trait_name::wrap_raw(self, std::sync::Arc::new(parking_lot::Mutex::new(handler)))
-				}
-				#[must_use = "Dropping this handler wrapper would immediately drop the handler"]
-				fn wrap_raw<H: #aspect_handler_name>(self, handler: std::sync::Arc<parking_lot::Mutex<H>>) -> NodeResult<crate::HandlerWrapper<Self, H>> {
-					let handler_wrapper = crate::HandlerWrapper::new_raw(self, handler);
-					<Self as #aspect_trait_name>::add_handlers(&handler_wrapper)?;
-					Ok(handler_wrapper)
-				}
-				fn add_handlers<N: crate::node::NodeType, H: #aspect_handler_name>(handler_wrapper: &crate::HandlerWrapper<N, H>) -> NodeResult<()> {
-					#handlers
-					Ok(())
-				}
-			}
-		}).unwrap_or_default();
+		} else {
+			quote!()
+		};
+		let aspect_name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
+		let event_name = Ident::new(&format!("{}Event", aspect_name), Span::call_site());
+		let aspect_events = {
+			let variants = self
+				.members
+				.iter()
+				.filter(|m| m.side == Side::Client)
+				.map(|m| {
+					let variant_name = Ident::new(&m.name.to_case(Case::Pascal), Span::call_site());
+					let fields = m.arguments.iter().map(|a| generate_argument_decl(a, true));
+					let response = if let Some(response_type) = &m.return_type {
+						let response_type = generate_argument_type(response_type, false);
+						quote!(response: crate::TypedMethodResponse<#response_type>)
+					} else {
+						quote!()
+					};
+					quote! {
+						#variant_name { #(#fields),* #response }
+					}
+				});
 
-	let inherit_types = aspect
-		.inherits
-		.iter()
-		.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
-		.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
-	let server_side_members = server_members
-		.map(|m| generate_member(None, aspect.id, m))
-		.reduce(fold_tokens)
-		.unwrap_or_default();
-	let node = generate_node
-		.then_some(quote! {
+			quote! {
+				#[derive(Debug)]
+				pub enum #event_name {
+					#(#variants),*
+				}
+			}
+		};
+		let aspect_event_sender_impl = if self.members.iter().any(|m| m.side == Side::Client) {
+			generate_event_sender_impl(self)
+		} else {
+			quote!()
+		};
+		let inherit_types = self
+			.inherits
+			.iter()
+			.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
+			.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
+		let server_side_members = server_members.map(|m| generate_server_member(None, self.id, m));
+		let do_add_aspect = self.members.iter().any(|m| m.side == Side::Client);
+		let add_aspect_tokens = do_add_aspect
+			.then_some(quote!(client.scenegraph.add_aspect::<#event_name>(&node);))
+			.unwrap_or_default();
+		let node = generate_node.then_some(quote! {
+			#[allow(clippy::all)]
 			#[doc = #description]
 			#[derive(Debug)]
 			pub struct #node_name (pub crate::node::Node);
+			#[allow(clippy::all)]
 			impl crate::node::NodeType for #node_name {
 				fn node(&self) -> &crate::node::Node {
 					&self.0
 				}
-				fn alias(&self) -> Self {
-					#node_name(self.0.alias())
-				}
-				fn from_id(client: &std::sync::Arc<crate::client::Client>, id: u64, owned: bool) -> Self {
-					#node_name(crate::node::Node::from_id(client, id, owned))
+				fn from_id(client: &std::sync::Arc<crate::client::ClientHandle>, id: u64, owned: bool) -> Self {
+					let node = crate::node::Node::from_id(client, id, owned);
+					#add_aspect_tokens
+					#node_name(node)
 				}
 			}
+			#[allow(clippy::all)]
 			impl serde::Serialize for #node_name {
 				fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
 					let node_id = self.0.get_id().map_err(|e| serde::ser::Error::custom(e))?;
 					serializer.serialize_u64(node_id)
 				}
 			}
+			#[allow(clippy::all)]
 			impl #aspect_trait_name for #node_name {}
-		})
-		.unwrap_or_default();
-	quote! {
-		#node
-		#aspect_id
-		#opcodes
-		#client_side
-		#[doc = #description]
-		pub trait #aspect_trait_name: #inherit_types {
-			#aspect_wrap
-			#server_side_members
+		});
+
+		let events_method = self
+			.members
+			.iter()
+			.any(|m| m.side == Side::Client)
+			.then(|| {
+				let id = self.id;
+				quote! {
+					fn recv_event(&self) -> Option<#event_name> {
+						self.node().recv_event(#id)
+					}
+				}
+			})
+			.unwrap_or_default();
+		quote! {
+			#node
+			#aspect_id
+			#(#opcodes)*
+			#client_side
+			#aspect_events
+			#aspect_event_sender_impl
+
+			#[allow(clippy::all)]
+			#[doc = #description]
+			pub trait #aspect_trait_name: #inherit_types {
+				#events_method
+				#(#server_side_members)*
+			}
 		}
 	}
 }
 
-fn generate_member(interface_node_id: Option<u64>, aspect_id: u64, member: &Member) -> TokenStream {
+fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
+	let aspect_name = Ident::new(&aspect.name.to_case(Case::Pascal), Span::call_site());
+	let event_name = Ident::new(&format!("{}Event", aspect_name), Span::call_site());
+	let opcode = aspect.id;
+
+	let (signal_matches, method_matches) = aspect
+		.members
+		.iter()
+		.filter(|m| m.side == Side::Client)
+		.map(|m| {
+			let opcode = m.opcode;
+			let variant_name = Ident::new(&m.name.to_case(Case::Pascal), Span::call_site());
+			let field_names = m
+				.arguments
+				.iter()
+				.map(|a| Ident::new(&a.name.to_case(Case::Snake), Span::call_site()));
+			let deserialize_types = m
+				.arguments
+				.iter()
+				.map(|a| generate_argument_type(&convert_deserializeable_argument_type(&a._type), true));
+			let field_uses: Vec<_> = m
+				.arguments
+				.iter()
+				.map(|a| {
+					let name_ident = Ident::new(&a.name.to_case(Case::Snake), Span::call_site());
+					let argument_deserialize =
+						generate_argument_deserialize(&a.name, &a._type, a.optional);
+					quote!(#name_ident: #argument_deserialize)
+				})
+				.collect();
+
+			let response_sender = if m._type == MemberType::Method {
+				quote! {
+					response: crate::TypedMethodResponse(response.borrow_mut().take().unwrap(), std::marker::PhantomData),
+				}
+			} else {
+				quote!()
+			};
+
+			(
+				m._type,
+				quote! {
+					#opcode => {
+						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr::schemas::flex::deserialize(_data)?;
+						Ok(#event_name::#variant_name { #(#field_uses,)* #response_sender })
+					}
+				},
+			)
+		})
+		.split(|(_ty, _)| _ty == &MemberType::Method);
+
+	let signal_matches = signal_matches.map(|t| t.1);
+	let method_matches = method_matches.map(|t| t.1);
+
+	quote! {
+		#[allow(clippy::all)]
+		impl crate::scenegraph::EventParser for #event_name {
+			const ASPECT_ID: u64 = #opcode;
+			fn serialize_signal(_client: &std::sync::Arc<crate::client::ClientHandle>, signal_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+				match signal_id {
+					#(#signal_matches)*
+					_ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+				}
+			}
+			fn serialize_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr::scenegraph::MethodResponse) -> Option<Self> {
+				let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
+				let response2 = response.clone();
+				let result = || match method_id {
+					#(#method_matches)*
+					_ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+				};
+				match (result)() {
+					Ok(event) => Some(event),
+					Err(e) => {
+						let _ = response2.borrow_mut().take().unwrap().send(Err(e));
+						None
+					}
+				}
+			}
+		}
+	}
+}
+
+fn generate_server_member(
+	interface_node_id: Option<u64>,
+	aspect_id: u64,
+	member: &Member,
+) -> TokenStream {
 	let opcode = member.opcode;
 	let name = Ident::new(&member.name.to_case(Case::Snake), Span::call_site());
 	let description = &member.description;
 
-	let side = member.side;
+	if member.side == Side::Client {
+		return quote!();
+	}
 	let _type = member._type;
 
 	let first_arg = if interface_node_id.is_some() {
-		quote!(_client: &std::sync::Arc<crate::client::Client>)
-	} else if member.side == Side::Server {
-		quote!(&self)
+		quote!(_client: &std::sync::Arc<crate::client::ClientHandle>)
 	} else {
-		quote!(&mut self)
+		quote!(&self)
 	};
 	let argument_decls = member
 		.arguments
@@ -386,58 +517,22 @@ fn generate_member(interface_node_id: Option<u64>, aspect_id: u64, member: &Memb
 	let argument_uses = member
 		.arguments
 		.iter()
-		.map(|a| generate_argument_serialize(&a.name, &a._type, a.optional))
-		.reduce(|a, b| quote!(#a, #b))
-		.unwrap_or_default();
+		.map(|a| generate_argument_serialize(&a.name, &a._type, a.optional));
 	let return_type = member
 		.return_type
 		.as_ref()
 		.map(|r| generate_argument_type(r, true))
 		.unwrap_or_else(|| quote!(()));
 
-	match (side, _type) {
-		(Side::Server, MemberType::Method) => {
-			let body = if let Some(interface_node_id) = &interface_node_id {
-				let argument_type = member.return_type.clone().unwrap_or(ArgumentType::Empty);
-				let deserializeable_type = generate_argument_type(
-					&convert_deserializeable_argument_type(&argument_type),
-					true,
-				);
-				let deserialize = generate_argument_deserialize("result", &argument_type, false);
-				quote! {
-					let data = stardust_xr::schemas::flex::serialize(&(#argument_uses))?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, Vec::new())?.await?.into_message();
-					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
-					Ok(#deserialize)
-				}
-			} else {
-				quote! {
-					self.node().execute_remote_method(#aspect_id, #opcode, &(#argument_uses)).await
-				}
-			};
-			if interface_node_id.is_some() {
-				return quote! {
-					#[doc = #description]
-					pub async fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
-						#body
-					}
-				};
-			}
-			quote! {
-				#[doc = #description]
-				async fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
-					#body
-				}
-			}
-		}
-		(Side::Server, MemberType::Signal) => {
+	match _type {
+		MemberType::Signal => {
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#argument_uses))?, Vec::new())
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?, Vec::new())
 				}
 			} else {
 				quote! {
-					self.node().send_remote_signal(#aspect_id, #opcode, &(#argument_uses))
+					self.node().send_remote_signal(#aspect_id, #opcode, &(#(#argument_uses),*))
 				}
 			};
 			body = if let Some(ArgumentType::Node {
@@ -464,6 +559,7 @@ fn generate_member(interface_node_id: Option<u64>, aspect_id: u64, member: &Memb
 				if let Some(ArgumentType::Node { .. }) = &member.return_type {
 				} else {
 					return quote! {
+						#[allow(clippy::all)]
 						#[doc = #description]
 						pub fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
 							#body
@@ -478,77 +574,41 @@ fn generate_member(interface_node_id: Option<u64>, aspect_id: u64, member: &Memb
 				}
 			}
 		}
-		(Side::Client, MemberType::Method) => {
-			quote! {
-				#[doc = #description]
-				fn #name(#argument_decls) -> crate::node::MethodResult<#return_type>;
-			}
-		}
-		(Side::Client, MemberType::Signal) => {
-			quote! {
-				#[doc = #description]
-				fn #name(#argument_decls);
-			}
-		}
-	}
-}
-fn generate_handler(aspect_id: u64, member: &Member) -> TokenStream {
-	let name = &member.name;
-	let opcode = member.opcode;
-	let name_ident = Ident::new(name, Span::call_site());
-
-	let argument_names = member
-		.arguments
-		.iter()
-		.map(generate_argument_name)
-		.reduce(|a, b| quote!(#a, #b));
-	let argument_types = member
-		.arguments
-		.iter()
-		.map(|a| &a._type)
-		.map(convert_deserializeable_argument_type)
-		.map(|a| generate_argument_type(&a, true))
-		.reduce(|a, b| quote!(#a, #b));
-	// dbg!(&argument_types);
-	let deserialize = argument_names
-		.clone()
-		.zip(argument_types)
-		.map(|(argument_names, argument_types)| {
-			quote!(let (#argument_names): (#argument_types) = stardust_xr::schemas::flex::deserialize(_data)?;)
-		})
-		.unwrap_or_default();
-	let argument_uses = member
-		.arguments
-		.iter()
-		.map(|a| generate_argument_deserialize(&a.name, &a._type, a.optional))
-		.fold(TokenStream::default(), |a, b| quote!(#a, #b));
-	match member._type {
-		MemberType::Signal => quote! {
-			handler_wrapper.add_handled_signal(#aspect_id, #opcode, |_node, _handler, _data, _fds| {
-				#deserialize
-				let _client = _node.client()?;
-				let mut _handler_lock = _handler.lock();
-				Ok(H::#name_ident(&mut *_handler_lock #argument_uses))
-			})?;
-		},
 		MemberType::Method => {
-			let serialize =
-				generate_argument_serialize("value", member.return_type.as_ref().unwrap(), false);
+			let body = if let Some(interface_node_id) = &interface_node_id {
+				let argument_type = member.return_type.clone().unwrap_or(ArgumentType::Empty);
+				let deserializeable_type = generate_argument_type(
+					&convert_deserializeable_argument_type(&argument_type),
+					true,
+				);
+				let deserialize = generate_argument_deserialize("result", &argument_type, false);
+				quote! {
+					let data = stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?;
+					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, Vec::new())?.await?.into_message();
+					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
+					Ok(#deserialize)
+				}
+			} else {
+				quote! {
+					self.node().execute_remote_method(#aspect_id, #opcode, &(#(#argument_uses),*)).await
+				}
+			};
+			if interface_node_id.is_some() {
+				return quote! {
+					#[doc = #description]
+					pub async fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
+						#body
+					}
+				};
+			}
 			quote! {
-				handler_wrapper.add_handled_method(#aspect_id, #opcode, |_node, _handler, _data, _fds| {
-					#deserialize
-					let _client = _node.client()?;
-					let mut _handler_lock = _handler.lock();
-					let value = H::#name_ident(&mut *_handler_lock #argument_uses)?;
-					let data = stardust_xr::schemas::flex::serialize(&(#serialize))?;
-					Ok((data, vec![]))
-				})?;
+				#[doc = #description]
+				async fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
+					#body
+				}
 			}
 		}
 	}
-}
-fn generate_argument_name(argument: &Argument) -> TokenStream {
-	Ident::new(&argument.name.to_case(Case::Snake), Span::call_site()).to_token_stream()
 }
 fn generate_argument_deserialize(
 	argument_name: &str,
@@ -563,8 +623,12 @@ fn generate_argument_deserialize(
 		} => {
 			let node_type = Ident::new(&_type.to_case(Case::Pascal), Span::call_site());
 			match optional {
-				true => quote!(#name.map(|n| #node_type::from_id(&_client, n, false))),
-				false => quote!(#node_type::from_id(&_client, #name, false)),
+				true => {
+					quote!(#name.map(|n| <#node_type as crate::node::NodeType>::from_id(&_client, n, false)))
+				}
+				false => {
+					quote!(<#node_type as crate::node::NodeType>::from_id(&_client, #name, false))
+				}
 			}
 		}
 		ArgumentType::Color => quote!(color::rgba_linear!(#name[0], #name[1], #name[2], #name[3])),

@@ -152,11 +152,9 @@ impl Eq for InputData {}
 
 #[tokio::test]
 async fn fusion_input_handler() {
-	use super::client::Client;
+	use crate::Client;
 
-	let (client, event_loop) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
+	let mut client = Client::connect().await.expect("Couldn't connect");
 
 	let field = super::fields::Field::create(
 		client.get_root(),
@@ -164,59 +162,53 @@ async fn fusion_input_handler() {
 		crate::fields::Shape::Sphere(0.1),
 	)
 	.unwrap();
+	let _input_handler =
+		InputHandler::create(client.get_root(), Transform::none(), &field).unwrap();
 
-	struct InputHandlerTest;
-	impl InputHandlerHandler for InputHandlerTest {
-		fn input(&mut self, _methods: Vec<InputMethodRef>, data: Vec<InputData>) {
-			for data in data {
-				dbg!(data.id);
-				dbg!(data.distance);
-				match &data.input {
-					InputDataType::Pointer(_) => {
-						println!("Pointer input");
-					}
-					InputDataType::Hand(_) => {
-						println!("Hand input");
-						data.datamap.with_data(|datamap| {
-							dbg!(datamap
-								.iter_keys()
-								.zip(datamap.iter_values())
-								.collect::<Vec<_>>());
-							let _ = dbg!(datamap.idx("right").get_bool());
-						});
-					}
-					InputDataType::Tip(_) => {
-						println!("Tip input");
-					}
+	client
+		.event_loop(|_, _| {
+			while let Some(input_event) = _input_handler.recv_event() {
+				match input_event {
+					InputHandlerEvent::Input { methods: _, data } => on_input(data),
+				}
+			}
+		})
+		.await
+		.unwrap();
+
+	fn on_input(data: Vec<InputData>) {
+		for data in data {
+			dbg!(data.id);
+			dbg!(data.distance);
+			match &data.input {
+				InputDataType::Pointer(_) => {
+					println!("Pointer input");
+				}
+				InputDataType::Hand(_) => {
+					println!("Hand input");
+					data.datamap.with_data(|datamap| {
+						dbg!(datamap
+							.iter_keys()
+							.zip(datamap.iter_values())
+							.collect::<Vec<_>>());
+						let _ = dbg!(datamap.idx("right").get_bool());
+					});
+				}
+				InputDataType::Tip(_) => {
+					println!("Tip input");
 				}
 			}
 		}
-	}
-
-	let _input_handler = InputHandler::create(client.get_root(), Transform::none(), &field)
-		.unwrap()
-		.wrap(InputHandlerTest)
-		.unwrap();
-
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		e = event_loop => e.unwrap().unwrap(),
 	}
 }
 
 #[tokio::test]
 async fn fusion_pointer_input_method() {
-	use crate::client::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
+	use crate::Client;
 
-	let (client, event_loop) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	let mut client = Client::connect().await.expect("Couldn't connect");
 
 	let mut fbb = stardust_xr::schemas::flex::flexbuffers::Builder::default();
 	fbb.start_map();
@@ -227,35 +219,7 @@ async fn fusion_pointer_input_method() {
 		&Datamap::from_typed(PointerData::default()).unwrap(),
 	)
 	.unwrap();
-
-	#[derive(Default, serde::Serialize, serde::Deserialize)]
-	struct PointerData {
-		grab: f32,
-		select: f32,
-	}
-	struct PointerDemo {
-		pointer: InputMethod,
-		model: Model,
-		datamap: PointerData,
-	}
-	impl RootHandler for PointerDemo {
-		fn frame(&mut self, info: FrameInfo) {
-			let (sin, cos) = info.elapsed.sin_cos();
-			self.pointer
-				.set_local_transform(Transform::from_translation([sin * 0.1, 0.0, cos * 0.1]))
-				.unwrap();
-
-			self.datamap.grab = sin;
-			self.pointer
-				.set_datamap(&Datamap::from_typed(&self.datamap).unwrap())
-				.unwrap();
-		}
-		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
-			Ok(ClientState::default())
-		}
-	}
-
-	let model = Model::create(
+	let _model = Model::create(
 		&pointer,
 		Transform::from_rotation_scale(
 			glam::Quat::from_rotation_x(std::f32::consts::PI * 0.5),
@@ -264,35 +228,48 @@ async fn fusion_pointer_input_method() {
 		&stardust_xr::values::ResourceID::new_namespaced("fusion", "cursor_spike"),
 	)
 	.unwrap();
-	let _wrapped_root = client
-		.get_root()
-		.alias()
-		.wrap(PointerDemo {
-			pointer,
-			model,
-			datamap: PointerData::default(),
-		})
-		.unwrap();
+	let mut datamap = PointerData::default();
 
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		e = event_loop => e.unwrap().unwrap(),
+	#[derive(Default, serde::Serialize, serde::Deserialize)]
+	struct PointerData {
+		grab: f32,
+		select: f32,
 	}
+
+	client
+		.event_loop(|client, _| {
+			while let Some(root_event) = client.get_root().recv_event() {
+				match root_event {
+					RootEvent::Frame { info } => {
+						let (sin, cos) = info.elapsed.sin_cos();
+						pointer
+							.set_local_transform(Transform::from_translation([
+								sin * 0.1,
+								0.0,
+								cos * 0.1,
+							]))
+							.unwrap();
+
+						datamap.grab = sin;
+						pointer
+							.set_datamap(&Datamap::from_typed(&datamap).unwrap())
+							.unwrap();
+					}
+					RootEvent::SaveState { response } => response.send(Ok(Default::default())),
+				}
+			}
+		})
+		.await
+		.unwrap();
 }
 
 #[tokio::test]
 async fn fusion_tip_input_method() {
-	use crate::client::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
+	use crate::Client;
 
-	let (client, event_loop) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	let mut client = Client::connect().await.expect("Couldn't connect");
 
 	let tip = InputMethod::create(
 		client.get_root(),
@@ -324,62 +301,29 @@ async fn fusion_tip_input_method() {
 		grab: f32,
 		select: f32,
 	}
-	struct TipDemo {
-		tip: InputMethod,
-		cursor: Cursor,
-		datamap: TipData,
-	}
-	impl RootHandler for TipDemo {
-		fn frame(&mut self, info: FrameInfo) {
-			let (sin, cos) = info.elapsed.sin_cos();
-			self.tip
-				.set_local_transform(Transform::from_translation([sin * 0.1, 0.0, cos * 0.1]))
-				.unwrap();
+	let mut datamap = TipData::default();
 
-			self.datamap.grab = sin;
-			self.tip
-				.set_datamap(&Datamap::from_typed(&self.datamap).unwrap())
-				.unwrap();
-		}
-		fn save_state(&mut self) -> color_eyre::eyre::Result<ClientState> {
-			Ok(ClientState::default())
-		}
-	}
+	client
+		.event_loop(|client, _| {
+			while let Some(root_event) = client.get_root().recv_event() {
+				match root_event {
+					RootEvent::Frame { info } => {
+						let (sin, cos) = info.elapsed.sin_cos();
+						tip.set_local_transform(Transform::from_translation([
+							sin * 0.1,
+							0.0,
+							cos * 0.1,
+						]))
+						.unwrap();
 
-	let _wrapped_root = client.get_root().alias().wrap(TipDemo {
-		cursor: Cursor {
-			top: summon_model(
-				&tip,
-				glam::Quat::from_axis_angle(glam::Vec3::X, 180.0f32.to_radians()),
-			),
-			bottom: summon_model(
-				&tip,
-				glam::Quat::from_axis_angle(glam::Vec3::X, 0.0f32.to_radians()),
-			),
-			left: summon_model(
-				&tip,
-				glam::Quat::from_axis_angle(glam::Vec3::Z, 90.0f32.to_radians()),
-			),
-			right: summon_model(
-				&tip,
-				glam::Quat::from_axis_angle(glam::Vec3::Z, -90.0f32.to_radians()),
-			),
-			forward: summon_model(
-				&tip,
-				glam::Quat::from_axis_angle(glam::Vec3::X, 90.0f32.to_radians()),
-			),
-			backward: summon_model(
-				&tip,
-				glam::Quat::from_axis_angle(glam::Vec3::X, -90.0f32.to_radians()),
-			),
-		},
-		tip,
-		datamap: TipData::default(),
-	});
-
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		e = event_loop => e.unwrap().unwrap(),
-	}
+						datamap.grab = sin;
+						tip.set_datamap(&Datamap::from_typed(&datamap).unwrap())
+							.unwrap();
+					}
+					RootEvent::SaveState { response } => response.send(Ok(Default::default())),
+				}
+			}
+		})
+		.await
+		.unwrap();
 }
