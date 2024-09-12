@@ -1,39 +1,102 @@
-use crate::node::NodeInternals;
+use dashmap::DashMap;
 use parking_lot::Mutex;
-use rustc_hash::FxHashMap;
-use stardust_xr::scenegraph::{self, ScenegraphError};
+use stardust_xr::scenegraph::{self, MethodResponse, ScenegraphError};
 use std::{
 	os::fd::OwnedFd,
 	sync::{Arc, Weak},
 };
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 
-/// Scenegraph full of aliases to nodes, needed so the `Messenger` can send messages to nodes.
-#[derive(Default)]
-pub struct Scenegraph {
-	nodes: Mutex<FxHashMap<u64, Weak<NodeInternals>>>,
+use crate::{client::ClientHandle, node::Node};
+
+pub(crate) trait EventParser: Sized + Send + Sync + 'static {
+	const ASPECT_ID: u64;
+	fn serialize_signal(
+		_client: &Arc<crate::client::ClientHandle>,
+		signal_id: u64,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+	) -> Result<Self, ScenegraphError>;
+	fn serialize_method(
+		_client: &Arc<crate::client::ClientHandle>,
+		method_id: u64,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+		response: MethodResponse,
+	) -> Option<Self>;
 }
 
+trait EventSender: Send + Sync + 'static {
+	fn send_signal(
+		&self,
+		client: &Arc<crate::client::ClientHandle>,
+		signal_id: u64,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+	) -> Result<(), ScenegraphError>;
+	fn send_method(
+		&self,
+		client: &Arc<crate::client::ClientHandle>,
+		method_id: u64,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+		response: MethodResponse,
+	);
+}
+struct EventSenderWrapper<E: EventParser>(mpsc::UnboundedSender<E>);
+impl<E: EventParser> EventSender for EventSenderWrapper<E> {
+	fn send_signal(
+		&self,
+		client: &Arc<crate::client::ClientHandle>,
+		signal_id: u64,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+	) -> Result<(), ScenegraphError> {
+		let _ = self
+			.0
+			.send(E::serialize_signal(client, signal_id, data, fds)?);
+		Ok(())
+	}
+	fn send_method(
+		&self,
+		client: &Arc<crate::client::ClientHandle>,
+		method_id: u64,
+		data: &[u8],
+		fds: Vec<OwnedFd>,
+		response: MethodResponse,
+	) {
+		if let Some(event) = E::serialize_method(client, method_id, data, fds, response) {
+			let _ = self.0.send(event);
+		}
+	}
+}
+
+/// Scenegraph full of aliases to nodes, needed so the `Messenger` can send messages to nodes.
+pub struct Scenegraph {
+	client_ref: Weak<ClientHandle>,
+	nodes: DashMap<u64, DashMap<u64, Box<dyn EventSender>>>,
+}
 impl Scenegraph {
-	pub fn new() -> Self {
-		Default::default()
+	pub(crate) fn new(client_ref: Weak<ClientHandle>) -> Self {
+		Scenegraph {
+			client_ref,
+			nodes: Default::default(),
+		}
 	}
-
-	pub fn add_node(&self, node_internals: &Arc<NodeInternals>) {
-		// really this should NOT be necessary, we so need to upgrade to a stream-based instead of method-based API
+	pub(crate) fn add_aspect<E: EventParser>(&self, node: &Node) {
+		let (sender, receiver) = mpsc::unbounded_channel::<E>();
 		self.nodes
-			.lock()
-			.entry(node_internals.id)
-			.or_insert(Arc::downgrade(node_internals));
+			.entry(node.id)
+			.or_default()
+			.value_mut()
+			.insert(E::ASPECT_ID, Box::new(EventSenderWrapper(sender)));
+		node.aspects
+			.entry(E::ASPECT_ID)
+			.insert(Mutex::new(Box::new(receiver)));
 	}
-
-	pub fn remove_node(&self, id: u64) {
-		self.nodes.lock().remove(&id);
+	pub(crate) fn remove_node(&self, id: u64) {
+		self.nodes.remove(&id);
 	}
-
-	// pub fn get_node(&self, path: &str) -> Option<Node> {
-	// 	self.nodes.lock().get(path).cloned().unwrap_or_default()
-	// }
 }
 
 impl scenegraph::Scenegraph for Scenegraph {
@@ -45,23 +108,9 @@ impl scenegraph::Scenegraph for Scenegraph {
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), ScenegraphError> {
-		let node = self
-			.nodes
-			.lock()
-			.get(&id)
-			.and_then(Weak::upgrade)
-			.ok_or(ScenegraphError::NodeNotFound)?;
-		let aspects = node.aspects.lock();
-		let signal = aspects
-			.get(&aspect)
-			.ok_or(ScenegraphError::AspectNotFound)?
-			.local_signals
-			.get(&signal)
-			.ok_or(ScenegraphError::SignalNotFound)?
-			.clone();
-		signal(data, fds).map_err(|e| ScenegraphError::SignalError {
-			error: e.to_string(),
-		})
+		let node = self.nodes.get(&id).ok_or(ScenegraphError::NodeNotFound)?;
+		let aspect = node.get(&aspect).ok_or(ScenegraphError::AspectNotFound)?;
+		aspect.send_signal(&self.client_ref.upgrade().unwrap(), signal, data, fds)
 	}
 	fn execute_method(
 		&self,
@@ -72,26 +121,20 @@ impl scenegraph::Scenegraph for Scenegraph {
 		fds: Vec<OwnedFd>,
 		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,
 	) {
-		let method_method = || {
-			let node = self
-				.nodes
-				.lock()
-				.get(&id)
-				.and_then(Weak::upgrade)
-				.ok_or(ScenegraphError::NodeNotFound)?;
-			let aspects = node.aspects.lock();
-			let method = aspects
-				.get(&aspect)
-				.ok_or(ScenegraphError::AspectNotFound)?
-				.local_methods
-				.get(&method)
-				.ok_or(ScenegraphError::MethodNotFound)?
-				.clone();
-			method(data, fds).map_err(|e| ScenegraphError::MethodError {
-				error: e.to_string(),
-			})
+		let Some(node) = self.nodes.get(&id) else {
+			let _ = response.send(Err(ScenegraphError::NodeNotFound));
+			return;
 		};
-
-		let _ = response.send(method_method());
+		let Some(aspect) = node.get(&aspect) else {
+			let _ = response.send(Err(ScenegraphError::AspectNotFound));
+			return;
+		};
+		aspect.send_method(
+			&self.client_ref.upgrade().unwrap(),
+			method,
+			data,
+			fds,
+			response,
+		);
 	}
 }

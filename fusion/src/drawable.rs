@@ -149,9 +149,7 @@ impl Hash for TextStyle {
 
 #[tokio::test]
 async fn fusion_lines() {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
-		.await
-		.unwrap();
+	let mut client = crate::Client::connect().await.unwrap();
 
 	let points = vec![
 		LinePoint {
@@ -183,17 +181,13 @@ async fn fusion_lines() {
 	};
 	let _lines = Lines::create(client.get_root(), Transform::none(), &[line]).unwrap();
 
+	client.flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 }
 
 #[tokio::test]
 async fn fusion_model() {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
-		.await
-		.unwrap();
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	let mut client = crate::Client::connect().await.unwrap();
 
 	let gyro_resource = ResourceID::new_namespaced("fusion", "gyro");
 	let gyro_model = Model::create(client.get_root(), Transform::none(), &gyro_resource).unwrap();
@@ -219,16 +213,12 @@ async fn fusion_model() {
 		.apply_holdout_material()
 		.unwrap();
 
+	client.flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 }
 #[tokio::test]
 async fn fusion_text() {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
-		.await
-		.unwrap();
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	let mut client = crate::Client::connect().await.unwrap();
 
 	let style: TextStyle = TextStyle {
 		font: Some(stardust_xr::values::ResourceID::new_namespaced(
@@ -241,21 +231,18 @@ async fn fusion_text() {
 	text.set_character_height(0.05).unwrap();
 	text.set_text("Test Text: Changed").unwrap();
 
+	client.flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(60)).await;
 }
 
 #[tokio::test]
 async fn fusion_sky() {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	let mut client = crate::Client::connect().await.expect("Couldn't connect");
 	let sky_resource = stardust_xr::values::ResourceID::new_namespaced("fusion", "sky");
 
-	set_sky_light(&client, &sky_resource).unwrap();
-	set_sky_tex(&client, &sky_resource).unwrap();
+	set_sky_light(&client.handle(), &sky_resource).unwrap();
+	set_sky_tex(&client.handle(), &sky_resource).unwrap();
 
+	client.flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(5)).await;
 }

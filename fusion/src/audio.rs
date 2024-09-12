@@ -28,18 +28,15 @@ impl Sound {
 }
 #[tokio::test]
 async fn fusion_sound() {
-	let (client, _event_loop) = crate::client::Client::connect_with_async_loop()
-		.await
-		.unwrap();
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	let mut client = crate::client::Client::connect().await.unwrap();
 
 	let lightspeed_resource = ResourceID::new_namespaced("fusion", "kittn_lightspeed");
 	let sound = Sound::create(client.get_root(), Transform::none(), &lightspeed_resource).unwrap();
 	sound.play().unwrap();
+	client.try_flush().await.unwrap();
 
 	tokio::time::sleep(core::time::Duration::from_secs(10)).await;
 	sound.stop().unwrap();
+	client.try_flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(2)).await;
 }

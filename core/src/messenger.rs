@@ -8,7 +8,7 @@ use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, Ms
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
-use stardust_xr_schemas::flex::flexbuffers;
+use stardust_xr_schemas::flex::flexbuffers::{self};
 use std::future::Future;
 use std::io::{IoSlice, IoSliceMut};
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
@@ -427,6 +427,13 @@ impl MessageSender {
 	/// Send all the queued messages from the handles
 	pub async fn flush(&mut self) -> Result<(), MessengerError> {
 		while let Some(message) = self.message_rx.recv().await {
+			self.send(message).await?;
+		}
+		Ok(())
+	}
+	/// Send all the queued messages from the handles
+	pub async fn try_flush(&mut self) -> Result<(), MessengerError> {
+		while let Ok(message) = self.message_rx.try_recv() {
 			self.send(message).await?;
 		}
 		Ok(())

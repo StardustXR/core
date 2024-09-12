@@ -21,7 +21,7 @@ use crate::{
 	fields::{Field, FieldAspect},
 	impl_aspects,
 	node::NodeResult,
-	node::{NodeType, OwnedAspect},
+	node::OwnedAspect,
 	spatial::{SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
@@ -71,7 +71,7 @@ pub use xkbcommon::xkb;
 #[cfg(feature = "keymap")]
 use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
 #[cfg(feature = "keymap")]
-impl crate::client::Client {
+impl crate::client::ClientHandle {
 	pub fn register_xkb_keymap(
 		&self,
 		keymap_string: String,
@@ -103,36 +103,12 @@ impl crate::client::Client {
 
 #[tokio::test]
 async fn fusion_pulses() {
-	use super::client::Client;
-
-	let (client, event_loop) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
+	use crate::*;
+	let mut client = Client::connect().await.expect("Couldn't connect");
 
 	#[derive(Debug, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
 	struct Test {
 		test: (),
-	}
-
-	struct PulseReceiverTest(std::sync::Arc<Client>);
-	impl PulseReceiverHandler for PulseReceiverTest {
-		fn data(&mut self, sender: SpatialRef, data: Datamap) {
-			println!("Pulse sender {sender:?} sent {data:?}");
-			self.0.stop_loop();
-		}
-	}
-	struct PulseSenderTest {
-		data: Datamap,
-		node: PulseSender,
-	}
-	impl PulseSenderHandler for PulseSenderTest {
-		fn new_receiver(&mut self, receiver: PulseReceiver, field: Field) {
-			println!("New pulse receiver {:?} with field {:?}", receiver, field);
-			receiver.send_data(&self.node, &self.data).unwrap();
-		}
-		fn drop_receiver(&mut self, id: u64) {
-			println!("Pulse receiver {} dropped", id);
-		}
 	}
 
 	let field = super::fields::Field::create(
@@ -141,22 +117,35 @@ async fn fusion_pulses() {
 		crate::fields::Shape::Sphere(0.1),
 	)
 	.unwrap();
-
 	let data = Datamap::from_typed(Test::default()).unwrap();
 	let pulse_sender = PulseSender::create(client.get_root(), Transform::none(), &data).unwrap();
-	let pulse_sender_handler = PulseSenderTest {
-		data: data.clone(),
-		node: pulse_sender.alias(),
-	};
-	let _pulse_sender_handler = pulse_sender.wrap(pulse_sender_handler).unwrap();
-	let _pulse_receiver =
-		PulseReceiver::create(client.get_root(), Transform::none(), &field, &data)
-			.unwrap()
-			.wrap(PulseReceiverTest(client.clone()))
-			.unwrap();
+	let pulse_receiver =
+		PulseReceiver::create(client.get_root(), Transform::none(), &field, &data).unwrap();
 
-	tokio::select! {
-		_ = tokio::time::sleep(core::time::Duration::from_secs(1)) => panic!("Timed Out"),
-		e = event_loop => e.unwrap().unwrap(),
-	}
+	let event_loop = client.event_loop(|_client, stop| {
+		while let Some(sender_event) = pulse_sender.recv_event() {
+			match sender_event {
+				PulseSenderEvent::NewReceiver { receiver, field } => {
+					println!("New pulse receiver {:?} with field {:?}", receiver, field);
+					receiver.send_data(&pulse_sender, &data).unwrap();
+				}
+				PulseSenderEvent::DropReceiver { id } => {
+					println!("Pulse receiver {} dropped", id);
+				}
+			}
+		}
+		while let Some(receiver_event) = pulse_receiver.recv_event() {
+			match receiver_event {
+				PulseReceiverEvent::Data { sender, data } => {
+					println!("Pulse sender {sender:?} sent {data:?}");
+					stop.stop();
+				}
+			}
+		}
+	});
+
+	tokio::time::timeout(std::time::Duration::from_secs(1), event_loop)
+		.await
+		.unwrap()
+		.unwrap()
 }

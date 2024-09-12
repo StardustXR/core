@@ -17,10 +17,10 @@
 use std::{hash::Hash, sync::Arc};
 
 use crate::{
-	client::Client,
+	client::ClientHandle,
 	fields::FieldAspect,
 	impl_aspects,
-	node::{NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, OwnedAspect},
 };
 use stardust_xr::values::*;
 
@@ -145,7 +145,7 @@ impl Hash for Transform {
 }
 
 impl SpatialRef {
-	pub async fn import(client: &Arc<Client>, uid: u64) -> NodeResult<Self> {
+	pub async fn import(client: &Arc<ClientHandle>, uid: u64) -> NodeResult<Self> {
 		import_spatial_ref(client, uid).await
 	}
 }
@@ -190,10 +190,8 @@ impl Zone {
 
 #[tokio::test]
 async fn fusion_spatial() {
-	use super::client::Client;
-	let (client, _) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
+	use crate::Client;
+	let client = Client::connect().await.expect("Couldn't connect");
 	let spatial = Spatial::create(
 		client.get_root(),
 		Transform::from_translation_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
@@ -210,10 +208,8 @@ async fn fusion_spatial() {
 
 #[tokio::test]
 async fn fusion_spatial_import_export() {
-	use super::client::Client;
-	let (client, _) = Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
+	use crate::Client;
+	let client = Client::connect().await.expect("Couldn't connect");
 	let exported = Spatial::create(
 		client.get_root(),
 		Transform::from_translation_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
@@ -221,26 +217,21 @@ async fn fusion_spatial_import_export() {
 	)
 	.unwrap();
 	let uid = exported.export_spatial().await.unwrap();
-	let imported = SpatialRef::import(&client, uid).await.unwrap();
+	let imported = SpatialRef::import(&client.handle(), uid).await.unwrap();
 	let relative_transform = imported.get_transform(&exported).await.unwrap();
 	assert_eq!(relative_transform, Transform::identity());
 }
 
 #[tokio::test]
 async fn fusion_zone() {
-	let (client, event_loop) = crate::client::Client::connect_with_async_loop()
-		.await
-		.expect("Couldn't connect");
-	client
-		.set_base_prefixes(&[manifest_dir_macros::directory_relative_path!("res")])
-		.unwrap();
+	use crate::node::NodeType;
+	use crate::root::*;
+	let mut client = crate::Client::connect().await.expect("Couldn't connect");
 
-	let model_parent =
-		crate::spatial::Spatial::create(client.get_root(), Transform::none(), true).unwrap();
+	let root = crate::spatial::Spatial::create(client.get_root(), Transform::none(), true).unwrap();
 
 	let gyro_gem = stardust_xr::values::ResourceID::new_namespaced("fusion", "gyro_gem");
-	let _model =
-		crate::drawable::Model::create(&model_parent, Transform::none(), &gyro_gem).unwrap();
+	let _model = crate::drawable::Model::create(&root, Transform::none(), &gyro_gem).unwrap();
 
 	let field = crate::fields::Field::create(
 		client.get_root(),
@@ -249,49 +240,43 @@ async fn fusion_zone() {
 	)
 	.unwrap();
 
-	struct ZoneTest {
-		client: std::sync::Arc<crate::client::Client>,
-		root: crate::spatial::Spatial,
-		zone: Zone,
-		zone_spatials: rustc_hash::FxHashMap<u64, SpatialRef>,
-	}
-	impl ZoneHandler for ZoneTest {
-		fn enter(&mut self, spatial: SpatialRef) {
-			println!("Spatial {spatial:?} entered zone");
-			self.zone.capture(&spatial).unwrap();
-			self.zone_spatials
-				.insert(spatial.node().get_id().unwrap(), spatial);
-		}
-		fn capture(&mut self, spatial: Spatial) {
-			println!("Spatial {spatial:?} was captured");
-			self.zone.release(&spatial).unwrap();
-		}
-		fn release(&mut self, id: u64) {
-			println!("Spatial {id} was released");
-			self.root
-				.set_local_transform(Transform::from_translation([0.0, 1.0, 0.0]))
-				.unwrap();
-			self.zone.update().unwrap();
-		}
-		fn leave(&mut self, id: u64) {
-			println!("Spatial {id} left zone");
-			self.client.stop_loop();
-		}
-	}
-	let zone = Zone::create(client.get_root(), Transform::none(), &field).unwrap();
-	let zone_handler = ZoneTest {
-		client,
-		root: model_parent,
-		zone: zone.alias(),
-		zone_spatials: Default::default(),
-	};
-	let zone = zone.wrap(zone_handler).unwrap();
-	zone.node().update().unwrap();
+	let mut zone_spatials: rustc_hash::FxHashMap<u64, SpatialRef> = Default::default();
 
-	tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-	tokio::select! {
-		biased;
-		_ = tokio::signal::ctrl_c() => (),
-		e = event_loop => e.unwrap().unwrap(),
-	}
+	let zone = Zone::create(client.get_root(), Transform::none(), &field).unwrap();
+
+	let event_loop = client.event_loop(|client, stop| {
+		while let Some(event) = client.get_root().recv_event() {
+			match event {
+				RootEvent::Frame { info: _ } => zone.update().unwrap(),
+				RootEvent::SaveState { response } => response.send(Ok(ClientState::default())),
+			}
+		}
+		while let Some(zone_event) = zone.recv_event() {
+			match zone_event {
+				ZoneEvent::Enter { spatial } => {
+					println!("Spatial {spatial:?} entered zone");
+					zone.capture(&spatial).unwrap();
+					zone_spatials.insert(spatial.node().get_id().unwrap(), spatial);
+				}
+				ZoneEvent::Capture { spatial } => {
+					println!("Spatial {spatial:?} was captured");
+					zone.release(&spatial).unwrap();
+				}
+				ZoneEvent::Release { id } => {
+					println!("Spatial {id} was released");
+					root.set_local_transform(Transform::from_translation([0.0, 1.0, 0.0]))
+						.unwrap();
+					zone.update().unwrap();
+				}
+				ZoneEvent::Leave { id } => {
+					println!("Spatial {id} left zone");
+					stop.stop();
+				}
+			}
+		}
+	});
+	tokio::time::timeout(std::time::Duration::from_secs(1), event_loop)
+		.await
+		.unwrap()
+		.unwrap();
 }
