@@ -13,7 +13,8 @@ use stardust_xr::{
 };
 use std::future::Future;
 use std::path::PathBuf;
-use std::sync::{mpsc, Arc};
+use std::sync::Arc;
+use std::time::Instant;
 use thiserror::Error;
 use tokio::net::UnixStream;
 use tokio::sync::OnceCell;
@@ -72,6 +73,15 @@ impl Client {
 		}
 	}
 
+	pub async fn connect_with_event_loop<F: FnMut(&Arc<ClientHandle>, &mut ControlFlow)>(
+		&mut self,
+		f: F,
+	) -> Result<Self, ClientError> {
+		let mut client = Client::connect().await?;
+		client.event_loop(f).await?;
+		Ok(client)
+	}
+
 	pub fn handle(&self) -> Arc<ClientHandle> {
 		self.internal.clone()
 	}
@@ -121,26 +131,48 @@ impl Client {
 			v = f => Ok(v),
 		}
 	}
-	pub async fn event_loop<F: FnMut(Arc<ClientHandle>, StopSender)>(
+	pub async fn event_loop<F: FnMut(&Arc<ClientHandle>, &mut ControlFlow)>(
 		&mut self,
 		mut f: F,
 	) -> Result<(), MessengerError> {
-		let (stop_tx, stop_rx) = std::sync::mpsc::channel();
-		let stop_sender = StopSender(stop_tx);
-		while stop_rx.try_recv().is_err() {
+		let mut flow = ControlFlow::Wait;
+		let handle = self.handle();
+		loop {
 			self.try_flush().await?;
-			self.dispatch().await?;
-			(f)(self.handle(), stop_sender.clone());
+			match flow {
+				ControlFlow::Poll => Ok(()),
+				ControlFlow::Wait => self.dispatch().await,
+				ControlFlow::WaitUntil(instant) => tokio::select! {
+					_ = tokio::time::sleep_until(tokio::time::Instant::from_std(instant)) => Ok(()),
+					r = self.dispatch() => r,
+				},
+				ControlFlow::Stop => break,
+			}?;
+			(f)(&handle, &mut flow);
 		}
 		Ok(())
 	}
 }
 
-#[derive(Clone)]
-pub struct StopSender(mpsc::Sender<()>);
-impl StopSender {
-	pub fn stop(&self) {
-		let _ = self.0.send(());
+#[derive(Debug, Clone, Copy)]
+pub enum ControlFlow {
+	Poll,
+	Wait,
+	WaitUntil(Instant),
+	Stop,
+}
+impl ControlFlow {
+	pub fn poll(&mut self) {
+		*self = ControlFlow::Poll;
+	}
+	pub fn wait(&mut self) {
+		*self = ControlFlow::Wait;
+	}
+	pub fn wait_until(&mut self, instant: Instant) {
+		*self = ControlFlow::WaitUntil(instant);
+	}
+	pub fn stop(&mut self) {
+		*self = ControlFlow::Stop;
 	}
 }
 
@@ -195,12 +227,12 @@ async fn fusion_client_life_cycle() {
 		panic!("Timed Out");
 	});
 	client
-		.event_loop(|client, stop| {
+		.event_loop(|client, flow| {
 			while let Some(event) = client.get_root().recv_event() {
 				match event {
 					RootEvent::Frame { info: _ } => {
 						println!("Got frame event");
-						stop.stop();
+						flow.stop();
 					}
 					RootEvent::SaveState { response } => response.send(Ok(ClientState::default())),
 				}
