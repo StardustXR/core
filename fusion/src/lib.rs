@@ -8,8 +8,11 @@ use std::{fmt::Debug, marker::PhantomData, os::fd::OwnedFd};
 pub use client::*;
 use serde::Serialize;
 pub use stardust_xr as core;
-use stardust_xr::scenegraph::{MethodResponse, ScenegraphError};
 pub use stardust_xr::values;
+use stardust_xr::{
+	scenegraph::{MethodResponse, ScenegraphError},
+	values::MethodResult,
+};
 
 #[macro_use]
 pub mod node;
@@ -28,7 +31,7 @@ pub mod spatial;
 
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);
 impl<T: Serialize> TypedMethodResponse<T> {
-	pub fn send(self, result: stardust_xr::values::MethodResult<T>) {
+	pub fn send(self, result: MethodResult<T>) {
 		let data = match result {
 			Ok(d) => d,
 			Err(e) => {
@@ -45,6 +48,9 @@ impl<T: Serialize> TypedMethodResponse<T> {
 			return;
 		};
 		let _ = self.0.send(Ok((serialized, Vec::<OwnedFd>::new())));
+	}
+	pub fn wrap<F: FnOnce() -> MethodResult<T>>(self, f: F) {
+		self.send((f)())
 	}
 }
 impl<T: Serialize> Debug for TypedMethodResponse<T> {
