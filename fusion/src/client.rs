@@ -12,7 +12,7 @@ use stardust_xr::{
 	messenger::{MessageReceiver, MessageSender, MessageSenderHandle},
 };
 use std::future::Future;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
@@ -47,6 +47,13 @@ impl From<DeserializationError> for ClientError {
 	}
 }
 
+#[macro_export]
+macro_rules! project_local_resources {
+	($relative_path:expr) => {
+		std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join($relative_path)
+	};
+}
+
 pub struct Client {
 	internal: Arc<ClientHandle>,
 	message_rx: MessageReceiver,
@@ -59,7 +66,6 @@ impl Client {
 			.await
 			.map_err(|_| ClientError::ConnectionFailure)?;
 		let client = Client::from_connection(connection);
-		client.setup_resources()?;
 		Ok(client)
 	}
 
@@ -89,19 +95,14 @@ impl Client {
 		self.internal.get_root()
 	}
 
-	fn setup_resources(&self) -> NodeResult<()> {
-		let manifest_dir = option_env!("CARGO_MANIFEST_DIR")
-			.map(PathBuf::from)
-			.map(|p| p.join("res"))
-			.map(|p| p.to_string_lossy().to_string())
-			.into_iter();
+	pub fn setup_resources(&self, paths: &[&Path]) -> NodeResult<()> {
+		let paths = paths.iter().map(|p| p.to_string_lossy().to_string());
 		let env_prefixes = option_env!("STARDUST_RES_PREFIXES")
 			.into_iter()
 			.flat_map(|f| f.split(':'))
 			.map(|p| p.to_string());
 
-		let prefixes = manifest_dir.chain(env_prefixes).collect::<Vec<String>>();
-
+		let prefixes = env_prefixes.chain(paths).collect::<Vec<String>>();
 		self.get_root().set_base_prefixes(&prefixes)
 	}
 

@@ -2,6 +2,7 @@ use glam::Quat;
 use stardust_xr::values::{color::rgba_linear, ResourceID};
 use stardust_xr_fusion::{
 	drawable::{MaterialParameter, Model, ModelPartAspect},
+	project_local_resources,
 	root::{ClientState, RootAspect, RootEvent},
 	spatial::{SpatialAspect, Transform},
 	Client,
@@ -11,6 +12,9 @@ use stardust_xr_fusion::{
 async fn main() {
 	tracing_subscriber::fmt::init();
 	let mut client = Client::connect().await.unwrap();
+	client
+		.setup_resources(&[&project_local_resources!("res")])
+		.unwrap();
 
 	let gyro = Model::create(
 		client.get_root(),
