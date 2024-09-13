@@ -380,9 +380,13 @@ impl Tokenize for Aspect {
 			.iter()
 			.any(|m| m.side == Side::Client)
 			.then(|| {
+				let recv_event_method_name = Ident::new(
+					&format!("recv_{}_event", self.name.to_case(Case::Snake)),
+					Span::call_site(),
+				);
 				let id = self.id;
 				quote! {
-					fn recv_event(&self) -> Option<#event_name> {
+					fn #recv_event_method_name(&self) -> Option<#event_name> {
 						self.node().recv_event(#id)
 					}
 				}

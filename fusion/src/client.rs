@@ -228,7 +228,7 @@ async fn fusion_client_life_cycle() {
 	});
 	client
 		.event_loop(|client, flow| {
-			while let Some(event) = client.get_root().recv_event() {
+			while let Some(event) = client.get_root().recv_root_event() {
 				match event {
 					RootEvent::Frame { info: _ } => {
 						println!("Got frame event");

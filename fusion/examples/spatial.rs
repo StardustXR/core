@@ -40,7 +40,7 @@ async fn main() {
 
 	client
 		.event_loop(|client, _stop| {
-			while let Some(root_event) = client.get_root().recv_event() {
+			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Frame { info } => {
 						elapsed += info.delta;
