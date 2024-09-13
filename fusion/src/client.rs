@@ -93,7 +93,6 @@ impl Client {
 		let manifest_dir = option_env!("CARGO_MANIFEST_DIR")
 			.map(PathBuf::from)
 			.map(|p| p.join("res"))
-			.filter(|p| p.exists())
 			.map(|p| p.to_string_lossy().to_string())
 			.into_iter();
 		let env_prefixes = option_env!("STARDUST_RES_PREFIXES")
