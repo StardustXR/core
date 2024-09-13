@@ -3,7 +3,7 @@ use crate::{
 	client::ClientHandle,
 	fields::{Field, FieldAspect},
 	impl_aspects,
-	node::{Node, NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
@@ -35,7 +35,7 @@ impl_aspects!(CameraItemUi: ItemUiAspect);
 impl CameraItemUi {
 	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_camera_item_ui(client)?;
-		Ok(CameraItemUi(Node::from_id(client, INTERFACE_NODE_ID, true)))
+		Ok(CameraItemUi::from_id(client, INTERFACE_NODE_ID, true))
 	}
 }
 

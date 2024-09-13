@@ -4,7 +4,7 @@ use crate::{
 	drawable::ModelPartAspect,
 	fields::{Field, FieldAspect},
 	impl_aspects,
-	node::{Node, NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use std::sync::Arc;
@@ -17,7 +17,7 @@ impl_aspects!(PanelItemUi: ItemUiAspect);
 impl PanelItemUi {
 	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_panel_item_ui(client)?;
-		Ok(PanelItemUi(Node::from_id(client, INTERFACE_NODE_ID, true)))
+		Ok(PanelItemUi::from_id(client, INTERFACE_NODE_ID, true))
 	}
 }
 
