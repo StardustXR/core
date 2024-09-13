@@ -123,7 +123,7 @@ async fn fusion_pulses() {
 		PulseReceiver::create(client.get_root(), Transform::none(), &field, &data).unwrap();
 
 	let event_loop = client.event_loop(|_client, stop| {
-		while let Some(sender_event) = pulse_sender.recv_event() {
+		while let Some(sender_event) = pulse_sender.recv_pulse_sender_event() {
 			match sender_event {
 				PulseSenderEvent::NewReceiver { receiver, field } => {
 					println!("New pulse receiver {:?} with field {:?}", receiver, field);
@@ -134,7 +134,7 @@ async fn fusion_pulses() {
 				}
 			}
 		}
-		while let Some(receiver_event) = pulse_receiver.recv_event() {
+		while let Some(receiver_event) = pulse_receiver.recv_pulse_receiver_event() {
 			match receiver_event {
 				PulseReceiverEvent::Data { sender, data } => {
 					println!("Pulse sender {sender:?} sent {data:?}");

@@ -167,7 +167,7 @@ async fn fusion_input_handler() {
 
 	client
 		.event_loop(|_, _| {
-			while let Some(input_event) = _input_handler.recv_event() {
+			while let Some(input_event) = _input_handler.recv_input_handler_event() {
 				match input_event {
 					InputHandlerEvent::Input { methods: _, data } => on_input(data),
 				}
@@ -238,7 +238,7 @@ async fn fusion_pointer_input_method() {
 
 	client
 		.event_loop(|client, _| {
-			while let Some(root_event) = client.get_root().recv_event() {
+			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Frame { info } => {
 						let (sin, cos) = info.elapsed.sin_cos();
@@ -305,7 +305,7 @@ async fn fusion_tip_input_method() {
 
 	client
 		.event_loop(|client, _| {
-			while let Some(root_event) = client.get_root().recv_event() {
+			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Frame { info } => {
 						let (sin, cos) = info.elapsed.sin_cos();

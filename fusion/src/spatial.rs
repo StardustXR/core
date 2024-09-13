@@ -245,13 +245,13 @@ async fn fusion_zone() {
 	let zone = Zone::create(client.get_root(), Transform::none(), &field).unwrap();
 
 	let event_loop = client.event_loop(|client, stop| {
-		while let Some(event) = client.get_root().recv_event() {
+		while let Some(event) = client.get_root().recv_root_event() {
 			match event {
 				RootEvent::Frame { info: _ } => zone.update().unwrap(),
 				RootEvent::SaveState { response } => response.send(Ok(ClientState::default())),
 			}
 		}
-		while let Some(zone_event) = zone.recv_event() {
+		while let Some(zone_event) = zone.recv_zone_event() {
 			match zone_event {
 				ZoneEvent::Enter { spatial } => {
 					println!("Spatial {spatial:?} entered zone");
