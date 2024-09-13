@@ -11,7 +11,7 @@ use stardust_xr::{
 		deserialize, flexbuffers::DeserializationError, serialize, FlexSerializeError,
 	},
 };
-use std::any::Any;
+use std::{any::Any, hash::Hash};
 use std::{
 	fmt::Debug,
 	future::Future,
@@ -209,6 +209,17 @@ impl Debug for Node {
 		dbg.finish()
 	}
 }
+impl Hash for Node {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.id.hash(state)
+	}
+}
+impl PartialEq for Node {
+	fn eq(&self, other: &Self) -> bool {
+		self.id.eq(&other.id)
+	}
+}
+impl Eq for Node {}
 impl Drop for Node {
 	fn drop(&mut self) {
 		if let Some(client) = self.client.upgrade() {
