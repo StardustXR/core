@@ -255,8 +255,7 @@ impl Tokenize for Aspect {
 		let node_name = Ident::new(&self.name, Span::call_site());
 		let description = &self.description;
 		let opcode = self.id;
-		let (client_members, server_members) =
-			self.members.iter().split(|m| m.side == Side::Server);
+		let server_members = self.members.iter().filter(|m| m.side == Side::Server);
 
 		let aspect_id = {
 			let name = Ident::new(
@@ -266,10 +265,6 @@ impl Tokenize for Aspect {
 			quote!(pub(crate) const #name: u64 = #opcode;)
 		};
 
-		let aspect_handler_name = Ident::new(
-			&format!("{}Handler", &self.name.to_case(Case::Pascal)),
-			Span::call_site(),
-		);
 		let aspect_trait_name = Ident::new(
 			&format!("{}Aspect", &self.name.to_case(Case::Pascal)),
 			Span::call_site(),
@@ -292,19 +287,6 @@ impl Tokenize for Aspect {
 			quote!(pub(crate) const #name: u64 = #opcode;)
 		});
 
-		let client_side = client_members
-			.map(|m| generate_server_member(None, self.id, m))
-			.collect::<Vec<_>>();
-		let client_side = if !client_side.is_empty() {
-			quote! {
-				#[doc = #description]
-				pub trait #aspect_handler_name: Send + Sync + 'static {
-					#(#client_side)*
-				}
-			}
-		} else {
-			quote!()
-		};
 		let aspect_name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
 		let event_name = Ident::new(&format!("{}Event", aspect_name), Span::call_site());
 		let aspect_events = {
@@ -396,7 +378,7 @@ impl Tokenize for Aspect {
 			#node
 			#aspect_id
 			#(#opcodes)*
-			#client_side
+
 			#aspect_events
 			#aspect_event_sender_impl
 
