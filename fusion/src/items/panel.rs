@@ -13,6 +13,7 @@ stardust_xr_fusion_codegen::codegen_item_panel_protocol!();
 
 impl_aspects!(PanelItem: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAspect);
 
+impl_aspects!(PanelItemUi: ItemUiAspect);
 impl PanelItemUi {
 	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_panel_item_ui(client)?;
