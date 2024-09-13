@@ -351,7 +351,7 @@ impl Tokenize for Aspect {
 		let node = generate_node.then_some(quote! {
 			#[allow(clippy::all)]
 			#[doc = #description]
-			#[derive(Debug)]
+			#[derive(Debug, Hash, PartialEq, Eq)]
 			pub struct #node_name (pub crate::node::Node);
 			#[allow(clippy::all)]
 			impl crate::node::NodeType for #node_name {
