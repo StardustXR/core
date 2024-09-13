@@ -85,12 +85,10 @@ impl Scenegraph {
 	}
 	pub(crate) fn add_aspect<E: EventParser>(&self, node: &Node) {
 		let (sender, receiver) = mpsc::unbounded_channel::<E>();
-		self.nodes
-			.entry(node.id)
-			.or_default()
-			.value_mut()
+		let scenegraph_node = self.nodes.entry(node.id).or_default();
+		scenegraph_node
 			.entry(E::ASPECT_ID)
-			.or_insert(Box::new(EventSenderWrapper(sender)));
+			.or_insert_with(|| Box::new(EventSenderWrapper(sender)));
 		node.aspects
 			.entry(E::ASPECT_ID)
 			.insert(Mutex::new(Box::new(receiver)));
