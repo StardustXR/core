@@ -89,7 +89,8 @@ impl Scenegraph {
 			.entry(node.id)
 			.or_default()
 			.value_mut()
-			.insert(E::ASPECT_ID, Box::new(EventSenderWrapper(sender)));
+			.entry(E::ASPECT_ID)
+			.or_insert(Box::new(EventSenderWrapper(sender)));
 		node.aspects
 			.entry(E::ASPECT_ID)
 			.insert(Mutex::new(Box::new(receiver)));
