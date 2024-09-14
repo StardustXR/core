@@ -256,7 +256,7 @@ async fn fusion_zone() {
 				ZoneEvent::Enter { spatial } => {
 					println!("Spatial {spatial:?} entered zone");
 					zone.capture(&spatial).unwrap();
-					zone_spatials.insert(spatial.node().get_id().unwrap(), spatial);
+					zone_spatials.insert(spatial.node().id(), spatial);
 				}
 				ZoneEvent::Capture { spatial } => {
 					println!("Spatial {spatial:?} was captured");

@@ -3,7 +3,7 @@ use crate::{
 	client::ClientHandle,
 	fields::{Field, FieldAspect},
 	impl_aspects,
-	node::{NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;

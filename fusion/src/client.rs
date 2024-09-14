@@ -1,6 +1,6 @@
 //! Your connection to the Stardust server and other essentials.
 
-use crate::node::{NodeResult, NodeType};
+use crate::node::NodeResult;
 use crate::root::{Root, RootAspect};
 use crate::{node::NodeError, scenegraph::Scenegraph};
 use color_eyre::eyre::Result;

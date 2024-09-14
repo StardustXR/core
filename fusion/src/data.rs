@@ -22,7 +22,7 @@ use crate::{
 	impl_aspects,
 	node::NodeResult,
 	node::OwnedAspect,
-	spatial::{SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
+	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
 

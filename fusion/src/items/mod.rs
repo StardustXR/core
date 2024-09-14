@@ -4,7 +4,7 @@ pub mod panel;
 use crate::{
 	impl_aspects,
 	node::OwnedAspect,
-	spatial::{SpatialAspect, SpatialRefAspect},
+	spatial::{Spatial, SpatialAspect, SpatialRefAspect},
 };
 
 stardust_xr_fusion_codegen::codegen_item_protocol!();

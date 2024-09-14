@@ -5,7 +5,7 @@ use std::hash::Hash;
 use crate::{
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
-	spatial::{SpatialAspect, SpatialRefAspect, Transform},
+	spatial::{Spatial, SpatialAspect, SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
 

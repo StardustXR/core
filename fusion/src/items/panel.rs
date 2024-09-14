@@ -4,7 +4,7 @@ use crate::{
 	drawable::ModelPartAspect,
 	fields::{Field, FieldAspect},
 	impl_aspects,
-	node::{NodeResult, NodeType, OwnedAspect},
+	node::{NodeResult, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use std::sync::Arc;

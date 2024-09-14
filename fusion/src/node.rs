@@ -83,7 +83,10 @@ impl From<NodeError> for ScenegraphError {
 pub trait NodeType: Sized + Send + Sync + 'static {
 	/// Get a reference to the node.
 	fn node(&self) -> &Node;
-	fn from_id(client: &Arc<ClientHandle>, id: u64, owned: bool) -> Self;
+	// What's the node's ID? (used for comparison)
+	fn id(&self) -> u64 {
+		self.node().id
+	}
 	/// Try to get the client
 	fn client(&self) -> NodeResult<Arc<ClientHandle>> {
 		self.node().client()
@@ -110,9 +113,18 @@ impl Node {
 		self.client.upgrade().ok_or(NodeError::ClientDropped)
 	}
 
+	pub(crate) fn from_id(client: &Arc<ClientHandle>, id: u64, owned: bool) -> Arc<Node> {
+		Arc::new(Node {
+			client: Arc::downgrade(client),
+			id,
+			aspects: DashMap::default(),
+			owned,
+		})
+	}
+
 	/// Get the entire path of the node including the name.
-	pub fn get_id(&self) -> Result<u64, NodeError> {
-		Ok(self.id)
+	pub fn id(&self) -> u64 {
+		self.id
 	}
 
 	/// Check if this node is still alive.
@@ -144,7 +156,7 @@ impl Node {
 	) -> Result<(), NodeError> {
 		self.client()?
 			.message_sender_handle
-			.signal(self.get_id()?, aspect, signal, data, fds)
+			.signal(self.id(), aspect, signal, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })
 	}
 	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
@@ -170,7 +182,7 @@ impl Node {
 		let future = self
 			.client()?
 			.message_sender_handle
-			.method(self.get_id()?, aspect, method, data, fds)
+			.method(self.id(), aspect, method, data, fds)
 			.map_err(|e| NodeError::MessengerError { e })?;
 
 		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
@@ -186,15 +198,6 @@ impl Node {
 impl NodeType for Node {
 	fn node(&self) -> &Node {
 		self
-	}
-
-	fn from_id(client: &Arc<ClientHandle>, id: u64, owned: bool) -> Node {
-		Node {
-			client: Arc::downgrade(client),
-			id,
-			aspects: DashMap::default(),
-			owned,
-		}
 	}
 }
 impl serde::Serialize for Node {
