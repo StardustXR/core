@@ -1,6 +1,5 @@
 use crate::client::ClientHandle;
 use crate::impl_aspects;
-use crate::node::NodeType;
 use crate::spatial::{SpatialRef, SpatialRefAspect};
 use color_eyre::eyre::Result;
 use rustc_hash::FxHashMap;
@@ -30,10 +29,10 @@ impl ClientState {
 	) -> Result<Self> {
 		Ok(ClientState {
 			data: data.map(flexbuffers::to_vec).transpose()?,
-			root: root.node().get_id()?,
+			root: root.node().id(),
 			spatial_anchors: spatial_anchors
 				.into_iter()
-				.filter_map(|(k, v)| Some((k, v.node().get_id().ok()?)))
+				.map(|(k, v)| (k, v.node().id()))
 				.collect(),
 		})
 	}

@@ -6,7 +6,7 @@ use crate::{
 	client::ClientHandle,
 	impl_aspects,
 	node::{NodeResult, OwnedAspect},
-	spatial::{SpatialAspect, SpatialRefAspect, Transform},
+	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
 
 stardust_xr_fusion_codegen::codegen_field_protocol!();

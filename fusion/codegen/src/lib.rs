@@ -330,27 +330,46 @@ impl Tokenize for Aspect {
 		let add_aspect_tokens = do_add_aspect
 			.then_some(quote!(client.scenegraph.add_aspect::<#event_name>(&node);))
 			.unwrap_or_default();
+
+		let conversion_functions = self
+			.inherits
+			.iter()
+			.filter(|i| i.to_case(Case::Snake) != "owned")
+			.map(|i| {
+				let inherited_aspect = Ident::new(&i.to_case(Case::UpperCamel), Span::call_site());
+				let conversion_fn_name =
+					Ident::new(&format!("as_{}", i.to_case(Case::Snake)), Span::call_site());
+
+				quote! {
+					pub fn #conversion_fn_name(self) -> #inherited_aspect {
+						#inherited_aspect(self.0)
+					}
+				}
+			});
 		let node = generate_node.then_some(quote! {
 			#[allow(clippy::all)]
 			#[doc = #description]
-			#[derive(Debug, Hash, PartialEq, Eq)]
-			pub struct #node_name (pub crate::node::Node);
+			#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+			pub struct #node_name (pub(crate) std::sync::Arc<crate::node::Node>);
+			#[allow(clippy::all)]
+			impl #node_name {
+				pub(crate) fn from_id(client: &std::sync::Arc<crate::client::ClientHandle>, id: u64, owned: bool) -> Self {
+					let node = crate::node::Node::from_id(client, id, owned);
+					#add_aspect_tokens
+					#node_name(node)
+				}
+				#(#conversion_functions)*
+			}
 			#[allow(clippy::all)]
 			impl crate::node::NodeType for #node_name {
 				fn node(&self) -> &crate::node::Node {
 					&self.0
 				}
-				fn from_id(client: &std::sync::Arc<crate::client::ClientHandle>, id: u64, owned: bool) -> Self {
-					let node = crate::node::Node::from_id(client, id, owned);
-					#add_aspect_tokens
-					#node_name(node)
-				}
 			}
 			#[allow(clippy::all)]
 			impl serde::Serialize for #node_name {
 				fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-					let node_id = self.0.get_id().map_err(|e| serde::ser::Error::custom(e))?;
-					serializer.serialize_u64(node_id)
+					serializer.serialize_u64(self.0.id())
 				}
 			}
 			#[allow(clippy::all)]
@@ -534,7 +553,7 @@ fn generate_server_member(
 				};
 				quote! {
 					#body?;
-					Ok(<#return_type as crate::node::NodeType>::from_id(&#get_client, #id_argument, true))
+					Ok(#return_type::from_id(&#get_client, #id_argument, true))
 				}
 			} else {
 				quote! {
@@ -610,10 +629,10 @@ fn generate_argument_deserialize(
 			let node_type = Ident::new(&_type.to_case(Case::Pascal), Span::call_site());
 			match optional {
 				true => {
-					quote!(#name.map(|n| <#node_type as crate::node::NodeType>::from_id(&_client, n, false)))
+					quote!(#name.map(|n| #node_type::from_id(&_client, n, false)))
 				}
 				false => {
-					quote!(<#node_type as crate::node::NodeType>::from_id(&_client, #name, false))
+					quote!(#node_type::from_id(&_client, #name, false))
 				}
 			}
 		}
@@ -650,8 +669,8 @@ fn generate_argument_serialize(
 	let name = Ident::new(&argument_name.to_case(Case::Snake), Span::call_site());
 	if let ArgumentType::Node { _type, .. } = argument_type {
 		return match optional {
-			true => quote!(#name.map(|n| n.node().get_id()).transpose()?),
-			false => quote!(#name.node().get_id()?),
+			true => quote!(#name.map(|n| n.node().id())),
+			false => quote!(#name.node().id()),
 		};
 	}
 	if optional {

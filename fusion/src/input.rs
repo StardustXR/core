@@ -23,7 +23,7 @@ use crate::{
 	fields::{Field, FieldAspect},
 	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
-	spatial::{SpatialAspect, SpatialRefAspect, Transform},
+	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
 use glam::{vec3a, Quat};
 use stardust_xr::values::*;
