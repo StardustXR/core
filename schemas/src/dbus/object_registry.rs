@@ -66,6 +66,9 @@ impl ObjectRegistry {
 		let mut objects = HashMap::new();
 
 		for name in names {
+			if matches!(name.as_ref(), BusName::WellKnown(_)) {
+				continue;
+			}
 			Self::add_objects_for_name(&self.connection, name.inner().clone(), &mut objects).await;
 		}
 
