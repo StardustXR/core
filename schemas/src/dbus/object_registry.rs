@@ -1,5 +1,6 @@
 use futures_util::StreamExt;
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 use tokio::sync::watch;
 use zbus::names::{BusName, InterfaceName, OwnedBusName, OwnedInterfaceName};
 use zbus::proxy::ProxyDefault;
@@ -65,8 +66,7 @@ impl ObjectRegistry {
 		let mut objects = HashMap::new();
 
 		for name in names {
-			Self::add_objects_for_name(&self.connection, name.inner().clone(), &mut objects)
-				.await?;
+			Self::add_objects_for_name(&self.connection, name.inner().clone(), &mut objects).await;
 		}
 
 		let _ = self.objects_tx.send(objects);
@@ -86,15 +86,16 @@ impl ObjectRegistry {
 			while let Some(signal) = name_owner_changed_stream.next().await {
 				let args = signal.args().unwrap();
 				let name = &args.name;
+				if matches!(&args.name, BusName::WellKnown(_)) {
+					continue;
+				}
 				let old_owner = args.old_owner.as_ref();
 				let new_owner = args.new_owner.as_ref();
 
 				let mut objects = objects_rx.borrow().clone();
 				if old_owner.is_none() && new_owner.is_some() {
 					// New bus appeared
-					let _ =
-						Self::add_objects_for_name(&connection_clone, name.clone(), &mut objects)
-							.await;
+					Self::add_objects_for_name(&connection_clone, name.clone(), &mut objects).await;
 				} else if old_owner.is_some() && new_owner.is_none() {
 					// Bus disappeared
 					Self::remove_objects_for_bus(&mut objects, name.clone());
@@ -108,14 +109,21 @@ impl ObjectRegistry {
 		connection: &Connection,
 		name: BusName<'_>,
 		objects: &mut HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>,
-	) -> Result<()> {
-		let object_manager = fdo::ObjectManagerProxy::builder(connection)
-			.destination(name.clone())?
-			.path("/")?
-			.build()
-			.await?;
+	) {
+		let Ok(object_manager) =
+			fdo::ObjectManagerProxy::new(connection, name.to_owned(), "/").await
+		else {
+			return;
+		};
 
-		let managed_objects = object_manager.get_managed_objects().await?;
+		let Ok(Ok(managed_objects)) = tokio::time::timeout(
+			Duration::from_millis(1),
+			object_manager.get_managed_objects(),
+		)
+		.await
+		else {
+			return;
+		};
 
 		for (path, interfaces) in managed_objects {
 			for interface in interfaces.keys() {
@@ -128,8 +136,6 @@ impl ObjectRegistry {
 					});
 			}
 		}
-
-		Ok(())
 	}
 
 	fn remove_objects_for_bus(
