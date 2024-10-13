@@ -65,10 +65,8 @@ impl ObjectRegistry {
 		let mut objects = HashMap::new();
 
 		for name in names {
-			if name.starts_with("org.stardustxr.Object.") {
-				Self::add_objects_for_name(&self.connection, name.inner().clone(), &mut objects)
-					.await?;
-			}
+			Self::add_objects_for_name(&self.connection, name.inner().clone(), &mut objects)
+				.await?;
 		}
 
 		let _ = self.objects_tx.send(objects);
@@ -91,19 +89,17 @@ impl ObjectRegistry {
 				let old_owner = args.old_owner.as_ref();
 				let new_owner = args.new_owner.as_ref();
 
-				if name.starts_with("org.stardustxr.Object.") {
-					let mut objects = objects_rx.borrow().clone();
-					if old_owner.is_none() && new_owner.is_some() {
-						// New bus appeared
+				let mut objects = objects_rx.borrow().clone();
+				if old_owner.is_none() && new_owner.is_some() {
+					// New bus appeared
+					let _ =
 						Self::add_objects_for_name(&connection_clone, name.clone(), &mut objects)
-							.await
-							.unwrap();
-					} else if old_owner.is_some() && new_owner.is_none() {
-						// Bus disappeared
-						Self::remove_objects_for_bus(&mut objects, name.clone());
-					}
-					let _ = objects_tx.send(objects);
+							.await;
+				} else if old_owner.is_some() && new_owner.is_none() {
+					// Bus disappeared
+					Self::remove_objects_for_bus(&mut objects, name.clone());
 				}
+				let _ = objects_tx.send(objects);
 			}
 		});
 	}
@@ -171,10 +167,8 @@ async fn object_registry_test() -> Result<()> {
 
 	fn registry_contains_test_service(registry: &ObjectRegistry) -> bool {
 		registry.get_watch().borrow().values().any(|set| {
-			set.iter().any(|obj| {
-				obj.bus_name == "org.stardustxr.Object.TestService"
-					&& obj.object_path.as_str() == "/org/example/TestObject"
-			})
+			set.iter()
+				.any(|obj| obj.object_path.as_str() == "/org/example/TestObject")
 		})
 	}
 
