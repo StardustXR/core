@@ -17,7 +17,8 @@ use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
 use tokio::net::UnixStream;
-use tokio::sync::OnceCell;
+use tokio::sync::{Notify, OnceCell};
+use tokio::task::JoinHandle;
 
 #[derive(Error, Debug)]
 pub enum ClientError {
@@ -79,15 +80,6 @@ impl Client {
 		}
 	}
 
-	pub async fn connect_with_event_loop<F: FnMut(&Arc<ClientHandle>, &mut ControlFlow)>(
-		&mut self,
-		f: F,
-	) -> Result<Self, ClientError> {
-		let mut client = Client::connect().await?;
-		client.event_loop(f).await?;
-		Ok(client)
-	}
-
 	pub fn handle(&self) -> Arc<ClientHandle> {
 		self.internal.clone()
 	}
@@ -109,14 +101,16 @@ impl Client {
 	pub async fn dispatch(&mut self) -> Result<(), MessengerError> {
 		self.message_rx.dispatch(&*self.handle().scenegraph).await
 	}
+	/// this one will wait until there's some message to send
 	pub async fn flush(&mut self) -> Result<(), MessengerError> {
 		self.message_tx.flush().await
 	}
+	/// this one will try to send any messages if they're in the queue and if not return immediately
 	pub async fn try_flush(&mut self) -> Result<(), MessengerError> {
 		self.message_tx.try_flush().await
 	}
 
-	pub async fn with_event_loop<O, F: Future<Output = O>>(
+	pub async fn await_method<O, F: Future<Output = O>>(
 		&mut self,
 		f: F,
 	) -> Result<O, MessengerError> {
@@ -131,7 +125,8 @@ impl Client {
 			v = f => Ok(v),
 		}
 	}
-	pub async fn event_loop<F: FnMut(&Arc<ClientHandle>, &mut ControlFlow)>(
+
+	pub async fn sync_event_loop<F: FnMut(&Arc<ClientHandle>, &mut ControlFlow)>(
 		&mut self,
 		mut f: F,
 	) -> Result<(), MessengerError> {
@@ -151,6 +146,36 @@ impl Client {
 			(f)(&handle, &mut flow);
 		}
 		Ok(())
+	}
+	pub fn async_event_loop(mut self) -> AsyncEventLoop {
+		let notify = Arc::new(Notify::new());
+		let notify_clone = notify.clone();
+		let join_handle = tokio::spawn(async move {
+			let scenegraph = self.internal.scenegraph.clone();
+			loop {
+				tokio::select! {
+					r = self.message_tx.flush() => r?,
+					r = self.message_rx.dispatch(&*scenegraph) => r?,
+					_ = notify_clone.notified() => break,
+				}
+			}
+			Ok(Client {
+				internal: self.internal,
+				message_rx: self.message_rx,
+				message_tx: self.message_tx,
+			})
+		});
+		AsyncEventLoop(notify, join_handle)
+	}
+}
+
+pub struct AsyncEventLoop(Arc<Notify>, JoinHandle<Result<Client, MessengerError>>);
+impl AsyncEventLoop {
+	pub async fn stop(self) -> Result<Client, MessengerError> {
+		self.0.notify_waiters();
+		self.1
+			.await
+			.map_err(|e| MessengerError::IOError(e.into()))?
 	}
 }
 
@@ -227,7 +252,7 @@ async fn fusion_client_life_cycle() {
 		panic!("Timed Out");
 	});
 	client
-		.event_loop(|client, flow| {
+		.sync_event_loop(|client, flow| {
 			while let Some(event) = client.get_root().recv_root_event() {
 				match event {
 					RootEvent::Frame { info: _ } => {

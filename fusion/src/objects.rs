@@ -64,15 +64,12 @@ impl FieldObject {
 }
 
 pub async fn hmd(client: &Arc<ClientHandle>) -> Option<SpatialRef> {
-	SpatialRefProxy::new(
-		&Connection::session().await.ok()?,
-		"org.stardustxr.HMD",
-		"/org/stardustxr/HMD",
-	)
-	.await
-	.ok()?
-	.import(client)
-	.await
+	let connection = Connection::session().await.ok()?;
+	let spatial_ref =
+		SpatialRefProxy::new(&connection, "org.stardustxr.HMD", "/org/stardustxr/HMD")
+			.await
+			.ok()?;
+	spatial_ref.import(client).await
 }
 
 #[tokio::test]
@@ -80,8 +77,11 @@ async fn fusion_objects_hmd() {
 	use crate::spatial::SpatialRefAspect;
 
 	let client = crate::Client::connect().await.unwrap();
-	let hmd = hmd(&client.handle()).await.unwrap();
-	assert!(hmd.get_transform(client.get_root()).await.is_ok())
+	let client_handle = client.handle();
+	client.async_event_loop();
+
+	let hmd = hmd(&client_handle).await.unwrap();
+	assert!(hmd.get_transform(client_handle.get_root()).await.is_ok())
 }
 
 pub struct PlaySpace {

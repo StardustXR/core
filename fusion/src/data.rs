@@ -122,7 +122,7 @@ async fn fusion_pulses() {
 	let pulse_receiver =
 		PulseReceiver::create(client.get_root(), Transform::none(), &field, &data).unwrap();
 
-	let event_loop = client.event_loop(|_client, stop| {
+	let event_loop = client.sync_event_loop(|_client, stop| {
 		while let Some(sender_event) = pulse_sender.recv_pulse_sender_event() {
 			match sender_event {
 				PulseSenderEvent::NewReceiver { receiver, field } => {
