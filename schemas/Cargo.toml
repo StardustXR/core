@@ -23,7 +23,7 @@ fnv = "1.0.7"
 thiserror = "1.0.56"
 
 #dbus stuff
-zbus = { version = "4.4.0", features = ["tokio"] }
+zbus = { version = "5.0.0", features = ["tokio"] }
 tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
 futures-util = "0.3.30"
 
