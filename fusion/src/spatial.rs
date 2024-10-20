@@ -244,7 +244,7 @@ async fn fusion_zone() {
 
 	let zone = Zone::create(client.get_root(), Transform::none(), &field).unwrap();
 
-	let event_loop = client.event_loop(|client, stop| {
+	let event_loop = client.sync_event_loop(|client, stop| {
 		while let Some(event) = client.get_root().recv_root_event() {
 			match event {
 				RootEvent::Frame { info: _ } => zone.update().unwrap(),

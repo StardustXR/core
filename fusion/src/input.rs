@@ -166,7 +166,7 @@ async fn fusion_input_handler() {
 		InputHandler::create(client.get_root(), Transform::none(), &field).unwrap();
 
 	client
-		.event_loop(|_, _| {
+		.sync_event_loop(|_, _| {
 			while let Some(input_event) = _input_handler.recv_input_handler_event() {
 				match input_event {
 					InputHandlerEvent::Input { methods: _, data } => on_input(data),
@@ -237,7 +237,7 @@ async fn fusion_pointer_input_method() {
 	}
 
 	client
-		.event_loop(|client, _| {
+		.sync_event_loop(|client, _| {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Frame { info } => {
@@ -304,7 +304,7 @@ async fn fusion_tip_input_method() {
 	let mut datamap = TipData::default();
 
 	client
-		.event_loop(|client, _| {
+		.sync_event_loop(|client, _| {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Frame { info } => {

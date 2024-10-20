@@ -26,7 +26,7 @@ async fn main() {
 
 	let client_handle = client.handle();
 	let mut elapsed: f32 = client
-		.with_event_loop(client_handle.get_root().get_state())
+		.await_method(client_handle.get_root().get_state())
 		.await
 		.unwrap()
 		.unwrap()
@@ -39,7 +39,7 @@ async fn main() {
 	let _gyro = gyro;
 
 	client
-		.event_loop(|client, _stop| {
+		.sync_event_loop(|client, _stop| {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Frame { info } => {
