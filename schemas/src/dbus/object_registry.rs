@@ -2,8 +2,9 @@ use futures_util::StreamExt;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::watch;
+use tokio::task::AbortHandle;
 use zbus::names::{BusName, InterfaceName, OwnedBusName, OwnedInterfaceName};
-use zbus::proxy::ProxyDefault;
+use zbus::proxy::Defaults;
 use zbus::zvariant::OwnedObjectPath;
 use zbus::{fdo, Connection, Proxy, Result};
 
@@ -26,12 +27,12 @@ impl ObjectInfo {
 		)
 		.await
 	}
-	pub async fn to_typed_proxy<P: From<Proxy<'static>> + ProxyDefault + 'static>(
+	pub async fn to_typed_proxy<P: From<Proxy<'static>> + Defaults + 'static>(
 		&self,
 		conn: &Connection,
 	) -> Result<P> {
 		Ok(self
-			.to_proxy(conn, P::INTERFACE.unwrap().to_string())
+			.to_proxy(conn, P::INTERFACE.as_ref().unwrap().to_string())
 			.await?
 			.into())
 	}
@@ -42,26 +43,81 @@ pub struct ObjectRegistry {
 	connection: Connection,
 	objects_tx: watch::Sender<Objects>,
 	objects_rx: watch::Receiver<Objects>,
+	abort_handle: AbortHandle,
 }
 impl ObjectRegistry {
 	pub async fn new(connection: &Connection) -> Result<Self> {
-		let (objects_tx, objects_rx) = watch::channel(HashMap::new());
+		let objects = Self::get_all_objects(connection).await?;
+		let (objects_tx, objects_rx) = watch::channel(objects);
 
-		let registry = Self {
+		let abort_handle = tokio::spawn(Self::update_task(
+			connection.clone(),
+			objects_tx.clone(),
+			objects_rx.clone(),
+		))
+		.abort_handle();
+
+		Ok(ObjectRegistry {
 			connection: connection.clone(),
 			objects_tx,
 			objects_rx,
-		};
-
-		registry.refresh_all().await?;
-		registry.start_background_task();
-
-		Ok(registry)
+			abort_handle,
+		})
 	}
 
-	pub async fn refresh_all(&self) -> Result<()> {
-		let proxy = fdo::DBusProxy::new(&self.connection).await?;
-		let names = proxy.list_names().await?;
+	async fn update_task(
+		connection: Connection,
+		objects_tx: watch::Sender<Objects>,
+		objects_rx: watch::Receiver<Objects>,
+	) -> Result<()> {
+		let mut bus_names: HashSet<OwnedBusName> =
+			HashSet::from_iter(Self::get_bus_names(&connection).await?.into_iter());
+
+		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
+		let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
+		let mut objects = objects_rx.borrow().clone();
+		while let Some(signal) = name_owner_changed_stream.next().await {
+			let mut updated = false;
+			let args = signal.args().unwrap();
+			let name: OwnedBusName = args.name.clone().into();
+			if matches!(&args.name, BusName::WellKnown(_)) {
+				continue;
+			}
+			// println!("updating for bus {name}");
+			let old_owner = args.old_owner.as_ref();
+			let new_owner = args.new_owner.as_ref();
+
+			if old_owner.is_none() && new_owner.is_some() {
+				// New bus appeared
+				// println!("new bus {name} appeared");
+				bus_names.insert(name.clone());
+				Self::add_objects_for_name(&connection, name, &mut objects).await;
+				updated = true;
+			} else if old_owner.is_some() && new_owner.is_none() {
+				// Bus disappeared
+				// println!("bus {name} disappeared");
+				Self::remove_objects_for_bus(&mut objects, name.clone());
+				bus_names.remove::<OwnedBusName>(&name);
+				updated = true;
+			}
+			if updated {
+				// println!("Sending new objects {objects:?}");
+				let _ = objects_tx.send(objects.clone());
+			}
+		}
+
+		Ok(())
+	}
+
+	async fn get_bus_names(connection: &Connection) -> Result<Vec<OwnedBusName>> {
+		let proxy = fdo::DBusProxy::new(connection).await?;
+		Ok(proxy.list_names().await?)
+	}
+
+	async fn get_all_objects(
+		connection: &Connection,
+	) -> Result<HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>> {
+		let names = Self::get_bus_names(connection).await?;
 
 		let mut objects = HashMap::new();
 
@@ -69,48 +125,15 @@ impl ObjectRegistry {
 			if matches!(name.as_ref(), BusName::WellKnown(_)) {
 				continue;
 			}
-			Self::add_objects_for_name(&self.connection, name.inner().clone(), &mut objects).await;
+			Self::add_objects_for_name(connection, name, &mut objects).await;
 		}
 
-		let _ = self.objects_tx.send(objects);
-		Ok(())
-	}
-
-	fn start_background_task(&self) {
-		let connection_clone = self.connection.clone();
-		let objects_tx = self.objects_tx.clone();
-		let objects_rx = self.objects_rx.clone();
-
-		tokio::spawn(async move {
-			let dbus_proxy = fdo::DBusProxy::new(&connection_clone).await.unwrap();
-			let mut name_owner_changed_stream =
-				dbus_proxy.receive_name_owner_changed().await.unwrap();
-
-			while let Some(signal) = name_owner_changed_stream.next().await {
-				let args = signal.args().unwrap();
-				let name = &args.name;
-				if matches!(&args.name, BusName::WellKnown(_)) {
-					continue;
-				}
-				let old_owner = args.old_owner.as_ref();
-				let new_owner = args.new_owner.as_ref();
-
-				let mut objects = objects_rx.borrow().clone();
-				if old_owner.is_none() && new_owner.is_some() {
-					// New bus appeared
-					Self::add_objects_for_name(&connection_clone, name.clone(), &mut objects).await;
-				} else if old_owner.is_some() && new_owner.is_none() {
-					// Bus disappeared
-					Self::remove_objects_for_bus(&mut objects, name.clone());
-				}
-				let _ = objects_tx.send(objects);
-			}
-		});
+		Ok(objects)
 	}
 
 	async fn add_objects_for_name(
 		connection: &Connection,
-		name: BusName<'_>,
+		name: OwnedBusName,
 		objects: &mut HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>,
 	) {
 		let Ok(object_manager) =
@@ -120,7 +143,7 @@ impl ObjectRegistry {
 		};
 
 		let Ok(Ok(managed_objects)) = tokio::time::timeout(
-			Duration::from_millis(1),
+			Duration::from_millis(5),
 			object_manager.get_managed_objects(),
 		)
 		.await
@@ -134,7 +157,7 @@ impl ObjectRegistry {
 					.entry(interface.clone())
 					.or_default()
 					.insert(ObjectInfo {
-						bus_name: name.clone().into(),
+						bus_name: name.clone(),
 						object_path: path.clone(),
 					});
 			}
@@ -143,7 +166,7 @@ impl ObjectRegistry {
 
 	fn remove_objects_for_bus(
 		objects: &mut HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>,
-		bus_name: BusName<'_>,
+		bus_name: OwnedBusName,
 	) {
 		for object_set in objects.values_mut() {
 			object_set.retain(|obj| obj.bus_name.inner() != &bus_name);
@@ -160,6 +183,12 @@ impl ObjectRegistry {
 
 	pub fn get_watch(&self) -> watch::Receiver<Objects> {
 		self.objects_rx.clone()
+	}
+}
+
+impl Drop for ObjectRegistry {
+	fn drop(&mut self) {
+		self.abort_handle.abort();
 	}
 }
 
@@ -182,19 +211,18 @@ async fn object_registry_test() -> Result<()> {
 	}
 
 	// Set up connections and registry
-	let registry_connection = Connection::session().await?;
+	let registry_connection = zbus::connection::Builder::session()?
+		.name("org.stardustxr.ObjectRegistry")?
+		.build()
+		.await?;
 	let registry = ObjectRegistry::new(&registry_connection).await?;
+	tokio::time::sleep(Duration::from_millis(250)).await;
 
 	// Start monitoring for changes
 	let mut watch = registry.get_watch().clone();
-	let monitor_task = tokio::spawn(async move {
-		while watch.changed().await.is_ok() {
-			println!("Objects updated: {:?}", watch.borrow().clone());
-		}
-	});
 
 	// Set up test service
-	let test_connection = zbus::ConnectionBuilder::session()?
+	let test_connection = zbus::connection::Builder::session()?
 		.name("org.stardustxr.Object.TestService")?
 		.serve_at("/", zbus::fdo::ObjectManager)?
 		.serve_at("/org/example/TestObject", TestInterface)?
@@ -202,16 +230,15 @@ async fn object_registry_test() -> Result<()> {
 		.await?;
 
 	// Wait for service to register and verify presence
-	tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+	watch.changed().await.unwrap();
+	println!("Objects updated: {:?}", watch.borrow().clone());
 	assert!(registry_contains_test_service(&registry));
 
 	// Simulate service disappearance and verify removal
 	drop(test_connection);
-	tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+	watch.changed().await.unwrap();
+	println!("Objects updated: {:?}", watch.borrow().clone());
 	assert!(!registry_contains_test_service(&registry));
-
-	// Clean up
-	monitor_task.abort();
 
 	Ok(())
 }
