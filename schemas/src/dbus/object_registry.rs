@@ -1,5 +1,6 @@
 use futures_util::StreamExt;
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::time::Duration;
 use tokio::sync::watch;
 use tokio::task::AbortHandle;
@@ -38,6 +39,86 @@ impl ObjectInfo {
 	}
 }
 
+#[derive(Debug)]
+struct InternalBusRecord([AbortHandle; 2]);
+impl InternalBusRecord {
+	fn new(
+		name: OwnedBusName,
+		object_manager: fdo::ObjectManagerProxy<'static>,
+		objects_tx: watch::Sender<Objects>,
+	) -> Self {
+		let name_2 = name.clone();
+		let object_manager_2 = object_manager.clone();
+		let objects_tx_2 = objects_tx.clone();
+		InternalBusRecord([
+			tokio::spawn(async move {
+				let Ok(mut interfaces_added_stream) =
+					object_manager.clone().receive_interfaces_added().await
+				else {
+					return;
+				};
+				while let Some(interface_added) = interfaces_added_stream.next().await {
+					let Ok(args) = interface_added.args() else {
+						continue;
+					};
+					objects_tx.send_if_modified(|objects| {
+						let mut changed = false;
+						for interface in args.interfaces_and_properties().keys() {
+							if objects.entry(interface.clone().into()).or_default().insert(
+								ObjectInfo {
+									bus_name: name.clone(),
+									object_path: args.object_path.clone().into(),
+								},
+							) {
+								changed = true
+							};
+						}
+						changed
+					});
+				}
+			})
+			.abort_handle(),
+			tokio::spawn(async move {
+				let Ok(mut interfaces_removed_stream) =
+					object_manager_2.receive_interfaces_removed().await
+				else {
+					return;
+				};
+				while let Some(interface_removed) = interfaces_removed_stream.next().await {
+					let Ok(args) = interface_removed.args() else {
+						continue;
+					};
+					objects_tx_2.send_if_modified(|objects| {
+						let mut changed = false;
+						for interface in args.interfaces().as_ref() {
+							let Some(object_interface) =
+								objects.get_mut::<OwnedInterfaceName>(&interface.clone().into())
+							else {
+								continue;
+							};
+
+							if object_interface.remove(&ObjectInfo {
+								bus_name: name_2.clone(),
+								object_path: args.object_path.clone().into(),
+							}) {
+								changed = true;
+							};
+						}
+						changed
+					});
+				}
+			})
+			.abort_handle(),
+		])
+	}
+}
+impl Drop for InternalBusRecord {
+	fn drop(&mut self) {
+		self.0[0].abort();
+		self.0[1].abort();
+	}
+}
+
 pub type Objects = HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>;
 pub struct ObjectRegistry {
 	connection: Connection,
@@ -70,13 +151,29 @@ impl ObjectRegistry {
 		objects_tx: watch::Sender<Objects>,
 		objects_rx: watch::Receiver<Objects>,
 	) -> Result<()> {
-		let mut bus_names: HashSet<OwnedBusName> =
-			HashSet::from_iter(Self::get_bus_names(&connection).await?.into_iter());
+		let mut buses: HashMap<OwnedBusName, InternalBusRecord> = {
+			let names = Self::get_bus_names(&connection).await?;
+			let mut buses = HashMap::new();
+
+			for name in names {
+				let Ok(object_manager_proxy) =
+					fdo::ObjectManagerProxy::new(&connection, name.clone(), "/").await
+				else {
+					continue;
+				};
+
+				let bus_record =
+					InternalBusRecord::new(name.clone(), object_manager_proxy, objects_tx.clone());
+				buses.insert(name, bus_record);
+			}
+
+			buses
+		};
 
 		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
 		let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
-		let mut objects = objects_rx.borrow().clone();
 		while let Some(signal) = name_owner_changed_stream.next().await {
+			let mut objects = objects_rx.borrow().clone();
 			let mut updated = false;
 			let args = signal.args().unwrap();
 			let name: OwnedBusName = args.name.clone().into();
@@ -90,14 +187,20 @@ impl ObjectRegistry {
 			if old_owner.is_none() && new_owner.is_some() {
 				// New bus appeared
 				// println!("new bus {name} appeared");
-				bus_names.insert(name.clone());
-				Self::add_objects_for_name(&connection, name, &mut objects).await;
-				updated = true;
+				if let Some(object_manager) =
+					Self::add_objects_for_name(&connection, name.clone(), &mut objects).await
+				{
+					buses.insert(
+						name.clone(),
+						InternalBusRecord::new(name, object_manager, objects_tx.clone()),
+					);
+					updated = true;
+				}
 			} else if old_owner.is_some() && new_owner.is_none() {
 				// Bus disappeared
 				// println!("bus {name} disappeared");
 				Self::remove_objects_for_bus(&mut objects, name.clone());
-				bus_names.remove::<OwnedBusName>(&name);
+				buses.remove::<OwnedBusName>(&name);
 				updated = true;
 			}
 			if updated {
@@ -135,21 +238,18 @@ impl ObjectRegistry {
 		connection: &Connection,
 		name: OwnedBusName,
 		objects: &mut HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>,
-	) {
-		let Ok(object_manager) =
-			fdo::ObjectManagerProxy::new(connection, name.to_owned(), "/").await
-		else {
-			return;
-		};
+	) -> Option<fdo::ObjectManagerProxy<'static>> {
+		let object_manager = fdo::ObjectManagerProxy::new(connection, name.to_owned(), "/")
+			.await
+			.ok()?;
 
-		let Ok(Ok(managed_objects)) = tokio::time::timeout(
+		let managed_objects = tokio::time::timeout(
 			Duration::from_millis(5),
 			object_manager.get_managed_objects(),
 		)
 		.await
-		else {
-			return;
-		};
+		.ok()?
+		.ok()?;
 
 		for (path, interfaces) in managed_objects {
 			for interface in interfaces.keys() {
@@ -162,6 +262,7 @@ impl ObjectRegistry {
 					});
 			}
 		}
+		Some(object_manager)
 	}
 
 	fn remove_objects_for_bus(
