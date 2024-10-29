@@ -13,13 +13,17 @@ pub async fn connect_client() -> zbus::Result<zbus::Connection> {
 }
 
 pub fn random_object_name() -> OwnedObjectPath {
-	nanoid::nanoid!(
-		32,
-		&[
-			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q',
-			'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
-		]
-	)
+	OwnedObjectPath::try_from(format!(
+		"/{}",
+		nanoid::nanoid!(
+			32,
+			&[
+				'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+				'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+			]
+		)
+	))
+	.unwrap()
 }
 
 #[tokio::test]
