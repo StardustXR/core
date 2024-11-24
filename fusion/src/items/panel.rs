@@ -4,7 +4,7 @@ use crate::{
 	drawable::ModelPartAspect,
 	fields::{Field, FieldAspect},
 	impl_aspects,
-	node::{NodeResult, OwnedAspect},
+	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
 use std::sync::Arc;
@@ -17,7 +17,12 @@ impl_aspects!(PanelItemUi: ItemUiAspect);
 impl PanelItemUi {
 	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_panel_item_ui(client)?;
-		Ok(PanelItemUi::from_id(client, INTERFACE_NODE_ID, true))
+		// TODO: properly autogen this adding of aspect
+		let panel_item_ui = PanelItemUi::from_id(client, INTERFACE_NODE_ID, true);
+		client
+			.scenegraph
+			.add_aspect::<ItemUiEvent>(panel_item_ui.node());
+		Ok(panel_item_ui)
 	}
 }
 
