@@ -64,7 +64,7 @@ impl InternalBusRecord {
 					objects_tx.send_if_modified(|objects| {
 						let mut changed = false;
 						for interface in args.interfaces_and_properties().keys() {
-							if objects.entry(interface.clone().into()).or_default().insert(
+							if objects.entry(interface.to_string()).or_default().insert(
 								ObjectInfo {
 									bus_name: name.clone(),
 									object_path: args.object_path.clone().into(),
@@ -91,8 +91,7 @@ impl InternalBusRecord {
 					objects_tx_2.send_if_modified(|objects| {
 						let mut changed = false;
 						for interface in args.interfaces().as_ref() {
-							let Some(object_interface) =
-								objects.get_mut::<OwnedInterfaceName>(&interface.clone().into())
+							let Some(object_interface) = objects.get_mut(&interface.to_string())
 							else {
 								continue;
 							};
@@ -119,7 +118,7 @@ impl Drop for InternalBusRecord {
 	}
 }
 
-pub type Objects = HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>;
+pub type Objects = HashMap<String, HashSet<ObjectInfo>>;
 pub struct ObjectRegistry {
 	connection: Connection,
 	objects_tx: watch::Sender<Objects>,
@@ -217,9 +216,7 @@ impl ObjectRegistry {
 		Ok(proxy.list_names().await?)
 	}
 
-	async fn get_all_objects(
-		connection: &Connection,
-	) -> Result<HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>> {
+	async fn get_all_objects(connection: &Connection) -> Result<Objects> {
 		let names = Self::get_bus_names(connection).await?;
 
 		let mut objects = HashMap::new();
@@ -237,7 +234,7 @@ impl ObjectRegistry {
 	async fn add_objects_for_name(
 		connection: &Connection,
 		name: OwnedBusName,
-		objects: &mut HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>,
+		objects: &mut Objects,
 	) -> Option<fdo::ObjectManagerProxy<'static>> {
 		let object_manager = fdo::ObjectManagerProxy::new(connection, name.to_owned(), "/")
 			.await
@@ -254,7 +251,7 @@ impl ObjectRegistry {
 		for (path, interfaces) in managed_objects {
 			for interface in interfaces.keys() {
 				objects
-					.entry(interface.clone())
+					.entry(interface.to_string())
 					.or_default()
 					.insert(ObjectInfo {
 						bus_name: name.clone(),
@@ -265,16 +262,13 @@ impl ObjectRegistry {
 		Some(object_manager)
 	}
 
-	fn remove_objects_for_bus(
-		objects: &mut HashMap<OwnedInterfaceName, HashSet<ObjectInfo>>,
-		bus_name: OwnedBusName,
-	) {
+	fn remove_objects_for_bus(objects: &mut Objects, bus_name: OwnedBusName) {
 		for object_set in objects.values_mut() {
 			object_set.retain(|obj| obj.bus_name.inner() != &bus_name);
 		}
 	}
 
-	pub fn get_objects(&self, interface: &OwnedInterfaceName) -> HashSet<ObjectInfo> {
+	pub fn get_objects(&self, interface: &str) -> HashSet<ObjectInfo> {
 		self.objects_rx
 			.borrow()
 			.get(interface)
