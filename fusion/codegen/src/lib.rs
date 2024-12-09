@@ -648,7 +648,7 @@ fn generate_argument_deserialize(
 			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<rustc_hash::FxHashMap<String, _>, crate::node::NodeError>>()?)
 		}
 		ArgumentType::Fd => {
-			quote!(_fds[#name as usize].try_clone()?)
+			quote!(_fds.remove(0))
 		}
 		_ => quote!(#name),
 	}
@@ -662,6 +662,7 @@ fn convert_deserializeable_argument_type(argument_type: &ArgumentType) -> Argume
 		ArgumentType::Map(v) => {
 			ArgumentType::Map(Box::new(convert_deserializeable_argument_type(v)))
 		}
+		ArgumentType::Fd => ArgumentType::UInt,
 		f => f.clone(),
 	}
 }
