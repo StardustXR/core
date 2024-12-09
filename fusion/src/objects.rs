@@ -2,7 +2,7 @@
 
 use crate::{
 	client::ClientHandle,
-	fields::{Field, FieldRef},
+	fields::{Field, FieldAspect, FieldRef},
 	node::NodeResult,
 	spatial::{Spatial, SpatialAspect, SpatialRef},
 };
@@ -52,7 +52,7 @@ impl FieldRefProxyExt for FieldRefProxy<'_> {
 pub struct FieldObject(u64, Field);
 impl FieldObject {
 	pub async fn new(field: Field) -> NodeResult<Self> {
-		Ok(Self(field.export_spatial().await?, field))
+		Ok(Self(field.export_field().await?, field))
 	}
 }
 #[zbus::interface(name = "org.stardustxr.FieldRef")]
