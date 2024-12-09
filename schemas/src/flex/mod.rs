@@ -248,7 +248,7 @@ struct FlexVecSerializer<'b> {
 
 struct FlexVecSerializerWrapper<'parent, 'fvb>(&'fvb mut flexbuffers::VectorBuilder<'parent>);
 
-impl<'parent, 'fvb> Serializer for FlexVecSerializerWrapper<'parent, 'fvb> {
+impl<'fvb> Serializer for FlexVecSerializerWrapper<'_, 'fvb> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -446,7 +446,7 @@ impl<'parent, 'fvb> Serializer for FlexVecSerializerWrapper<'parent, 'fvb> {
 		})
 	}
 }
-impl<'b> SerializeSeq for FlexVecSerializer<'b> {
+impl SerializeSeq for FlexVecSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -461,7 +461,7 @@ impl<'b> SerializeSeq for FlexVecSerializer<'b> {
 		Ok(())
 	}
 }
-impl<'b> SerializeTuple for FlexVecSerializer<'b> {
+impl SerializeTuple for FlexVecSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -476,7 +476,7 @@ impl<'b> SerializeTuple for FlexVecSerializer<'b> {
 		Ok(())
 	}
 }
-impl<'b> SerializeTupleStruct for FlexVecSerializer<'b> {
+impl SerializeTupleStruct for FlexVecSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -491,7 +491,7 @@ impl<'b> SerializeTupleStruct for FlexVecSerializer<'b> {
 		Ok(())
 	}
 }
-impl<'b> SerializeTupleVariant for FlexVecSerializer<'b> {
+impl SerializeTupleVariant for FlexVecSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -506,7 +506,7 @@ impl<'b> SerializeTupleVariant for FlexVecSerializer<'b> {
 		Ok(())
 	}
 }
-impl<'b> SerializeStruct for FlexVecSerializer<'b> {
+impl SerializeStruct for FlexVecSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -523,7 +523,7 @@ impl<'b> SerializeStruct for FlexVecSerializer<'b> {
 	}
 }
 
-impl<'b> SerializeStructVariant for FlexVecSerializer<'b> {
+impl SerializeStructVariant for FlexVecSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -719,7 +719,7 @@ struct FlexMapSerializerWrapper<'parent, 'fvb>(
 	&'fvb mut flexbuffers::MapBuilder<'parent>,
 );
 
-impl<'parent, 'fvb> Serializer for FlexMapSerializerWrapper<'parent, 'fvb> {
+impl<'fvb> Serializer for FlexMapSerializerWrapper<'_, 'fvb> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
@@ -918,7 +918,7 @@ impl<'parent, 'fvb> Serializer for FlexMapSerializerWrapper<'parent, 'fvb> {
 	}
 }
 
-impl<'b> SerializeMap for FlexMapSerializer<'b> {
+impl SerializeMap for FlexMapSerializer<'_> {
 	type Ok = ();
 	type Error = FlexSerializeError;
 
