@@ -269,6 +269,7 @@ fn convert_argument_type(argument: &KdlNode, key: &str) -> Result<ArgumentType, 
 				.map(ToString::to_string)
 				.ok(),
 		},
+		"fd" => ArgumentType::Fd,
 		t => {
 			return Err(ParseError::InvalidPropertyType {
 				field_name: argument.name().value().to_string(),

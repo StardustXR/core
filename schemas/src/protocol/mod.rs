@@ -8,7 +8,6 @@ pub const ROOT_PROTOCOL: &str = include_str!("root.kdl");
 pub const NODE_PROTOCOL: &str = include_str!("node.kdl");
 pub const SPATIAL_PROTOCOL: &str = include_str!("spatial.kdl");
 pub const FIELD_PROTOCOL: &str = include_str!("field.kdl");
-pub const DATA_PROTOCOL: &str = include_str!("data.kdl");
 pub const AUDIO_PROTOCOL: &str = include_str!("audio.kdl");
 pub const DRAWABLE_PROTOCOL: &str = include_str!("drawable.kdl");
 pub const INPUT_PROTOCOL: &str = include_str!("input.kdl");
@@ -125,6 +124,7 @@ pub enum ArgumentType {
 		_type: String,
 		return_id_parameter_name: Option<String>,
 	},
+	Fd,
 }
 
 #[derive(Debug)]

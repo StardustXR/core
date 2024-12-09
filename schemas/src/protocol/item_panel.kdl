@@ -148,11 +148,12 @@ aspect "PanelItem" {
         description "Send an event to stop scrolling the pointer."
         argument "surface" type="struct" struct="SurfaceID"
     }
-    signal "keyboard_keys" side="server" {
-        description "Send a series of key presses and releases (positive keycode for pressed, negative for released)."
+    signal "keyboard_key" side="server" {
+        description "Send a key press or release event with the given keymap file descriptor."
         argument "surface" type="struct" struct="SurfaceID"
-        argument "keymap_id" type="id"
-        argument "keys" type="vec" member_type="int"
+        argument "keymap" type="fd" description="File descriptor for the keymap"
+        argument "key" type="uint" description="Key code to press/release"
+        argument "pressed" type="bool" description="true for press, false for release"
     }
     signal "touch_down" side="server" {
         description "Put a touch down on this surface with the unique ID `uid` at `position` (in pixels) from top left corner of the surface."

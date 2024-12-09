@@ -21,10 +21,6 @@ pub fn codegen_field_protocol(_input: proc_macro::TokenStream) -> proc_macro::To
 	codegen_client_protocol(FIELD_PROTOCOL, true, true)
 }
 #[proc_macro]
-pub fn codegen_data_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(DATA_PROTOCOL, true, true)
-}
-#[proc_macro]
 pub fn codegen_audio_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	codegen_client_protocol(AUDIO_PROTOCOL, true, true)
 }
@@ -221,6 +217,7 @@ fn argument_type_option_name(argument_type: &ArgumentType) -> String {
 		ArgumentType::Union(u) => u.clone(),
 		ArgumentType::Struct(s) => s.clone(),
 		ArgumentType::Node { _type, .. } => _type.clone(),
+		ArgumentType::Fd => "File Descriptor".to_string(),
 	}
 }
 
@@ -532,13 +529,16 @@ fn generate_server_member(
 	match _type {
 		MemberType::Signal => {
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
-				quote! {
-					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?, Vec::new())
-				}
+				quote! {{
+					let mut _fds = Vec::new();
+					let data = stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?;
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &data, _fds)
+				}}
 			} else {
-				quote! {
-					self.node().send_remote_signal(#aspect_id, #opcode, &(#(#argument_uses),*))
-				}
+				quote! {{
+					let mut _fds = Vec::new();
+					self.node().send_remote_signal(#aspect_id, #opcode, &(#(#argument_uses),*), _fds)
+				}}
 			};
 			body = if let Some(ArgumentType::Node {
 				_type: _,
@@ -588,15 +588,17 @@ fn generate_server_member(
 				);
 				let deserialize = generate_argument_deserialize("result", &argument_type, false);
 				quote! {
+					let mut _fds = Vec::new();
 					let data = stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, Vec::new())?.await?.into_message();
+					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, _fds)?.await?.into_message();
 					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
 					Ok(#deserialize)
 				}
 			} else {
-				quote! {
-					self.node().execute_remote_method(#aspect_id, #opcode, &(#(#argument_uses),*)).await
-				}
+				quote! {{
+					let mut _fds = Vec::new();
+					self.node().execute_remote_method(#aspect_id, #opcode, &(#(#argument_uses),*), _fds).await
+				}}
 			};
 			if interface_node_id.is_some() {
 				return quote! {
@@ -644,6 +646,9 @@ fn generate_argument_deserialize(
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
 			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<rustc_hash::FxHashMap<String, _>, crate::node::NodeError>>()?)
+		}
+		ArgumentType::Fd => {
+			quote!(_fds[#name as usize].try_clone()?)
 		}
 		_ => quote!(#name),
 	}
@@ -699,6 +704,12 @@ fn generate_argument_serialize(
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_serialize("a", v, false);
 			quote!(#name.iter().map(|(k, a)| Ok((k, #mapping))).collect::<crate::node::NodeResult<rustc_hash::FxHashMap<String, _>>>()?)
+		}
+		ArgumentType::Fd => {
+			quote!({
+				_fds.push(#name);
+				(_fds.len() - 1) as u32
+			})
 		}
 		_ => quote!(#name),
 	}
@@ -821,6 +832,9 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 				let node = Ident::new(&_type.to_case(Case::Pascal), Span::call_site());
 				quote!(#node)
 			}
+		}
+		ArgumentType::Fd => {
+			quote!(std::os::unix::io::OwnedFd)
 		}
 	}
 }

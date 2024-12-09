@@ -26,51 +26,8 @@ use crate::{
 };
 use stardust_xr::values::*;
 
-stardust_xr_fusion_codegen::codegen_data_protocol!();
-
-impl_aspects!(PulseSender: OwnedAspect, SpatialRefAspect, SpatialAspect);
-impl PulseSender {
-	pub fn create(
-		spatial_parent: &impl SpatialRefAspect,
-		transform: Transform,
-		mask: &Datamap,
-	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
-		create_pulse_sender(
-			&client,
-			client.generate_id(),
-			spatial_parent,
-			transform,
-			mask,
-		)
-	}
-}
-
-impl_aspects!(PulseReceiver: OwnedAspect, SpatialRefAspect, SpatialAspect);
-impl PulseReceiver {
-	pub fn create(
-		spatial_parent: &impl SpatialRefAspect,
-		transform: Transform,
-		field: &impl FieldAspect,
-		mask: &Datamap,
-	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
-		create_pulse_receiver(
-			&client,
-			client.generate_id(),
-			spatial_parent,
-			transform,
-			field,
-			mask,
-		)
-	}
-}
-
-#[cfg(feature = "keymap")]
 pub use xkbcommon::xkb;
-#[cfg(feature = "keymap")]
 use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
-#[cfg(feature = "keymap")]
 impl crate::client::ClientHandle {
 	pub fn register_xkb_keymap(
 		&self,
@@ -99,53 +56,4 @@ impl crate::client::ClientHandle {
 		)
 		.ok_or_else(|| crate::node::NodeError::InvalidPath)
 	}
-}
-
-#[tokio::test]
-async fn fusion_pulses() {
-	use crate::*;
-	let mut client = Client::connect().await.expect("Couldn't connect");
-
-	#[derive(Debug, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
-	struct Test {
-		test: (),
-	}
-
-	let field = super::fields::Field::create(
-		client.get_root(),
-		Transform::identity(),
-		crate::fields::Shape::Sphere(0.1),
-	)
-	.unwrap();
-	let data = Datamap::from_typed(Test::default()).unwrap();
-	let pulse_sender = PulseSender::create(client.get_root(), Transform::none(), &data).unwrap();
-	let pulse_receiver =
-		PulseReceiver::create(client.get_root(), Transform::none(), &field, &data).unwrap();
-
-	let event_loop = client.sync_event_loop(|_client, stop| {
-		while let Some(sender_event) = pulse_sender.recv_pulse_sender_event() {
-			match sender_event {
-				PulseSenderEvent::NewReceiver { receiver, field } => {
-					println!("New pulse receiver {:?} with field {:?}", receiver, field);
-					receiver.send_data(&pulse_sender, &data).unwrap();
-				}
-				PulseSenderEvent::DropReceiver { id } => {
-					println!("Pulse receiver {} dropped", id);
-				}
-			}
-		}
-		while let Some(receiver_event) = pulse_receiver.recv_pulse_receiver_event() {
-			match receiver_event {
-				PulseReceiverEvent::Data { sender, data } => {
-					println!("Pulse sender {sender:?} sent {data:?}");
-					stop.stop();
-				}
-			}
-		}
-	});
-
-	tokio::time::timeout(std::time::Duration::from_secs(1), event_loop)
-		.await
-		.unwrap()
-		.unwrap()
 }

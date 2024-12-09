@@ -93,8 +93,12 @@ pub trait NodeType: Sized + Send + Sync + 'static {
 	}
 	/// Set whether the node is active or not. This has different effects depending on the node.
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.node()
-			.send_remote_signal(OWNED_ASPECT_ID, OWNED_SET_ENABLED_SERVER_OPCODE, &enabled)
+		self.node().send_remote_signal(
+			OWNED_ASPECT_ID,
+			OWNED_SET_ENABLED_SERVER_OPCODE,
+			&enabled,
+			vec![],
+		)
 	}
 }
 
@@ -138,12 +142,13 @@ impl Node {
 		aspect: u64,
 		signal: u64,
 		data: &S,
+		fds: Vec<OwnedFd>,
 	) -> Result<(), NodeError> {
 		self.send_remote_signal_raw(
 			aspect,
 			signal,
 			&serialize(data).map_err(|_| NodeError::Serialization)?,
-			Vec::new(),
+			fds,
 		)
 	}
 	/// Send a signal to the node on the server with raw data (like when sending flatbuffers over). Not needed unless implementing functionality Fusion does not already have.
@@ -165,9 +170,10 @@ impl Node {
 		aspect: u64,
 		method: u64,
 		send_data: &S,
+		fds: Vec<OwnedFd>,
 	) -> Result<D, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(aspect, method, &send_data, Vec::new())?;
+		let future = self.execute_remote_method_raw(aspect, method, &send_data, fds)?;
 		let data = future.await?;
 		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
 	}
