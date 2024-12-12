@@ -2,6 +2,19 @@ version (u32)1
 interface (u64)12
 description ""
 
+method "register_keymap" side="server" {
+	description "Register a keymap with the server to easily identify it later"
+
+	argument "keymap" type="string"
+	return type="id"
+}
+method "get_keymap" side="server" {
+	description "Get the keymap string representation from an ID"
+
+	argument "keymap_id" type="id"
+	return type="string"
+}
+
 union "SurfaceID" {
 	description ""
 

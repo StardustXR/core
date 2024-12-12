@@ -37,3 +37,38 @@ impl PanelItemAcceptor {
 		create_panel_item_acceptor(client, client.generate_id(), parent, transform, field)
 	}
 }
+
+#[cfg(feature = "keymap")]
+pub use xkbcommon::xkb;
+#[cfg(feature = "keymap")]
+use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
+#[cfg(feature = "keymap")]
+impl crate::client::ClientHandle {
+	pub fn register_xkb_keymap(
+		&self,
+		keymap_string: String,
+	) -> NodeResult<impl std::future::Future<Output = NodeResult<u64>> + Send + Sync> {
+		let client = self.get_root().client();
+		Keymap::new_from_string(
+			&Context::new(0),
+			keymap_string.clone(),
+			FORMAT_TEXT_V1,
+			KEYMAP_COMPILE_NO_FLAGS,
+		)
+		.ok_or_else(|| crate::node::NodeError::ReturnedError {
+			e: "Invalid keymap".to_string(),
+		})?;
+		Ok(async move { register_keymap(&client?, &keymap_string).await })
+	}
+	pub async fn get_xkb_keymap(&self, keymap_id: u64) -> NodeResult<Keymap> {
+		let keymap_str = get_keymap(&self.get_root().client()?, keymap_id).await?;
+
+		Keymap::new_from_string(
+			&Context::new(0),
+			keymap_str,
+			FORMAT_TEXT_V1,
+			KEYMAP_COMPILE_NO_FLAGS,
+		)
+		.ok_or_else(|| crate::node::NodeError::InvalidPath)
+	}
+}
