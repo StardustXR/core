@@ -162,9 +162,9 @@ aspect "PanelItem" {
         argument "surface" type="struct" struct="SurfaceID"
     }
     signal "keyboard_key" side="server" {
-        description "Send a key press or release event with the given keymap file descriptor."
+        description "Send a key press or release event with the given keymap ID."
         argument "surface" type="struct" struct="SurfaceID"
-        argument "keymap" type="fd" description="File descriptor for the keymap"
+        argument "keymap_id" type="id"
         argument "key" type="uint" description="Key code to press/release"
         argument "pressed" type="bool" description="true for press, false for release"
     }
