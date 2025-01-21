@@ -89,7 +89,10 @@ impl Client {
 
 	pub fn setup_resources(&self, paths: &[&Path]) -> NodeResult<()> {
 		let paths = paths.iter().map(|p| p.to_string_lossy().to_string());
-		let env_prefixes = option_env!("STARDUST_RES_PREFIXES")
+		let runtime_prefixes = std::env::var("STARDUST_RES_PREFIXES").ok();
+		let env_prefixes = runtime_prefixes
+			.as_deref()
+			.or(option_env!("STARDUST_RES_PREFIXES"))
 			.into_iter()
 			.flat_map(|f| f.split(':'))
 			.map(|p| p.to_string());
