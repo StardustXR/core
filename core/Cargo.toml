@@ -1,5 +1,5 @@
 [package]
-edition = "2021"
+edition = "2024"
 name = "stardust-xr"
 version = "0.45.0"
 authors = ["Nova King <technobaboo@proton.me>"]

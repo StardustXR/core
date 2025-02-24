@@ -3,18 +3,16 @@
 use crate::{client::ClientHandle, scenegraph::EventParser};
 use dashmap::DashMap;
 use parking_lot::Mutex;
-use serde::{de::DeserializeOwned, Serialize, Serializer};
+use serde::{Serialize, Serializer, de::DeserializeOwned};
 use stardust_xr::{
-	messenger::{Message, MessengerError},
+	messenger::MessengerError,
 	scenegraph::ScenegraphError,
 	schemas::flex::{
-		deserialize, flexbuffers::DeserializationError, serialize, FlexSerializeError,
+		FlexSerializeError, deserialize, flexbuffers::DeserializationError, serialize,
 	},
 };
-use std::{any::Any, hash::Hash};
+use std::{any::Any, fmt::Debug, hash::Hash};
 use std::{
-	fmt::Debug,
-	future::Future,
 	os::fd::OwnedFd,
 	sync::{Arc, Weak},
 	vec::Vec,
@@ -173,25 +171,16 @@ impl Node {
 		fds: Vec<OwnedFd>,
 	) -> Result<D, NodeError> {
 		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
-		let future = self.execute_remote_method_raw(aspect, method, &send_data, fds)?;
-		let data = future.await?;
-		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
-	}
-	/// Execute a method on the node on the server with raw data (like when sending over flatbuffers). Not needed unless implementing functionality Fusion does not already have.
-	pub fn execute_remote_method_raw(
-		&self,
-		aspect: u64,
-		method: u64,
-		data: &[u8],
-		fds: Vec<OwnedFd>,
-	) -> Result<impl Future<Output = Result<Message, NodeError>>, NodeError> {
-		let future = self
+
+		let data = self
 			.client()?
 			.message_sender_handle
-			.method(self.id(), aspect, method, data, fds)
-			.map_err(|e| NodeError::MessengerError { e })?;
+			.method(self.id(), aspect, method, &send_data, fds)
+			.await
+			.map_err(|e| NodeError::MessengerError { e })?
+			.map_err(|e| NodeError::ReturnedError { e })?;
 
-		Ok(async move { future.await.map_err(|e| NodeError::ReturnedError { e }) })
+		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
 	}
 
 	pub(crate) fn recv_event<E: EventParser>(&self, id: u64) -> Option<E> {

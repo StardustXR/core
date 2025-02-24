@@ -1,5 +1,5 @@
 [package]
-edition = "2021"
+edition = "2024"
 name = "stardust-xr-schemas"
 version = "1.5.3"
 authors = ["Nova King <technobaboo@protonmail.me", "Philpax"]

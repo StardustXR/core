@@ -10,7 +10,9 @@ pub async fn connect() -> Result<UnixStream, std::io::Error> {
 		.ok()
 		.and_then(|s| s.parse::<u8>().ok())
 		.unwrap_or(0);
-	std::env::set_var("STARDUST_INSTANCE", stardust_instance.to_string());
+	unsafe {
+		std::env::set_var("STARDUST_INSTANCE", stardust_instance.to_string());
+	}
 
 	// Tries to connect the client to the server.
 	let socket_path = runtime_dir()

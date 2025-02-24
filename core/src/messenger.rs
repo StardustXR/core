@@ -3,20 +3,19 @@
 use crate::scenegraph::{self, ScenegraphError};
 use global_counter::primitive::exact::CounterU64;
 use nix::cmsg_space;
-use nix::fcntl::{fcntl, FcntlArg};
-use nix::sys::socket::{recvmsg, sendmsg, ControlMessage, ControlMessageOwned, MsgFlags};
+use nix::fcntl::{FcntlArg, fcntl};
+use nix::sys::socket::{ControlMessage, ControlMessageOwned, MsgFlags, recvmsg, sendmsg};
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
-use stardust_xr_schemas::flat::message::{root_as_message, Message as FlatMessage, MessageArgs};
+use stardust_xr_schemas::flat::message::{Message as FlatMessage, MessageArgs, root_as_message};
 use stardust_xr_schemas::flex::flexbuffers::{self};
-use std::future::Future;
 use std::io::{IoSlice, IoSliceMut};
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, Interest};
-use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::UnixStream;
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::{mpsc, oneshot};
 use tracing::instrument;
 
@@ -550,14 +549,14 @@ impl MessageSenderHandle {
 		))
 	}
 	/// Queue up a method to be sent and get back a future for when a response is returned.
-	pub fn method(
+	pub async fn method(
 		&self,
 		node_id: u64,
 		aspect: u64,
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-	) -> Result<impl Future<Output = Result<Message, String>>, MessengerError> {
+	) -> Result<Result<Message, String>, MessengerError> {
 		let (tx, rx) = oneshot::channel();
 		let message_id = self.message_counter.inc();
 		self.pending_future_tx
@@ -566,7 +565,7 @@ impl MessageSenderHandle {
 		self.send(serialize_method_call(
 			message_id, node_id, aspect, method, data, fds,
 		))?;
-		Ok(async move { rx.await.map_err(|e| e.to_string())? })
+		rx.await.map_err(|_| MessengerError::ReceiverDropped)
 	}
 
 	#[instrument(level = "trace", skip_all)]

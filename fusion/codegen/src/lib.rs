@@ -1,6 +1,6 @@
 use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use split_iter::Splittable;
 use stardust_xr_schemas::protocol::*;
 
@@ -590,7 +590,7 @@ fn generate_server_member(
 				quote! {
 					let mut _fds = Vec::new();
 					let data = stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, _fds)?.await?.into_message();
+					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
 					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
 					Ok(#deserialize)
 				}
