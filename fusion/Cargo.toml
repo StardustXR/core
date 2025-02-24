@@ -14,7 +14,7 @@ default = []
 keymap = ["dep:xkbcommon"]
 
 [dependencies]
-glam = { version = "0.24.1", features = ["mint"] }
+glam = { version = "0.30.0", features = ["mint"] }
 global_counter = "=0.2.2"
 parking_lot = "0.12.1"
 rustc-hash = "1.1.0"
@@ -41,5 +41,4 @@ split-iter = "0.1.0"
 dashmap = "6.1.0"
 
 [dev-dependencies]
-glam = { version = "0.24.1", features = ["mint"] }
 tracing-subscriber = "0.3.17"
