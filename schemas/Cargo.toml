@@ -24,7 +24,7 @@ thiserror = "1.0.56"
 
 #dbus stuff
 nanoid = "0.4.0"
-zbus = { version = "5.0.0", features = ["tokio"] }
+zbus = { version = "5.5.0", features = ["tokio"] }
 tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
 futures-util = "0.3.30"
 
