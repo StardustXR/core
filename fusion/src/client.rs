@@ -151,34 +151,60 @@ impl Client {
 		Ok(())
 	}
 	pub fn async_event_loop(mut self) -> AsyncEventLoop {
-		let notify = Arc::new(Notify::new());
-		let notify_clone = notify.clone();
-		let join_handle = tokio::spawn(async move {
-			let scenegraph = self.internal.scenegraph.clone();
-			loop {
-				tokio::select! {
-					r = self.message_tx.flush() => r?,
-					r = self.message_rx.dispatch(&*scenegraph) => r?,
-					_ = notify_clone.notified() => break,
+		let stop_notify = Arc::new(Notify::new());
+		let wait_notify = Arc::new(Notify::new());
+		let join_handle = tokio::spawn({
+			let stop_notify = stop_notify.clone();
+			let wait_notify = wait_notify.clone();
+			async move {
+				let scenegraph = self.internal.scenegraph.clone();
+				loop {
+					tokio::select! {
+						r = self.message_tx.flush() => r?,
+						r = self.message_rx.dispatch(&*scenegraph) => r?,
+						_ = stop_notify.notified() => break,
+					}
+					wait_notify.notify_waiters();
 				}
+				Ok(Client {
+					internal: self.internal,
+					message_rx: self.message_rx,
+					message_tx: self.message_tx,
+				})
 			}
-			Ok(Client {
-				internal: self.internal,
-				message_rx: self.message_rx,
-				message_tx: self.message_tx,
-			})
 		});
-		AsyncEventLoop(notify, join_handle)
+		AsyncEventLoop {
+			stop_notify,
+			join_handle,
+			wait_notify,
+		}
 	}
 }
 
-pub struct AsyncEventLoop(Arc<Notify>, JoinHandle<Result<Client, MessengerError>>);
+#[derive(Clone, Debug)]
+pub struct AsyncEventHandle(Arc<Notify>);
+
+impl AsyncEventHandle {
+	pub async fn wait(&self) {
+		self.0.notified().await
+	}
+}
+
+pub struct AsyncEventLoop {
+	stop_notify: Arc<Notify>,
+	join_handle: JoinHandle<Result<Client, MessengerError>>,
+	wait_notify: Arc<Notify>,
+}
 impl AsyncEventLoop {
 	pub async fn stop(self) -> Result<Client, MessengerError> {
-		self.0.notify_waiters();
-		self.1
+		self.stop_notify.notify_waiters();
+		self.join_handle
 			.await
 			.map_err(|e| MessengerError::IOError(e.into()))?
+	}
+
+	pub fn get_event_handle(&self) -> AsyncEventHandle {
+		AsyncEventHandle(self.wait_notify.clone())
 	}
 }
 
