@@ -35,8 +35,8 @@ pub enum NodeError {
 	NotAliased,
 	#[error("invalid path")]
 	InvalidPath,
-	#[error("Serialization failed")]
-	Serialization,
+	#[error("Serialization failed with an error: {e}")]
+	Serialization { e: FlexSerializeError },
 	#[error("Deserialization failed with an error: {e}")]
 	Deserialization { e: DeserializationError },
 	/// The server returned an error on a method return.
@@ -54,8 +54,8 @@ impl From<MessengerError> for NodeError {
 	}
 }
 impl From<FlexSerializeError> for NodeError {
-	fn from(_: FlexSerializeError) -> Self {
-		NodeError::Serialization
+	fn from(e: FlexSerializeError) -> Self {
+		NodeError::Serialization { e }
 	}
 }
 impl From<DeserializationError> for NodeError {
@@ -145,7 +145,7 @@ impl Node {
 		self.send_remote_signal_raw(
 			aspect,
 			signal,
-			&serialize(data).map_err(|_| NodeError::Serialization)?,
+			&serialize(data).map_err(|e| NodeError::Serialization { e })?,
 			fds,
 		)
 	}
@@ -170,7 +170,7 @@ impl Node {
 		send_data: &S,
 		fds: Vec<OwnedFd>,
 	) -> Result<D, NodeError> {
-		let send_data = serialize(send_data).map_err(|_| NodeError::Serialization)?;
+		let send_data = serialize(send_data).map_err(|e| NodeError::Serialization { e })?;
 
 		let data = self
 			.client()?

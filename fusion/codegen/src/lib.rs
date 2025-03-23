@@ -170,7 +170,7 @@ impl Tokenize for CustomUnion {
 		quote! {
 			#[doc = #description]
 			#derive
-			#[serde(tag = "type")]
+			#[serde(tag = "t", content = "c")]
 			pub enum #name {
 				#(#option_decls),*
 			}
