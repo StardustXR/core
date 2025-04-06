@@ -240,8 +240,8 @@ async fn fusion_sky() {
 	let mut client = crate::Client::connect().await.expect("Couldn't connect");
 	let sky_resource = stardust_xr::values::ResourceID::new_namespaced("fusion", "sky");
 
-	set_sky_light(&client.handle(), &sky_resource).unwrap();
-	set_sky_tex(&client.handle(), &sky_resource).unwrap();
+	set_sky_light(&client.handle(), Some(&sky_resource)).unwrap();
+	set_sky_tex(&client.handle(), Some(&sky_resource)).unwrap();
 
 	client.flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(5)).await;

@@ -4,13 +4,13 @@ description ""
 
 signal "set_sky_tex" side="server" {
 	description "Set the sky texture to a given HDRI file."
-	
-	argument "tex" type="resource"
+
+	argument "tex" type="resource" optional=true
 }
 signal "set_sky_light" side="server" {
 	description "Set the sky lighting to a given HDRI file."
 
-	argument "light" type="resource"
+	argument "light" type="resource" optional=true
 }
 
 
@@ -50,7 +50,7 @@ aspect "Lines" {
 
 union "MaterialParameter" {
 	description ""
-	
+
 	option type="bool"
 	option type="int"
 	option type="uint"
