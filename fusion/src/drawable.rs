@@ -237,12 +237,20 @@ async fn fusion_text() {
 
 #[tokio::test]
 async fn fusion_sky() {
-	let mut client = crate::Client::connect().await.expect("Couldn't connect");
+	let client = crate::Client::connect().await.expect("Couldn't connect");
+	client
+		.setup_resources(&[&crate::project_local_resources!("res")])
+		.unwrap();
+	let client_handle = client.handle();
+	let _event_loop = client.async_event_loop();
 	let sky_resource = stardust_xr::values::ResourceID::new_namespaced("fusion", "sky");
 
-	set_sky_light(&client.handle(), Some(&sky_resource)).unwrap();
-	set_sky_tex(&client.handle(), Some(&sky_resource)).unwrap();
+	set_sky_light(&client_handle, Some(&sky_resource)).unwrap();
+	set_sky_tex(&client_handle, Some(&sky_resource)).unwrap();
 
-	client.flush().await.unwrap();
 	tokio::time::sleep(core::time::Duration::from_secs(5)).await;
+
+	set_sky_light(&client_handle, None).unwrap();
+	set_sky_tex(&client_handle, None).unwrap();
+	tokio::time::sleep(core::time::Duration::from_secs(1)).await;
 }
