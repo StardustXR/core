@@ -1,11 +1,11 @@
 use glam::Quat;
-use stardust_xr::values::{color::rgba_linear, ResourceID};
+use stardust_xr::values::{ResourceID, color::rgba_linear};
 use stardust_xr_fusion::{
+	Client,
 	drawable::{MaterialParameter, Model, ModelPartAspect},
 	project_local_resources,
 	root::{ClientState, RootAspect, RootEvent},
 	spatial::{SpatialAspect, Transform},
-	Client,
 };
 
 #[tokio::main(flavor = "current_thread")]
@@ -42,6 +42,9 @@ async fn main() {
 		.sync_event_loop(|client, _stop| {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
+					RootEvent::Ping { response } => {
+						response.send(Ok(()));
+					}
 					RootEvent::Frame { info } => {
 						elapsed += info.delta;
 

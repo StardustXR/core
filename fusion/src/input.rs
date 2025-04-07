@@ -25,7 +25,7 @@ use crate::{
 	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
-use glam::{vec3a, Quat};
+use glam::{Quat, vec3a};
 use stardust_xr::values::*;
 use std::hash::Hash;
 
@@ -187,10 +187,12 @@ async fn fusion_input_handler() {
 				InputDataType::Hand(_) => {
 					println!("Hand input");
 					data.datamap.with_data(|datamap| {
-						dbg!(datamap
-							.iter_keys()
-							.zip(datamap.iter_values())
-							.collect::<Vec<_>>());
+						dbg!(
+							datamap
+								.iter_keys()
+								.zip(datamap.iter_values())
+								.collect::<Vec<_>>()
+						);
 						let _ = dbg!(datamap.idx("right").get_bool());
 					});
 				}
@@ -204,9 +206,9 @@ async fn fusion_input_handler() {
 
 #[tokio::test]
 async fn fusion_pointer_input_method() {
+	use crate::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
-	use crate::Client;
 
 	let mut client = Client::connect().await.expect("Couldn't connect");
 
@@ -240,6 +242,9 @@ async fn fusion_pointer_input_method() {
 		.sync_event_loop(|client, _| {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
+					RootEvent::Ping { response } => {
+						response.send(Ok(()));
+					}
 					RootEvent::Frame { info } => {
 						let (sin, cos) = info.elapsed.sin_cos();
 						pointer
@@ -265,9 +270,9 @@ async fn fusion_pointer_input_method() {
 
 #[tokio::test]
 async fn fusion_tip_input_method() {
+	use crate::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
-	use crate::Client;
 
 	let mut client = Client::connect().await.expect("Couldn't connect");
 
@@ -307,6 +312,9 @@ async fn fusion_tip_input_method() {
 		.sync_event_loop(|client, _| {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
+					RootEvent::Ping { response } => {
+						response.send(Ok(()));
+					}
 					RootEvent::Frame { info } => {
 						let (sin, cos) = info.elapsed.sin_cos();
 						tip.set_local_transform(Transform::from_translation([

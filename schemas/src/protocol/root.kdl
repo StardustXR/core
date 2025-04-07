@@ -19,45 +19,51 @@ aspect "Root" {
 	description ""
 	inherits "SpatialRef"
 
+
+	method "ping" side="client" {
+		description "Checks if the client is still alive and responding to messages, respond as soon as you get this"
+		return type="empty"
+	}
+
 	signal "frame" side="client" {
 		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
-	
+
 		argument "info" type="struct" struct="FrameInfo"
 	}
 	method "get_state" side="server" {
 		description "Get the current state. Useful to check the state before you initialize your application!"
-	
+
 		return type="struct" struct="ClientState"
 	}
 	method "save_state" side="client" {
 		description "Runs every frame with information about the current frame, for animations and motion and a consistent update."
-	
+
 		return type="struct" struct="ClientState"
 	}
-	
+
 	method "generate_state_token" side="server" {
 		description r#"
 			Generate a client state token and return it back.
-	
+
 			When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
 			Make sure the environment variable shows in `/proc/{pid}/environ` as that's the only reliable way to pass the value to the server (suggestions welcome).
 		"#
-	
+
 		argument "state" type="struct" struct="ClientState"
 		return type="string"
 	}
 	method "get_connection_environment" side="server" {
 		description "Get a hashmap of all the environment variables to connect a given app to the stardust server"
-		
+
 		return type="map" value_type="string"
 	}
-	
+
 	signal "set_base_prefixes" side="server" {
 		description "Set initial list of folders to look for namespaced resources in"
-		
+
 		argument "prefixes" type="vec" member_type="string"
 	}
-	
+
 	signal "disconnect" side="server" {
 		description "Cleanly disconnect from the server"
 	}

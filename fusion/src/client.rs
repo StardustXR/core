@@ -284,6 +284,9 @@ async fn fusion_client_life_cycle() {
 		.sync_event_loop(|client, flow| {
 			while let Some(event) = client.get_root().recv_root_event() {
 				match event {
+					RootEvent::Ping { response } => {
+						response.send(Ok(()));
+					}
 					RootEvent::Frame { info: _ } => {
 						println!("Got frame event");
 						flow.stop();
