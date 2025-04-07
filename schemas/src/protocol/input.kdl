@@ -87,9 +87,14 @@ signal "create_input_method" side="server" {
 aspect "InputMethodRef" {
 	description "Node representing a spatial input device"
 	inherits "SpatialRef"
-	
-	signal "request_capture" side="server" {
-		description "Have the input handler that this method reference came from capture the method for the next frame."
+
+	signal "try_capture" side="server" {
+		description "Try to capture the input method with the given handler. When the handler does not get input from the method, it will be released."
+
+		argument "handler" type="node" aspect="InputHandler"
+	}
+	signal "release" side="server" {
+		description "If captured by this handler, release it (e.g. the object is let go of after grabbing)."
 
 		argument "handler" type="node" aspect="InputHandler"
 	}
@@ -116,7 +121,7 @@ aspect "InputMethod" {
 	}
 	signal "set_captures" side="server" {
 		description "Set which handlers are captured."
-		
+
 		argument "handlers" type="vec" member_type="node" aspect="InputHandler"
 	}
 
@@ -140,7 +145,7 @@ aspect "InputMethod" {
 
 signal "create_input_handler" side="server" {
 	description "Create an input handler node"
-    
+
     argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="Transform"

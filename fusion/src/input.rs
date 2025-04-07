@@ -11,13 +11,6 @@
 //! For example when grabbing you don't want your hand to press buttons if you're grabbing the object through them.
 //! Input handlers should account for the occasional case where their field is closer than an input handler that captured a method by filtering out interactions that are triggered the same frame the input method first becomes visible.
 //! Capturing an input method may be delayed a frame or 2.
-//!
-//! Every frame, for each input method, the server will:
-//! - Sort the input handlers by the distance from the input method to their fields (often absolute value for onion skinning)
-//! - Send out input events (`InputHandlerHandler::input`) in order of distance until an input handler has captured the method.
-//! - The frame event is sent (`LifeCycle::frame`).
-//!
-//! You may want to use the `InputAction`-based structs in molecules for an easy way to parse and react to the raw input.
 
 use crate::{
 	fields::{Field, FieldAspect},
