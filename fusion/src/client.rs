@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
 use tokio::net::UnixStream;
-use tokio::sync::{Notify, OnceCell};
+use tokio::sync::{Mutex, Notify, OnceCell};
 use tokio::task::JoinHandle;
 
 #[derive(Error, Debug)]
@@ -129,15 +129,18 @@ impl Client {
 		}
 	}
 
-	pub async fn sync_event_loop<F: FnMut(&Arc<ClientHandle>, &mut ControlFlow)>(
+	pub async fn sync_event_loop<
+		F: FnMut(&Arc<ClientHandle>, &mut ControlFlow) + Send + Sync + 'static,
+	>(
 		&mut self,
-		mut f: F,
+		f: F,
 	) -> Result<(), MessengerError> {
-		let mut flow = ControlFlow::Wait;
+		let f = Arc::new(Mutex::new(f));
+		let flow = Arc::new(Mutex::new(ControlFlow::Wait));
 		let handle = self.handle();
 		loop {
 			self.try_flush().await?;
-			match flow {
+			match *flow.lock().await {
 				ControlFlow::Poll => Ok(()),
 				ControlFlow::Wait => self.dispatch().await,
 				ControlFlow::WaitUntil(instant) => tokio::select! {
@@ -146,7 +149,15 @@ impl Client {
 				},
 				ControlFlow::Stop => break,
 			}?;
-			(f)(&handle, &mut flow);
+			_ = tokio::task::spawn_blocking({
+				let handle = handle.clone();
+				let f = f.clone();
+				let flow = flow.clone();
+				move || {
+					(f.blocking_lock())(&handle, &mut flow.blocking_lock());
+				}
+			})
+			.await;
 		}
 		Ok(())
 	}
