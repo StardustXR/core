@@ -136,6 +136,11 @@ aspect "InputMethod" {
 
 		argument "id" type="id"
 	}
+	signal "release_handler" side="client" {
+		description "An input handler releases this input method."
+
+		argument "id" type="id"
+	}
 	signal "destroy_handler" side="client" {
 		description "An input handler has just been destroyed."
 
