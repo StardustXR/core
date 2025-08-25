@@ -8,7 +8,6 @@ use nix::sys::socket::{ControlMessage, ControlMessageOwned, MsgFlags, recvmsg, s
 use rustc_hash::FxHashMap;
 use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
 use stardust_xr_schemas::flat::message::{Message as FlatMessage, MessageArgs, root_as_message};
-use stardust_xr_schemas::flex::flexbuffers::{self};
 use std::io::{IoSlice, IoSliceMut};
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::sync::Arc;
@@ -18,71 +17,6 @@ use tokio::net::UnixStream;
 use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::{mpsc, oneshot};
 use tracing::instrument;
-
-#[allow(clippy::too_many_arguments)]
-fn trace_call(
-	incoming: bool,
-	call_type: u8,
-	message_id: u64,
-	node_id: u64,
-	aspect: u64,
-	method: u64,
-	err: Option<&str>,
-	data: &[u8],
-) {
-	let level = match call_type {
-		0 => tracing::Level::WARN,
-		_ => tracing::Level::TRACE,
-	};
-
-	if tracing::level_enabled!(level) {
-		let call_type = match call_type {
-			0 => "error",
-			1 => "signal",
-			2 => "method call",
-			3 => "method return",
-			_ => "unknown",
-		};
-		let data = match flexbuffers::Reader::get_root(data) {
-			Ok(root) => root.to_string(),
-			Err(_) => String::from_utf8_lossy(data).into_owned(),
-		};
-
-		match level {
-			tracing::Level::WARN => {
-				tracing::warn!(
-					source = match incoming {
-						true => "remote",
-						false => "local",
-					},
-					message_id,
-					node_id,
-					aspect,
-					method,
-					err,
-					data,
-					"Stardust error",
-				)
-			}
-			_ => {
-				tracing::trace!(
-					direction = match incoming {
-						true => "incoming",
-						false => "outgoing",
-					},
-					call_type,
-					message_id,
-					node_id,
-					aspect,
-					method,
-					err,
-					data,
-					"Stardust message",
-				)
-			}
-		}
-	}
-}
 
 /// Error for all messenger-related failures.
 #[derive(Error, Debug)]
@@ -227,16 +161,6 @@ impl MessageReceiver {
 		let message = root_as_message(&raw_message)?;
 		let message_type = message.type_();
 
-		trace_call(
-			true,
-			message_type,
-			message.message_id(),
-			message.node_id(),
-			message.aspect(),
-			message.method(),
-			message.error(),
-			message.data().map(|d| d.bytes()).unwrap_or(&[]),
-		);
 		let message_id = message.message_id();
 		let node_id = message.node_id();
 		let aspect_id = message.aspect();
@@ -372,10 +296,6 @@ fn serialize_call(
 	data: &[u8],
 	fds: Vec<OwnedFd>,
 ) -> Message {
-	trace_call(
-		false, call_type, message_id, node_id, aspect, method, err, data,
-	);
-
 	let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(1024);
 	let flex_err = err.map(|s| fbb.create_string(s));
 	let flex_data = fbb.create_vector(data);
