@@ -3,8 +3,8 @@ use crate::impl_aspects;
 use crate::spatial::{SpatialRef, SpatialRefAspect};
 use color_eyre::eyre::Result;
 use rustc_hash::FxHashMap;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use stardust_xr::schemas::flex::flexbuffers;
 use std::sync::Arc;
 
@@ -64,4 +64,25 @@ impl ClientState {
 			.map(|(k, v)| (k.to_string(), SpatialRef::from_id(client, *v, false)))
 			.collect()
 	}
+}
+
+#[tokio::test]
+async fn fusion_root_save_state() {
+	use crate::Client;
+	let mut client = Client::connect().await.expect("Couldn't connect");
+	client
+		.sync_event_loop(|client, _| {
+			let root = client.get_root();
+			while let Some(event) = root.recv_root_event() {
+				match event {
+					RootEvent::Ping { response } => response.send(Ok(())),
+					RootEvent::Frame { info: _ } => (),
+					RootEvent::SaveState { response } => {
+						response.send(ClientState::from_data_root(Some(()), root));
+					}
+				}
+			}
+		})
+		.await
+		.unwrap();
 }
