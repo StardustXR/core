@@ -208,7 +208,7 @@ impl MessageReceiver {
 						Ok(fds)
 					}
 					Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
-					Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+					Err(e) => Err(std::io::Error::other(e)),
 				}
 			})
 			.await?;
@@ -326,7 +326,7 @@ pub fn serialize_error<T: std::fmt::Display>(
 	err: T,
 	data: &[u8],
 ) -> Message {
-	let error = format!("{}", err);
+	let error = format!("{err}");
 	serialize_call(
 		0,
 		message_id,
@@ -463,7 +463,7 @@ impl MessageSender {
 					match sendmsg::<()>(stream.as_raw_fd(), iov, cmsgs, MsgFlags::empty(), None) {
 						Ok(_) => Ok(()),
 						Err(nix::Error::EWOULDBLOCK) => Err(std::io::ErrorKind::WouldBlock.into()),
-						Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+						Err(e) => Err(std::io::Error::other(e)),
 					}
 				})
 				.await?;
