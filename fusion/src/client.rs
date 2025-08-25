@@ -151,6 +151,7 @@ impl Client {
 		Ok(())
 	}
 	pub fn async_event_loop(mut self) -> AsyncEventLoop {
+		let client_handle = self.handle();
 		let stop_notify = Arc::new(Notify::new());
 		let wait_notify = Arc::new(Notify::new());
 		let join_handle = tokio::spawn({
@@ -174,6 +175,7 @@ impl Client {
 			}
 		});
 		AsyncEventLoop {
+			client_handle,
 			stop_notify,
 			join_handle,
 			wait_notify,
@@ -191,6 +193,7 @@ impl AsyncEventHandle {
 }
 
 pub struct AsyncEventLoop {
+	pub client_handle: Arc<ClientHandle>,
 	stop_notify: Arc<Notify>,
 	join_handle: JoinHandle<Result<Client, MessengerError>>,
 	wait_notify: Arc<Notify>,
