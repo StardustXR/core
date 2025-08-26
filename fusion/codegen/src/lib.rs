@@ -106,7 +106,7 @@ impl Tokenize for Protocol {
 						);
 						let opcode = m.opcode;
 
-						let member = generate_server_member(Some(p.node_id), 0, m);
+						let member = generate_server_member(Some(p.node_id), 0, "Interface", m);
 						quote! {
 							pub(crate) const #name: u64 = #opcode;
 							#member
@@ -322,7 +322,8 @@ impl Tokenize for Aspect {
 			.iter()
 			.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
 			.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
-		let server_side_members = server_members.map(|m| generate_server_member(None, self.id, m));
+		let server_side_members =
+			server_members.map(|m| generate_server_member(None, self.id, &self.name, m));
 		let do_add_aspect = self.members.iter().any(|m| m.side == Side::Client);
 		let add_aspect_tokens = do_add_aspect
 			.then_some(quote!(client.scenegraph.add_aspect::<#event_name>(&node);))
@@ -397,7 +398,7 @@ impl Tokenize for Aspect {
 
 			#[allow(clippy::all)]
 			#[doc = #description]
-			pub trait #aspect_trait_name: #inherit_types {
+			pub trait #aspect_trait_name: #inherit_types + std::fmt::Debug {
 				#events_method
 				#(#server_side_members)*
 			}
@@ -491,10 +492,12 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 fn generate_server_member(
 	interface_node_id: Option<u64>,
 	aspect_id: u64,
+	aspect_name: &str,
 	member: &Member,
 ) -> TokenStream {
 	let opcode = member.opcode;
-	let name = Ident::new(&member.name.to_case(Case::Snake), Span::call_site());
+	let name_str = member.name.to_case(Case::Snake);
+	let name = Ident::new(&name_str, Span::call_site());
 	let description = &member.description;
 
 	if member.side == Side::Client {
@@ -507,6 +510,18 @@ fn generate_server_member(
 	} else {
 		quote!(&self)
 	};
+
+	let arguments = member
+		.arguments
+		.iter()
+		.map(|a| Ident::new(&a.name.to_case(Case::Snake), Span::call_site()));
+	let arguments_debug = member
+		.arguments
+		.iter()
+		.map(|a| Ident::new(&a.name.to_case(Case::Snake), Span::call_site()))
+		.map(|a| quote!(?#a))
+		.reduce(|a, b| quote!(#a, #b))
+		.map(|a| quote!(#a,));
 	let argument_decls = member
 		.arguments
 		.iter()
@@ -525,19 +540,24 @@ fn generate_server_member(
 
 	match _type {
 		MemberType::Signal => {
-			let mut body = if let Some(interface_node_id) = &interface_node_id {
-				quote! {{
-					let mut _fds = Vec::new();
-					let data = (#(#argument_uses),*);
+			let send_signal = if let Some(interface_node_id) = &interface_node_id {
+				quote! {
 					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
-					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)
-				}}
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)?;
+				}
 			} else {
 				quote! {{
-					let mut _fds = Vec::new();
-					let data = (#(#argument_uses),*);
-					self.node().send_remote_signal(#aspect_id, #opcode, &data, _fds)
+					self.node().send_remote_signal(#aspect_id, #opcode, &data, _fds)?;
 				}}
+			};
+			let mut body = quote! {
+				let mut _fds = Vec::new();
+				let data = (#(#argument_uses),*);
+				#send_signal
+				{
+					let (#(#arguments),*) = data;
+					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
+				}
 			};
 			body = if let Some(ArgumentType::Node {
 				_type: _,
@@ -548,15 +568,16 @@ fn generate_server_member(
 				let get_client = if interface_node_id.is_some() {
 					quote!(_client)
 				} else {
-					quote!(self.node().client()?)
+					quote!(&self.node().client()?)
 				};
 				quote! {
-					#body?;
-					Ok(#return_type::from_id(&#get_client, #id_argument, true))
+					{ #body }
+					Ok(#return_type::from_id(#get_client, #id_argument, true))
 				}
 			} else {
 				quote! {
-					Ok(#body?)
+					#body
+					Ok(())
 				}
 			};
 			if interface_node_id.is_some() {
