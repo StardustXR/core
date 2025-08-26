@@ -285,7 +285,7 @@ impl Tokenize for Aspect {
 		});
 
 		let aspect_name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
-		let event_name = Ident::new(&format!("{}Event", aspect_name), Span::call_site());
+		let event_name = Ident::new(&format!("{aspect_name}Event"), Span::call_site());
 		let aspect_events = {
 			let variants = self
 				.members
@@ -373,23 +373,20 @@ impl Tokenize for Aspect {
 			impl #aspect_trait_name for #node_name {}
 		});
 
-		let events_method = self
-			.members
-			.iter()
-			.any(|m| m.side == Side::Client)
-			.then(|| {
-				let recv_event_method_name = Ident::new(
-					&format!("recv_{}_event", self.name.to_case(Case::Snake)),
-					Span::call_site(),
-				);
-				let id = self.id;
-				quote! {
-					fn #recv_event_method_name(&self) -> Option<#event_name> {
-						self.node().recv_event(#id)
-					}
+		let events_method = if self.members.iter().any(|m| m.side == Side::Client) {
+			let recv_event_method_name = Ident::new(
+				&format!("recv_{}_event", self.name.to_case(Case::Snake)),
+				Span::call_site(),
+			);
+			let id = self.id;
+			quote! {
+				fn #recv_event_method_name(&self) -> Option<#event_name> {
+					self.node().recv_event(#id)
 				}
-			})
-			.unwrap_or_default();
+			}
+		} else {
+			Default::default()
+		};
 		quote! {
 			#node
 			#aspect_id
@@ -410,7 +407,7 @@ impl Tokenize for Aspect {
 
 fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 	let aspect_name = Ident::new(&aspect.name.to_case(Case::Pascal), Span::call_site());
-	let event_name = Ident::new(&format!("{}Event", aspect_name), Span::call_site());
+	let event_name = Ident::new(&format!("{aspect_name}Event"), Span::call_site());
 	let opcode = aspect.id;
 
 	let (signal_matches, method_matches) = aspect
@@ -531,13 +528,15 @@ fn generate_server_member(
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {{
 					let mut _fds = Vec::new();
-					let data = stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?;
-					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &data, _fds)
+					let data = (#(#argument_uses),*);
+					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)
 				}}
 			} else {
 				quote! {{
 					let mut _fds = Vec::new();
-					self.node().send_remote_signal(#aspect_id, #opcode, &(#(#argument_uses),*), _fds)
+					let data = (#(#argument_uses),*);
+					self.node().send_remote_signal(#aspect_id, #opcode, &data, _fds)
 				}}
 			};
 			body = if let Some(ArgumentType::Node {
@@ -589,15 +588,17 @@ fn generate_server_member(
 				let deserialize = generate_argument_deserialize("result", &argument_type, false);
 				quote! {
 					let mut _fds = Vec::new();
-					let data = stardust_xr::schemas::flex::serialize(&(#(#argument_uses),*))?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
+					let data = (#(#argument_uses),*);
+					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
 					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
 					Ok(#deserialize)
 				}
 			} else {
 				quote! {{
 					let mut _fds = Vec::new();
-					self.node().execute_remote_method(#aspect_id, #opcode, &(#(#argument_uses),*), _fds).await
+					let data = (#(#argument_uses),*);
+					self.node().execute_remote_method(#aspect_id, #opcode, &data, _fds).await
 				}}
 			};
 			if interface_node_id.is_some() {
