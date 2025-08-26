@@ -1,7 +1,6 @@
 use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
-use split_iter::Splittable;
 use stardust_xr_schemas::protocol::*;
 
 #[proc_macro]
@@ -407,26 +406,34 @@ impl Tokenize for Aspect {
 }
 
 fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
-	let aspect_name = Ident::new(&aspect.name.to_case(Case::Pascal), Span::call_site());
+	let aspect_name = aspect.name.to_case(Case::Pascal);
 	let event_name = Ident::new(&format!("{aspect_name}Event"), Span::call_site());
 	let opcode = aspect.id;
 
-	let (signal_matches, method_matches) = aspect
+	let (signal_matches, method_matches): (Vec<_>, Vec<_>) = aspect
 		.members
 		.iter()
 		.filter(|m| m.side == Side::Client)
-		.map(|m| {
-			let opcode = m.opcode;
-			let variant_name = Ident::new(&m.name.to_case(Case::Pascal), Span::call_site());
-			let field_names = m
+		.map(|member| -> (MemberType, TokenStream) {
+			let opcode = member.opcode;
+			let variant_str = member.name.to_case(Case::Snake);
+			let variant_name = Ident::new(&member.name.to_case(Case::Pascal), Span::call_site());
+			let field_names = member
 				.arguments
 				.iter()
 				.map(|a| Ident::new(&a.name.to_case(Case::Snake), Span::call_site()));
-			let deserialize_types = m
+			let fields_debug = member
+				.arguments
+				.iter()
+				.map(|a| Ident::new(&a.name.to_case(Case::Snake), Span::call_site()))
+				.map(|a| quote!(?#a))
+				.reduce(|a, b| quote!(#a, #b))
+				.map(|a| quote!(#a,));
+			let deserialize_types = member
 				.arguments
 				.iter()
 				.map(|a| generate_argument_type(&convert_deserializeable_argument_type(&a._type), true));
-			let field_uses: Vec<_> = m
+			let field_uses: Vec<_> = member
 				.arguments
 				.iter()
 				.map(|a| {
@@ -437,7 +444,7 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 				})
 				.collect();
 
-			let response_sender = if m._type == MemberType::Method {
+			let response_sender = if member._type == MemberType::Method {
 				quote! {
 					response: crate::TypedMethodResponse(response.borrow_mut().take().unwrap(), std::marker::PhantomData),
 				}
@@ -445,20 +452,32 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 				quote!()
 			};
 
+			let debug = if member._type == MemberType::Signal {
+				quote! {
+					tracing::trace!(#fields_debug "Got signal from server, {}::{}", #aspect_name, #variant_str);
+				}
+			} else {
+				quote! {
+					tracing::trace!(#fields_debug "Method called from server, {}::{}", #aspect_name, #variant_str);
+				}
+			};
+
 			(
-				m._type,
+				member._type,
 				quote! {
 					#opcode => {
 						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr::schemas::flex::deserialize(_data)?;
+
+						#debug
 						Ok(#event_name::#variant_name { #(#field_uses,)* #response_sender })
 					}
 				},
 			)
 		})
-		.split(|(_ty, _)| _ty == &MemberType::Method);
+		.partition(|(_ty, _)| _ty == &MemberType::Signal);
 
-	let signal_matches = signal_matches.map(|t| t.1);
-	let method_matches = method_matches.map(|t| t.1);
+	let signal_matches = signal_matches.into_iter().map(|t| t.1);
+	let method_matches = method_matches.into_iter().map(|t| t.1);
 
 	quote! {
 		#[allow(clippy::all)]
@@ -540,21 +559,22 @@ fn generate_server_member(
 
 	match _type {
 		MemberType::Signal => {
-			let send_signal = if let Some(interface_node_id) = &interface_node_id {
+			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
+					let mut _fds = Vec::new();
+					let data = (#(#argument_uses),*);
 					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
 					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)?;
+
+					let (#(#arguments),*) = data;
+					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
 				}
 			} else {
-				quote! {{
+				quote! {
+					let mut _fds = Vec::new();
+					let data = (#(#argument_uses),*);
 					self.node().send_remote_signal(#aspect_id, #opcode, &data, _fds)?;
-				}}
-			};
-			let mut body = quote! {
-				let mut _fds = Vec::new();
-				let data = (#(#argument_uses),*);
-				#send_signal
-				{
+
 					let (#(#arguments),*) = data;
 					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
 				}
@@ -600,26 +620,39 @@ fn generate_server_member(
 			}
 		}
 		MemberType::Method => {
+			let argument_type = member.return_type.clone().unwrap_or(ArgumentType::Empty);
+			let deserializeable_type = generate_argument_type(
+				&convert_deserializeable_argument_type(&argument_type),
+				true,
+			);
+			let deserialize = generate_argument_deserialize("result", &argument_type, false);
 			let body = if let Some(interface_node_id) = &interface_node_id {
-				let argument_type = member.return_type.clone().unwrap_or(ArgumentType::Empty);
-				let deserializeable_type = generate_argument_type(
-					&convert_deserializeable_argument_type(&argument_type),
-					true,
-				);
-				let deserialize = generate_argument_deserialize("result", &argument_type, false);
 				quote! {
 					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
+					{
+						let (#(#arguments),*) = &data;
+						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
+					}
 					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
 					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
 					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
-					Ok(#deserialize)
+					let deserialized = #deserialize;
+					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
+					Ok(deserialized)
 				}
 			} else {
 				quote! {{
 					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					self.node().execute_remote_method(#aspect_id, #opcode, &data, _fds).await
+					{
+						let (#(#arguments),*) = &data;
+						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
+					}
+					let result: #deserializeable_type = self.node().execute_remote_method(#aspect_id, #opcode, &data, _fds).await?;
+					let deserialized = #deserialize;
+					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
+					Ok(deserialized)
 				}}
 			};
 			if interface_node_id.is_some() {
@@ -667,7 +700,7 @@ fn generate_argument_deserialize(
 		}
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
-			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<rustc_hash::FxHashMap<String, _>, crate::node::NodeError>>()?)
+			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<stardust_xr::values::Map<String, _>, crate::node::NodeError>>()?)
 		}
 		ArgumentType::Fd => {
 			quote!(_fds.remove(0))
