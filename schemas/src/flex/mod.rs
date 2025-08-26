@@ -1,5 +1,6 @@
 use flexbuffers::{BitWidth, DeserializationError, FlexBufferType, ReaderError, ReaderIterator};
 use serde::{
+	Deserialize, Deserializer, Serialize, Serializer,
 	de::{
 		DeserializeSeed, EnumAccess, IntoDeserializer, MapAccess, SeqAccess, VariantAccess, Visitor,
 	},
@@ -7,7 +8,6 @@ use serde::{
 		SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
 		SerializeTupleStruct, SerializeTupleVariant,
 	},
-	Deserialize, Deserializer, Serialize, Serializer,
 };
 use std::{borrow::BorrowMut, cell::RefCell, f32::consts::PI, fmt::Display, marker::PhantomData};
 
@@ -1230,7 +1230,7 @@ fn round_trip_flex_serialize() {
 	test_struct.test_struct = Some(Box::new(test_struct.clone()));
 	let serialized = serialize(test_struct.clone()).unwrap();
 	let flex = flexbuffers::Reader::get_root(serialized.as_slice()).unwrap();
-	println!("{}", flex);
+	println!("{flex}");
 	let deserialized: TestStruct = deserialize(&serialized).unwrap();
 	assert_eq!(test_struct, deserialized, "Round trip lost data");
 }
