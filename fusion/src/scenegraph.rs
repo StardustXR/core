@@ -1,11 +1,14 @@
 use dashmap::DashMap;
 use parking_lot::Mutex;
-use stardust_xr::scenegraph::{self, MethodResponse, ScenegraphError};
+use stardust_xr::{
+	messenger::MethodResponse,
+	scenegraph::{self, ScenegraphError},
+};
 use std::{
 	os::fd::OwnedFd,
 	sync::{Arc, Weak},
 };
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 use crate::{client::ClientHandle, node::Node};
 
@@ -118,14 +121,14 @@ impl scenegraph::Scenegraph for Scenegraph {
 		method: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-		response: oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>,
+		response: MethodResponse,
 	) {
 		let Some(node) = self.nodes.get(&id) else {
-			let _ = response.send(Err(ScenegraphError::NodeNotFound));
+			response.send(Err(ScenegraphError::NodeNotFound));
 			return;
 		};
 		let Some(aspect) = node.get(&aspect) else {
-			let _ = response.send(Err(ScenegraphError::AspectNotFound));
+			response.send(Err(ScenegraphError::AspectNotFound));
 			return;
 		};
 		aspect.send_method(

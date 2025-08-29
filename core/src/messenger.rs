@@ -58,17 +58,62 @@ impl Message {
 	}
 }
 
+/// Handles node signals and method calls for the messenger.
+pub struct MethodResponse {
+	sender_handle: MessageSenderHandle,
+	message_id: u64,
+	node_id: u64,
+	aspect_id: u64,
+	method_id: u64,
+}
+impl MethodResponse {
+	pub fn send(self, result: Result<(&[u8], Vec<OwnedFd>), ScenegraphError>) {
+		let _ = match result {
+			Ok((data, fds)) => self.sender_handle.send(serialize_call(
+				3,
+				self.message_id,
+				self.node_id,
+				self.aspect_id,
+				self.method_id,
+				None,
+				data,
+				fds,
+			)),
+			Err(error) => self.sender_handle.error(
+				self.message_id,
+				self.node_id,
+				self.aspect_id,
+				self.method_id,
+				error,
+				&[],
+			),
+		};
+	}
+}
+impl Drop for MethodResponse {
+	fn drop(&mut self) {
+		let _ = self.sender_handle.error(
+			self.message_id,
+			self.node_id,
+			self.aspect_id,
+			self.method_id,
+			"Internal: method did not return a response",
+			&[],
+		);
+	}
+}
+
 /// Header for sending messages over the socket.
 #[derive(Clone, Copy)]
-pub struct Header {
-	pub body_length: u32,
+struct Header {
+	body_length: u32,
 }
 impl Header {
-	pub const SIZE: usize = 4;
-	pub fn into_bytes(self) -> [u8; Self::SIZE] {
+	const SIZE: usize = 4;
+	fn into_bytes(self) -> [u8; Self::SIZE] {
 		self.body_length.to_ne_bytes()
 	}
-	pub fn from_bytes(bytes: [u8; Self::SIZE]) -> Self {
+	fn from_bytes(bytes: [u8; Self::SIZE]) -> Self {
 		let body_length = u32::from_ne_bytes(bytes);
 		Header { body_length }
 	}
@@ -99,7 +144,7 @@ impl MessageReceiver {
 		}
 	}
 	/// Take all the pending futures in the queue from method calls and store them for when the other side sends a method return.
-	pub fn update_pending_futures(&mut self) {
+	fn update_pending_futures(&mut self) {
 		while let Ok((id, future)) = self.pending_future_rx.try_recv() {
 			let _ = self.pending_futures.insert(id, future);
 		}
@@ -184,34 +229,20 @@ impl MessageReceiver {
 			}
 			// Method called
 			2 => {
-				let (response_tx, response_rx) =
-					oneshot::channel::<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>();
-				let send_handle = self.send_handle.clone();
-				scenegraph.execute_method(node_id, aspect_id, method, data, fds, response_tx);
-				tokio::task::spawn(async move {
-					let Ok(message) = root_as_message(&raw_message) else {
-						return;
-					};
-					let data = message.data().unwrap_or_default().bytes();
-					if let Ok(result) = response_rx.await {
-						let _ = match result {
-							Ok((data, fds)) => send_handle.send(serialize_call(
-								3, message_id, node_id, aspect_id, method, None, &data, fds,
-							)),
-							Err(error) => send_handle
-								.error(message_id, node_id, aspect_id, method, error, data),
-						};
-					} else {
-						let _ = send_handle.error(
-							message_id,
-							node_id,
-							aspect_id,
-							method,
-							"Internal: method did not return a response",
-							data,
-						);
-					}
-				});
+				scenegraph.execute_method(
+					node_id,
+					aspect_id,
+					method,
+					data,
+					fds,
+					MethodResponse {
+						sender_handle: self.send_handle.clone(),
+						message_id,
+						node_id,
+						aspect_id,
+						method_id: method,
+					},
+				);
 			}
 			// Method return
 			3 => {
@@ -242,7 +273,7 @@ impl MessageReceiver {
 }
 
 /// Generate an error message from arguments.
-pub fn serialize_error<T: std::fmt::Display>(
+fn serialize_error<T: std::fmt::Display>(
 	message_id: u64,
 	node_id: u64,
 	aspect: u64,
@@ -263,7 +294,7 @@ pub fn serialize_error<T: std::fmt::Display>(
 	)
 }
 /// Generate a signal message from arguments.
-pub fn serialize_signal_call(
+fn serialize_signal_call(
 	message_id: u64,
 	node_id: u64,
 	aspect: u64,
@@ -274,7 +305,7 @@ pub fn serialize_signal_call(
 	serialize_call(1, message_id, node_id, aspect, method, None, data, fds)
 }
 /// Generate a method message from arguments.
-pub fn serialize_method_call(
+fn serialize_method_call(
 	message_id: u64,
 	node_id: u64,
 	aspect: u64,

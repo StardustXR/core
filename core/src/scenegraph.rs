@@ -1,8 +1,8 @@
+use crate::messenger::MethodResponse;
 use color_eyre::Report;
 use stardust_xr_schemas::flex::flexbuffers::DeserializationError;
 use std::os::unix::io::OwnedFd;
 use thiserror::Error;
-use tokio::sync::oneshot;
 
 /// Error for all scenegraph-related things.
 #[derive(Error, Debug)]
@@ -33,8 +33,6 @@ impl From<Report> for ScenegraphError {
 	}
 }
 
-/// Handles node signals and method calls for the messenger.
-pub type MethodResponse = oneshot::Sender<Result<(Vec<u8>, Vec<OwnedFd>), ScenegraphError>>;
 pub trait Scenegraph {
 	fn send_signal(
 		&self,

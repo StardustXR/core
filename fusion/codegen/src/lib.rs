@@ -489,7 +489,7 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 					_ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
 				}
 			}
-			fn serialize_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr::scenegraph::MethodResponse) -> Option<Self> {
+			fn serialize_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr::messenger::MethodResponse) -> Option<Self> {
 				let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
 				let response2 = response.clone();
 				let result = || match method_id {

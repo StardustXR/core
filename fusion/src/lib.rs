@@ -9,10 +9,7 @@ pub use client::*;
 use serde::Serialize;
 pub use stardust_xr as core;
 pub use stardust_xr::values;
-use stardust_xr::{
-	scenegraph::{MethodResponse, ScenegraphError},
-	values::MethodResult,
-};
+use stardust_xr::{messenger::MethodResponse, scenegraph::ScenegraphError, values::MethodResult};
 
 #[macro_use]
 pub mod node;
@@ -35,19 +32,19 @@ impl<T: Serialize> TypedMethodResponse<T> {
 		let data = match result {
 			Ok(d) => d,
 			Err(e) => {
-				let _ = self.0.send(Err(ScenegraphError::MemberError {
+				self.0.send(Err(ScenegraphError::MemberError {
 					error: e.to_string(),
 				}));
 				return;
 			}
 		};
 		let Ok(serialized) = stardust_xr::schemas::flex::serialize(data) else {
-			let _ = self.0.send(Err(ScenegraphError::MemberError {
+			self.0.send(Err(ScenegraphError::MemberError {
 				error: "Internal: Failed to serialize".to_string(),
 			}));
 			return;
 		};
-		let _ = self.0.send(Ok((serialized, Vec::<OwnedFd>::new())));
+		self.0.send(Ok((&serialized, Vec::<OwnedFd>::new())));
 	}
 	pub fn wrap<F: FnOnce() -> MethodResult<T>>(self, f: F) {
 		self.send((f)())

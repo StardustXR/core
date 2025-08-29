@@ -71,7 +71,7 @@ async fn fusion_root_save_state() {
 	use crate::Client;
 	let mut client = Client::connect().await.expect("Couldn't connect");
 	client
-		.sync_event_loop(|client, _| {
+		.sync_event_loop(|client, flow| {
 			let root = client.get_root();
 			while let Some(event) = root.recv_root_event() {
 				match event {
@@ -79,6 +79,7 @@ async fn fusion_root_save_state() {
 					RootEvent::Frame { info: _ } => (),
 					RootEvent::SaveState { response } => {
 						response.send(ClientState::from_data_root(Some(()), root));
+						flow.stop();
 					}
 				}
 			}
