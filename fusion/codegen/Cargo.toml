@@ -10,6 +10,4 @@ proc-macro = true
 convert_case = "0.6.0"
 quote = "1.0.33"
 stardust-xr-schemas = { path = "../../schemas" }
-mint = "0.5.9"
 proc-macro2 = "1.0.71"
-split-iter = "0.1.0"
