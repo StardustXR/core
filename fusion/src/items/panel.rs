@@ -10,6 +10,8 @@ use crate::{
 use std::sync::Arc;
 
 stardust_xr_fusion_codegen::codegen_item_panel_protocol!();
+impl Copy for Geometry {}
+impl Copy for SurfaceId {}
 
 impl_aspects!(PanelItem: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAspect);
 
