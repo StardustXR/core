@@ -1,5 +1,6 @@
 use self::parser::convert;
 use kdl::{KdlDocument, KdlError};
+use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 mod parser;
@@ -30,6 +31,100 @@ impl Protocol {
 		let parsed: KdlDocument = sbs.parse().map_err(|p: KdlError| ParseError::Kdl(p))?;
 		convert(parsed)
 	}
+}
+
+/// Resolves inheritance dependencies across all protocols in-place.
+/// Each aspect's inherits list will be expanded to include all transitive dependencies.
+pub fn resolve_inherits(protocols: &mut [&mut Protocol]) -> Result<(), String> {
+	// Create a map of aspect name -> protocol index and aspect index for fast lookups
+	let mut aspect_locations: HashMap<String, (usize, usize)> = HashMap::new();
+
+	// Build the aspect location map
+	for (protocol_idx, protocol) in protocols.iter().enumerate() {
+		for (aspect_idx, aspect) in protocol.aspects.iter().enumerate() {
+			if aspect_locations
+				.insert(aspect.name.clone(), (protocol_idx, aspect_idx))
+				.is_some()
+			{
+				return Err(format!("Duplicate aspect name: {}", aspect.name));
+			}
+		}
+	}
+
+	// For each aspect, resolve its full inheritance chain
+	for protocol_idx in 0..protocols.len() {
+		let aspect_count = protocols[protocol_idx].aspects.len();
+		for aspect_idx in 0..aspect_count {
+			// Get the current aspect's inherits list (we need to clone to avoid borrow checker issues)
+			let current_inherits = protocols[protocol_idx].aspects[aspect_idx].inherits.clone();
+
+			// Resolve the full inheritance chain
+			let resolved_inherits = resolve_aspect_inheritance_chain(
+				&protocols[protocol_idx].aspects[aspect_idx].name,
+				&current_inherits,
+				&aspect_locations,
+				protocols,
+			)?;
+
+			// Update the aspect's inherits list with the resolved chain
+			protocols[protocol_idx].aspects[aspect_idx].inherits = resolved_inherits;
+		}
+	}
+
+	Ok(())
+}
+
+/// Recursively resolve the inheritance chain for a single aspect
+fn resolve_aspect_inheritance_chain(
+	aspect_name: &str,
+	direct_inherits: &[String],
+	aspect_locations: &HashMap<String, (usize, usize)>,
+	protocols: &[&mut Protocol],
+) -> Result<Vec<String>, String> {
+	let mut resolved = Vec::new();
+	let mut visited = HashSet::new();
+	let mut visiting = HashSet::new(); // Track aspects currently being processed to detect cycles
+
+	// Use a stack to do depth-first traversal
+	let mut to_visit: Vec<String> = direct_inherits.to_vec();
+
+	while let Some(current_aspect) = to_visit.pop() {
+		// Check for circular dependencies
+		if visiting.contains(&current_aspect) {
+			return Err(format!(
+				"Circular inheritance detected involving aspect: {aspect_name} -> {current_aspect}",
+			));
+		}
+
+		// Skip if already resolved
+		if visited.contains(&current_aspect) {
+			continue;
+		}
+
+		visiting.insert(current_aspect.clone());
+
+		// Find the aspect and add it to resolved list
+		if let Some(&(protocol_idx, aspect_idx)) = aspect_locations.get(&current_aspect) {
+			resolved.push(current_aspect.clone());
+			visited.insert(current_aspect.clone());
+
+			// Add its dependencies to the stack
+			let inherited_aspects = &protocols[protocol_idx].aspects[aspect_idx].inherits;
+			for inherited in inherited_aspects {
+				if !visited.contains(inherited) {
+					to_visit.push(inherited.clone());
+				}
+			}
+		} else {
+			return Err(format!(
+				"Aspect '{aspect_name}' inherits from unknown aspect '{current_aspect}'",
+			));
+		}
+
+		visiting.remove(&current_aspect);
+	}
+
+	Ok(resolved)
 }
 
 #[derive(Debug)]
