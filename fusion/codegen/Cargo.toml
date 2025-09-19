@@ -3,11 +3,12 @@ edition = "2024"
 name = "stardust-xr-fusion-codegen"
 version = "0.1.0"
 
-[lib]
-proc-macro = true
-
 [dependencies]
 convert_case = "0.6.0"
 quote = "1.0.33"
 stardust-xr-schemas = { path = "../../schemas" }
 proc-macro2 = "1.0.71"
+clap = { version = "4.4", features = ["derive"] }
+color-eyre = "0.6"
+syn = "2.0.106"
+prettyplease = "0.2.37"

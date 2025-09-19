@@ -22,7 +22,7 @@ use glam::{Quat, vec3a};
 use stardust_xr::values::*;
 use std::hash::Hash;
 
-stardust_xr_fusion_codegen::codegen_input_protocol!();
+pub use crate::protocol::input::*;
 
 impl_aspects!(InputMethodRef: SpatialRefAspect);
 impl_aspects!(InputMethod: OwnedAspect, SpatialRefAspect, SpatialAspect, InputMethodRefAspect);

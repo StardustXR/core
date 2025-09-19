@@ -7,7 +7,7 @@ use crate::{
 };
 use stardust_xr::values::*;
 
-stardust_xr_fusion_codegen::codegen_audio_protocol!();
+pub use crate::protocol::audio::*;
 
 impl_aspects!(Sound: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Sound {

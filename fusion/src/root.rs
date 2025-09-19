@@ -8,7 +8,8 @@ use serde::de::DeserializeOwned;
 use stardust_xr::schemas::flex::flexbuffers;
 use std::sync::Arc;
 
-stardust_xr_fusion_codegen::codegen_root_protocol!();
+pub use crate::protocol::root::*;
+
 impl_aspects!(Root: SpatialRefAspect);
 
 /// The persistent state of a Stardust client.

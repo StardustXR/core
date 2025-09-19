@@ -1,47 +1,129 @@
+use color_eyre::Result;
 use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
 use stardust_xr_schemas::protocol::*;
+use std::fs;
+use std::path::Path;
 
-#[proc_macro]
-pub fn codegen_root_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ROOT_PROTOCOL, true, true)
+pub struct ProtocolInfo {
+	pub name: &'static str,
+	pub content: &'static str,
+	pub generate_node: bool,
+	pub partial_eq: bool,
 }
-#[proc_macro]
-pub fn codegen_node_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(NODE_PROTOCOL, false, true)
+
+pub fn get_all_protocols() -> Vec<ProtocolInfo> {
+	vec![
+		ProtocolInfo {
+			name: "root",
+			content: ROOT_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "node",
+			content: NODE_PROTOCOL,
+			generate_node: false,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "spatial",
+			content: SPATIAL_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "field",
+			content: FIELD_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "audio",
+			content: AUDIO_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "drawable",
+			content: DRAWABLE_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "input",
+			content: INPUT_PROTOCOL,
+			generate_node: true,
+			partial_eq: false,
+		},
+		ProtocolInfo {
+			name: "item",
+			content: ITEM_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "item_camera",
+			content: ITEM_CAMERA_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+		ProtocolInfo {
+			name: "item_panel",
+			content: ITEM_PANEL_PROTOCOL,
+			generate_node: true,
+			partial_eq: true,
+		},
+	]
 }
-#[proc_macro]
-pub fn codegen_spatial_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(SPATIAL_PROTOCOL, true, true)
+
+pub fn generate_protocol_files(
+	protocols: &[ProtocolInfo],
+	output_dir: &Path,
+	_force: bool,
+) -> Result<()> {
+	fs::create_dir_all(output_dir)?;
+
+	for protocol_info in protocols {
+		let output_file = output_dir.join(format!("{}.rs", protocol_info.name));
+
+		let tokens = codegen_client_protocol(
+			protocol_info.content,
+			protocol_info.generate_node,
+			protocol_info.partial_eq,
+		);
+		let pretty = prettyplease::unparse(&syn::parse2::<syn::File>(tokens)?);
+
+		let header = "// Generated code - do not edit manually\n\n";
+		fs::write(&output_file, header)?;
+		fs::write(&output_file, pretty)?;
+	}
+
+	// Generate mod.rs
+	let mod_content = generate_mod_file(protocols);
+	fs::write(output_dir.join("mod.rs"), mod_content)?;
+
+	Ok(())
 }
-#[proc_macro]
-pub fn codegen_field_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(FIELD_PROTOCOL, true, true)
-}
-#[proc_macro]
-pub fn codegen_audio_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(AUDIO_PROTOCOL, true, true)
-}
-#[proc_macro]
-pub fn codegen_drawable_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(DRAWABLE_PROTOCOL, true, true)
-}
-#[proc_macro]
-pub fn codegen_input_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(INPUT_PROTOCOL, true, false)
-}
-#[proc_macro]
-pub fn codegen_item_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ITEM_PROTOCOL, true, true)
-}
-#[proc_macro]
-pub fn codegen_item_camera_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ITEM_CAMERA_PROTOCOL, true, true)
-}
-#[proc_macro]
-pub fn codegen_item_panel_protocol(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-	codegen_client_protocol(ITEM_PANEL_PROTOCOL, true, true)
+
+fn generate_mod_file(protocols: &[ProtocolInfo]) -> String {
+	let mut content = String::from("// Generated code - do not edit manually\n\n");
+
+	for protocol_info in protocols {
+		content.push_str(&format!("pub mod {};", protocol_info.name));
+		content.push('\n');
+	}
+
+	content.push('\n');
+	content.push_str("// Re-export all public items from the modules");
+
+	for protocol_info in protocols {
+		content.push_str(&format!("pub(self) use {}::*;", protocol_info.name));
+		content.push('\n');
+	}
+
+	content
 }
 
 trait Tokenize {
@@ -52,11 +134,10 @@ fn codegen_client_protocol(
 	protocol: &'static str,
 	generate_node: bool,
 	partial_eq: bool,
-) -> proc_macro::TokenStream {
+) -> TokenStream {
 	Protocol::parse(protocol)
 		.unwrap()
 		.tokenize(generate_node, partial_eq)
-		.into()
 }
 impl Tokenize for Protocol {
 	fn tokenize(&self, generate_node: bool, partial_eq: bool) -> TokenStream {
@@ -320,6 +401,7 @@ impl Tokenize for Aspect {
 			.inherits
 			.iter()
 			.map(|m| Ident::new(&format!("{m}Aspect"), Span::call_site()))
+			.map(|i| quote!(super::#i))
 			.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
 		let server_side_members =
 			server_members.map(|m| generate_server_member(None, self.id, &self.name, m));
@@ -338,8 +420,8 @@ impl Tokenize for Aspect {
 					Ident::new(&format!("as_{}", i.to_case(Case::Snake)), Span::call_site());
 
 				quote! {
-					pub fn #conversion_fn_name(self) -> #inherited_aspect {
-						#inherited_aspect(self.0)
+					pub fn #conversion_fn_name(self) -> super::#inherited_aspect {
+						super::#inherited_aspect(self.0)
 					}
 				}
 			});

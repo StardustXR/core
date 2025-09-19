@@ -9,7 +9,7 @@ use crate::{
 	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
 };
 
-stardust_xr_fusion_codegen::codegen_field_protocol!();
+pub use crate::protocol::field::*;
 
 impl_aspects!(FieldRef: SpatialRefAspect);
 impl FieldRef {

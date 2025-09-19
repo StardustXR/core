@@ -39,5 +39,8 @@ stardust-xr = { path = "../core" }
 stardust-xr-fusion-codegen = { path = "codegen" }
 dashmap = "6.1.0"
 
+[build-dependencies]
+stardust-xr-fusion-codegen = { path = "codegen" }
+
 [dev-dependencies]
 tracing-subscriber = "0.3.17"

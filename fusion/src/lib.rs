@@ -16,14 +16,13 @@ pub mod node;
 
 pub mod audio;
 pub mod client;
-// pub mod data;
 pub mod drawable;
 pub mod fields;
 pub mod input;
-pub mod items;
 pub mod objects;
+pub mod protocol;
 pub mod root;
-mod scenegraph;
+pub mod scenegraph;
 pub mod spatial;
 
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);

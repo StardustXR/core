@@ -14,8 +14,7 @@
 //! Zones can capture spatials, temporarily parenting them to the zone until they are released.
 //! Zones can see zoneable spatials if they're closer to the surface of the field than any zone that captured them, so no zones can steal and hoard them.
 
-use std::{hash::Hash, sync::Arc};
-
+pub use crate::protocol::spatial::*;
 use crate::{
 	client::ClientHandle,
 	fields::FieldAspect,
@@ -23,8 +22,8 @@ use crate::{
 	node::{NodeResult, OwnedAspect},
 };
 use stardust_xr::values::*;
+use std::{hash::Hash, sync::Arc};
 
-stardust_xr_fusion_codegen::codegen_spatial_protocol!();
 impl Transform {
 	pub const fn none() -> Self {
 		Transform {

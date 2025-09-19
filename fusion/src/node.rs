@@ -19,7 +19,7 @@ use std::{
 };
 use thiserror::Error;
 
-stardust_xr_fusion_codegen::codegen_node_protocol!();
+pub use crate::protocol::node::*;
 
 pub type MethodResult<T> = color_eyre::eyre::Result<T>;
 

@@ -9,7 +9,7 @@ use crate::{
 };
 use stardust_xr::values::*;
 
-stardust_xr_fusion_codegen::codegen_drawable_protocol!();
+pub use crate::protocol::drawable::*;
 
 impl_aspects!(Lines: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Lines {
