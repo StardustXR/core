@@ -3,7 +3,6 @@ use crate::{
 	client::ClientHandle,
 	drawable::ModelPartAspect,
 	fields::{Field, FieldAspect},
-	impl_aspects,
 	node::{NodeResult, NodeType, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
@@ -13,9 +12,6 @@ stardust_xr_fusion_codegen::codegen_item_panel_protocol!();
 impl Copy for Geometry {}
 impl Copy for SurfaceId {}
 
-impl_aspects!(PanelItem: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAspect);
-
-impl_aspects!(PanelItemUi: ItemUiAspect);
 impl PanelItemUi {
 	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_panel_item_ui(client)?;
@@ -28,7 +24,6 @@ impl PanelItemUi {
 	}
 }
 
-impl_aspects!(PanelItemAcceptor: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAcceptorAspect);
 impl PanelItemAcceptor {
 	pub fn create(
 		client: &Arc<ClientHandle>,
@@ -43,7 +38,7 @@ impl PanelItemAcceptor {
 #[cfg(feature = "keymap")]
 pub use xkbcommon::xkb;
 #[cfg(feature = "keymap")]
-use xkbcommon::xkb::{Context, Keymap, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS};
+use xkbcommon::xkb::{Context, FORMAT_TEXT_V1, KEYMAP_COMPILE_NO_FLAGS, Keymap};
 #[cfg(feature = "keymap")]
 impl crate::client::ClientHandle {
 	pub fn register_xkb_keymap(

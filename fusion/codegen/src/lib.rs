@@ -78,66 +78,68 @@ pub fn get_all_protocols() -> Vec<ProtocolInfo> {
 	]
 }
 
-pub fn generate_protocol_files(
-	protocols: &[ProtocolInfo],
-	output_dir: &Path,
+pub fn generate_protocol_file(
+	protocols: Vec<ProtocolInfo>,
+	file_path: &Path,
 	_force: bool,
 ) -> Result<()> {
-	fs::create_dir_all(output_dir)?;
+	let mut protocols = protocols
+		.into_iter()
+		.map(|p| (Protocol::parse(p.content).unwrap(), p))
+		.collect::<Vec<_>>();
 
-	for protocol_info in protocols {
-		let output_file = output_dir.join(format!("{}.rs", protocol_info.name));
+	let mut protocol_definitions = protocols.iter_mut().map(|(p, _)| p).collect::<Vec<_>>();
+	stardust_xr_schemas::protocol::resolve_inherits(&mut protocol_definitions).unwrap();
 
-		let tokens = codegen_client_protocol(
-			protocol_info.content,
-			protocol_info.generate_node,
-			protocol_info.partial_eq,
-		);
-		let pretty = prettyplease::unparse(&syn::parse2::<syn::File>(tokens)?);
+	// panic!("{protocol_definitions:# ?}");
 
-		let header = "// Generated code - do not edit manually\n\n";
-		fs::write(&output_file, header)?;
-		fs::write(&output_file, pretty)?;
-	}
+	let protocols = protocols
+		.into_iter()
+		.map(|p| {
+			let protocol = p.0.tokenize(p.1.generate_node, p.1.partial_eq);
+			let mod_name = Ident::new(p.1.name, Span::call_site());
+			quote! {
+				#[allow(unused_imports)]
+				use #mod_name::*;
+				pub mod #mod_name {
+					#[allow(unused_imports)]
+					use super::*;
+					#protocol
+				}
+			}
+		})
+		.reduce(|a, b| {
+			quote! {
+				#a
+
+
+				//=====================================
+				#b
+			}
+		})
+		.unwrap_or_default();
+
+	let file_tokens = quote! {
+		#![allow(async_fn_in_trait, unused_parens, clippy::all)]
+		// Generated code - do not edit manually
+
+		use crate::node::NodeType;
+
+		//=====================================
+		#protocols
+	};
+
+	let syn_file = syn::parse2::<syn::File>(file_tokens).unwrap();
+	let formatted = prettyplease::unparse(&syn_file);
 
 	// Generate mod.rs
-	let mod_content = generate_mod_file(protocols);
-	fs::write(output_dir.join("mod.rs"), mod_content)?;
+	fs::write(file_path, formatted)?;
 
 	Ok(())
 }
 
-fn generate_mod_file(protocols: &[ProtocolInfo]) -> String {
-	let mut content = String::from("// Generated code - do not edit manually\n\n");
-
-	for protocol_info in protocols {
-		content.push_str(&format!("pub mod {};", protocol_info.name));
-		content.push('\n');
-	}
-
-	content.push('\n');
-	content.push_str("// Re-export all public items from the modules");
-
-	for protocol_info in protocols {
-		content.push_str(&format!("pub(self) use {}::*;", protocol_info.name));
-		content.push('\n');
-	}
-
-	content
-}
-
 trait Tokenize {
 	fn tokenize(&self, generate_node: bool, partial_eq: bool) -> TokenStream;
-}
-
-fn codegen_client_protocol(
-	protocol: &'static str,
-	generate_node: bool,
-	partial_eq: bool,
-) -> TokenStream {
-	Protocol::parse(protocol)
-		.unwrap()
-		.tokenize(generate_node, partial_eq)
 }
 impl Tokenize for Protocol {
 	fn tokenize(&self, generate_node: bool, partial_eq: bool) -> TokenStream {
@@ -425,7 +427,24 @@ impl Tokenize for Aspect {
 					}
 				}
 			});
-		let node = generate_node.then_some(quote! {
+		let impl_inherits = self
+			.inherits
+			.iter()
+			.map(|i| {
+				Ident::new(
+					&format!("{}Aspect", i.to_case(Case::Pascal)),
+					Span::call_site(),
+				)
+			})
+			.map(|i| {
+				quote! {
+					#[allow(clippy::all)]
+					impl #i for #node_name {}
+				}
+			})
+			.reduce(|a, b| quote!(#a #b))
+			.unwrap_or_default();
+		let node = generate_node.then(|| quote! {
 			#[allow(clippy::all)]
 			#[doc = #description]
 			#[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -453,6 +472,7 @@ impl Tokenize for Aspect {
 			}
 			#[allow(clippy::all)]
 			impl #aspect_trait_name for #node_name {}
+			#impl_inherits
 		});
 
 		let events_method = if self.members.iter().any(|m| m.side == Side::Client) {
@@ -683,16 +703,13 @@ fn generate_server_member(
 				}
 			};
 			if interface_node_id.is_some() {
-				if let Some(ArgumentType::Node { .. }) = &member.return_type {
-				} else {
-					return quote! {
-						#[allow(clippy::all)]
-						#[doc = #description]
-						pub fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
-							#body
-						}
-					};
-				}
+				return quote! {
+					#[allow(clippy::all)]
+					#[doc = #description]
+					pub fn #name(#argument_decls) -> crate::node::NodeResult<#return_type> {
+						#body
+					}
+				};
 			}
 			quote! {
 				#[doc = #description]

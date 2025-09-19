@@ -3,15 +3,13 @@
 use std::hash::Hash;
 
 use crate::{
-	impl_aspects,
-	node::{NodeResult, NodeType, OwnedAspect},
-	spatial::{Spatial, SpatialAspect, SpatialRefAspect, Transform},
+	node::{NodeResult, NodeType},
+	spatial::{SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
 
 pub use crate::protocol::drawable::*;
 
-impl_aspects!(Lines: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Lines {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
@@ -67,9 +65,6 @@ impl Hash for Line {
 	}
 }
 
-impl<M: ModelAspect> SpatialAspect for M {}
-impl_aspects!(Model: OwnedAspect, SpatialRefAspect);
-impl_aspects!(ModelPart: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Model {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
@@ -90,7 +85,6 @@ impl Model {
 		self.bind_model_part(client.generate_id(), relative_path)
 	}
 }
-impl_aspects!(Text: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Text {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,

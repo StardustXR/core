@@ -1,5 +1,4 @@
 use crate::client::ClientHandle;
-use crate::impl_aspects;
 use crate::spatial::{SpatialRef, SpatialRefAspect};
 use color_eyre::eyre::Result;
 use rustc_hash::FxHashMap;
@@ -9,8 +8,6 @@ use stardust_xr::schemas::flex::flexbuffers;
 use std::sync::Arc;
 
 pub use crate::protocol::root::*;
-
-impl_aspects!(Root: SpatialRefAspect);
 
 /// The persistent state of a Stardust client.
 impl Default for ClientState {

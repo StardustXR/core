@@ -20,7 +20,7 @@ pub mod drawable;
 pub mod fields;
 pub mod input;
 pub mod objects;
-pub mod protocol;
+mod protocol;
 pub mod root;
 pub mod scenegraph;
 pub mod spatial;
@@ -53,11 +53,4 @@ impl<T: Serialize> Debug for TypedMethodResponse<T> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("TypedMethodResponse").finish()
 	}
-}
-
-#[macro_export]
-macro_rules! impl_aspects {
-    ($node:ident: $( $aspect:ident ),+) => {
-		$(impl $aspect for $node {})+
-    }
 }

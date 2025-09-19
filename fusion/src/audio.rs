@@ -1,15 +1,13 @@
 //! Create audio!
 
 use crate::{
-	impl_aspects,
-	node::{NodeResult, OwnedAspect},
-	spatial::{Spatial, SpatialAspect, SpatialRefAspect, Transform},
+	node::NodeResult,
+	spatial::{SpatialRefAspect, Transform},
 };
 use stardust_xr::values::*;
 
 pub use crate::protocol::audio::*;
 
-impl_aspects!(Sound: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Sound {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,

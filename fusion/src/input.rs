@@ -13,10 +13,9 @@
 //! Capturing an input method may be delayed a frame or 2.
 
 use crate::{
-	fields::{Field, FieldAspect},
-	impl_aspects,
-	node::{NodeResult, NodeType, OwnedAspect},
-	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
+	fields::FieldAspect,
+	node::NodeResult,
+	spatial::{SpatialRefAspect, Transform},
 };
 use glam::{Quat, vec3a};
 use stardust_xr::values::*;
@@ -24,8 +23,6 @@ use std::hash::Hash;
 
 pub use crate::protocol::input::*;
 
-impl_aspects!(InputMethodRef: SpatialRefAspect);
-impl_aspects!(InputMethod: OwnedAspect, SpatialRefAspect, SpatialAspect, InputMethodRefAspect);
 impl InputMethod {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
@@ -44,7 +41,6 @@ impl InputMethod {
 		)
 	}
 }
-impl_aspects!(InputHandler: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl InputHandler {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
@@ -202,6 +198,7 @@ async fn fusion_pointer_input_method() {
 	use crate::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
+	use crate::spatial::SpatialAspect;
 
 	let mut client = Client::connect().await.expect("Couldn't connect");
 
@@ -266,6 +263,7 @@ async fn fusion_tip_input_method() {
 	use crate::Client;
 	use crate::drawable::Model;
 	use crate::root::*;
+	use crate::spatial::SpatialAspect;
 
 	let mut client = Client::connect().await.expect("Couldn't connect");
 

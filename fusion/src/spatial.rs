@@ -15,12 +15,7 @@
 //! Zones can see zoneable spatials if they're closer to the surface of the field than any zone that captured them, so no zones can steal and hoard them.
 
 pub use crate::protocol::spatial::*;
-use crate::{
-	client::ClientHandle,
-	fields::FieldAspect,
-	impl_aspects,
-	node::{NodeResult, OwnedAspect},
-};
+use crate::{client::ClientHandle, fields::FieldAspect, node::NodeResult};
 use stardust_xr::values::*;
 use std::{hash::Hash, sync::Arc};
 
@@ -149,7 +144,6 @@ impl SpatialRef {
 	}
 }
 
-impl_aspects!(Spatial: OwnedAspect, SpatialRefAspect);
 impl Spatial {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
@@ -167,7 +161,6 @@ impl Spatial {
 	}
 }
 
-impl_aspects!(Zone: OwnedAspect, SpatialRefAspect, SpatialAspect);
 impl Zone {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,

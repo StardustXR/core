@@ -4,20 +4,17 @@ use std::sync::Arc;
 
 use crate::{
 	client::ClientHandle,
-	impl_aspects,
-	node::{NodeResult, OwnedAspect},
-	spatial::{Spatial, SpatialAspect, SpatialRef, SpatialRefAspect, Transform},
+	node::NodeResult,
+	spatial::{SpatialRefAspect, Transform},
 };
 
 pub use crate::protocol::field::*;
 
-impl_aspects!(FieldRef: SpatialRefAspect);
 impl FieldRef {
 	pub async fn import(client: &Arc<ClientHandle>, uid: u64) -> NodeResult<Self> {
 		import_field_ref(client, uid).await
 	}
 }
-impl_aspects!(Field: OwnedAspect, SpatialRefAspect, SpatialAspect, FieldRefAspect);
 impl Field {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,

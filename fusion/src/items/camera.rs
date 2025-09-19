@@ -2,7 +2,6 @@ use super::*;
 use crate::{
 	client::ClientHandle,
 	fields::{Field, FieldAspect},
-	impl_aspects,
 	node::{NodeResult, OwnedAspect},
 	spatial::{SpatialAspect, SpatialRefAspect, Transform},
 };
@@ -11,7 +10,6 @@ use std::sync::Arc;
 
 stardust_xr_fusion_codegen::codegen_item_camera_protocol!();
 
-impl_aspects!(CameraItem: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAspect);
 impl CameraItem {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
@@ -31,7 +29,6 @@ impl CameraItem {
 	}
 }
 
-impl_aspects!(CameraItemUi: ItemUiAspect);
 impl CameraItemUi {
 	pub fn register(client: &Arc<ClientHandle>) -> NodeResult<Self> {
 		register_camera_item_ui(client)?;
@@ -39,7 +36,6 @@ impl CameraItemUi {
 	}
 }
 
-impl_aspects!(CameraItemAcceptor: OwnedAspect, SpatialRefAspect, SpatialAspect, ItemAcceptorAspect);
 impl CameraItemAcceptor {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
