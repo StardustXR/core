@@ -19,11 +19,9 @@ pub mod root {
         pub root: u64,
         pub spatial_anchors: stardust_xr::values::Map<String, u64>,
     }
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Root(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Root {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -38,13 +36,11 @@ pub mod root {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Root {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Root {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -53,9 +49,7 @@ pub mod root {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl RootAspect for Root {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Root {}
     pub(crate) const ROOT_ASPECT_ID: u64 = 7212020743076450030u64;
     pub(crate) const ROOT_PING_CLIENT_OPCODE: u64 = 1374738518356883234u64;
@@ -72,7 +66,6 @@ pub mod root {
         Frame { info: FrameInfo },
         SaveState { response: crate::TypedMethodResponse<ClientState> },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for RootEvent {
         const ASPECT_ID: u64 = 7212020743076450030u64;
         fn serialize_signal(
@@ -137,7 +130,6 @@ pub mod root {
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait RootAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_root_event(&self) -> Option<RootEvent> {
@@ -295,7 +287,6 @@ pub mod node {
     pub(crate) const OWNED_DESTROY_SERVER_OPCODE: u64 = 8637450960623370830u64;
     #[derive(Debug)]
     pub enum OwnedEvent {}
-    #[allow(clippy::all)]
     ///This node was created by the current client and can be disabled/destroyed
     pub trait OwnedAspect: crate::node::NodeType + std::fmt::Debug {
         ///Set if this node is enabled or not. Disabled drawables won't render, input handlers won't receive input, etc.
@@ -352,7 +343,6 @@ pub mod spatial {
         pub rotation: Option<stardust_xr::values::Quaternion>,
         pub scale: Option<stardust_xr::values::Vector3<f32>>,
     }
-    #[allow(clippy::all)]
     /**
 		A reference to a node with spatial attributes (position, rotation, scale).
 
@@ -360,7 +350,6 @@ pub mod spatial {
 	*/
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct SpatialRef(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl SpatialRef {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -371,13 +360,11 @@ pub mod spatial {
             SpatialRef(node)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for SpatialRef {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for SpatialRef {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -386,7 +373,6 @@ pub mod spatial {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl SpatialRefAspect for SpatialRef {}
     pub(crate) const SPATIAL_REF_ASPECT_ID: u64 = 14774096707642646617u64;
     pub(crate) const SPATIAL_REF_GET_LOCAL_BOUNDING_BOX_SERVER_OPCODE: u64 = 15184457389419466387u64;
@@ -394,7 +380,6 @@ pub mod spatial {
     pub(crate) const SPATIAL_REF_GET_TRANSFORM_SERVER_OPCODE: u64 = 6982810219028106561u64;
     #[derive(Debug)]
     pub enum SpatialRefEvent {}
-    #[allow(clippy::all)]
     /**
 		A reference to a node with spatial attributes (position, rotation, scale).
 
@@ -495,7 +480,6 @@ pub mod spatial {
             }
         }
     }
-    #[allow(clippy::all)]
     /**
 		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
 
@@ -503,7 +487,6 @@ pub mod spatial {
 	*/
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Spatial(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Spatial {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -517,13 +500,11 @@ pub mod spatial {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Spatial {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Spatial {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -532,11 +513,8 @@ pub mod spatial {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl SpatialAspect for Spatial {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Spatial {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Spatial {}
     pub(crate) const SPATIAL_ASPECT_ID: u64 = 17785849468685298036u64;
     pub(crate) const SPATIAL_SET_LOCAL_TRANSFORM_SERVER_OPCODE: u64 = 5092462149256736585u64;
@@ -547,7 +525,6 @@ pub mod spatial {
     pub(crate) const SPATIAL_EXPORT_SPATIAL_SERVER_OPCODE: u64 = 3600225297814947977u64;
     #[derive(Debug)]
     pub enum SpatialEvent {}
-    #[allow(clippy::all)]
     /**
 		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
 
@@ -694,13 +671,11 @@ pub mod spatial {
             }
         }
     }
-    #[allow(clippy::all)]
     /**
 		Node to manipulate spatial nodes across clients.
 	*/
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Zone(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Zone {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -718,13 +693,11 @@ pub mod spatial {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Zone {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Zone {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -733,13 +706,9 @@ pub mod spatial {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl ZoneAspect for Zone {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Zone {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Zone {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Zone {}
     pub(crate) const ZONE_ASPECT_ID: u64 = 8505905936867072296u64;
     pub(crate) const ZONE_UPDATE_SERVER_OPCODE: u64 = 4876473203673722513u64;
@@ -756,7 +725,6 @@ pub mod spatial {
         Release { id: u64 },
         Leave { id: u64 },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for ZoneEvent {
         const ASPECT_ID: u64 = 8505905936867072296u64;
         fn serialize_signal(
@@ -826,7 +794,6 @@ pub mod spatial {
             }
         }
     }
-    #[allow(clippy::all)]
     /**
 		Node to manipulate spatial nodes across clients.
 	*/
@@ -923,7 +890,6 @@ pub mod spatial {
         Ok(deserialized)
     }
     pub(crate) const INTERFACE_CREATE_SPATIAL_SERVER_OPCODE: u64 = 3949276749019911643u64;
-    #[allow(clippy::all)]
     ///Create a spatial relative to another spatial
     pub fn create_spatial(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -948,7 +914,6 @@ pub mod spatial {
         Ok(Spatial::from_id(_client, id, true))
     }
     pub(crate) const INTERFACE_CREATE_ZONE_SERVER_OPCODE: u64 = 7282214243246353525u64;
-    #[allow(clippy::all)]
     /**
 	    Create a zone given a field, this zone will become inactive if the field is dropped.
         Keep in mind the zone and its field are different spatials, they can move independently.
@@ -1018,11 +983,9 @@ pub mod field {
         pub radius_a: f32,
         pub radius_b: f32,
     }
-    #[allow(clippy::all)]
     ///A node that is spatial and contains an SDF
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct FieldRef(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl FieldRef {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1036,13 +999,11 @@ pub mod field {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for FieldRef {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for FieldRef {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1051,9 +1012,7 @@ pub mod field {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl FieldRefAspect for FieldRef {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for FieldRef {}
     pub(crate) const FIELD_REF_ASPECT_ID: u64 = 10662923473076663509u64;
     pub(crate) const FIELD_REF_DISTANCE_SERVER_OPCODE: u64 = 12706699825100237095u64;
@@ -1062,7 +1021,6 @@ pub mod field {
     pub(crate) const FIELD_REF_RAY_MARCH_SERVER_OPCODE: u64 = 7352457860499612292u64;
     #[derive(Debug)]
     pub enum FieldRefEvent {}
-    #[allow(clippy::all)]
     ///A node that is spatial and contains an SDF
     pub trait FieldRefAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
         ///Get the distance to the surface of this field relative to the `point` in `space`
@@ -1199,11 +1157,9 @@ pub mod field {
             }
         }
     }
-    #[allow(clippy::all)]
     ///An owned field with adjustable shape
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Field(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Field {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1223,13 +1179,11 @@ pub mod field {
             super::Spatial(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Field {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Field {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1238,22 +1192,16 @@ pub mod field {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl FieldAspect for Field {}
-    #[allow(clippy::all)]
     impl FieldRefAspect for Field {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Field {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Field {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Field {}
     pub(crate) const FIELD_ASPECT_ID: u64 = 3948434400034960392u64;
     pub(crate) const FIELD_SET_SHAPE_SERVER_OPCODE: u64 = 10076774457453995458u64;
     pub(crate) const FIELD_EXPORT_FIELD_SERVER_OPCODE: u64 = 939650650519133349u64;
     #[derive(Debug)]
     pub enum FieldEvent {}
-    #[allow(clippy::all)]
     ///An owned field with adjustable shape
     pub trait FieldAspect: crate::node::NodeType + super::FieldRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
         ///Set the shape of this field (and its parameters)
@@ -1334,7 +1282,6 @@ pub mod field {
         Ok(deserialized)
     }
     pub(crate) const INTERFACE_CREATE_FIELD_SERVER_OPCODE: u64 = 3216373392735127623u64;
-    #[allow(clippy::all)]
     ///Create a field with the shape of a box
     pub fn create_field(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1366,11 +1313,9 @@ pub mod audio {
     use super::*;
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 10u64;
-    #[allow(clippy::all)]
     ///Simple spatial audio source
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Sound(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Sound {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1387,13 +1332,11 @@ pub mod audio {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Sound {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Sound {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1402,20 +1345,15 @@ pub mod audio {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl SoundAspect for Sound {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Sound {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Sound {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Sound {}
     pub(crate) const SOUND_ASPECT_ID: u64 = 17761155925539609649u64;
     pub(crate) const SOUND_PLAY_SERVER_OPCODE: u64 = 18267594382511242772u64;
     pub(crate) const SOUND_STOP_SERVER_OPCODE: u64 = 4968801543080236686u64;
     #[derive(Debug)]
     pub enum SoundEvent {}
-    #[allow(clippy::all)]
     ///Simple spatial audio source
     pub trait SoundAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Play sound effect
@@ -1450,7 +1388,6 @@ pub mod audio {
         }
     }
     pub(crate) const INTERFACE_CREATE_SOUND_SERVER_OPCODE: u64 = 3197851813257440734u64;
-    #[allow(clippy::all)]
     ///Create a sound node. WAV and MP3 are supported.
     pub fn create_sound(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1576,11 +1513,9 @@ pub mod drawable {
         pub text_align_y: YAlign,
         pub bounds: Option<TextBounds>,
     }
-    #[allow(clippy::all)]
     ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Lines(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Lines {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1597,13 +1532,11 @@ pub mod drawable {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Lines {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Lines {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1612,19 +1545,14 @@ pub mod drawable {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl LinesAspect for Lines {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Lines {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Lines {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Lines {}
     pub(crate) const LINES_ASPECT_ID: u64 = 16705186951373789081u64;
     pub(crate) const LINES_SET_LINES_SERVER_OPCODE: u64 = 17689001183742889136u64;
     #[derive(Debug)]
     pub enum LinesEvent {}
-    #[allow(clippy::all)]
     ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
     pub trait LinesAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Replace all polylines with the given lines
@@ -1648,11 +1576,9 @@ pub mod drawable {
             Ok(())
         }
     }
-    #[allow(clippy::all)]
     ///A GLTF model loaded by the server.
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Model(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Model {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1669,13 +1595,11 @@ pub mod drawable {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Model {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Model {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1684,19 +1608,14 @@ pub mod drawable {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl ModelAspect for Model {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Model {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Model {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Model {}
     pub(crate) const MODEL_ASPECT_ID: u64 = 11775342128130118047u64;
     pub(crate) const MODEL_BIND_MODEL_PART_SERVER_OPCODE: u64 = 18406803564448475833u64;
     #[derive(Debug)]
     pub enum ModelEvent {}
-    #[allow(clippy::all)]
     ///A GLTF model loaded by the server.
     pub trait ModelAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Bind a model part to the node with the ID input.
@@ -1724,11 +1643,9 @@ pub mod drawable {
             Ok(ModelPart::from_id(&self.node().client()?, id, true))
         }
     }
-    #[allow(clippy::all)]
     ///A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct ModelPart(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl ModelPart {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1745,13 +1662,11 @@ pub mod drawable {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for ModelPart {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for ModelPart {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1760,20 +1675,15 @@ pub mod drawable {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl ModelPartAspect for ModelPart {}
-    #[allow(clippy::all)]
     impl SpatialAspect for ModelPart {}
-    #[allow(clippy::all)]
     impl OwnedAspect for ModelPart {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for ModelPart {}
     pub(crate) const MODEL_PART_ASPECT_ID: u64 = 7912164431074553740u64;
     pub(crate) const MODEL_PART_APPLY_HOLDOUT_MATERIAL_SERVER_OPCODE: u64 = 13817793452575402942u64;
     pub(crate) const MODEL_PART_SET_MATERIAL_PARAMETER_SERVER_OPCODE: u64 = 12609900228877593594u64;
     #[derive(Debug)]
     pub enum ModelPartEvent {}
-    #[allow(clippy::all)]
     ///A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.
     pub trait ModelPartAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object.
@@ -1816,11 +1726,9 @@ pub mod drawable {
             Ok(())
         }
     }
-    #[allow(clippy::all)]
     ///Text rendered to work best in XR
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Text(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Text {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1837,13 +1745,11 @@ pub mod drawable {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Text {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Text {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1852,20 +1758,15 @@ pub mod drawable {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl TextAspect for Text {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Text {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Text {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Text {}
     pub(crate) const TEXT_ASPECT_ID: u64 = 3129045917168168339u64;
     pub(crate) const TEXT_SET_CHARACTER_HEIGHT_SERVER_OPCODE: u64 = 1124886941794143568u64;
     pub(crate) const TEXT_SET_TEXT_SERVER_OPCODE: u64 = 395974856293277940u64;
     #[derive(Debug)]
     pub enum TextEvent {}
-    #[allow(clippy::all)]
     ///Text rendered to work best in XR
     pub trait TextAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Set the character height in meters
@@ -1902,7 +1803,6 @@ pub mod drawable {
         }
     }
     pub(crate) const INTERFACE_SET_SKY_TEX_SERVER_OPCODE: u64 = 4424860741442403592u64;
-    #[allow(clippy::all)]
     ///Set the sky texture to a given HDRI file.
     pub fn set_sky_tex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1921,7 +1821,6 @@ pub mod drawable {
         Ok(())
     }
     pub(crate) const INTERFACE_SET_SKY_LIGHT_SERVER_OPCODE: u64 = 6210987039553590011u64;
-    #[allow(clippy::all)]
     ///Set the sky lighting to a given HDRI file.
     pub fn set_sky_light(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1940,7 +1839,6 @@ pub mod drawable {
         Ok(())
     }
     pub(crate) const INTERFACE_CREATE_LINES_SERVER_OPCODE: u64 = 17691651736865216822u64;
-    #[allow(clippy::all)]
     ///Create a lines node
     pub fn create_lines(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1970,7 +1868,6 @@ pub mod drawable {
         Ok(Lines::from_id(_client, id, true))
     }
     pub(crate) const INTERFACE_LOAD_MODEL_SERVER_OPCODE: u64 = 8647852218278439936u64;
-    #[allow(clippy::all)]
     ///Load a GLTF model into a Model node
     pub fn load_model(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1995,7 +1892,6 @@ pub mod drawable {
         Ok(Model::from_id(_client, id, true))
     }
     pub(crate) const INTERFACE_CREATE_TEXT_SERVER_OPCODE: u64 = 11386227176670607870u64;
-    #[allow(clippy::all)]
     ///Create a text node
     pub fn create_text(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2097,11 +1993,9 @@ pub mod input {
         pub order: u32,
         pub captured: bool,
     }
-    #[allow(clippy::all)]
     ///Node representing a spatial input device
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct InputMethodRef(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl InputMethodRef {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2115,13 +2009,11 @@ pub mod input {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for InputMethodRef {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for InputMethodRef {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2130,16 +2022,13 @@ pub mod input {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl InputMethodRefAspect for InputMethodRef {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for InputMethodRef {}
     pub(crate) const INPUT_METHOD_REF_ASPECT_ID: u64 = 2611007814387963428u64;
     pub(crate) const INPUT_METHOD_REF_TRY_CAPTURE_SERVER_OPCODE: u64 = 12158986667525139020u64;
     pub(crate) const INPUT_METHOD_REF_RELEASE_SERVER_OPCODE: u64 = 11905596878821798323u64;
     #[derive(Debug)]
     pub enum InputMethodRefEvent {}
-    #[allow(clippy::all)]
     ///Node representing a spatial input device
     pub trait InputMethodRefAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
         ///Try to capture the input method with the given handler. When the handler does not get input from the method, it will be released.
@@ -2184,11 +2073,9 @@ pub mod input {
             Ok(())
         }
     }
-    #[allow(clippy::all)]
     ///Node representing a spatial input device
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct InputMethod(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl InputMethod {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2209,13 +2096,11 @@ pub mod input {
             super::Spatial(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for InputMethod {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for InputMethod {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2224,15 +2109,10 @@ pub mod input {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl InputMethodAspect for InputMethod {}
-    #[allow(clippy::all)]
     impl InputMethodRefAspect for InputMethod {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for InputMethod {}
-    #[allow(clippy::all)]
     impl SpatialAspect for InputMethod {}
-    #[allow(clippy::all)]
     impl OwnedAspect for InputMethod {}
     pub(crate) const INPUT_METHOD_ASPECT_ID: u64 = 14883688361483968991u64;
     pub(crate) const INPUT_METHOD_SET_INPUT_SERVER_OPCODE: u64 = 17348904196349853573u64;
@@ -2250,7 +2130,6 @@ pub mod input {
         ReleaseHandler { id: u64 },
         DestroyHandler { id: u64 },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for InputMethodEvent {
         const ASPECT_ID: u64 = 14883688361483968991u64;
         fn serialize_signal(
@@ -2327,7 +2206,6 @@ pub mod input {
             }
         }
     }
-    #[allow(clippy::all)]
     ///Node representing a spatial input device
     pub trait InputMethodAspect: crate::node::NodeType + super::InputMethodRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
         fn recv_input_method_event(&self) -> Option<InputMethodEvent> {
@@ -2419,11 +2297,9 @@ pub mod input {
             Ok(())
         }
     }
-    #[allow(clippy::all)]
     ///Handle raw input events.
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct InputHandler(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl InputHandler {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2441,13 +2317,11 @@ pub mod input {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for InputHandler {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for InputHandler {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2456,13 +2330,9 @@ pub mod input {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl InputHandlerAspect for InputHandler {}
-    #[allow(clippy::all)]
     impl SpatialAspect for InputHandler {}
-    #[allow(clippy::all)]
     impl OwnedAspect for InputHandler {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for InputHandler {}
     pub(crate) const INPUT_HANDLER_ASPECT_ID: u64 = 537028132086008694u64;
     pub(crate) const INPUT_HANDLER_INPUT_CLIENT_OPCODE: u64 = 5305312459121645740u64;
@@ -2470,7 +2340,6 @@ pub mod input {
     pub enum InputHandlerEvent {
         Input { methods: Vec<InputMethodRef>, data: Vec<InputData> },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for InputHandlerEvent {
         const ASPECT_ID: u64 = 537028132086008694u64;
         fn serialize_signal(
@@ -2523,7 +2392,6 @@ pub mod input {
             }
         }
     }
-    #[allow(clippy::all)]
     ///Handle raw input events.
     pub trait InputHandlerAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_input_handler_event(&self) -> Option<InputHandlerEvent> {
@@ -2531,7 +2399,6 @@ pub mod input {
         }
     }
     pub(crate) const INTERFACE_CREATE_INPUT_METHOD_SERVER_OPCODE: u64 = 11977582531774730283u64;
-    #[allow(clippy::all)]
     ///Create an input method node
     pub fn create_input_method(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2557,7 +2424,6 @@ pub mod input {
         Ok(InputMethod::from_id(_client, id, true))
     }
     pub(crate) const INTERFACE_CREATE_INPUT_HANDLER_SERVER_OPCODE: u64 = 1654491336591158898u64;
-    #[allow(clippy::all)]
     ///Create an input handler node
     pub fn create_input_handler(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2589,11 +2455,9 @@ pub mod item {
     use super::*;
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 10u64;
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct Item(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl Item {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2610,13 +2474,11 @@ pub mod item {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for Item {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for Item {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2625,19 +2487,14 @@ pub mod item {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl ItemAspect for Item {}
-    #[allow(clippy::all)]
     impl SpatialAspect for Item {}
-    #[allow(clippy::all)]
     impl OwnedAspect for Item {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for Item {}
     pub(crate) const ITEM_ASPECT_ID: u64 = 18318655529277677339u64;
     pub(crate) const ITEM_RELEASE_SERVER_OPCODE: u64 = 11905596878821798323u64;
     #[derive(Debug)]
     pub enum ItemEvent {}
-    #[allow(clippy::all)]
     ///
     pub trait ItemAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///
@@ -2656,11 +2513,9 @@ pub mod item {
             Ok(())
         }
     }
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct ItemAcceptor(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl ItemAcceptor {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2678,13 +2533,11 @@ pub mod item {
             super::SpatialRef(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for ItemAcceptor {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for ItemAcceptor {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2693,13 +2546,9 @@ pub mod item {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl ItemAcceptorAspect for ItemAcceptor {}
-    #[allow(clippy::all)]
     impl SpatialAspect for ItemAcceptor {}
-    #[allow(clippy::all)]
     impl OwnedAspect for ItemAcceptor {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for ItemAcceptor {}
     pub(crate) const ITEM_ACCEPTOR_ASPECT_ID: u64 = 10274055739447304636u64;
     pub(crate) const ITEM_ACCEPTOR_RELEASE_ITEM_CLIENT_OPCODE: u64 = 14821884892980204849u64;
@@ -2707,7 +2556,6 @@ pub mod item {
     pub enum ItemAcceptorEvent {
         ReleaseItem { item_id: u64 },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for ItemAcceptorEvent {
         const ASPECT_ID: u64 = 10274055739447304636u64;
         fn serialize_signal(
@@ -2753,18 +2601,15 @@ pub mod item {
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait ItemAcceptorAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
             self.node().recv_event(10274055739447304636u64)
         }
     }
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct ItemUi(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl ItemUi {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2776,13 +2621,11 @@ pub mod item {
             ItemUi(node)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for ItemUi {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for ItemUi {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2791,7 +2634,6 @@ pub mod item {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl ItemUiAspect for ItemUi {}
     pub(crate) const ITEM_UI_ASPECT_ID: u64 = 7265392688253796589u64;
     pub(crate) const ITEM_UI_CAPTURE_ITEM_CLIENT_OPCODE: u64 = 1751367302976798762u64;
@@ -2805,7 +2647,6 @@ pub mod item {
         DestroyItem { id: u64 },
         DestroyAcceptor { id: u64 },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for ItemUiEvent {
         const ASPECT_ID: u64 = 7265392688253796589u64;
         fn serialize_signal(
@@ -2882,7 +2723,6 @@ pub mod item {
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait ItemUiAspect: crate::node::NodeType + std::fmt::Debug {
         fn recv_item_ui_event(&self) -> Option<ItemUiEvent> {
@@ -2897,11 +2737,9 @@ pub mod item_camera {
     use super::*;
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 11u64;
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct CameraItem(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl CameraItem {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2921,13 +2759,11 @@ pub mod item_camera {
             super::Spatial(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for CameraItem {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for CameraItem {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2936,27 +2772,19 @@ pub mod item_camera {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl CameraItemAspect for CameraItem {}
-    #[allow(clippy::all)]
     impl ItemAspect for CameraItem {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for CameraItem {}
-    #[allow(clippy::all)]
     impl OwnedAspect for CameraItem {}
-    #[allow(clippy::all)]
     impl SpatialAspect for CameraItem {}
     pub(crate) const CAMERA_ITEM_ASPECT_ID: u64 = 15672103361112197430u64;
     #[derive(Debug)]
     pub enum CameraItemEvent {}
-    #[allow(clippy::all)]
     ///
     pub trait CameraItemAspect: crate::node::NodeType + super::ItemAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {}
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct CameraItemUi(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl CameraItemUi {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2968,13 +2796,11 @@ pub mod item_camera {
             CameraItemUi(node)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for CameraItemUi {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for CameraItemUi {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2983,7 +2809,6 @@ pub mod item_camera {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl CameraItemUiAspect for CameraItemUi {}
     pub(crate) const CAMERA_ITEM_UI_ASPECT_ID: u64 = 708021061010127172u64;
     pub(crate) const CAMERA_ITEM_UI_CREATE_ITEM_CLIENT_OPCODE: u64 = 15524466827491111758u64;
@@ -2993,7 +2818,6 @@ pub mod item_camera {
         CreateItem { item: CameraItem },
         CreateAcceptor { acceptor: CameraItemAcceptor, acceptor_field: Field },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for CameraItemUiEvent {
         const ASPECT_ID: u64 = 708021061010127172u64;
         fn serialize_signal(
@@ -3050,18 +2874,15 @@ pub mod item_camera {
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait CameraItemUiAspect: crate::node::NodeType + std::fmt::Debug {
         fn recv_camera_item_ui_event(&self) -> Option<CameraItemUiEvent> {
             self.node().recv_event(708021061010127172u64)
         }
     }
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct CameraItemAcceptor(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl CameraItemAcceptor {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3082,13 +2903,11 @@ pub mod item_camera {
             super::Spatial(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for CameraItemAcceptor {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for CameraItemAcceptor {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -3097,15 +2916,10 @@ pub mod item_camera {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl CameraItemAcceptorAspect for CameraItemAcceptor {}
-    #[allow(clippy::all)]
     impl ItemAcceptorAspect for CameraItemAcceptor {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for CameraItemAcceptor {}
-    #[allow(clippy::all)]
     impl OwnedAspect for CameraItemAcceptor {}
-    #[allow(clippy::all)]
     impl SpatialAspect for CameraItemAcceptor {}
     pub(crate) const CAMERA_ITEM_ACCEPTOR_ASPECT_ID: u64 = 5036088114779304421u64;
     pub(crate) const CAMERA_ITEM_ACCEPTOR_CAPTURE_ITEM_SERVER_OPCODE: u64 = 1751367302976798762u64;
@@ -3114,7 +2928,6 @@ pub mod item_camera {
     pub enum CameraItemAcceptorEvent {
         CaptureItem { item: CameraItem },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for CameraItemAcceptorEvent {
         const ASPECT_ID: u64 = 5036088114779304421u64;
         fn serialize_signal(
@@ -3158,7 +2971,6 @@ pub mod item_camera {
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait CameraItemAcceptorAspect: crate::node::NodeType + super::ItemAcceptorAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
         fn recv_camera_item_acceptor_event(&self) -> Option<CameraItemAcceptorEvent> {
@@ -3187,7 +2999,6 @@ pub mod item_camera {
         }
     }
     pub(crate) const INTERFACE_CREATE_CAMERA_ITEM_SERVER_OPCODE: u64 = 16398826726504952950u64;
-    #[allow(clippy::all)]
     ///Create a camera item at a specific location
     pub fn create_camera_item(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3219,7 +3030,6 @@ pub mod item_camera {
         Ok(CameraItem::from_id(_client, id, true))
     }
     pub(crate) const INTERFACE_REGISTER_CAMERA_ITEM_UI_SERVER_OPCODE: u64 = 13470969625663359032u64;
-    #[allow(clippy::all)]
     ///Register this client to manage camera items and create default 3D UI for them.
     pub fn register_camera_item_ui(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3237,7 +3047,6 @@ pub mod item_camera {
         Ok(())
     }
     pub(crate) const INTERFACE_CREATE_CAMERA_ITEM_ACCEPTOR_SERVER_OPCODE: u64 = 13070169044031356364u64;
-    #[allow(clippy::all)]
     ///Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/camera/acceptor/<name>`.
     pub fn create_camera_item_acceptor(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3311,11 +3120,9 @@ pub mod item_panel {
         pub pointer_grab: Option<SurfaceId>,
         pub keyboard_grab: Option<SurfaceId>,
     }
-    #[allow(clippy::all)]
     ///An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.).
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct PanelItem(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl PanelItem {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3336,13 +3143,11 @@ pub mod item_panel {
             super::Spatial(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for PanelItem {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for PanelItem {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -3351,15 +3156,10 @@ pub mod item_panel {
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl PanelItemAspect for PanelItem {}
-    #[allow(clippy::all)]
     impl ItemAspect for PanelItem {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for PanelItem {}
-    #[allow(clippy::all)]
     impl OwnedAspect for PanelItem {}
-    #[allow(clippy::all)]
     impl SpatialAspect for PanelItem {}
     pub(crate) const PANEL_ITEM_ASPECT_ID: u64 = 16007573185838633179u64;
     pub(crate) const PANEL_ITEM_APPLY_CURSOR_MATERIAL_SERVER_OPCODE: u64 = 12984352657777750687u64;
@@ -3404,7 +3204,6 @@ pub mod item_panel {
         RepositionChild { uid: u64, geometry: Geometry },
         DestroyChild { uid: u64 },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for PanelItemEvent {
         const ASPECT_ID: u64 = 16007573185838633179u64;
         fn serialize_signal(
@@ -3577,7 +3376,6 @@ pub mod item_panel {
             }
         }
     }
-    #[allow(clippy::all)]
     ///An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.).
     pub trait PanelItemAspect: crate::node::NodeType + super::ItemAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
         fn recv_panel_item_event(&self) -> Option<PanelItemEvent> {
@@ -3896,11 +3694,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             Ok(())
         }
     }
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct PanelItemUi(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl PanelItemUi {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3912,13 +3708,11 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             PanelItemUi(node)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for PanelItemUi {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for PanelItemUi {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -3927,7 +3721,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl PanelItemUiAspect for PanelItemUi {}
     pub(crate) const PANEL_ITEM_UI_ASPECT_ID: u64 = 11713374794499719853u64;
     pub(crate) const PANEL_ITEM_UI_CREATE_ITEM_CLIENT_OPCODE: u64 = 15524466827491111758u64;
@@ -3937,7 +3730,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         CreateItem { item: PanelItem, initial_data: PanelItemInitData },
         CreateAcceptor { acceptor: PanelItemAcceptor, acceptor_field: Field },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for PanelItemUiEvent {
         const ASPECT_ID: u64 = 11713374794499719853u64;
         fn serialize_signal(
@@ -3997,18 +3789,15 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait PanelItemUiAspect: crate::node::NodeType + std::fmt::Debug {
         fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent> {
             self.node().recv_event(11713374794499719853u64)
         }
     }
-    #[allow(clippy::all)]
     ///
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct PanelItemAcceptor(pub(crate) std::sync::Arc<crate::node::Node>);
-    #[allow(clippy::all)]
     impl PanelItemAcceptor {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -4029,13 +3818,11 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             super::Spatial(self.0)
         }
     }
-    #[allow(clippy::all)]
     impl crate::node::NodeType for PanelItemAcceptor {
         fn node(&self) -> &crate::node::Node {
             &self.0
         }
     }
-    #[allow(clippy::all)]
     impl serde::Serialize for PanelItemAcceptor {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -4044,15 +3831,10 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             serializer.serialize_u64(self.0.id())
         }
     }
-    #[allow(clippy::all)]
     impl PanelItemAcceptorAspect for PanelItemAcceptor {}
-    #[allow(clippy::all)]
     impl ItemAcceptorAspect for PanelItemAcceptor {}
-    #[allow(clippy::all)]
     impl SpatialRefAspect for PanelItemAcceptor {}
-    #[allow(clippy::all)]
     impl OwnedAspect for PanelItemAcceptor {}
-    #[allow(clippy::all)]
     impl SpatialAspect for PanelItemAcceptor {}
     pub(crate) const PANEL_ITEM_ACCEPTOR_ASPECT_ID: u64 = 6398932320740499836u64;
     pub(crate) const PANEL_ITEM_ACCEPTOR_CAPTURE_ITEM_SERVER_OPCODE: u64 = 1751367302976798762u64;
@@ -4061,7 +3843,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     pub enum PanelItemAcceptorEvent {
         CaptureItem { item: PanelItem, initial_data: PanelItemInitData },
     }
-    #[allow(clippy::all)]
     impl crate::scenegraph::EventParser for PanelItemAcceptorEvent {
         const ASPECT_ID: u64 = 6398932320740499836u64;
         fn serialize_signal(
@@ -4108,7 +3889,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             }
         }
     }
-    #[allow(clippy::all)]
     ///
     pub trait PanelItemAcceptorAspect: crate::node::NodeType + super::ItemAcceptorAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
         fn recv_panel_item_acceptor_event(&self) -> Option<PanelItemAcceptorEvent> {
@@ -4200,7 +3980,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         Ok(deserialized)
     }
     pub(crate) const INTERFACE_REGISTER_PANEL_ITEM_UI_SERVER_OPCODE: u64 = 13016197282381545765u64;
-    #[allow(clippy::all)]
     ///Register this client to manage the items of a certain type and create default 3D UI for them.
     pub fn register_panel_item_ui(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -4218,7 +3997,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         Ok(())
     }
     pub(crate) const INTERFACE_CREATE_PANEL_ITEM_ACCEPTOR_SERVER_OPCODE: u64 = 793626320493717815u64;
-    #[allow(clippy::all)]
     ///Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/panel/acceptor/<name>`.
     pub fn create_panel_item_acceptor(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
