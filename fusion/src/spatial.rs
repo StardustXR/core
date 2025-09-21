@@ -240,10 +240,10 @@ async fn fusion_zone() {
 		while let Some(event) = client.get_root().recv_root_event() {
 			match event {
 				RootEvent::Ping { response } => {
-					response.send(Ok(()));
+					response.send_ok(());
 				}
 				RootEvent::Frame { info: _ } => zone.update().unwrap(),
-				RootEvent::SaveState { response } => response.send(Ok(ClientState::default())),
+				RootEvent::SaveState { response } => response.send_ok(ClientState::default()),
 			}
 		}
 		while let Some(zone_event) = zone.recv_zone_event() {

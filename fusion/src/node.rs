@@ -21,8 +21,6 @@ use thiserror::Error;
 
 pub use crate::protocol::node::*;
 
-pub type MethodResult<T> = color_eyre::eyre::Result<T>;
-
 #[derive(Error, Debug)]
 pub enum NodeError {
 	#[error("client has been dropped")]

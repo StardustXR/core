@@ -1,5 +1,4 @@
 pub use color;
-pub use color_eyre::eyre::Result as MethodResult;
 pub use mint::{Vector2, Vector3};
 pub type Quaternion = mint::Quaternion<f32>;
 pub type Mat4 = mint::ColumnMatrix4<f32>;

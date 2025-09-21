@@ -1,5 +1,4 @@
 use crate::messenger::MethodResponse;
-use color_eyre::Report;
 use stardust_xr_schemas::flex::flexbuffers::DeserializationError;
 use std::os::unix::io::OwnedFd;
 use thiserror::Error;
@@ -22,13 +21,6 @@ impl From<DeserializationError> for ScenegraphError {
 	fn from(value: DeserializationError) -> Self {
 		Self::MemberError {
 			error: format!("Deserialization error: {value:?}"),
-		}
-	}
-}
-impl From<Report> for ScenegraphError {
-	fn from(value: Report) -> Self {
-		Self::MemberError {
-			error: value.to_string(),
 		}
 	}
 }

@@ -3,7 +3,6 @@
 use crate::node::NodeResult;
 use crate::root::{Root, RootAspect};
 use crate::{node::NodeError, scenegraph::Scenegraph};
-use color_eyre::eyre::Result;
 use global_counter::primitive::exact::CounterU64;
 use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
 use stardust_xr::{
@@ -288,13 +287,13 @@ async fn fusion_client_life_cycle() {
 			while let Some(event) = client.get_root().recv_root_event() {
 				match event {
 					RootEvent::Ping { response } => {
-						response.send(Ok(()));
+						response.send_ok(());
 					}
 					RootEvent::Frame { info: _ } => {
 						println!("Got frame event");
 						flow.stop();
 					}
-					RootEvent::SaveState { response } => response.send(Ok(ClientState::default())),
+					RootEvent::SaveState { response } => response.send_ok(ClientState::default()),
 				}
 			}
 		})

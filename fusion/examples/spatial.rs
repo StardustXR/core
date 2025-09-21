@@ -43,7 +43,7 @@ async fn main() {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Ping { response } => {
-						response.send(Ok(()));
+						response.send_ok(());
 					}
 					RootEvent::Frame { info } => {
 						elapsed += info.delta;

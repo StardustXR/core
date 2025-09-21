@@ -3,13 +3,15 @@
 #![allow(dead_code)]
 #![allow(clippy::derivable_impls)]
 
-use std::{fmt::Debug, marker::PhantomData, os::fd::OwnedFd};
+use std::{error::Error, fmt::Debug, marker::PhantomData, os::fd::OwnedFd};
 
 pub use client::*;
 use serde::Serialize;
 pub use stardust_xr as core;
 pub use stardust_xr::values;
-use stardust_xr::{messenger::MethodResponse, scenegraph::ScenegraphError, values::MethodResult};
+use stardust_xr::{messenger::MethodResponse, scenegraph::ScenegraphError};
+
+use crate::node::NodeError;
 
 #[macro_use]
 pub mod node;
@@ -27,7 +29,10 @@ pub mod spatial;
 
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);
 impl<T: Serialize> TypedMethodResponse<T> {
-	pub fn send(self, result: MethodResult<T>) {
+	pub fn send_ok(self, value: T) {
+		self.send(Ok::<T, NodeError>(value))
+	}
+	pub fn send<E: Error>(self, result: Result<T, E>) {
 		let data = match result {
 			Ok(d) => d,
 			Err(e) => {
@@ -45,8 +50,8 @@ impl<T: Serialize> TypedMethodResponse<T> {
 		};
 		self.0.send(Ok((&serialized, Vec::<OwnedFd>::new())));
 	}
-	pub fn wrap<F: FnOnce() -> MethodResult<T>>(self, f: F) {
-		self.send((f)())
+	pub fn wrap<E: Error, F: FnOnce() -> Result<T, E>>(self, f: F) {
+		self.send(f())
 	}
 }
 impl<T: Serialize> Debug for TypedMethodResponse<T> {

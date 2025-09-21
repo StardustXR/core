@@ -233,7 +233,7 @@ async fn fusion_pointer_input_method() {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Ping { response } => {
-						response.send(Ok(()));
+						response.send_ok(());
 					}
 					RootEvent::Frame { info } => {
 						let (sin, cos) = info.elapsed.sin_cos();
@@ -250,7 +250,7 @@ async fn fusion_pointer_input_method() {
 							.set_datamap(&Datamap::from_typed(&datamap).unwrap())
 							.unwrap();
 					}
-					RootEvent::SaveState { response } => response.send(Ok(Default::default())),
+					RootEvent::SaveState { response } => response.send_ok(Default::default()),
 				}
 			}
 		})
@@ -304,7 +304,7 @@ async fn fusion_tip_input_method() {
 			while let Some(root_event) = client.get_root().recv_root_event() {
 				match root_event {
 					RootEvent::Ping { response } => {
-						response.send(Ok(()));
+						response.send_ok(());
 					}
 					RootEvent::Frame { info } => {
 						let (sin, cos) = info.elapsed.sin_cos();
@@ -319,7 +319,7 @@ async fn fusion_tip_input_method() {
 						tip.set_datamap(&Datamap::from_typed(&datamap).unwrap())
 							.unwrap();
 					}
-					RootEvent::SaveState { response } => response.send(Ok(Default::default())),
+					RootEvent::SaveState { response } => response.send_ok(Default::default()),
 				}
 			}
 		})
