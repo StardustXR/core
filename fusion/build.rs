@@ -204,7 +204,7 @@ impl Tokenize for Protocol {
 				p.members
 					.iter()
 					.map(|m| {
-						let member_name = m.name.to_case(Case::ScreamingSnake);
+						let member_name = m.name.to_case(Case::UpperSnake);
 						let name_type = if m.side == Side::Client {
 							"CLIENT"
 						} else {
@@ -366,7 +366,7 @@ impl Tokenize for Aspect {
 
 		let aspect_id = {
 			let name = Ident::new(
-				&format!("{}_ASPECT_ID", self.name.to_case(Case::ScreamingSnake)),
+				&format!("{}_ASPECT_ID", self.name.to_case(Case::UpperSnake)),
 				Span::call_site(),
 			);
 			quote!(pub(crate) const #name: u64 = #opcode;)
@@ -378,8 +378,8 @@ impl Tokenize for Aspect {
 		);
 
 		let opcodes = self.members.iter().map(|m| {
-			let aspect_name = self.name.to_case(Case::ScreamingSnake);
-			let member_name = m.name.to_case(Case::ScreamingSnake);
+			let aspect_name = self.name.to_case(Case::UpperSnake);
+			let member_name = m.name.to_case(Case::UpperSnake);
 			let name_type = if m.side == Side::Client {
 				"CLIENT"
 			} else {

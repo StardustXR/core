@@ -17,10 +17,10 @@ keymap = ["dep:xkbcommon"]
 glam = { version = "0.30.0", features = ["mint"] }
 global_counter = "=0.2.2"
 parking_lot = "0.12.1"
-rustc-hash = "1.1.0"
+rustc-hash = "2.1.1"
 serde = "1.0.177"
 serde_repr = "0.1.16"
-thiserror = "1.0.38"
+thiserror = "2.0.16"
 tokio = { version = "1", features = [
 	"sync",
 	"macros",
@@ -30,14 +30,14 @@ tokio = { version = "1", features = [
 	"io-util",
 	"signal",
 ] }
-xkbcommon = { version = "0.5.1", default-features = false, optional = true }
+xkbcommon = { version = "0.9.0", default-features = false, optional = true }
 tracing = "0.1.37"
-zbus = "5.5.0"
+zbus = { version = "5.11.0", features = ["tokio"], default-features = false }
 stardust-xr = { path = "../core" }
 dashmap = "6.1.0"
 
 [build-dependencies]
-convert_case = "0.6.0"
+convert_case = "0.8.0"
 quote = "1.0.33"
 stardust-xr-schemas = { path = "../schemas" }
 proc-macro2 = "1.0.71"
