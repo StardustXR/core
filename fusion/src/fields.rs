@@ -21,7 +21,7 @@ impl Field {
 		transform: Transform,
 		shape: Shape,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_field(
 			&client,
 			client.generate_id(),

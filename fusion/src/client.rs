@@ -2,7 +2,7 @@
 
 use crate::node::NodeResult;
 use crate::root::{Root, RootAspect};
-use crate::{node::NodeError, scenegraph::Scenegraph};
+use crate::{node::NodeError, scenegraph::NodeRegistry};
 use global_counter::primitive::exact::CounterU64;
 use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
 use stardust_xr::{
@@ -72,8 +72,9 @@ impl Client {
 	/// Create a client and messenger halves from an established tokio async `UnixStream` for manually setting up the event loop.
 	pub fn from_connection(connection: UnixStream) -> Self {
 		let (message_tx, message_rx) = messenger::create(connection);
+		let internal = ClientHandle::new(&message_tx);
 		Client {
-			internal: ClientHandle::new(&message_tx),
+			internal,
 			message_rx,
 			message_tx,
 		}
@@ -101,7 +102,8 @@ impl Client {
 	}
 
 	pub async fn dispatch(&mut self) -> Result<(), MessengerError> {
-		self.message_rx.dispatch(&*self.handle().scenegraph).await
+		// Use the new registry for better performance, but fallback to legacy scenegraph
+		self.message_rx.dispatch(&self.internal.registry).await
 	}
 	/// this one will wait until there's some message to send
 	pub async fn flush(&mut self) -> Result<(), MessengerError> {
@@ -157,11 +159,10 @@ impl Client {
 			let stop_notify = stop_notify.clone();
 			let wait_notify = wait_notify.clone();
 			async move {
-				let scenegraph = self.internal.scenegraph.clone();
 				loop {
 					tokio::select! {
 						r = self.message_tx.flush() => r?,
-						r = self.message_rx.dispatch(&*scenegraph) => r?,
+						r = self.message_rx.dispatch(&self.internal.registry) => r?,
 						_ = stop_notify.notified() => break,
 					}
 					wait_notify.notify_waiters();
@@ -235,19 +236,16 @@ impl ControlFlow {
 /// Your connection to the Stardust server.
 pub struct ClientHandle {
 	pub message_sender_handle: MessageSenderHandle,
-	pub scenegraph: Arc<Scenegraph>,
+	pub(crate) registry: NodeRegistry,
 	id_counter: CounterU64,
 	root: OnceCell<Root>,
 }
-
 impl ClientHandle {
 	fn new(message_tx: &MessageSender) -> Arc<Self> {
-		let client = Arc::new_cyclic(|client_ref| ClientHandle {
-			scenegraph: Arc::new(Scenegraph::new(client_ref.clone())),
+		let client = Arc::new_cyclic(|weak_handle| ClientHandle {
 			message_sender_handle: message_tx.handle(),
-
+			registry: NodeRegistry::new(weak_handle.clone()),
 			id_counter: CounterU64::new(u64::MAX / 2),
-
 			root: OnceCell::new(),
 		});
 		let _ = client.root.set(Root::from_id(&client, 0, true));

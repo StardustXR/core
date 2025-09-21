@@ -3,11 +3,12 @@ use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
 use stardust_xr_schemas::protocol::*;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::iter::once;
 use std::path::Path;
 use std::path::PathBuf;
-
 fn main() {
 	// Watch for changes to KDL schema files
 	let schema_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
@@ -153,6 +154,10 @@ pub fn generate_protocol_file(
 
 		use crate::node::NodeType;
 
+		pub(crate) trait AddAspect<A> {
+			fn add_aspect(registry: &crate::scenegraph::NodeRegistry, node_id: u64, aspect_id: u64);
+		}
+
 		//=====================================
 		#protocols
 	};
@@ -203,25 +208,7 @@ impl Tokenize for Protocol {
 			.map(|p| {
 				p.members
 					.iter()
-					.map(|m| {
-						let member_name = m.name.to_case(Case::UpperSnake);
-						let name_type = if m.side == Side::Client {
-							"CLIENT"
-						} else {
-							"SERVER"
-						};
-						let name = Ident::new(
-							&format!("INTERFACE_{member_name}_{name_type}_OPCODE"),
-							Span::call_site(),
-						);
-						let opcode = m.opcode;
-
-						let member = generate_server_member(Some(p.node_id), 0, "Interface", m);
-						quote! {
-							pub(crate) const #name: u64 = #opcode;
-							#member
-						}
-					})
+					.map(|m| generate_server_member(Some(p.node_id), 0, "Interface", m))
 					.reduce(|a, b| quote!(#a #b))
 					.unwrap_or_default()
 			})
@@ -361,38 +348,13 @@ impl Tokenize for Aspect {
 	fn tokenize(&self, generate_node: bool, _partial_eq: bool) -> TokenStream {
 		let node_name = Ident::new(&self.name, Span::call_site());
 		let description = &self.description;
-		let opcode = self.id;
+		let aspect_id = self.id;
 		let server_members = self.members.iter().filter(|m| m.side == Side::Server);
-
-		let aspect_id = {
-			let name = Ident::new(
-				&format!("{}_ASPECT_ID", self.name.to_case(Case::UpperSnake)),
-				Span::call_site(),
-			);
-			quote!(pub(crate) const #name: u64 = #opcode;)
-		};
 
 		let aspect_trait_name = Ident::new(
 			&format!("{}Aspect", &self.name.to_case(Case::Pascal)),
 			Span::call_site(),
 		);
-
-		let opcodes = self.members.iter().map(|m| {
-			let aspect_name = self.name.to_case(Case::UpperSnake);
-			let member_name = m.name.to_case(Case::UpperSnake);
-			let name_type = if m.side == Side::Client {
-				"CLIENT"
-			} else {
-				"SERVER"
-			};
-			let name = Ident::new(
-				&format!("{aspect_name}_{member_name}_{name_type}_OPCODE"),
-				Span::call_site(),
-			);
-			let opcode = m.opcode;
-
-			quote!(pub(crate) const #name: u64 = #opcode;)
-		});
 
 		let aspect_name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
 		let event_name = Ident::new(&format!("{aspect_name}Event"), Span::call_site());
@@ -435,10 +397,6 @@ impl Tokenize for Aspect {
 			.fold(quote!(crate::node::NodeType), |a, b| quote!(#a + #b));
 		let server_side_members =
 			server_members.map(|m| generate_server_member(None, self.id, &self.name, m));
-		let do_add_aspect = self.members.iter().any(|m| m.side == Side::Client);
-		let add_aspect_tokens = do_add_aspect
-			.then_some(quote!(client.scenegraph.add_aspect::<#event_name>(&node);))
-			.unwrap_or_default();
 
 		let conversion_functions = self
 			.inherits
@@ -451,7 +409,9 @@ impl Tokenize for Aspect {
 
 				quote! {
 					pub fn #conversion_fn_name(self) -> super::#inherited_aspect {
-						super::#inherited_aspect(self.0)
+						super::#inherited_aspect {
+							core: self.core,
+						}
 					}
 				}
 			});
@@ -473,24 +433,28 @@ impl Tokenize for Aspect {
 			.unwrap_or_default();
 		let node = generate_node.then(|| quote! {
 			#[doc = #description]
-			#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-			pub struct #node_name (pub(crate) std::sync::Arc<crate::node::Node>);
+			#[derive(Debug, Clone)]
+			pub struct #node_name {
+				pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+			}
 			impl #node_name {
 				pub(crate) fn from_id(client: &std::sync::Arc<crate::client::ClientHandle>, id: u64, owned: bool) -> Self {
-					let node = crate::node::Node::from_id(client, id, owned);
-					#add_aspect_tokens
-					#node_name(node)
+					let core = std::sync::Arc::new(crate::node::NodeCore::new(client.clone(), id, owned));
+					client.registry.add_aspect::<>(id, #aspect_id);
+					#node_name {
+						core
+					}
 				}
 				#(#conversion_functions)*
 			}
 			impl crate::node::NodeType for #node_name {
-				fn node(&self) -> &crate::node::Node {
-					&self.0
+				fn node(&self) -> &crate::node::NodeCore {
+					&self.core
 				}
 			}
 			impl serde::Serialize for #node_name {
 				fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-					serializer.serialize_u64(self.0.id())
+					serializer.serialize_u64(self.core.id)
 				}
 			}
 			impl #aspect_trait_name for #node_name {}
@@ -505,7 +469,7 @@ impl Tokenize for Aspect {
 			let id = self.id;
 			quote! {
 				fn #recv_event_method_name(&self) -> Option<#event_name> {
-					self.node().recv_event(#id)
+					self.recv_event(#id)
 				}
 			}
 		} else {
@@ -513,8 +477,6 @@ impl Tokenize for Aspect {
 		};
 		quote! {
 			#node
-			#aspect_id
-			#(#opcodes)*
 
 			#aspect_events
 			#aspect_event_sender_impl
@@ -569,7 +531,7 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 
 			let response_sender = if member._type == MemberType::Method {
 				quote! {
-					response: crate::TypedMethodResponse(response.borrow_mut().take().unwrap(), std::marker::PhantomData),
+					response: crate::TypedMethodResponse(response, std::marker::PhantomData),
 				}
 			} else {
 				quote!()
@@ -605,24 +567,19 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 	quote! {
 		impl crate::scenegraph::EventParser for #event_name {
 			const ASPECT_ID: u64 = #opcode;
-			fn serialize_signal(_client: &std::sync::Arc<crate::client::ClientHandle>, signal_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+
+			fn parse_signal(_client: &std::sync::Arc<crate::client::ClientHandle>, signal_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
 				match signal_id {
 					#(#signal_matches)*
 					_ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
 				}
 			}
-			fn serialize_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr::messenger::MethodResponse) -> Option<Self> {
-				let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-				let response2 = response.clone();
-				let result = || match method_id {
+			fn parse_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr::messenger::MethodResponse) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+				match method_id {
 					#(#method_matches)*
-					_ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-				};
-				match (result)() {
-					Ok(event) => Some(event),
-					Err(e) => {
-						let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-						None
+					_ => {
+						let _ = response.send(Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound));
+						Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
 					}
 				}
 			}
@@ -695,7 +652,7 @@ fn generate_server_member(
 				quote! {
 					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					self.node().send_remote_signal(#aspect_id, #opcode, &data, _fds)?;
+					self.node().send_signal(#aspect_id, #opcode, &data, _fds)?;
 
 					let (#(#arguments),*) = data;
 					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
@@ -710,7 +667,7 @@ fn generate_server_member(
 				let get_client = if interface_node_id.is_some() {
 					quote!(_client)
 				} else {
-					quote!(&self.node().client()?)
+					quote!(&self.node().client)
 				};
 				quote! {
 					{ #body }
@@ -767,7 +724,7 @@ fn generate_server_member(
 						let (#(#arguments),*) = &data;
 						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
 					}
-					let result: #deserializeable_type = self.node().execute_remote_method(#aspect_id, #opcode, &data, _fds).await?;
+					let result: #deserializeable_type = self.node().call_method(#aspect_id, #opcode, &data, _fds).await?;
 					let deserialized = #deserialize;
 					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
 					Ok(deserialized)
@@ -804,10 +761,10 @@ fn generate_argument_deserialize(
 			let node_type = Ident::new(&_type.to_case(Case::Pascal), Span::call_site());
 			match optional {
 				true => {
-					quote!(#name.map(|n| #node_type::from_id(&_client, n, false)))
+					quote!(#name.map(|n| #node_type::from_id(_client, n, false)))
 				}
 				false => {
-					quote!(#node_type::from_id(&_client, #name, false))
+					quote!(#node_type::from_id(_client, #name, false))
 				}
 			}
 		}
@@ -848,8 +805,8 @@ fn generate_argument_serialize(
 	let name = Ident::new(&argument_name.to_case(Case::Snake), Span::call_site());
 	if let ArgumentType::Node { _type, .. } = argument_type {
 		return match optional {
-			true => quote!(#name.map(|n| n.node().id())),
-			false => quote!(#name.node().id()),
+			true => quote!(#name.map(|n| n.node().id)),
+			false => quote!(#name.node().id),
 		};
 	}
 	if optional {

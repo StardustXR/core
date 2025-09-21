@@ -18,7 +18,7 @@ impl PanelItemUi {
 		// TODO: properly autogen this adding of aspect
 		let panel_item_ui = PanelItemUi::from_id(client, INTERFACE_NODE_ID, true);
 		client
-			.scenegraph
+			.registry
 			.add_aspect::<ItemUiEvent>(panel_item_ui.node());
 		Ok(panel_item_ui)
 	}

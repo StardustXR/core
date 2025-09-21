@@ -16,7 +16,7 @@ impl Lines {
 		transform: Transform,
 		lines: &[Line],
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_lines(
 			&client,
 			client.generate_id(),
@@ -71,7 +71,7 @@ impl Model {
 		transform: Transform,
 		model: &ResourceID,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		load_model(
 			&client,
 			client.generate_id(),
@@ -81,7 +81,7 @@ impl Model {
 		)
 	}
 	pub fn part(&self, relative_path: &str) -> NodeResult<ModelPart> {
-		let client = self.client()?;
+		let client = self.client();
 		self.bind_model_part(client.generate_id(), relative_path)
 	}
 }
@@ -92,7 +92,7 @@ impl Text {
 		text: &str,
 		style: TextStyle,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_text(
 			&client,
 			client.generate_id(),

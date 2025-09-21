@@ -26,10 +26,10 @@ impl ClientState {
 	) -> Result<Self, SerializationError> {
 		Ok(ClientState {
 			data: data.map(flexbuffers::to_vec).transpose()?,
-			root: root.node().id(),
+			root: root.id(),
 			spatial_anchors: spatial_anchors
 				.into_iter()
-				.map(|(k, v)| (k, v.node().id()))
+				.map(|(k, v)| (k, v.id()))
 				.collect(),
 		})
 	}

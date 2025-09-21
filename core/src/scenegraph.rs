@@ -16,6 +16,8 @@ pub enum ScenegraphError {
 	MemberNotFound,
 	#[error("Signal/method error: {error}")]
 	MemberError { error: String },
+	#[error("Internal error: {0}")]
+	InternalError(String),
 }
 impl From<DeserializationError> for ScenegraphError {
 	fn from(value: DeserializationError) -> Self {

@@ -1,5 +1,12 @@
 #![allow(async_fn_in_trait, unused_parens, clippy::all)]
 use crate::node::NodeType;
+pub(crate) trait AddAspect<A> {
+    fn add_aspect(
+        registry: &crate::scenegraph::NodeRegistry,
+        node_id: u64,
+        aspect_id: u64,
+    );
+}
 #[allow(unused_imports)]
 use root::*;
 pub mod root {
@@ -20,25 +27,31 @@ pub mod root {
         pub spatial_anchors: stardust_xr::values::Map<String, u64>,
     }
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Root(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Root {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Root {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<RootEvent>(&node);
-            Root(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 7212020743076450030u64);
+            Root { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Root {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Root {
@@ -46,20 +59,11 @@ pub mod root {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl RootAspect for Root {}
     impl SpatialRefAspect for Root {}
-    pub(crate) const ROOT_ASPECT_ID: u64 = 7212020743076450030u64;
-    pub(crate) const ROOT_PING_CLIENT_OPCODE: u64 = 1374738518356883234u64;
-    pub(crate) const ROOT_FRAME_CLIENT_OPCODE: u64 = 2586777469268117179u64;
-    pub(crate) const ROOT_GET_STATE_SERVER_OPCODE: u64 = 14958324855167218950u64;
-    pub(crate) const ROOT_SAVE_STATE_CLIENT_OPCODE: u64 = 6559167809188075643u64;
-    pub(crate) const ROOT_GENERATE_STATE_TOKEN_SERVER_OPCODE: u64 = 530863980839400599u64;
-    pub(crate) const ROOT_GET_CONNECTION_ENVIRONMENT_SERVER_OPCODE: u64 = 3344613215577382567u64;
-    pub(crate) const ROOT_SET_BASE_PREFIXES_SERVER_OPCODE: u64 = 3714507829296596139u64;
-    pub(crate) const ROOT_DISCONNECT_SERVER_OPCODE: u64 = 662137628972844924u64;
     #[derive(Debug)]
     pub enum RootEvent {
         Ping { response: crate::TypedMethodResponse<()> },
@@ -68,7 +72,7 @@ pub mod root {
     }
     impl crate::scenegraph::EventParser for RootEvent {
         const ASPECT_ID: u64 = 7212020743076450030u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -87,22 +91,20 @@ pub mod root {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
                 1374738518356883234u64 => {
                     let (): () = stardust_xr::schemas::flex::deserialize(_data)?;
                     tracing::trace!("Method called from server, {}::{}", "Root", "ping");
                     Ok(RootEvent::Ping {
                         response: crate::TypedMethodResponse(
-                            response.borrow_mut().take().unwrap(),
+                            response,
                             std::marker::PhantomData,
                         ),
                     })
@@ -114,18 +116,17 @@ pub mod root {
                     );
                     Ok(RootEvent::SaveState {
                         response: crate::TypedMethodResponse(
-                            response.borrow_mut().take().unwrap(),
+                            response,
                             std::marker::PhantomData,
                         ),
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -133,7 +134,7 @@ pub mod root {
     ///
     pub trait RootAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_root_event(&self) -> Option<RootEvent> {
-            self.node().recv_event(7212020743076450030u64)
+            self.recv_event(7212020743076450030u64)
         }
         ///Get the current state. Useful to check the state before you initialize your application!
         async fn get_state(&self) -> crate::node::NodeResult<ClientState> {
@@ -148,7 +149,7 @@ pub mod root {
                 }
                 let result: ClientState = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         7212020743076450030u64,
                         14958324855167218950u64,
                         &data,
@@ -185,7 +186,7 @@ pub mod root {
                 }
                 let result: String = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         7212020743076450030u64,
                         530863980839400599u64,
                         &data,
@@ -216,7 +217,7 @@ pub mod root {
                 }
                 let result: stardust_xr::values::Map<String, String> = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         7212020743076450030u64,
                         3344613215577382567u64,
                         &data,
@@ -247,7 +248,7 @@ pub mod root {
                 .map(|a| Ok(a))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     7212020743076450030u64,
                     3714507829296596139u64,
                     &data,
@@ -264,7 +265,7 @@ pub mod root {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     7212020743076450030u64,
                     662137628972844924u64,
                     &data,
@@ -282,9 +283,6 @@ pub mod node {
     #[allow(unused_imports)]
     use super::*;
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
-    pub(crate) const OWNED_ASPECT_ID: u64 = 15801764205032075891u64;
-    pub(crate) const OWNED_SET_ENABLED_SERVER_OPCODE: u64 = 13365497663235993822u64;
-    pub(crate) const OWNED_DESTROY_SERVER_OPCODE: u64 = 8637450960623370830u64;
     #[derive(Debug)]
     pub enum OwnedEvent {}
     ///This node was created by the current client and can be disabled/destroyed
@@ -294,7 +292,7 @@ pub mod node {
             let mut _fds = Vec::new();
             let data = (enabled);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     15801764205032075891u64,
                     13365497663235993822u64,
                     &data,
@@ -311,7 +309,7 @@ pub mod node {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     15801764205032075891u64,
                     8637450960623370830u64,
                     &data,
@@ -348,21 +346,26 @@ pub mod spatial {
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	*/
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct SpatialRef(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct SpatialRef {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl SpatialRef {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            SpatialRef(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 14774096707642646617u64);
+            SpatialRef { core }
         }
     }
     impl crate::node::NodeType for SpatialRef {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for SpatialRef {
@@ -370,14 +373,10 @@ pub mod spatial {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl SpatialRefAspect for SpatialRef {}
-    pub(crate) const SPATIAL_REF_ASPECT_ID: u64 = 14774096707642646617u64;
-    pub(crate) const SPATIAL_REF_GET_LOCAL_BOUNDING_BOX_SERVER_OPCODE: u64 = 15184457389419466387u64;
-    pub(crate) const SPATIAL_REF_GET_RELATIVE_BOUNDING_BOX_SERVER_OPCODE: u64 = 8077745023404307052u64;
-    pub(crate) const SPATIAL_REF_GET_TRANSFORM_SERVER_OPCODE: u64 = 6982810219028106561u64;
     #[derive(Debug)]
     pub enum SpatialRefEvent {}
     /**
@@ -400,7 +399,7 @@ pub mod spatial {
                 }
                 let result: BoundingBox = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         14774096707642646617u64,
                         15184457389419466387u64,
                         &data,
@@ -422,7 +421,7 @@ pub mod spatial {
         ) -> crate::node::NodeResult<BoundingBox> {
             {
                 let mut _fds = Vec::new();
-                let data = (relative_to.node().id());
+                let data = (relative_to.node().id);
                 {
                     let (relative_to) = &data;
                     tracing::trace!(
@@ -432,7 +431,7 @@ pub mod spatial {
                 }
                 let result: BoundingBox = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         14774096707642646617u64,
                         8077745023404307052u64,
                         &data,
@@ -454,7 +453,7 @@ pub mod spatial {
         ) -> crate::node::NodeResult<Transform> {
             {
                 let mut _fds = Vec::new();
-                let data = (relative_to.node().id());
+                let data = (relative_to.node().id);
                 {
                     let (relative_to) = &data;
                     tracing::trace!(
@@ -464,7 +463,7 @@ pub mod spatial {
                 }
                 let result: Transform = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         14774096707642646617u64,
                         6982810219028106561u64,
                         &data,
@@ -485,24 +484,31 @@ pub mod spatial {
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	*/
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Spatial(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Spatial {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Spatial {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Spatial(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 17785849468685298036u64);
+            Spatial { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Spatial {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Spatial {
@@ -510,19 +516,12 @@ pub mod spatial {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl SpatialAspect for Spatial {}
     impl SpatialRefAspect for Spatial {}
     impl OwnedAspect for Spatial {}
-    pub(crate) const SPATIAL_ASPECT_ID: u64 = 17785849468685298036u64;
-    pub(crate) const SPATIAL_SET_LOCAL_TRANSFORM_SERVER_OPCODE: u64 = 5092462149256736585u64;
-    pub(crate) const SPATIAL_SET_RELATIVE_TRANSFORM_SERVER_OPCODE: u64 = 15020422542376308840u64;
-    pub(crate) const SPATIAL_SET_SPATIAL_PARENT_SERVER_OPCODE: u64 = 12472379656662040034u64;
-    pub(crate) const SPATIAL_SET_SPATIAL_PARENT_IN_PLACE_SERVER_OPCODE: u64 = 1386737540675144626u64;
-    pub(crate) const SPATIAL_SET_ZONEABLE_SERVER_OPCODE: u64 = 14580454097816778715u64;
-    pub(crate) const SPATIAL_EXPORT_SPATIAL_SERVER_OPCODE: u64 = 3600225297814947977u64;
     #[derive(Debug)]
     pub enum SpatialEvent {}
     /**
@@ -539,7 +538,7 @@ pub mod spatial {
             let mut _fds = Vec::new();
             let data = (transform);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17785849468685298036u64,
                     5092462149256736585u64,
                     &data,
@@ -559,9 +558,9 @@ pub mod spatial {
             transform: Transform,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (relative_to.node().id(), transform);
+            let data = (relative_to.node().id, transform);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17785849468685298036u64,
                     15020422542376308840u64,
                     &data,
@@ -583,9 +582,9 @@ pub mod spatial {
             parent: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (parent.node().id());
+            let data = (parent.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17785849468685298036u64,
                     12472379656662040034u64,
                     &data,
@@ -607,9 +606,9 @@ pub mod spatial {
             parent: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (parent.node().id());
+            let data = (parent.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17785849468685298036u64,
                     1386737540675144626u64,
                     &data,
@@ -630,7 +629,7 @@ pub mod spatial {
             let mut _fds = Vec::new();
             let data = (zoneable);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17785849468685298036u64,
                     14580454097816778715u64,
                     &data,
@@ -655,7 +654,7 @@ pub mod spatial {
                 }
                 let result: u64 = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         17785849468685298036u64,
                         3600225297814947977u64,
                         &data,
@@ -674,28 +673,34 @@ pub mod spatial {
     /**
 		Node to manipulate spatial nodes across clients.
 	*/
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Zone(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Zone {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Zone {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<ZoneEvent>(&node);
-            Zone(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 8505905936867072296u64);
+            Zone { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Zone {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Zone {
@@ -703,21 +708,13 @@ pub mod spatial {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl ZoneAspect for Zone {}
     impl SpatialAspect for Zone {}
     impl OwnedAspect for Zone {}
     impl SpatialRefAspect for Zone {}
-    pub(crate) const ZONE_ASPECT_ID: u64 = 8505905936867072296u64;
-    pub(crate) const ZONE_UPDATE_SERVER_OPCODE: u64 = 4876473203673722513u64;
-    pub(crate) const ZONE_CAPTURE_SERVER_OPCODE: u64 = 11313548931929469818u64;
-    pub(crate) const ZONE_RELEASE_SERVER_OPCODE: u64 = 11905596878821798323u64;
-    pub(crate) const ZONE_ENTER_CLIENT_OPCODE: u64 = 17714309963407960406u64;
-    pub(crate) const ZONE_CAPTURE_CLIENT_OPCODE: u64 = 11313548931929469818u64;
-    pub(crate) const ZONE_RELEASE_CLIENT_OPCODE: u64 = 11905596878821798323u64;
-    pub(crate) const ZONE_LEAVE_CLIENT_OPCODE: u64 = 2707764513383459725u64;
     #[derive(Debug)]
     pub enum ZoneEvent {
         Enter { spatial: SpatialRef },
@@ -727,7 +724,7 @@ pub mod spatial {
     }
     impl crate::scenegraph::EventParser for ZoneEvent {
         const ASPECT_ID: u64 = 8505905936867072296u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -742,7 +739,7 @@ pub mod spatial {
                         ? spatial, "Got signal from server, {}::{}", "Zone", "enter"
                     );
                     Ok(ZoneEvent::Enter {
-                        spatial: SpatialRef::from_id(&_client, spatial, false),
+                        spatial: SpatialRef::from_id(_client, spatial, false),
                     })
                 }
                 11313548931929469818u64 => {
@@ -753,7 +750,7 @@ pub mod spatial {
                         ? spatial, "Got signal from server, {}::{}", "Zone", "capture"
                     );
                     Ok(ZoneEvent::Capture {
-                        spatial: Spatial::from_id(&_client, spatial, false),
+                        spatial: Spatial::from_id(_client, spatial, false),
                     })
                 }
                 11905596878821798323u64 => {
@@ -773,23 +770,20 @@ pub mod spatial {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -799,14 +793,14 @@ pub mod spatial {
 	*/
     pub trait ZoneAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_zone_event(&self) -> Option<ZoneEvent> {
-            self.node().recv_event(8505905936867072296u64)
+            self.recv_event(8505905936867072296u64)
         }
         ///
         fn update(&self) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     8505905936867072296u64,
                     4876473203673722513u64,
                     &data,
@@ -822,9 +816,9 @@ pub mod spatial {
             spatial: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (spatial.node().id());
+            let data = (spatial.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     8505905936867072296u64,
                     11313548931929469818u64,
                     &data,
@@ -842,9 +836,9 @@ pub mod spatial {
             spatial: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (spatial.node().id());
+            let data = (spatial.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     8505905936867072296u64,
                     11905596878821798323u64,
                     &data,
@@ -857,7 +851,6 @@ pub mod spatial {
             Ok(())
         }
     }
-    pub(crate) const INTERFACE_IMPORT_SPATIAL_REF_SERVER_OPCODE: u64 = 7309812661610962094u64;
     ///Import a spatial ref from a UUID generated by Spatial::export_spatial
     pub async fn import_spatial_ref(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -882,14 +875,13 @@ pub mod spatial {
             })?
             .into_message();
         let result: u64 = stardust_xr::schemas::flex::deserialize(&message)?;
-        let deserialized = SpatialRef::from_id(&_client, result, false);
+        let deserialized = SpatialRef::from_id(_client, result, false);
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
             "import_spatial_ref"
         );
         Ok(deserialized)
     }
-    pub(crate) const INTERFACE_CREATE_SPATIAL_SERVER_OPCODE: u64 = 3949276749019911643u64;
     ///Create a spatial relative to another spatial
     pub fn create_spatial(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -900,7 +892,7 @@ pub mod spatial {
     ) -> crate::node::NodeResult<Spatial> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, zoneable);
+            let data = (id, parent.node().id, transform, zoneable);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -913,7 +905,6 @@ pub mod spatial {
         }
         Ok(Spatial::from_id(_client, id, true))
     }
-    pub(crate) const INTERFACE_CREATE_ZONE_SERVER_OPCODE: u64 = 7282214243246353525u64;
     /**
 	    Create a zone given a field, this zone will become inactive if the field is dropped.
         Keep in mind the zone and its field are different spatials, they can move independently.
@@ -927,7 +918,7 @@ pub mod spatial {
     ) -> crate::node::NodeResult<Zone> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, field.node().id());
+            let data = (id, parent.node().id, transform, field.node().id);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -984,24 +975,31 @@ pub mod field {
         pub radius_b: f32,
     }
     ///A node that is spatial and contains an SDF
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct FieldRef(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct FieldRef {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl FieldRef {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            FieldRef(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 10662923473076663509u64);
+            FieldRef { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for FieldRef {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for FieldRef {
@@ -1009,16 +1007,11 @@ pub mod field {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl FieldRefAspect for FieldRef {}
     impl SpatialRefAspect for FieldRef {}
-    pub(crate) const FIELD_REF_ASPECT_ID: u64 = 10662923473076663509u64;
-    pub(crate) const FIELD_REF_DISTANCE_SERVER_OPCODE: u64 = 12706699825100237095u64;
-    pub(crate) const FIELD_REF_NORMAL_SERVER_OPCODE: u64 = 10933809934326220183u64;
-    pub(crate) const FIELD_REF_CLOSEST_POINT_SERVER_OPCODE: u64 = 13473947755141124846u64;
-    pub(crate) const FIELD_REF_RAY_MARCH_SERVER_OPCODE: u64 = 7352457860499612292u64;
     #[derive(Debug)]
     pub enum FieldRefEvent {}
     ///A node that is spatial and contains an SDF
@@ -1031,7 +1024,7 @@ pub mod field {
         ) -> crate::node::NodeResult<f32> {
             {
                 let mut _fds = Vec::new();
-                let data = (space.node().id(), point.into());
+                let data = (space.node().id, point.into());
                 {
                     let (space, point) = &data;
                     tracing::trace!(
@@ -1041,7 +1034,7 @@ pub mod field {
                 }
                 let result: f32 = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         10662923473076663509u64,
                         12706699825100237095u64,
                         &data,
@@ -1064,7 +1057,7 @@ pub mod field {
         ) -> crate::node::NodeResult<stardust_xr::values::Vector3<f32>> {
             {
                 let mut _fds = Vec::new();
-                let data = (space.node().id(), point.into());
+                let data = (space.node().id, point.into());
                 {
                     let (space, point) = &data;
                     tracing::trace!(
@@ -1074,7 +1067,7 @@ pub mod field {
                 }
                 let result: stardust_xr::values::Vector3<f32> = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         10662923473076663509u64,
                         10933809934326220183u64,
                         &data,
@@ -1097,7 +1090,7 @@ pub mod field {
         ) -> crate::node::NodeResult<stardust_xr::values::Vector3<f32>> {
             {
                 let mut _fds = Vec::new();
-                let data = (space.node().id(), point.into());
+                let data = (space.node().id, point.into());
                 {
                     let (space, point) = &data;
                     tracing::trace!(
@@ -1107,7 +1100,7 @@ pub mod field {
                 }
                 let result: stardust_xr::values::Vector3<f32> = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         10662923473076663509u64,
                         13473947755141124846u64,
                         &data,
@@ -1131,7 +1124,7 @@ pub mod field {
         ) -> crate::node::NodeResult<RayMarchResult> {
             {
                 let mut _fds = Vec::new();
-                let data = (space.node().id(), ray_origin.into(), ray_direction.into());
+                let data = (space.node().id, ray_origin.into(), ray_direction.into());
                 {
                     let (space, ray_origin, ray_direction) = &data;
                     tracing::trace!(
@@ -1141,7 +1134,7 @@ pub mod field {
                 }
                 let result: RayMarchResult = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         10662923473076663509u64,
                         7352457860499612292u64,
                         &data,
@@ -1158,30 +1151,37 @@ pub mod field {
         }
     }
     ///An owned field with adjustable shape
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Field(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Field {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Field {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Field(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 3948434400034960392u64);
+            Field { core }
         }
         pub fn as_field_ref(self) -> super::FieldRef {
-            super::FieldRef(self.0)
+            super::FieldRef { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
     }
     impl crate::node::NodeType for Field {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Field {
@@ -1189,7 +1189,7 @@ pub mod field {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl FieldAspect for Field {}
@@ -1197,9 +1197,6 @@ pub mod field {
     impl SpatialRefAspect for Field {}
     impl SpatialAspect for Field {}
     impl OwnedAspect for Field {}
-    pub(crate) const FIELD_ASPECT_ID: u64 = 3948434400034960392u64;
-    pub(crate) const FIELD_SET_SHAPE_SERVER_OPCODE: u64 = 10076774457453995458u64;
-    pub(crate) const FIELD_EXPORT_FIELD_SERVER_OPCODE: u64 = 939650650519133349u64;
     #[derive(Debug)]
     pub enum FieldEvent {}
     ///An owned field with adjustable shape
@@ -1209,7 +1206,7 @@ pub mod field {
             let mut _fds = Vec::new();
             let data = (shape);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     3948434400034960392u64,
                     10076774457453995458u64,
                     &data,
@@ -1234,7 +1231,7 @@ pub mod field {
                 }
                 let result: u64 = self
                     .node()
-                    .execute_remote_method(
+                    .call_method(
                         3948434400034960392u64,
                         939650650519133349u64,
                         &data,
@@ -1250,7 +1247,6 @@ pub mod field {
             }
         }
     }
-    pub(crate) const INTERFACE_IMPORT_FIELD_REF_SERVER_OPCODE: u64 = 5844955584634021418u64;
     ///Import a FieldRef from a UUID generated by Field::export_field
     pub async fn import_field_ref(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1274,14 +1270,13 @@ pub mod field {
             })?
             .into_message();
         let result: u64 = stardust_xr::schemas::flex::deserialize(&message)?;
-        let deserialized = FieldRef::from_id(&_client, result, false);
+        let deserialized = FieldRef::from_id(_client, result, false);
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
             "import_field_ref"
         );
         Ok(deserialized)
     }
-    pub(crate) const INTERFACE_CREATE_FIELD_SERVER_OPCODE: u64 = 3216373392735127623u64;
     ///Create a field with the shape of a box
     pub fn create_field(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1292,7 +1287,7 @@ pub mod field {
     ) -> crate::node::NodeResult<Field> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, shape);
+            let data = (id, parent.node().id, transform, shape);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -1314,27 +1309,34 @@ pub mod audio {
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 10u64;
     ///Simple spatial audio source
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Sound(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Sound {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Sound {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Sound(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 17761155925539609649u64);
+            Sound { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Sound {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Sound {
@@ -1342,16 +1344,13 @@ pub mod audio {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl SoundAspect for Sound {}
     impl SpatialAspect for Sound {}
     impl OwnedAspect for Sound {}
     impl SpatialRefAspect for Sound {}
-    pub(crate) const SOUND_ASPECT_ID: u64 = 17761155925539609649u64;
-    pub(crate) const SOUND_PLAY_SERVER_OPCODE: u64 = 18267594382511242772u64;
-    pub(crate) const SOUND_STOP_SERVER_OPCODE: u64 = 4968801543080236686u64;
     #[derive(Debug)]
     pub enum SoundEvent {}
     ///Simple spatial audio source
@@ -1361,7 +1360,7 @@ pub mod audio {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17761155925539609649u64,
                     18267594382511242772u64,
                     &data,
@@ -1376,7 +1375,7 @@ pub mod audio {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     17761155925539609649u64,
                     4968801543080236686u64,
                     &data,
@@ -1387,7 +1386,6 @@ pub mod audio {
             Ok(())
         }
     }
-    pub(crate) const INTERFACE_CREATE_SOUND_SERVER_OPCODE: u64 = 3197851813257440734u64;
     ///Create a sound node. WAV and MP3 are supported.
     pub fn create_sound(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1398,7 +1396,7 @@ pub mod audio {
     ) -> crate::node::NodeResult<Sound> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, resource);
+            let data = (id, parent.node().id, transform, resource);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -1514,27 +1512,34 @@ pub mod drawable {
         pub bounds: Option<TextBounds>,
     }
     ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Lines(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Lines {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Lines {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Lines(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 16705186951373789081u64);
+            Lines { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Lines {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Lines {
@@ -1542,15 +1547,13 @@ pub mod drawable {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl LinesAspect for Lines {}
     impl SpatialAspect for Lines {}
     impl OwnedAspect for Lines {}
     impl SpatialRefAspect for Lines {}
-    pub(crate) const LINES_ASPECT_ID: u64 = 16705186951373789081u64;
-    pub(crate) const LINES_SET_LINES_SERVER_OPCODE: u64 = 17689001183742889136u64;
     #[derive(Debug)]
     pub enum LinesEvent {}
     ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
@@ -1563,7 +1566,7 @@ pub mod drawable {
                 .map(|a| Ok(a))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16705186951373789081u64,
                     17689001183742889136u64,
                     &data,
@@ -1577,27 +1580,34 @@ pub mod drawable {
         }
     }
     ///A GLTF model loaded by the server.
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Model(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Model {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Model {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Model(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 11775342128130118047u64);
+            Model { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Model {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Model {
@@ -1605,15 +1615,13 @@ pub mod drawable {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl ModelAspect for Model {}
     impl SpatialAspect for Model {}
     impl OwnedAspect for Model {}
     impl SpatialRefAspect for Model {}
-    pub(crate) const MODEL_ASPECT_ID: u64 = 11775342128130118047u64;
-    pub(crate) const MODEL_BIND_MODEL_PART_SERVER_OPCODE: u64 = 18406803564448475833u64;
     #[derive(Debug)]
     pub enum ModelEvent {}
     ///A GLTF model loaded by the server.
@@ -1628,7 +1636,7 @@ pub mod drawable {
                 let mut _fds = Vec::new();
                 let data = (id, part_path);
                 self.node()
-                    .send_remote_signal(
+                    .send_signal(
                         11775342128130118047u64,
                         18406803564448475833u64,
                         &data,
@@ -1640,31 +1648,38 @@ pub mod drawable {
                     "bind_model_part"
                 );
             }
-            Ok(ModelPart::from_id(&self.node().client()?, id, true))
+            Ok(ModelPart::from_id(&self.node().client, id, true))
         }
     }
     ///A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct ModelPart(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct ModelPart {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl ModelPart {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            ModelPart(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 7912164431074553740u64);
+            ModelPart { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for ModelPart {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for ModelPart {
@@ -1672,16 +1687,13 @@ pub mod drawable {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl ModelPartAspect for ModelPart {}
     impl SpatialAspect for ModelPart {}
     impl OwnedAspect for ModelPart {}
     impl SpatialRefAspect for ModelPart {}
-    pub(crate) const MODEL_PART_ASPECT_ID: u64 = 7912164431074553740u64;
-    pub(crate) const MODEL_PART_APPLY_HOLDOUT_MATERIAL_SERVER_OPCODE: u64 = 13817793452575402942u64;
-    pub(crate) const MODEL_PART_SET_MATERIAL_PARAMETER_SERVER_OPCODE: u64 = 12609900228877593594u64;
     #[derive(Debug)]
     pub enum ModelPartEvent {}
     ///A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.
@@ -1691,7 +1703,7 @@ pub mod drawable {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     7912164431074553740u64,
                     13817793452575402942u64,
                     &data,
@@ -1712,7 +1724,7 @@ pub mod drawable {
             let mut _fds = Vec::new();
             let data = (parameter_name, value);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     7912164431074553740u64,
                     12609900228877593594u64,
                     &data,
@@ -1727,27 +1739,34 @@ pub mod drawable {
         }
     }
     ///Text rendered to work best in XR
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Text(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Text {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Text {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Text(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 3129045917168168339u64);
+            Text { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Text {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Text {
@@ -1755,16 +1774,13 @@ pub mod drawable {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl TextAspect for Text {}
     impl SpatialAspect for Text {}
     impl OwnedAspect for Text {}
     impl SpatialRefAspect for Text {}
-    pub(crate) const TEXT_ASPECT_ID: u64 = 3129045917168168339u64;
-    pub(crate) const TEXT_SET_CHARACTER_HEIGHT_SERVER_OPCODE: u64 = 1124886941794143568u64;
-    pub(crate) const TEXT_SET_TEXT_SERVER_OPCODE: u64 = 395974856293277940u64;
     #[derive(Debug)]
     pub enum TextEvent {}
     ///Text rendered to work best in XR
@@ -1774,7 +1790,7 @@ pub mod drawable {
             let mut _fds = Vec::new();
             let data = (height);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     3129045917168168339u64,
                     1124886941794143568u64,
                     &data,
@@ -1791,7 +1807,7 @@ pub mod drawable {
             let mut _fds = Vec::new();
             let data = (text);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     3129045917168168339u64,
                     395974856293277940u64,
                     &data,
@@ -1802,7 +1818,6 @@ pub mod drawable {
             Ok(())
         }
     }
-    pub(crate) const INTERFACE_SET_SKY_TEX_SERVER_OPCODE: u64 = 4424860741442403592u64;
     ///Set the sky texture to a given HDRI file.
     pub fn set_sky_tex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1820,7 +1835,6 @@ pub mod drawable {
         );
         Ok(())
     }
-    pub(crate) const INTERFACE_SET_SKY_LIGHT_SERVER_OPCODE: u64 = 6210987039553590011u64;
     ///Set the sky lighting to a given HDRI file.
     pub fn set_sky_light(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1838,7 +1852,6 @@ pub mod drawable {
         );
         Ok(())
     }
-    pub(crate) const INTERFACE_CREATE_LINES_SERVER_OPCODE: u64 = 17691651736865216822u64;
     ///Create a lines node
     pub fn create_lines(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1851,7 +1864,7 @@ pub mod drawable {
             let mut _fds = Vec::new();
             let data = (
                 id,
-                parent.node().id(),
+                parent.node().id,
                 transform,
                 lines.iter().map(|a| Ok(a)).collect::<crate::node::NodeResult<Vec<_>>>()?,
             );
@@ -1867,7 +1880,6 @@ pub mod drawable {
         }
         Ok(Lines::from_id(_client, id, true))
     }
-    pub(crate) const INTERFACE_LOAD_MODEL_SERVER_OPCODE: u64 = 8647852218278439936u64;
     ///Load a GLTF model into a Model node
     pub fn load_model(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1878,7 +1890,7 @@ pub mod drawable {
     ) -> crate::node::NodeResult<Model> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, model);
+            let data = (id, parent.node().id, transform, model);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -1891,7 +1903,6 @@ pub mod drawable {
         }
         Ok(Model::from_id(_client, id, true))
     }
-    pub(crate) const INTERFACE_CREATE_TEXT_SERVER_OPCODE: u64 = 11386227176670607870u64;
     ///Create a text node
     pub fn create_text(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -1903,7 +1914,7 @@ pub mod drawable {
     ) -> crate::node::NodeResult<Text> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, text, style);
+            let data = (id, parent.node().id, transform, text, style);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -1994,24 +2005,31 @@ pub mod input {
         pub captured: bool,
     }
     ///Node representing a spatial input device
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct InputMethodRef(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct InputMethodRef {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl InputMethodRef {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            InputMethodRef(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 2611007814387963428u64);
+            InputMethodRef { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for InputMethodRef {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for InputMethodRef {
@@ -2019,14 +2037,11 @@ pub mod input {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl InputMethodRefAspect for InputMethodRef {}
     impl SpatialRefAspect for InputMethodRef {}
-    pub(crate) const INPUT_METHOD_REF_ASPECT_ID: u64 = 2611007814387963428u64;
-    pub(crate) const INPUT_METHOD_REF_TRY_CAPTURE_SERVER_OPCODE: u64 = 12158986667525139020u64;
-    pub(crate) const INPUT_METHOD_REF_RELEASE_SERVER_OPCODE: u64 = 11905596878821798323u64;
     #[derive(Debug)]
     pub enum InputMethodRefEvent {}
     ///Node representing a spatial input device
@@ -2037,9 +2052,9 @@ pub mod input {
             handler: &impl InputHandlerAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (handler.node().id());
+            let data = (handler.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     2611007814387963428u64,
                     12158986667525139020u64,
                     &data,
@@ -2058,9 +2073,9 @@ pub mod input {
             handler: &impl InputHandlerAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (handler.node().id());
+            let data = (handler.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     2611007814387963428u64,
                     11905596878821798323u64,
                     &data,
@@ -2074,31 +2089,39 @@ pub mod input {
         }
     }
     ///Node representing a spatial input device
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct InputMethod(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct InputMethod {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl InputMethod {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<InputMethodEvent>(&node);
-            InputMethod(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 14883688361483968991u64);
+            InputMethod { core }
         }
         pub fn as_input_method_ref(self) -> super::InputMethodRef {
-            super::InputMethodRef(self.0)
+            super::InputMethodRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
     }
     impl crate::node::NodeType for InputMethod {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for InputMethod {
@@ -2106,7 +2129,7 @@ pub mod input {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl InputMethodAspect for InputMethod {}
@@ -2114,15 +2137,6 @@ pub mod input {
     impl SpatialRefAspect for InputMethod {}
     impl SpatialAspect for InputMethod {}
     impl OwnedAspect for InputMethod {}
-    pub(crate) const INPUT_METHOD_ASPECT_ID: u64 = 14883688361483968991u64;
-    pub(crate) const INPUT_METHOD_SET_INPUT_SERVER_OPCODE: u64 = 17348904196349853573u64;
-    pub(crate) const INPUT_METHOD_SET_DATAMAP_SERVER_OPCODE: u64 = 9666763984937627751u64;
-    pub(crate) const INPUT_METHOD_SET_HANDLER_ORDER_SERVER_OPCODE: u64 = 4447101880184876824u64;
-    pub(crate) const INPUT_METHOD_SET_CAPTURES_SERVER_OPCODE: u64 = 4141712352465076448u64;
-    pub(crate) const INPUT_METHOD_CREATE_HANDLER_CLIENT_OPCODE: u64 = 6944316585732678571u64;
-    pub(crate) const INPUT_METHOD_REQUEST_CAPTURE_HANDLER_CLIENT_OPCODE: u64 = 11807638350036597049u64;
-    pub(crate) const INPUT_METHOD_RELEASE_HANDLER_CLIENT_OPCODE: u64 = 9300665394087171854u64;
-    pub(crate) const INPUT_METHOD_DESTROY_HANDLER_CLIENT_OPCODE: u64 = 7635230773176050803u64;
     #[derive(Debug)]
     pub enum InputMethodEvent {
         CreateHandler { handler: InputHandler, field: Field },
@@ -2132,7 +2146,7 @@ pub mod input {
     }
     impl crate::scenegraph::EventParser for InputMethodEvent {
         const ASPECT_ID: u64 = 14883688361483968991u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -2148,8 +2162,8 @@ pub mod input {
                         "InputMethod", "create_handler"
                     );
                     Ok(InputMethodEvent::CreateHandler {
-                        handler: InputHandler::from_id(&_client, handler, false),
-                        field: Field::from_id(&_client, field, false),
+                        handler: InputHandler::from_id(_client, handler, false),
+                        field: Field::from_id(_client, field, false),
                     })
                 }
                 11807638350036597049u64 => {
@@ -2185,23 +2199,20 @@ pub mod input {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2209,14 +2220,14 @@ pub mod input {
     ///Node representing a spatial input device
     pub trait InputMethodAspect: crate::node::NodeType + super::InputMethodRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
         fn recv_input_method_event(&self) -> Option<InputMethodEvent> {
-            self.node().recv_event(14883688361483968991u64)
+            self.recv_event(14883688361483968991u64)
         }
         ///Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing.
         fn set_input(&self, input: InputDataType) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (input);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     14883688361483968991u64,
                     17348904196349853573u64,
                     &data,
@@ -2236,7 +2247,7 @@ pub mod input {
             let mut _fds = Vec::new();
             let data = (datamap);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     14883688361483968991u64,
                     9666763984937627751u64,
                     &data,
@@ -2256,10 +2267,10 @@ pub mod input {
             let mut _fds = Vec::new();
             let data = (handlers
                 .iter()
-                .map(|a| Ok(a.node().id()))
+                .map(|a| Ok(a.node().id))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     14883688361483968991u64,
                     4447101880184876824u64,
                     &data,
@@ -2280,10 +2291,10 @@ pub mod input {
             let mut _fds = Vec::new();
             let data = (handlers
                 .iter()
-                .map(|a| Ok(a.node().id()))
+                .map(|a| Ok(a.node().id))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     14883688361483968991u64,
                     4141712352465076448u64,
                     &data,
@@ -2298,28 +2309,34 @@ pub mod input {
         }
     }
     ///Handle raw input events.
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct InputHandler(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct InputHandler {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl InputHandler {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<InputHandlerEvent>(&node);
-            InputHandler(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 537028132086008694u64);
+            InputHandler { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for InputHandler {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for InputHandler {
@@ -2327,22 +2344,20 @@ pub mod input {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl InputHandlerAspect for InputHandler {}
     impl SpatialAspect for InputHandler {}
     impl OwnedAspect for InputHandler {}
     impl SpatialRefAspect for InputHandler {}
-    pub(crate) const INPUT_HANDLER_ASPECT_ID: u64 = 537028132086008694u64;
-    pub(crate) const INPUT_HANDLER_INPUT_CLIENT_OPCODE: u64 = 5305312459121645740u64;
     #[derive(Debug)]
     pub enum InputHandlerEvent {
         Input { methods: Vec<InputMethodRef>, data: Vec<InputData> },
     }
     impl crate::scenegraph::EventParser for InputHandlerEvent {
         const ASPECT_ID: u64 = 537028132086008694u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -2360,7 +2375,7 @@ pub mod input {
                     Ok(InputHandlerEvent::Input {
                         methods: methods
                             .into_iter()
-                            .map(|a| Ok(InputMethodRef::from_id(&_client, a, false)))
+                            .map(|a| Ok(InputMethodRef::from_id(_client, a, false)))
                             .collect::<Result<Vec<_>, crate::node::NodeError>>()?,
                         data: data
                             .into_iter()
@@ -2371,23 +2386,20 @@ pub mod input {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2395,10 +2407,9 @@ pub mod input {
     ///Handle raw input events.
     pub trait InputHandlerAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_input_handler_event(&self) -> Option<InputHandlerEvent> {
-            self.node().recv_event(537028132086008694u64)
+            self.recv_event(537028132086008694u64)
         }
     }
-    pub(crate) const INTERFACE_CREATE_INPUT_METHOD_SERVER_OPCODE: u64 = 11977582531774730283u64;
     ///Create an input method node
     pub fn create_input_method(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2410,7 +2421,7 @@ pub mod input {
     ) -> crate::node::NodeResult<InputMethod> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, initial_data, datamap);
+            let data = (id, parent.node().id, transform, initial_data, datamap);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -2423,7 +2434,6 @@ pub mod input {
         }
         Ok(InputMethod::from_id(_client, id, true))
     }
-    pub(crate) const INTERFACE_CREATE_INPUT_HANDLER_SERVER_OPCODE: u64 = 1654491336591158898u64;
     ///Create an input handler node
     pub fn create_input_handler(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -2434,7 +2444,7 @@ pub mod input {
     ) -> crate::node::NodeResult<InputHandler> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, field.node().id());
+            let data = (id, parent.node().id, transform, field.node().id);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -2456,27 +2466,34 @@ pub mod item {
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 10u64;
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct Item(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct Item {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl Item {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            Item(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 18318655529277677339u64);
+            Item { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for Item {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for Item {
@@ -2484,15 +2501,13 @@ pub mod item {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl ItemAspect for Item {}
     impl SpatialAspect for Item {}
     impl OwnedAspect for Item {}
     impl SpatialRefAspect for Item {}
-    pub(crate) const ITEM_ASPECT_ID: u64 = 18318655529277677339u64;
-    pub(crate) const ITEM_RELEASE_SERVER_OPCODE: u64 = 11905596878821798323u64;
     #[derive(Debug)]
     pub enum ItemEvent {}
     ///
@@ -2502,7 +2517,7 @@ pub mod item {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     18318655529277677339u64,
                     11905596878821798323u64,
                     &data,
@@ -2514,28 +2529,34 @@ pub mod item {
         }
     }
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct ItemAcceptor(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct ItemAcceptor {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl ItemAcceptor {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<ItemAcceptorEvent>(&node);
-            ItemAcceptor(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 10274055739447304636u64);
+            ItemAcceptor { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
     }
     impl crate::node::NodeType for ItemAcceptor {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for ItemAcceptor {
@@ -2543,22 +2564,20 @@ pub mod item {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl ItemAcceptorAspect for ItemAcceptor {}
     impl SpatialAspect for ItemAcceptor {}
     impl OwnedAspect for ItemAcceptor {}
     impl SpatialRefAspect for ItemAcceptor {}
-    pub(crate) const ITEM_ACCEPTOR_ASPECT_ID: u64 = 10274055739447304636u64;
-    pub(crate) const ITEM_ACCEPTOR_RELEASE_ITEM_CLIENT_OPCODE: u64 = 14821884892980204849u64;
     #[derive(Debug)]
     pub enum ItemAcceptorEvent {
         ReleaseItem { item_id: u64 },
     }
     impl crate::scenegraph::EventParser for ItemAcceptorEvent {
         const ASPECT_ID: u64 = 10274055739447304636u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -2580,23 +2599,20 @@ pub mod item {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2604,26 +2620,30 @@ pub mod item {
     ///
     pub trait ItemAcceptorAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
-            self.node().recv_event(10274055739447304636u64)
+            self.recv_event(10274055739447304636u64)
         }
     }
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct ItemUi(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct ItemUi {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl ItemUi {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<ItemUiEvent>(&node);
-            ItemUi(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 7265392688253796589u64);
+            ItemUi { core }
         }
     }
     impl crate::node::NodeType for ItemUi {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for ItemUi {
@@ -2631,15 +2651,10 @@ pub mod item {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl ItemUiAspect for ItemUi {}
-    pub(crate) const ITEM_UI_ASPECT_ID: u64 = 7265392688253796589u64;
-    pub(crate) const ITEM_UI_CAPTURE_ITEM_CLIENT_OPCODE: u64 = 1751367302976798762u64;
-    pub(crate) const ITEM_UI_RELEASE_ITEM_CLIENT_OPCODE: u64 = 14821884892980204849u64;
-    pub(crate) const ITEM_UI_DESTROY_ITEM_CLIENT_OPCODE: u64 = 11215449886948753686u64;
-    pub(crate) const ITEM_UI_DESTROY_ACCEPTOR_CLIENT_OPCODE: u64 = 3521554848760623636u64;
     #[derive(Debug)]
     pub enum ItemUiEvent {
         CaptureItem { item_id: u64, acceptor_id: u64 },
@@ -2649,7 +2664,7 @@ pub mod item {
     }
     impl crate::scenegraph::EventParser for ItemUiEvent {
         const ASPECT_ID: u64 = 7265392688253796589u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -2702,23 +2717,20 @@ pub mod item {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2726,7 +2738,7 @@ pub mod item {
     ///
     pub trait ItemUiAspect: crate::node::NodeType + std::fmt::Debug {
         fn recv_item_ui_event(&self) -> Option<ItemUiEvent> {
-            self.node().recv_event(7265392688253796589u64)
+            self.recv_event(7265392688253796589u64)
         }
     }
 }
@@ -2738,30 +2750,37 @@ pub mod item_camera {
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 11u64;
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct CameraItem(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct CameraItem {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl CameraItem {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            CameraItem(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 15672103361112197430u64);
+            CameraItem { core }
         }
         pub fn as_item(self) -> super::Item {
-            super::Item(self.0)
+            super::Item { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
     }
     impl crate::node::NodeType for CameraItem {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for CameraItem {
@@ -2769,7 +2788,7 @@ pub mod item_camera {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl CameraItemAspect for CameraItem {}
@@ -2777,28 +2796,31 @@ pub mod item_camera {
     impl SpatialRefAspect for CameraItem {}
     impl OwnedAspect for CameraItem {}
     impl SpatialAspect for CameraItem {}
-    pub(crate) const CAMERA_ITEM_ASPECT_ID: u64 = 15672103361112197430u64;
     #[derive(Debug)]
     pub enum CameraItemEvent {}
     ///
     pub trait CameraItemAspect: crate::node::NodeType + super::ItemAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {}
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct CameraItemUi(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct CameraItemUi {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl CameraItemUi {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<CameraItemUiEvent>(&node);
-            CameraItemUi(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 708021061010127172u64);
+            CameraItemUi { core }
         }
     }
     impl crate::node::NodeType for CameraItemUi {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for CameraItemUi {
@@ -2806,13 +2828,10 @@ pub mod item_camera {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl CameraItemUiAspect for CameraItemUi {}
-    pub(crate) const CAMERA_ITEM_UI_ASPECT_ID: u64 = 708021061010127172u64;
-    pub(crate) const CAMERA_ITEM_UI_CREATE_ITEM_CLIENT_OPCODE: u64 = 15524466827491111758u64;
-    pub(crate) const CAMERA_ITEM_UI_CREATE_ACCEPTOR_CLIENT_OPCODE: u64 = 16628549773568263004u64;
     #[derive(Debug)]
     pub enum CameraItemUiEvent {
         CreateItem { item: CameraItem },
@@ -2820,7 +2839,7 @@ pub mod item_camera {
     }
     impl crate::scenegraph::EventParser for CameraItemUiEvent {
         const ASPECT_ID: u64 = 708021061010127172u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -2834,7 +2853,7 @@ pub mod item_camera {
                         "create_item"
                     );
                     Ok(CameraItemUiEvent::CreateItem {
-                        item: CameraItem::from_id(&_client, item, false),
+                        item: CameraItem::from_id(_client, item, false),
                     })
                 }
                 16628549773568263004u64 => {
@@ -2846,30 +2865,27 @@ pub mod item_camera {
                         "CameraItemUi", "create_acceptor"
                     );
                     Ok(CameraItemUiEvent::CreateAcceptor {
-                        acceptor: CameraItemAcceptor::from_id(&_client, acceptor, false),
-                        acceptor_field: Field::from_id(&_client, acceptor_field, false),
+                        acceptor: CameraItemAcceptor::from_id(_client, acceptor, false),
+                        acceptor_field: Field::from_id(_client, acceptor_field, false),
                     })
                 }
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2877,35 +2893,43 @@ pub mod item_camera {
     ///
     pub trait CameraItemUiAspect: crate::node::NodeType + std::fmt::Debug {
         fn recv_camera_item_ui_event(&self) -> Option<CameraItemUiEvent> {
-            self.node().recv_event(708021061010127172u64)
+            self.recv_event(708021061010127172u64)
         }
     }
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct CameraItemAcceptor(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct CameraItemAcceptor {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl CameraItemAcceptor {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<CameraItemAcceptorEvent>(&node);
-            CameraItemAcceptor(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 5036088114779304421u64);
+            CameraItemAcceptor { core }
         }
         pub fn as_item_acceptor(self) -> super::ItemAcceptor {
-            super::ItemAcceptor(self.0)
+            super::ItemAcceptor {
+                core: self.core,
+            }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
     }
     impl crate::node::NodeType for CameraItemAcceptor {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for CameraItemAcceptor {
@@ -2913,7 +2937,7 @@ pub mod item_camera {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl CameraItemAcceptorAspect for CameraItemAcceptor {}
@@ -2921,16 +2945,13 @@ pub mod item_camera {
     impl SpatialRefAspect for CameraItemAcceptor {}
     impl OwnedAspect for CameraItemAcceptor {}
     impl SpatialAspect for CameraItemAcceptor {}
-    pub(crate) const CAMERA_ITEM_ACCEPTOR_ASPECT_ID: u64 = 5036088114779304421u64;
-    pub(crate) const CAMERA_ITEM_ACCEPTOR_CAPTURE_ITEM_SERVER_OPCODE: u64 = 1751367302976798762u64;
-    pub(crate) const CAMERA_ITEM_ACCEPTOR_CAPTURE_ITEM_CLIENT_OPCODE: u64 = 1751367302976798762u64;
     #[derive(Debug)]
     pub enum CameraItemAcceptorEvent {
         CaptureItem { item: CameraItem },
     }
     impl crate::scenegraph::EventParser for CameraItemAcceptorEvent {
         const ASPECT_ID: u64 = 5036088114779304421u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -2944,29 +2965,26 @@ pub mod item_camera {
                         "capture_item"
                     );
                     Ok(CameraItemAcceptorEvent::CaptureItem {
-                        item: CameraItem::from_id(&_client, item, false),
+                        item: CameraItem::from_id(_client, item, false),
                     })
                 }
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2974,7 +2992,7 @@ pub mod item_camera {
     ///
     pub trait CameraItemAcceptorAspect: crate::node::NodeType + super::ItemAcceptorAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
         fn recv_camera_item_acceptor_event(&self) -> Option<CameraItemAcceptorEvent> {
-            self.node().recv_event(5036088114779304421u64)
+            self.recv_event(5036088114779304421u64)
         }
         ///
         fn capture_item(
@@ -2982,9 +3000,9 @@ pub mod item_camera {
             item: &impl CameraItemAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (item.node().id());
+            let data = (item.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     5036088114779304421u64,
                     1751367302976798762u64,
                     &data,
@@ -2998,7 +3016,6 @@ pub mod item_camera {
             Ok(())
         }
     }
-    pub(crate) const INTERFACE_CREATE_CAMERA_ITEM_SERVER_OPCODE: u64 = 16398826726504952950u64;
     ///Create a camera item at a specific location
     pub fn create_camera_item(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3012,7 +3029,7 @@ pub mod item_camera {
             let mut _fds = Vec::new();
             let data = (
                 id,
-                parent.node().id(),
+                parent.node().id,
                 transform,
                 proj_matrix.into(),
                 px_size.into(),
@@ -3029,7 +3046,6 @@ pub mod item_camera {
         }
         Ok(CameraItem::from_id(_client, id, true))
     }
-    pub(crate) const INTERFACE_REGISTER_CAMERA_ITEM_UI_SERVER_OPCODE: u64 = 13470969625663359032u64;
     ///Register this client to manage camera items and create default 3D UI for them.
     pub fn register_camera_item_ui(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3046,7 +3062,6 @@ pub mod item_camera {
         );
         Ok(())
     }
-    pub(crate) const INTERFACE_CREATE_CAMERA_ITEM_ACCEPTOR_SERVER_OPCODE: u64 = 13070169044031356364u64;
     ///Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/camera/acceptor/<name>`.
     pub fn create_camera_item_acceptor(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3057,7 +3072,7 @@ pub mod item_camera {
     ) -> crate::node::NodeResult<CameraItemAcceptor> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, field.node().id());
+            let data = (id, parent.node().id, transform, field.node().id);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
@@ -3121,31 +3136,37 @@ pub mod item_panel {
         pub keyboard_grab: Option<SurfaceId>,
     }
     ///An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.).
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct PanelItem(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct PanelItem {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl PanelItem {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<PanelItemEvent>(&node);
-            PanelItem(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 16007573185838633179u64);
+            PanelItem { core }
         }
         pub fn as_item(self) -> super::Item {
-            super::Item(self.0)
+            super::Item { core: self.core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
     }
     impl crate::node::NodeType for PanelItem {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for PanelItem {
@@ -3153,7 +3174,7 @@ pub mod item_panel {
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl PanelItemAspect for PanelItem {}
@@ -3161,34 +3182,6 @@ pub mod item_panel {
     impl SpatialRefAspect for PanelItem {}
     impl OwnedAspect for PanelItem {}
     impl SpatialAspect for PanelItem {}
-    pub(crate) const PANEL_ITEM_ASPECT_ID: u64 = 16007573185838633179u64;
-    pub(crate) const PANEL_ITEM_APPLY_CURSOR_MATERIAL_SERVER_OPCODE: u64 = 12984352657777750687u64;
-    pub(crate) const PANEL_ITEM_APPLY_SURFACE_MATERIAL_SERVER_OPCODE: u64 = 5538717944649978650u64;
-    pub(crate) const PANEL_ITEM_CLOSE_TOPLEVEL_SERVER_OPCODE: u64 = 11149391162473273576u64;
-    pub(crate) const PANEL_ITEM_AUTO_SIZE_TOPLEVEL_SERVER_OPCODE: u64 = 7177229187692151305u64;
-    pub(crate) const PANEL_ITEM_SET_TOPLEVEL_SIZE_SERVER_OPCODE: u64 = 8102855835344875634u64;
-    pub(crate) const PANEL_ITEM_SET_TOPLEVEL_FOCUSED_VISUALS_SERVER_OPCODE: u64 = 3934600665134956080u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_PARENT_CHANGED_CLIENT_OPCODE: u64 = 1408884359956576105u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_TITLE_CHANGED_CLIENT_OPCODE: u64 = 566483566315648641u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_APP_ID_CHANGED_CLIENT_OPCODE: u64 = 8706869778156655494u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_FULLSCREEN_ACTIVE_CLIENT_OPCODE: u64 = 11059551561818960198u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_MOVE_REQUEST_CLIENT_OPCODE: u64 = 3715781852227007625u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_RESIZE_REQUEST_CLIENT_OPCODE: u64 = 4540754955116125050u64;
-    pub(crate) const PANEL_ITEM_TOPLEVEL_SIZE_CHANGED_CLIENT_OPCODE: u64 = 3665525014775618530u64;
-    pub(crate) const PANEL_ITEM_SET_CURSOR_CLIENT_OPCODE: u64 = 6092877811616586203u64;
-    pub(crate) const PANEL_ITEM_HIDE_CURSOR_CLIENT_OPCODE: u64 = 12365625385177885025u64;
-    pub(crate) const PANEL_ITEM_CREATE_CHILD_CLIENT_OPCODE: u64 = 13878060402106144481u64;
-    pub(crate) const PANEL_ITEM_REPOSITION_CHILD_CLIENT_OPCODE: u64 = 4614990113965355127u64;
-    pub(crate) const PANEL_ITEM_DESTROY_CHILD_CLIENT_OPCODE: u64 = 7048616010698587017u64;
-    pub(crate) const PANEL_ITEM_POINTER_MOTION_SERVER_OPCODE: u64 = 651662101921814334u64;
-    pub(crate) const PANEL_ITEM_POINTER_BUTTON_SERVER_OPCODE: u64 = 1617963334017359776u64;
-    pub(crate) const PANEL_ITEM_POINTER_SCROLL_SERVER_OPCODE: u64 = 18077910517219850499u64;
-    pub(crate) const PANEL_ITEM_POINTER_STOP_SCROLL_SERVER_OPCODE: u64 = 13177724628894942354u64;
-    pub(crate) const PANEL_ITEM_KEYBOARD_KEY_SERVER_OPCODE: u64 = 18230480350930328965u64;
-    pub(crate) const PANEL_ITEM_TOUCH_DOWN_SERVER_OPCODE: u64 = 10543081656468919422u64;
-    pub(crate) const PANEL_ITEM_TOUCH_MOVE_SERVER_OPCODE: u64 = 15126475688563381777u64;
-    pub(crate) const PANEL_ITEM_TOUCH_UP_SERVER_OPCODE: u64 = 6589027081119653997u64;
-    pub(crate) const PANEL_ITEM_RESET_INPUT_SERVER_OPCODE: u64 = 14629122800709746500u64;
     #[derive(Debug)]
     pub enum PanelItemEvent {
         ToplevelParentChanged { parent_id: u64 },
@@ -3206,7 +3199,7 @@ pub mod item_panel {
     }
     impl crate::scenegraph::EventParser for PanelItemEvent {
         const ASPECT_ID: u64 = 16007573185838633179u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -3355,23 +3348,20 @@ pub mod item_panel {
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3379,7 +3369,7 @@ pub mod item_panel {
     ///An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.).
     pub trait PanelItemAspect: crate::node::NodeType + super::ItemAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
         fn recv_panel_item_event(&self) -> Option<PanelItemEvent> {
-            self.node().recv_event(16007573185838633179u64)
+            self.recv_event(16007573185838633179u64)
         }
         ///Apply the cursor as a material to a model.
         fn apply_cursor_material(
@@ -3387,9 +3377,9 @@ pub mod item_panel {
             model_part: &impl ModelPartAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (model_part.node().id());
+            let data = (model_part.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     12984352657777750687u64,
                     &data,
@@ -3409,9 +3399,9 @@ pub mod item_panel {
             model_part: &impl ModelPartAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (surface, model_part.node().id());
+            let data = (surface, model_part.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     5538717944649978650u64,
                     &data,
@@ -3431,7 +3421,7 @@ pub mod item_panel {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     11149391162473273576u64,
                     &data,
@@ -3448,7 +3438,7 @@ pub mod item_panel {
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     7177229187692151305u64,
                     &data,
@@ -3468,7 +3458,7 @@ pub mod item_panel {
             let mut _fds = Vec::new();
             let data = (size.into());
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     8102855835344875634u64,
                     &data,
@@ -3488,7 +3478,7 @@ pub mod item_panel {
             let mut _fds = Vec::new();
             let data = (focused);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     3934600665134956080u64,
                     &data,
@@ -3510,7 +3500,7 @@ pub mod item_panel {
             let mut _fds = Vec::new();
             let data = (surface, position.into());
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     651662101921814334u64,
                     &data,
@@ -3533,7 +3523,7 @@ pub mod item_panel {
             let mut _fds = Vec::new();
             let data = (surface, button, pressed);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     1617963334017359776u64,
                     &data,
@@ -3558,7 +3548,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = (surface, scroll_distance.into(), scroll_steps.into());
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     18077910517219850499u64,
                     &data,
@@ -3579,7 +3569,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = (surface);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     13177724628894942354u64,
                     &data,
@@ -3603,7 +3593,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = (surface, keymap_id, key, pressed);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     18230480350930328965u64,
                     &data,
@@ -3626,7 +3616,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = (surface, uid, position.into());
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     10543081656468919422u64,
                     &data,
@@ -3648,7 +3638,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = (uid, position.into());
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     15126475688563381777u64,
                     &data,
@@ -3666,7 +3656,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = (uid);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     6589027081119653997u64,
                     &data,
@@ -3683,7 +3673,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     16007573185838633179u64,
                     14629122800709746500u64,
                     &data,
@@ -3695,22 +3685,26 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         }
     }
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct PanelItemUi(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct PanelItemUi {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl PanelItemUi {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<PanelItemUiEvent>(&node);
-            PanelItemUi(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 11713374794499719853u64);
+            PanelItemUi { core }
         }
     }
     impl crate::node::NodeType for PanelItemUi {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for PanelItemUi {
@@ -3718,13 +3712,10 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl PanelItemUiAspect for PanelItemUi {}
-    pub(crate) const PANEL_ITEM_UI_ASPECT_ID: u64 = 11713374794499719853u64;
-    pub(crate) const PANEL_ITEM_UI_CREATE_ITEM_CLIENT_OPCODE: u64 = 15524466827491111758u64;
-    pub(crate) const PANEL_ITEM_UI_CREATE_ACCEPTOR_CLIENT_OPCODE: u64 = 16628549773568263004u64;
     #[derive(Debug)]
     pub enum PanelItemUiEvent {
         CreateItem { item: PanelItem, initial_data: PanelItemInitData },
@@ -3732,7 +3723,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     }
     impl crate::scenegraph::EventParser for PanelItemUiEvent {
         const ASPECT_ID: u64 = 11713374794499719853u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -3748,7 +3739,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                         "PanelItemUi", "create_item"
                     );
                     Ok(PanelItemUiEvent::CreateItem {
-                        item: PanelItem::from_id(&_client, item, false),
+                        item: PanelItem::from_id(_client, item, false),
                         initial_data: initial_data,
                     })
                 }
@@ -3761,30 +3752,27 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                         "PanelItemUi", "create_acceptor"
                     );
                     Ok(PanelItemUiEvent::CreateAcceptor {
-                        acceptor: PanelItemAcceptor::from_id(&_client, acceptor, false),
-                        acceptor_field: Field::from_id(&_client, acceptor_field, false),
+                        acceptor: PanelItemAcceptor::from_id(_client, acceptor, false),
+                        acceptor_field: Field::from_id(_client, acceptor_field, false),
                     })
                 }
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3792,35 +3780,43 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     ///
     pub trait PanelItemUiAspect: crate::node::NodeType + std::fmt::Debug {
         fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent> {
-            self.node().recv_event(11713374794499719853u64)
+            self.recv_event(11713374794499719853u64)
         }
     }
     ///
-    #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-    pub struct PanelItemAcceptor(pub(crate) std::sync::Arc<crate::node::Node>);
+    #[derive(Debug, Clone)]
+    pub struct PanelItemAcceptor {
+        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+    }
     impl PanelItemAcceptor {
         pub(crate) fn from_id(
             client: &std::sync::Arc<crate::client::ClientHandle>,
             id: u64,
             owned: bool,
         ) -> Self {
-            let node = crate::node::Node::from_id(client, id, owned);
-            client.scenegraph.add_aspect::<PanelItemAcceptorEvent>(&node);
-            PanelItemAcceptor(node)
+            let core = std::sync::Arc::new(
+                crate::node::NodeCore::new(client.clone(), id, owned),
+            );
+            client.registry.add_aspect(id, 6398932320740499836u64);
+            PanelItemAcceptor { core }
         }
         pub fn as_item_acceptor(self) -> super::ItemAcceptor {
-            super::ItemAcceptor(self.0)
+            super::ItemAcceptor {
+                core: self.core,
+            }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef(self.0)
+            super::SpatialRef {
+                core: self.core,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial(self.0)
+            super::Spatial { core: self.core }
         }
     }
     impl crate::node::NodeType for PanelItemAcceptor {
-        fn node(&self) -> &crate::node::Node {
-            &self.0
+        fn node(&self) -> &crate::node::NodeCore {
+            &self.core
         }
     }
     impl serde::Serialize for PanelItemAcceptor {
@@ -3828,7 +3824,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self,
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.0.id())
+            serializer.serialize_u64(self.core.id)
         }
     }
     impl PanelItemAcceptorAspect for PanelItemAcceptor {}
@@ -3836,16 +3832,13 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     impl SpatialRefAspect for PanelItemAcceptor {}
     impl OwnedAspect for PanelItemAcceptor {}
     impl SpatialAspect for PanelItemAcceptor {}
-    pub(crate) const PANEL_ITEM_ACCEPTOR_ASPECT_ID: u64 = 6398932320740499836u64;
-    pub(crate) const PANEL_ITEM_ACCEPTOR_CAPTURE_ITEM_SERVER_OPCODE: u64 = 1751367302976798762u64;
-    pub(crate) const PANEL_ITEM_ACCEPTOR_CAPTURE_ITEM_CLIENT_OPCODE: u64 = 1751367302976798762u64;
     #[derive(Debug)]
     pub enum PanelItemAcceptorEvent {
         CaptureItem { item: PanelItem, initial_data: PanelItemInitData },
     }
     impl crate::scenegraph::EventParser for PanelItemAcceptorEvent {
         const ASPECT_ID: u64 = 6398932320740499836u64;
-        fn serialize_signal(
+        fn parse_signal(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             signal_id: u64,
             _data: &[u8],
@@ -3861,30 +3854,27 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                         "PanelItemAcceptor", "capture_item"
                     );
                     Ok(PanelItemAcceptorEvent::CaptureItem {
-                        item: PanelItem::from_id(&_client, item, false),
+                        item: PanelItem::from_id(_client, item, false),
                         initial_data: initial_data,
                     })
                 }
                 _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
-        fn serialize_method(
+        fn parse_method(
             _client: &std::sync::Arc<crate::client::ClientHandle>,
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
             response: stardust_xr::messenger::MethodResponse,
-        ) -> Option<Self> {
-            let response = std::rc::Rc::new(std::cell::RefCell::new(Some(response)));
-            let response2 = response.clone();
-            let result = || match method_id {
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            };
-            match (result)() {
-                Ok(event) => Some(event),
-                Err(e) => {
-                    let _ = response2.borrow_mut().take().unwrap().send(Err(e));
-                    None
+        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            match method_id {
+                _ => {
+                    let _ = response
+                        .send(
+                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                        );
+                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3892,7 +3882,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     ///
     pub trait PanelItemAcceptorAspect: crate::node::NodeType + super::ItemAcceptorAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
         fn recv_panel_item_acceptor_event(&self) -> Option<PanelItemAcceptorEvent> {
-            self.node().recv_event(6398932320740499836u64)
+            self.recv_event(6398932320740499836u64)
         }
         ///
         fn capture_item(
@@ -3900,9 +3890,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             item: &impl PanelItemAspect,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (item.node().id());
+            let data = (item.node().id);
             self.node()
-                .send_remote_signal(
+                .send_signal(
                     6398932320740499836u64,
                     1751367302976798762u64,
                     &data,
@@ -3916,7 +3906,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             Ok(())
         }
     }
-    pub(crate) const INTERFACE_REGISTER_KEYMAP_SERVER_OPCODE: u64 = 13267771052011565359u64;
     ///Register a keymap with the server to easily identify it later
     pub async fn register_keymap(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3948,7 +3937,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         );
         Ok(deserialized)
     }
-    pub(crate) const INTERFACE_GET_KEYMAP_SERVER_OPCODE: u64 = 18393315648981916968u64;
     ///Get the keymap string representation from an ID
     pub async fn get_keymap(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3979,7 +3967,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         );
         Ok(deserialized)
     }
-    pub(crate) const INTERFACE_REGISTER_PANEL_ITEM_UI_SERVER_OPCODE: u64 = 13016197282381545765u64;
     ///Register this client to manage the items of a certain type and create default 3D UI for them.
     pub fn register_panel_item_ui(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -3996,7 +3983,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         );
         Ok(())
     }
-    pub(crate) const INTERFACE_CREATE_PANEL_ITEM_ACCEPTOR_SERVER_OPCODE: u64 = 793626320493717815u64;
     ///Create an item acceptor to allow temporary ownership of a given type of item. Creates a node at `/item/panel/acceptor/<name>`.
     pub fn create_panel_item_acceptor(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
@@ -4007,7 +3993,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     ) -> crate::node::NodeResult<PanelItemAcceptor> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id(), transform, field.node().id());
+            let data = (id, parent.node().id, transform, field.node().id);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle

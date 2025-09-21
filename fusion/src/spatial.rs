@@ -150,7 +150,7 @@ impl Spatial {
 		transform: Transform,
 		zoneable: bool,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_spatial(
 			&client,
 			client.generate_id(),
@@ -167,7 +167,7 @@ impl Zone {
 		transform: Transform,
 		field: &impl FieldAspect,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_zone(
 			&client,
 			client.generate_id(),
@@ -251,7 +251,7 @@ async fn fusion_zone() {
 				ZoneEvent::Enter { spatial } => {
 					println!("Spatial {spatial:?} entered zone");
 					zone.capture(&spatial).unwrap();
-					zone_spatials.insert(spatial.node().id(), spatial);
+					zone_spatials.insert(spatial.id(), spatial);
 				}
 				ZoneEvent::Capture { spatial } => {
 					println!("Spatial {spatial:?} was captured");

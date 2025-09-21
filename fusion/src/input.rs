@@ -30,7 +30,7 @@ impl InputMethod {
 		input_type: InputDataType,
 		datamap: &Datamap,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_input_method(
 			&client,
 			client.generate_id(),
@@ -47,7 +47,7 @@ impl InputHandler {
 		transform: Transform,
 		field: &impl FieldAspect,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_input_handler(
 			&client,
 			client.generate_id(),

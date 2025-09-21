@@ -14,7 +14,7 @@ impl Sound {
 		transform: Transform,
 		resource: &ResourceID,
 	) -> NodeResult<Self> {
-		let client = spatial_parent.client()?;
+		let client = spatial_parent.client();
 		create_sound(
 			&client,
 			client.generate_id(),

@@ -1,107 +1,116 @@
+//! Node registry for efficient event handling with broadcast channels.
+//! Replaces the old Scenegraph with a more efficient single-lookup system.
+
+use crate::client::ClientHandle;
 use dashmap::DashMap;
-use parking_lot::Mutex;
 use stardust_xr::{
 	messenger::MethodResponse,
 	scenegraph::{self, ScenegraphError},
 };
 use std::{
+	any::Any,
 	os::fd::OwnedFd,
 	sync::{Arc, Weak},
 };
 use tokio::sync::mpsc;
 
-use crate::{client::ClientHandle, node::Node};
-
-pub(crate) trait EventParser: Sized + Send + Sync + 'static {
+/// EventParser trait for compatibility with existing codegen
+/// This allows the generated code to work with NodeRegistry
+pub trait EventParser: Sized + Send + Sync + 'static {
 	const ASPECT_ID: u64;
-	fn serialize_signal(
-		_client: &Arc<crate::client::ClientHandle>,
+
+	fn parse_signal(
+		_client: &Arc<ClientHandle>,
 		signal_id: u64,
-		data: &[u8],
-		fds: Vec<OwnedFd>,
+		_data: &[u8],
+		_fds: Vec<OwnedFd>,
 	) -> Result<Self, ScenegraphError>;
-	fn serialize_method(
-		_client: &Arc<crate::client::ClientHandle>,
-		method_id: u64,
+	fn parse_method(
+		client: &Arc<ClientHandle>,
+		signal_id: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 		response: MethodResponse,
-	) -> Option<Self>;
+	) -> Result<Self, ScenegraphError>;
 }
 
-trait EventSender: Send + Sync + 'static {
+trait EventSender: Any + Send + Sync + 'static {
 	fn send_signal(
 		&self,
-		client: &Arc<crate::client::ClientHandle>,
+		client: &Arc<ClientHandle>,
 		signal_id: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-	) -> Result<(), ScenegraphError>;
-	fn send_method(
+	);
+	fn execute_method(
 		&self,
-		client: &Arc<crate::client::ClientHandle>,
+		client: &Arc<ClientHandle>,
 		method_id: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 		response: MethodResponse,
 	);
 }
-struct EventSenderWrapper<E: EventParser>(mpsc::UnboundedSender<E>);
-impl<E: EventParser> EventSender for EventSenderWrapper<E> {
+
+struct Sender<Event: EventParser>(mpsc::Sender<Event>);
+impl<Event: EventParser> EventSender for Sender<Event> {
 	fn send_signal(
 		&self,
-		client: &Arc<crate::client::ClientHandle>,
+		client: &Arc<ClientHandle>,
 		signal_id: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
-	) -> Result<(), ScenegraphError> {
-		let _ = self
-			.0
-			.send(E::serialize_signal(client, signal_id, data, fds)?);
-		Ok(())
+	) {
+		if let Ok(parsed) = Event::parse_signal(client, signal_id, data, fds) {
+			self.0.send(parsed);
+		}
 	}
-	fn send_method(
+
+	fn execute_method(
 		&self,
-		client: &Arc<crate::client::ClientHandle>,
+		client: &Arc<ClientHandle>,
 		method_id: u64,
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 		response: MethodResponse,
 	) {
-		if let Some(event) = E::serialize_method(client, method_id, data, fds, response) {
-			let _ = self.0.send(event);
+		if let Ok(parsed) = Event::parse_method(client, method_id, data, fds, response) {
+			self.0.send(parsed);
 		}
 	}
 }
 
-/// Scenegraph full of aliases to nodes, needed so the `Messenger` can send messages to nodes.
-pub struct Scenegraph {
-	client_ref: Weak<ClientHandle>,
-	nodes: DashMap<u64, DashMap<u64, Box<dyn EventSender>>>,
-}
-impl Scenegraph {
-	pub(crate) fn new(client_ref: Weak<ClientHandle>) -> Self {
-		Scenegraph {
-			client_ref,
-			nodes: Default::default(),
-		}
-	}
-	pub(crate) fn add_aspect<E: EventParser>(&self, node: &Node) {
-		let (sender, receiver) = mpsc::unbounded_channel::<E>();
-		let scenegraph_node = self.nodes.entry(node.id).or_default();
-		scenegraph_node
-			.entry(E::ASPECT_ID)
-			.or_insert_with(|| Box::new(EventSenderWrapper(sender)));
-		node.aspects
-			.entry(E::ASPECT_ID)
-			.insert(Mutex::new(Box::new(receiver)));
-	}
-	pub(crate) fn remove_node(&self, id: u64) {
-		self.nodes.remove(&id);
-	}
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+struct MemberInfo {
+	node_id: u64,
+	aspect_id: u64,
 }
 
-impl scenegraph::Scenegraph for Scenegraph {
+pub struct NodeRegistry {
+	client: Weak<ClientHandle>,
+	aspects: DashMap<MemberInfo, Box<dyn EventSender>>,
+}
+
+impl NodeRegistry {
+	pub fn new(client: Weak<ClientHandle>) -> Self {
+		Self {
+			client,
+			aspects: DashMap::new(),
+		}
+	}
+
+	pub fn add_aspect<E: EventParser>(&self, node_id: u64, aspect_id: u64) -> mpsc::Receiver<E> {
+		let (tx, rx) = mpsc::channel(64); // Reasonable buffer size
+		self.aspects
+			.insert(MemberInfo { node_id, aspect_id }, Box::new(Sender(tx)));
+		rx
+	}
+
+	pub fn remove_node(&self, node_id: u64) {
+		self.aspects.retain(|info, _| info.node_id != node_id);
+	}
+}
+impl scenegraph::Scenegraph for NodeRegistry {
 	fn send_signal(
 		&self,
 		id: u64,
@@ -110,10 +119,23 @@ impl scenegraph::Scenegraph for Scenegraph {
 		data: &[u8],
 		fds: Vec<OwnedFd>,
 	) -> Result<(), ScenegraphError> {
-		let node = self.nodes.get(&id).ok_or(ScenegraphError::NodeNotFound)?;
-		let aspect = node.get(&aspect).ok_or(ScenegraphError::AspectNotFound)?;
-		aspect.send_signal(&self.client_ref.upgrade().unwrap(), signal, data, fds)
+		let Some(client) = self.client.upgrade() else {
+			return Err(ScenegraphError::InternalError(
+				"Client not found".to_string(),
+			));
+		};
+
+		let aspect = self
+			.aspects
+			.get(&MemberInfo {
+				node_id: id,
+				aspect_id: aspect,
+			})
+			.ok_or_else(|| ScenegraphError::AspectNotFound)?;
+		aspect.value().send_signal(&client, signal, data, fds);
+		Ok(())
 	}
+
 	fn execute_method(
 		&self,
 		id: u64,
@@ -123,20 +145,22 @@ impl scenegraph::Scenegraph for Scenegraph {
 		fds: Vec<OwnedFd>,
 		response: MethodResponse,
 	) {
-		let Some(node) = self.nodes.get(&id) else {
-			response.send(Err(ScenegraphError::NodeNotFound));
+		let Some(client) = self.client.upgrade() else {
+			response.send(Err(ScenegraphError::InternalError(
+				"Client not found".to_string(),
+			)));
 			return;
 		};
-		let Some(aspect) = node.get(&aspect) else {
+
+		let Some(aspect) = self.aspects.get(&MemberInfo {
+			node_id: id,
+			aspect_id: aspect,
+		}) else {
 			response.send(Err(ScenegraphError::AspectNotFound));
 			return;
 		};
-		aspect.send_method(
-			&self.client_ref.upgrade().unwrap(),
-			method,
-			data,
-			fds,
-			response,
-		);
+		aspect
+			.value()
+			.execute_method(&client, method, data, fds, response);
 	}
 }

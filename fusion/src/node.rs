@@ -1,9 +1,7 @@
 //! The base of all objects in Stardust.
 
-use crate::{client::ClientHandle, scenegraph::EventParser};
-use dashmap::DashMap;
-use parking_lot::Mutex;
-use serde::{Serialize, Serializer, de::DeserializeOwned};
+use crate::client::ClientHandle;
+use serde::{Serialize, de::DeserializeOwned};
 use stardust_xr::{
 	messenger::MessengerError,
 	scenegraph::ScenegraphError,
@@ -11,15 +9,12 @@ use stardust_xr::{
 		FlexSerializeError, deserialize, flexbuffers::DeserializationError, serialize,
 	},
 };
-use std::{any::Any, fmt::Debug, hash::Hash};
-use std::{
-	os::fd::OwnedFd,
-	sync::{Arc, Weak},
-	vec::Vec,
-};
+use std::{fmt::Debug, os::fd::OwnedFd, sync::Arc, vec::Vec};
 use thiserror::Error;
 
 pub use crate::protocol::node::*;
+
+pub type NodeResult<O> = Result<O, NodeError>;
 
 #[derive(Error, Debug)]
 pub enum NodeError {
@@ -78,157 +73,125 @@ impl From<NodeError> for ScenegraphError {
 // #[enum_dispatch(FieldType)]
 pub trait NodeType: Sized + Send + Sync + 'static {
 	/// Get a reference to the node.
-	fn node(&self) -> &Node;
+	fn node(&self) -> &NodeCore;
 	// What's the node's ID? (used for comparison)
 	fn id(&self) -> u64 {
 		self.node().id
 	}
 	/// Try to get the client
-	fn client(&self) -> NodeResult<Arc<ClientHandle>> {
-		self.node().client()
+	fn client(&self) -> &Arc<ClientHandle> {
+		&self.node().client
 	}
 	/// Set whether the node is active or not. This has different effects depending on the node.
 	fn set_enabled(&self, enabled: bool) -> Result<(), NodeError> {
-		self.node().send_remote_signal(
-			OWNED_ASPECT_ID,
-			OWNED_SET_ENABLED_SERVER_OPCODE,
-			&enabled,
-			vec![],
-		)
+		if self.node().owned {
+			OwnedAspect::set_enabled(self.node(), enabled)
+		} else {
+			Err(NodeError::DoesNotExist)
+		}
 	}
 }
 
-pub type NodeResult<O> = Result<O, NodeError>;
-
-/// An object in the client's scenegraph on the server. Almost all calls to a node are IPC calls and so have several microseconds of delay, be aware.
-pub struct Node {
-	client: Weak<ClientHandle>,
-	pub(crate) id: u64,
-	pub(crate) aspects: DashMap<u64, Mutex<Box<dyn Any + Send + Sync + 'static>>>,
+pub(crate) struct NodeCore {
+	pub client: Arc<ClientHandle>,
+	pub id: u64,
 	pub(crate) owned: bool,
 }
-impl Node {
-	/// Try to get the client from the node, it's a result because that makes it work a lot better with `?` in internal functions.
-	pub fn client(&self) -> Result<Arc<ClientHandle>, NodeError> {
-		self.client.upgrade().ok_or(NodeError::ClientDropped)
+impl NodeCore {
+	pub(crate) fn new(client: Arc<ClientHandle>, id: u64, owned: bool) -> Self {
+		Self { client, id, owned }
 	}
 
-	pub(crate) fn from_id(client: &Arc<ClientHandle>, id: u64, owned: bool) -> Arc<Node> {
-		Arc::new(Node {
-			client: Arc::downgrade(client),
-			id,
-			aspects: DashMap::default(),
-			owned,
-		})
-	}
-
-	/// Get the entire path of the node including the name.
-	pub fn id(&self) -> u64 {
-		self.id
-	}
-
-	/// Check if this node is still alive.
-	pub fn alive(&self) -> bool {
-		self.client.strong_count() > 0
-	}
-
-	/// Send a signal to the node on the server. Not needed unless implementing functionality Fusion does not already have.
-	pub fn send_remote_signal<S: Serialize>(
+	/// Send a signal directly - no weak reference upgrade!
+	pub(crate) fn send_signal<S: Serialize>(
 		&self,
 		aspect: u64,
 		signal: u64,
 		data: &S,
 		fds: Vec<OwnedFd>,
 	) -> Result<(), NodeError> {
-		self.send_remote_signal_raw(
-			aspect,
-			signal,
-			&serialize(data).map_err(|e| NodeError::Serialization { e })?,
-			fds,
-		)
-	}
-	/// Send a signal to the node on the server with raw data (like when sending flatbuffers over). Not needed unless implementing functionality Fusion does not already have.
-	pub fn send_remote_signal_raw(
-		&self,
-		aspect: u64,
-		signal: u64,
-		data: &[u8],
-		fds: Vec<OwnedFd>,
-	) -> Result<(), NodeError> {
-		self.client()?
+		let serialized = serialize(data).map_err(|e| NodeError::Serialization { e })?;
+		self.client
 			.message_sender_handle
-			.signal(self.id(), aspect, signal, data, fds)
-			.map_err(|e| NodeError::MessengerError { e })
+			.signal(self.id, aspect, signal, &serialized, fds)
+			.map_err(|e| match e {
+				MessengerError::ReceiverDropped => NodeError::ClientDropped,
+				other => NodeError::MessengerError { e: other },
+			})
 	}
-	/// Execute a method on the node on the server. Not needed unless implementing functionality Fusion does not already have.
-	pub async fn execute_remote_method<S: Serialize, D: DeserializeOwned>(
+
+	/// Execute a method directly - no weak reference upgrade!
+	pub(crate) async fn call_method<S: Serialize, D: DeserializeOwned>(
 		&self,
 		aspect: u64,
 		method: u64,
-		send_data: &S,
+		data: &S,
 		fds: Vec<OwnedFd>,
 	) -> Result<D, NodeError> {
-		let send_data = serialize(send_data).map_err(|e| NodeError::Serialization { e })?;
+		let serialized = serialize(data).map_err(|e| NodeError::Serialization { e })?;
 
-		let data = self
-			.client()?
+		let response = self
+			.client
 			.message_sender_handle
-			.method(self.id(), aspect, method, &send_data, fds)
+			.method(self.id, aspect, method, &serialized, fds)
 			.await
-			.map_err(|e| NodeError::MessengerError { e })?
+			.map_err(|e| match e {
+				MessengerError::ReceiverDropped => NodeError::ClientDropped,
+				other => NodeError::MessengerError { e: other },
+			})?
 			.map_err(|e| NodeError::ReturnedError { e })?;
 
-		deserialize(&data.into_message()).map_err(|e| NodeError::Deserialization { e })
-	}
-
-	pub(crate) fn recv_event<E: EventParser>(&self, id: u64) -> Option<E> {
-		let aspect = self.node().aspects.get(&id)?;
-		let lock = &mut *aspect.lock();
-		let receiver = lock.downcast_mut::<tokio::sync::mpsc::UnboundedReceiver<E>>()?;
-		receiver.try_recv().ok()
+		deserialize(&response.into_message()).map_err(|e| NodeError::Deserialization { e })
 	}
 }
-impl NodeType for Node {
-	fn node(&self) -> &Node {
+impl NodeType for NodeCore {
+	fn node(&self) -> &NodeCore {
 		self
 	}
 }
-impl serde::Serialize for Node {
-	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-		serializer.serialize_u64(self.id)
-	}
-}
-impl Debug for Node {
+impl OwnedAspect for NodeCore {}
+impl std::fmt::Debug for NodeCore {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let mut dbg = f.debug_struct("Node");
-		dbg.field("id", &self.id).field("aspects", &self.aspects);
-		dbg.finish()
+		f.debug_struct("NodeCore")
+			.field("id", &self.id)
+			.field("owned", &self.owned)
+			.finish()
 	}
 }
-impl Hash for Node {
-	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.id.hash(state)
-	}
-}
-impl PartialEq for Node {
-	fn eq(&self, other: &Self) -> bool {
-		self.id.eq(&other.id)
-	}
-}
-impl Eq for Node {}
-impl Drop for Node {
+impl Drop for NodeCore {
 	fn drop(&mut self) {
-		if let Some(client) = self.client.upgrade() {
-			if self.owned {
-				let _ = client.message_sender_handle.signal(
-					self.id,
-					OWNED_ASPECT_ID,
-					OWNED_DESTROY_SERVER_OPCODE,
-					&[],
-					Vec::new(),
-				);
-			}
-			client.scenegraph.remove_node(self.id);
+		if self.owned {
+			let _ = self.destroy();
 		}
 	}
 }
+
+// impl NodeType for Node {
+// 	fn node(&self) -> &Node {
+// 		self
+// 	}
+// }
+// impl serde::Serialize for Node {
+// 	fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+// 		serializer.serialize_u64(self.core.id)
+// 	}
+// }
+// impl Debug for Node {
+// 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+// 		let mut dbg = f.debug_struct("Node");
+// 		dbg.field("id", &self.core.id)
+// 			.field("aspects", &self.aspects);
+// 		dbg.finish()
+// 	}
+// }
+// impl Hash for Node {
+// 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+// 		self.core.id.hash(state)
+// 	}
+// }
+// impl PartialEq for Node {
+// 	fn eq(&self, other: &Self) -> bool {
+// 		self.core.id.eq(&other.core.id)
+// 	}
+// }
+// impl Eq for Node {}
