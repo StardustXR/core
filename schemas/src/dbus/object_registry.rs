@@ -1,13 +1,16 @@
 use futures_util::StreamExt;
-use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
-use std::time::Duration;
-use tokio::sync::watch;
-use tokio::task::AbortHandle;
-use zbus::names::{BusName, InterfaceName, OwnedBusName, OwnedInterfaceName};
-use zbus::proxy::Defaults;
-use zbus::zvariant::OwnedObjectPath;
-use zbus::{fdo, Connection, Proxy, Result};
+use std::{
+	collections::{HashMap, HashSet},
+	hash::Hash,
+	time::Duration,
+};
+use tokio::{sync::watch, task::AbortHandle};
+use zbus::{
+	Connection, Proxy, Result, fdo,
+	names::{BusName, InterfaceName, OwnedBusName, OwnedInterfaceName},
+	proxy::Defaults,
+	zvariant::OwnedObjectPath,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ObjectInfo {

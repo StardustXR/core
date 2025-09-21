@@ -27,13 +27,17 @@ pub trait PlaySpace {
 	// fn set_bounds(&self, bounds: Vec<(f64, f64)>) -> Result<()>;
 }
 
-#[zbus::proxy(interface = "org.stardustxr.XKBv1")]
-// this is associated with the `SpatialRef` at the same path (as a connection point), and the `FieldRef` at this path for boundaries`
-pub trait RawKeyAcceptor {
-	#[zbus(no_reply)]
-	fn keymap(&self, keymap: &str) -> Result<()>;
-	#[zbus(no_reply)]
-	fn key_pressed(&self, key: u32) -> Result<()>;
-	#[zbus(no_reply)]
-	fn key_released(&self, key: u32) -> Result<()>;
+#[zbus::proxy(interface = "org.stardustxr.Zoneable")]
+/// You need to implement at least SpatialRef but optionally FieldRef
+pub trait Zoneable {
+	/// Ask the zoneable to parent itself to the given SpatialRef
+	fn parent(&self, new_parent: u64) -> Result<()>;
+	/// Set the transform of the zoneable relative to the given SpatialRef to zero
+	fn reset_transform(&self, spatial_ref: u64) -> Result<()>;
+}
+#[zbus::proxy(interface = "org.stardustxr.CaptureZoneable")]
+/// You need to implement Zoneable
+pub trait CaptureZoneable {
+	fn capture(&self) -> Result<()>;
+	fn release(&self) -> Result<()>;
 }

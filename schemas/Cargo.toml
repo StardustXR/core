@@ -9,8 +9,8 @@ repository = "https://github.com/StardustXR/core/"
 homepage = "https://stardustxr.org"
 
 [dependencies]
-flatbuffers = "24.3.25"
-flexbuffers = { version = "2.0.0", features = [
+flatbuffers = "25.2.10"
+flexbuffers = { version = "25.2.10", features = [
 	"serialize_human_readable",
 	"deserialize_human_readable",
 ] }
@@ -20,11 +20,11 @@ serde_repr = "0.1.18"
 # stardust protocol
 kdl = "4.6.0"
 fnv = "1.0.7"
-thiserror = "1.0.56"
+thiserror = "2.0.16"
 
 #dbus stuff
 nanoid = "0.4.0"
-zbus = { version = "5.5.0", features = ["tokio"] }
+zbus = { version = "5.11.0", features = ["tokio"], default-features = false }
 tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
 futures-util = "0.3.30"
 
