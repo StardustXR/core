@@ -21,7 +21,7 @@ rustc-hash = "2.1.1"
 serde = "1.0.177"
 serde_repr = "0.1.16"
 thiserror = "2.0.16"
-tokio = { version = "1", features = [
+tokio = { version = "1.38.0", features = [
 	"sync",
 	"macros",
 	"rt",
