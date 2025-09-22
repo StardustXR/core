@@ -3771,6 +3771,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     #[derive(Debug, Clone)]
     pub struct PanelItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) item_ui_event: std::sync::Arc<
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemUiEvent>>,
+        >,
         pub(crate) panel_item_ui_event: std::sync::Arc<
             std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemUiEvent>>,
         >,
@@ -3784,12 +3787,22 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
+            let item_ui_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 7265392688253796589u64).into(),
+            );
             let panel_item_ui_event = std::sync::Arc::new(
                 client.registry.add_aspect(id, 11713374794499719853u64).into(),
             );
             PanelItemUi {
                 core,
+                item_ui_event,
                 panel_item_ui_event,
+            }
+        }
+        pub fn as_item_ui(self) -> super::ItemUi {
+            super::ItemUi {
+                core: self.core,
+                item_ui_event: self.item_ui_event,
             }
         }
     }
@@ -3804,6 +3817,11 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             serializer: S,
         ) -> Result<S::Ok, S::Error> {
             serializer.serialize_u64(self.core.id)
+        }
+    }
+    impl ItemUiAspect for PanelItemUi {
+        fn recv_item_ui_event(&self) -> Option<ItemUiEvent> {
+            self.item_ui_event.lock().unwrap().try_recv().ok()
         }
     }
     impl PanelItemUiAspect for PanelItemUi {
@@ -3873,7 +3891,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         }
     }
     ///
-    pub trait PanelItemUiAspect: crate::node::NodeType + std::fmt::Debug {
+    pub trait PanelItemUiAspect: crate::node::NodeType + super::ItemUiAspect + std::fmt::Debug {
         fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent>;
     }
     ///

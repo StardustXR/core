@@ -32,7 +32,7 @@ impl InputMethod {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		create_input_method(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,
@@ -49,7 +49,7 @@ impl InputHandler {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		create_input_handler(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,

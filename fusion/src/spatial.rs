@@ -152,7 +152,7 @@ impl Spatial {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		create_spatial(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,
@@ -169,7 +169,7 @@ impl Zone {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		create_zone(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,

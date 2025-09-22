@@ -194,6 +194,7 @@ signal "register_panel_item_ui" side="server" {
 }
 aspect "PanelItemUi" {
     description ""
+    inherits "ItemUi"
 
     signal "create_item" side="client" {
         description ""

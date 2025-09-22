@@ -18,7 +18,7 @@ impl Lines {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		create_lines(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,
@@ -73,7 +73,7 @@ impl Model {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		load_model(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,
@@ -94,7 +94,7 @@ impl Text {
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
 		create_text(
-			&client,
+			client,
 			client.generate_id(),
 			spatial_parent,
 			transform,
