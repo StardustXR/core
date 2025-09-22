@@ -58,6 +58,7 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 		.iter()
 		.filter(|n| n.name().value() == "aspect")
 		.map(convert_aspect)
+		.map(|v| v.map(|a| Arc::new(RwLock::new(a))))
 		.collect::<Result<Vec<_>, ParseError>>()?;
 	Ok(Protocol {
 		version,
@@ -159,6 +160,8 @@ fn convert_aspect(aspect: &KdlNode) -> Result<Aspect, ParseError> {
 		description,
 		inherits,
 		members,
+		// populated later
+		inherited_aspects: Vec::new(),
 	})
 }
 fn check_member(member: &&KdlNode) -> bool {
@@ -176,7 +179,7 @@ fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
 			return Err(ParseError::InvalidStructType(
 				member.name().value().to_string(),
 				"signal or method".to_string(),
-			))
+			));
 		}
 	};
 	let side = get_string_property(member, "side")?;
@@ -187,7 +190,7 @@ fn convert_member(member: &KdlNode) -> Result<Member, ParseError> {
 			return Err(ParseError::InvalidPropertyType {
 				field_name: member.name().value().to_string(),
 				field_type: "side".to_string(),
-			})
+			});
 		}
 	};
 
@@ -274,7 +277,7 @@ fn convert_argument_type(argument: &KdlNode, key: &str) -> Result<ArgumentType, 
 			return Err(ParseError::InvalidPropertyType {
 				field_name: argument.name().value().to_string(),
 				field_type: t.to_string(),
-			})
+			});
 		}
 	})
 }

@@ -2,7 +2,7 @@ pub mod interfaces;
 pub mod object_registry;
 
 use zbus::{
-	conn, fdo::ObjectManager, proxy::Builder, zvariant::OwnedObjectPath, Connection, Result,
+	Connection, Result, conn, fdo::ObjectManager, proxy::Builder, zvariant::OwnedObjectPath,
 };
 
 pub async fn connect_client() -> zbus::Result<zbus::Connection> {

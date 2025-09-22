@@ -1,7 +1,11 @@
 use self::parser::convert;
 use kdl::{KdlDocument, KdlError};
-use std::collections::{HashMap, HashSet};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 use thiserror::Error;
+use tokio::sync::RwLock;
 
 mod parser;
 
@@ -24,7 +28,7 @@ pub struct Protocol {
 	pub custom_enums: Vec<CustomEnum>,
 	pub custom_structs: Vec<CustomStruct>,
 	pub custom_unions: Vec<CustomUnion>,
-	pub aspects: Vec<Aspect>,
+	pub aspects: Vec<Arc<RwLock<Aspect>>>,
 }
 impl Protocol {
 	pub fn parse(sbs: &str) -> Result<Self, ParseError> {
@@ -74,9 +78,10 @@ pub struct Aspect {
 	pub description: String,
 	pub inherits: Vec<String>,
 	pub members: Vec<Member>,
+	pub inherited_aspects: Vec<Arc<RwLock<Aspect>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Member {
 	pub name: String,
 	pub opcode: u64, // FNV hash (https://crates.io/crates/fnv) of the member name
@@ -128,7 +133,7 @@ pub enum ArgumentType {
 	Fd,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Argument {
 	pub name: String,
 	pub description: Option<String>,
@@ -175,10 +180,16 @@ pub fn resolve_inherits(protocols: &mut [&mut Protocol]) -> Result<(), String> {
 	for (protocol_idx, protocol) in protocols.iter().enumerate() {
 		for (aspect_idx, aspect) in protocol.aspects.iter().enumerate() {
 			if aspect_locations
-				.insert(aspect.name.clone(), (protocol_idx, aspect_idx))
+				.insert(
+					aspect.blocking_read().name.clone(),
+					(protocol_idx, aspect_idx),
+				)
 				.is_some()
 			{
-				return Err(format!("Duplicate aspect name: {}", aspect.name));
+				return Err(format!(
+					"Duplicate aspect name: {}",
+					aspect.blocking_read().name
+				));
 			}
 		}
 	}
@@ -188,18 +199,31 @@ pub fn resolve_inherits(protocols: &mut [&mut Protocol]) -> Result<(), String> {
 		let aspect_count = protocols[protocol_idx].aspects.len();
 		for aspect_idx in 0..aspect_count {
 			// Get the current aspect's inherits list (we need to clone to avoid borrow checker issues)
-			let current_inherits = protocols[protocol_idx].aspects[aspect_idx].inherits.clone();
+			let current_inherits = protocols[protocol_idx].aspects[aspect_idx]
+				.blocking_read()
+				.inherits
+				.clone();
 
 			// Resolve the full inheritance chain
 			let resolved_inherits = resolve_aspect_inheritance_chain(
-				&protocols[protocol_idx].aspects[aspect_idx].name,
+				&protocols[protocol_idx].aspects[aspect_idx]
+					.blocking_read()
+					.name,
 				&current_inherits,
 				&aspect_locations,
 				protocols,
 			)?;
 
 			// Update the aspect's inherits list with the resolved chain
-			protocols[protocol_idx].aspects[aspect_idx].inherits = resolved_inherits;
+			protocols[protocol_idx].aspects[aspect_idx]
+				.blocking_write()
+				.inherits = resolved_inherits
+				.iter()
+				.map(|aspect| aspect.blocking_read().name.clone())
+				.collect();
+			protocols[protocol_idx].aspects[aspect_idx]
+				.blocking_write()
+				.inherited_aspects = resolved_inherits;
 		}
 	}
 
@@ -212,7 +236,7 @@ fn resolve_aspect_inheritance_chain(
 	direct_inherits: &[String],
 	aspect_locations: &HashMap<String, (usize, usize)>,
 	protocols: &[&mut Protocol],
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<Arc<RwLock<Aspect>>>, String> {
 	let mut resolved = Vec::new();
 	let mut visited = HashSet::new();
 	let mut visiting = HashSet::new(); // Track aspects currently being processed to detect cycles
@@ -237,11 +261,13 @@ fn resolve_aspect_inheritance_chain(
 
 		// Find the aspect and add it to resolved list
 		if let Some(&(protocol_idx, aspect_idx)) = aspect_locations.get(&current_aspect) {
-			resolved.push(current_aspect.clone());
+			resolved.push(protocols[protocol_idx].aspects[aspect_idx].clone());
 			visited.insert(current_aspect.clone());
 
 			// Add its dependencies to the stack
-			let inherited_aspects = &protocols[protocol_idx].aspects[aspect_idx].inherits;
+			let inherited_aspects = &protocols[protocol_idx].aspects[aspect_idx]
+				.blocking_read()
+				.inherits;
 			for inherited in inherited_aspects {
 				if !visited.contains(inherited) {
 					to_visit.push(inherited.clone());

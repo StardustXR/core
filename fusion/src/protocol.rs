@@ -30,6 +30,9 @@ pub mod root {
     #[derive(Debug, Clone)]
     pub struct Root {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) root_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<RootEvent>>,
+        >,
     }
     impl Root {
         pub(crate) fn from_id(
@@ -40,8 +43,10 @@ pub mod root {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 7212020743076450030u64);
-            Root { core }
+            let root_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 7212020743076450030u64).into(),
+            );
+            Root { core, root_event }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
             super::SpatialRef {
@@ -62,8 +67,12 @@ pub mod root {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl RootAspect for Root {}
     impl SpatialRefAspect for Root {}
+    impl RootAspect for Root {
+        fn recv_root_event(&self) -> Option<RootEvent> {
+            self.root_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum RootEvent {
         Ping { response: crate::TypedMethodResponse<()> },
@@ -133,9 +142,7 @@ pub mod root {
     }
     ///
     pub trait RootAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
-        fn recv_root_event(&self) -> Option<RootEvent> {
-            self.recv_event(7212020743076450030u64)
-        }
+        fn recv_root_event(&self) -> Option<RootEvent>;
         ///Get the current state. Useful to check the state before you initialize your application!
         async fn get_state(&self) -> crate::node::NodeResult<ClientState> {
             {
@@ -359,7 +366,6 @@ pub mod spatial {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 14774096707642646617u64);
             SpatialRef { core }
         }
     }
@@ -497,7 +503,6 @@ pub mod spatial {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 17785849468685298036u64);
             Spatial { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
@@ -519,9 +524,9 @@ pub mod spatial {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl SpatialAspect for Spatial {}
     impl SpatialRefAspect for Spatial {}
     impl OwnedAspect for Spatial {}
+    impl SpatialAspect for Spatial {}
     #[derive(Debug)]
     pub enum SpatialEvent {}
     /**
@@ -676,6 +681,9 @@ pub mod spatial {
     #[derive(Debug, Clone)]
     pub struct Zone {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) zone_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ZoneEvent>>,
+        >,
     }
     impl Zone {
         pub(crate) fn from_id(
@@ -686,8 +694,10 @@ pub mod spatial {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 8505905936867072296u64);
-            Zone { core }
+            let zone_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 8505905936867072296u64).into(),
+            );
+            Zone { core, zone_event }
         }
         pub fn as_spatial(self) -> super::Spatial {
             super::Spatial { core: self.core }
@@ -711,10 +721,14 @@ pub mod spatial {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl ZoneAspect for Zone {}
     impl SpatialAspect for Zone {}
     impl OwnedAspect for Zone {}
     impl SpatialRefAspect for Zone {}
+    impl ZoneAspect for Zone {
+        fn recv_zone_event(&self) -> Option<ZoneEvent> {
+            self.zone_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum ZoneEvent {
         Enter { spatial: SpatialRef },
@@ -792,9 +806,7 @@ pub mod spatial {
 		Node to manipulate spatial nodes across clients.
 	*/
     pub trait ZoneAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
-        fn recv_zone_event(&self) -> Option<ZoneEvent> {
-            self.recv_event(8505905936867072296u64)
-        }
+        fn recv_zone_event(&self) -> Option<ZoneEvent>;
         ///
         fn update(&self) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
@@ -988,7 +1000,6 @@ pub mod field {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 10662923473076663509u64);
             FieldRef { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
@@ -1010,8 +1021,8 @@ pub mod field {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl FieldRefAspect for FieldRef {}
     impl SpatialRefAspect for FieldRef {}
+    impl FieldRefAspect for FieldRef {}
     #[derive(Debug)]
     pub enum FieldRefEvent {}
     ///A node that is spatial and contains an SDF
@@ -1164,7 +1175,6 @@ pub mod field {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 3948434400034960392u64);
             Field { core }
         }
         pub fn as_field_ref(self) -> super::FieldRef {
@@ -1192,11 +1202,11 @@ pub mod field {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl FieldAspect for Field {}
     impl FieldRefAspect for Field {}
     impl SpatialRefAspect for Field {}
     impl SpatialAspect for Field {}
     impl OwnedAspect for Field {}
+    impl FieldAspect for Field {}
     #[derive(Debug)]
     pub enum FieldEvent {}
     ///An owned field with adjustable shape
@@ -1322,7 +1332,6 @@ pub mod audio {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 17761155925539609649u64);
             Sound { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
@@ -1347,10 +1356,10 @@ pub mod audio {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl SoundAspect for Sound {}
     impl SpatialAspect for Sound {}
     impl OwnedAspect for Sound {}
     impl SpatialRefAspect for Sound {}
+    impl SoundAspect for Sound {}
     #[derive(Debug)]
     pub enum SoundEvent {}
     ///Simple spatial audio source
@@ -1525,7 +1534,6 @@ pub mod drawable {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 16705186951373789081u64);
             Lines { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
@@ -1550,10 +1558,10 @@ pub mod drawable {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl LinesAspect for Lines {}
     impl SpatialAspect for Lines {}
     impl OwnedAspect for Lines {}
     impl SpatialRefAspect for Lines {}
+    impl LinesAspect for Lines {}
     #[derive(Debug)]
     pub enum LinesEvent {}
     ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
@@ -1593,7 +1601,6 @@ pub mod drawable {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 11775342128130118047u64);
             Model { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
@@ -1618,10 +1625,10 @@ pub mod drawable {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl ModelAspect for Model {}
     impl SpatialAspect for Model {}
     impl OwnedAspect for Model {}
     impl SpatialRefAspect for Model {}
+    impl ModelAspect for Model {}
     #[derive(Debug)]
     pub enum ModelEvent {}
     ///A GLTF model loaded by the server.
@@ -1665,7 +1672,6 @@ pub mod drawable {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 7912164431074553740u64);
             ModelPart { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
@@ -1690,10 +1696,10 @@ pub mod drawable {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl ModelPartAspect for ModelPart {}
     impl SpatialAspect for ModelPart {}
     impl OwnedAspect for ModelPart {}
     impl SpatialRefAspect for ModelPart {}
+    impl ModelPartAspect for ModelPart {}
     #[derive(Debug)]
     pub enum ModelPartEvent {}
     ///A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.
@@ -1752,7 +1758,6 @@ pub mod drawable {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 3129045917168168339u64);
             Text { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
@@ -1777,10 +1782,10 @@ pub mod drawable {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl TextAspect for Text {}
     impl SpatialAspect for Text {}
     impl OwnedAspect for Text {}
     impl SpatialRefAspect for Text {}
+    impl TextAspect for Text {}
     #[derive(Debug)]
     pub enum TextEvent {}
     ///Text rendered to work best in XR
@@ -2018,7 +2023,6 @@ pub mod input {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 2611007814387963428u64);
             InputMethodRef { core }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
@@ -2040,8 +2044,8 @@ pub mod input {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl InputMethodRefAspect for InputMethodRef {}
     impl SpatialRefAspect for InputMethodRef {}
+    impl InputMethodRefAspect for InputMethodRef {}
     #[derive(Debug)]
     pub enum InputMethodRefEvent {}
     ///Node representing a spatial input device
@@ -2092,6 +2096,9 @@ pub mod input {
     #[derive(Debug, Clone)]
     pub struct InputMethod {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) input_method_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<InputMethodEvent>>,
+        >,
     }
     impl InputMethod {
         pub(crate) fn from_id(
@@ -2102,8 +2109,13 @@ pub mod input {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 14883688361483968991u64);
-            InputMethod { core }
+            let input_method_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 14883688361483968991u64).into(),
+            );
+            InputMethod {
+                core,
+                input_method_event,
+            }
         }
         pub fn as_input_method_ref(self) -> super::InputMethodRef {
             super::InputMethodRef {
@@ -2132,11 +2144,15 @@ pub mod input {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl InputMethodAspect for InputMethod {}
     impl InputMethodRefAspect for InputMethod {}
     impl SpatialRefAspect for InputMethod {}
     impl SpatialAspect for InputMethod {}
     impl OwnedAspect for InputMethod {}
+    impl InputMethodAspect for InputMethod {
+        fn recv_input_method_event(&self) -> Option<InputMethodEvent> {
+            self.input_method_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum InputMethodEvent {
         CreateHandler { handler: InputHandler, field: Field },
@@ -2219,9 +2235,7 @@ pub mod input {
     }
     ///Node representing a spatial input device
     pub trait InputMethodAspect: crate::node::NodeType + super::InputMethodRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
-        fn recv_input_method_event(&self) -> Option<InputMethodEvent> {
-            self.recv_event(14883688361483968991u64)
-        }
+        fn recv_input_method_event(&self) -> Option<InputMethodEvent>;
         ///Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing.
         fn set_input(&self, input: InputDataType) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
@@ -2312,6 +2326,9 @@ pub mod input {
     #[derive(Debug, Clone)]
     pub struct InputHandler {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) input_handler_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<InputHandlerEvent>>,
+        >,
     }
     impl InputHandler {
         pub(crate) fn from_id(
@@ -2322,8 +2339,13 @@ pub mod input {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 537028132086008694u64);
-            InputHandler { core }
+            let input_handler_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 537028132086008694u64).into(),
+            );
+            InputHandler {
+                core,
+                input_handler_event,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
             super::Spatial { core: self.core }
@@ -2347,10 +2369,14 @@ pub mod input {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl InputHandlerAspect for InputHandler {}
     impl SpatialAspect for InputHandler {}
     impl OwnedAspect for InputHandler {}
     impl SpatialRefAspect for InputHandler {}
+    impl InputHandlerAspect for InputHandler {
+        fn recv_input_handler_event(&self) -> Option<InputHandlerEvent> {
+            self.input_handler_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum InputHandlerEvent {
         Input { methods: Vec<InputMethodRef>, data: Vec<InputData> },
@@ -2406,9 +2432,7 @@ pub mod input {
     }
     ///Handle raw input events.
     pub trait InputHandlerAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
-        fn recv_input_handler_event(&self) -> Option<InputHandlerEvent> {
-            self.recv_event(537028132086008694u64)
-        }
+        fn recv_input_handler_event(&self) -> Option<InputHandlerEvent>;
     }
     ///Create an input method node
     pub fn create_input_method(
@@ -2479,7 +2503,6 @@ pub mod item {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 18318655529277677339u64);
             Item { core }
         }
         pub fn as_spatial(self) -> super::Spatial {
@@ -2504,10 +2527,10 @@ pub mod item {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl ItemAspect for Item {}
     impl SpatialAspect for Item {}
     impl OwnedAspect for Item {}
     impl SpatialRefAspect for Item {}
+    impl ItemAspect for Item {}
     #[derive(Debug)]
     pub enum ItemEvent {}
     ///
@@ -2532,6 +2555,9 @@ pub mod item {
     #[derive(Debug, Clone)]
     pub struct ItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) item_acceptor_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemAcceptorEvent>>,
+        >,
     }
     impl ItemAcceptor {
         pub(crate) fn from_id(
@@ -2542,8 +2568,13 @@ pub mod item {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 10274055739447304636u64);
-            ItemAcceptor { core }
+            let item_acceptor_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 10274055739447304636u64).into(),
+            );
+            ItemAcceptor {
+                core,
+                item_acceptor_event,
+            }
         }
         pub fn as_spatial(self) -> super::Spatial {
             super::Spatial { core: self.core }
@@ -2567,10 +2598,14 @@ pub mod item {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl ItemAcceptorAspect for ItemAcceptor {}
     impl SpatialAspect for ItemAcceptor {}
     impl OwnedAspect for ItemAcceptor {}
     impl SpatialRefAspect for ItemAcceptor {}
+    impl ItemAcceptorAspect for ItemAcceptor {
+        fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
+            self.item_acceptor_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum ItemAcceptorEvent {
         ReleaseItem { item_id: u64 },
@@ -2619,14 +2654,15 @@ pub mod item {
     }
     ///
     pub trait ItemAcceptorAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
-        fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
-            self.recv_event(10274055739447304636u64)
-        }
+        fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent>;
     }
     ///
     #[derive(Debug, Clone)]
     pub struct ItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) item_ui_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemUiEvent>>,
+        >,
     }
     impl ItemUi {
         pub(crate) fn from_id(
@@ -2637,8 +2673,10 @@ pub mod item {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 7265392688253796589u64);
-            ItemUi { core }
+            let item_ui_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 7265392688253796589u64).into(),
+            );
+            ItemUi { core, item_ui_event }
         }
     }
     impl crate::node::NodeType for ItemUi {
@@ -2654,7 +2692,11 @@ pub mod item {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl ItemUiAspect for ItemUi {}
+    impl ItemUiAspect for ItemUi {
+        fn recv_item_ui_event(&self) -> Option<ItemUiEvent> {
+            self.item_ui_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum ItemUiEvent {
         CaptureItem { item_id: u64, acceptor_id: u64 },
@@ -2737,9 +2779,7 @@ pub mod item {
     }
     ///
     pub trait ItemUiAspect: crate::node::NodeType + std::fmt::Debug {
-        fn recv_item_ui_event(&self) -> Option<ItemUiEvent> {
-            self.recv_event(7265392688253796589u64)
-        }
+        fn recv_item_ui_event(&self) -> Option<ItemUiEvent>;
     }
 }
 #[allow(unused_imports)]
@@ -2763,7 +2803,6 @@ pub mod item_camera {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 15672103361112197430u64);
             CameraItem { core }
         }
         pub fn as_item(self) -> super::Item {
@@ -2791,11 +2830,11 @@ pub mod item_camera {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl CameraItemAspect for CameraItem {}
     impl ItemAspect for CameraItem {}
     impl SpatialRefAspect for CameraItem {}
     impl OwnedAspect for CameraItem {}
     impl SpatialAspect for CameraItem {}
+    impl CameraItemAspect for CameraItem {}
     #[derive(Debug)]
     pub enum CameraItemEvent {}
     ///
@@ -2804,6 +2843,9 @@ pub mod item_camera {
     #[derive(Debug, Clone)]
     pub struct CameraItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) camera_item_ui_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<CameraItemUiEvent>>,
+        >,
     }
     impl CameraItemUi {
         pub(crate) fn from_id(
@@ -2814,8 +2856,13 @@ pub mod item_camera {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 708021061010127172u64);
-            CameraItemUi { core }
+            let camera_item_ui_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 708021061010127172u64).into(),
+            );
+            CameraItemUi {
+                core,
+                camera_item_ui_event,
+            }
         }
     }
     impl crate::node::NodeType for CameraItemUi {
@@ -2831,7 +2878,11 @@ pub mod item_camera {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl CameraItemUiAspect for CameraItemUi {}
+    impl CameraItemUiAspect for CameraItemUi {
+        fn recv_camera_item_ui_event(&self) -> Option<CameraItemUiEvent> {
+            self.camera_item_ui_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum CameraItemUiEvent {
         CreateItem { item: CameraItem },
@@ -2892,14 +2943,18 @@ pub mod item_camera {
     }
     ///
     pub trait CameraItemUiAspect: crate::node::NodeType + std::fmt::Debug {
-        fn recv_camera_item_ui_event(&self) -> Option<CameraItemUiEvent> {
-            self.recv_event(708021061010127172u64)
-        }
+        fn recv_camera_item_ui_event(&self) -> Option<CameraItemUiEvent>;
     }
     ///
     #[derive(Debug, Clone)]
     pub struct CameraItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) item_acceptor_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemAcceptorEvent>>,
+        >,
+        pub(crate) camera_item_acceptor_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<CameraItemAcceptorEvent>>,
+        >,
     }
     impl CameraItemAcceptor {
         pub(crate) fn from_id(
@@ -2910,12 +2965,22 @@ pub mod item_camera {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 5036088114779304421u64);
-            CameraItemAcceptor { core }
+            let item_acceptor_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 10274055739447304636u64).into(),
+            );
+            let camera_item_acceptor_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 5036088114779304421u64).into(),
+            );
+            CameraItemAcceptor {
+                core,
+                item_acceptor_event,
+                camera_item_acceptor_event,
+            }
         }
         pub fn as_item_acceptor(self) -> super::ItemAcceptor {
             super::ItemAcceptor {
                 core: self.core,
+                item_acceptor_event: self.item_acceptor_event,
             }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
@@ -2940,11 +3005,19 @@ pub mod item_camera {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl CameraItemAcceptorAspect for CameraItemAcceptor {}
-    impl ItemAcceptorAspect for CameraItemAcceptor {}
+    impl ItemAcceptorAspect for CameraItemAcceptor {
+        fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
+            self.item_acceptor_event.blocking_lock().try_recv().ok()
+        }
+    }
     impl SpatialRefAspect for CameraItemAcceptor {}
     impl OwnedAspect for CameraItemAcceptor {}
     impl SpatialAspect for CameraItemAcceptor {}
+    impl CameraItemAcceptorAspect for CameraItemAcceptor {
+        fn recv_camera_item_acceptor_event(&self) -> Option<CameraItemAcceptorEvent> {
+            self.camera_item_acceptor_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum CameraItemAcceptorEvent {
         CaptureItem { item: CameraItem },
@@ -2991,9 +3064,7 @@ pub mod item_camera {
     }
     ///
     pub trait CameraItemAcceptorAspect: crate::node::NodeType + super::ItemAcceptorAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
-        fn recv_camera_item_acceptor_event(&self) -> Option<CameraItemAcceptorEvent> {
-            self.recv_event(5036088114779304421u64)
-        }
+        fn recv_camera_item_acceptor_event(&self) -> Option<CameraItemAcceptorEvent>;
         ///
         fn capture_item(
             &self,
@@ -3139,6 +3210,9 @@ pub mod item_panel {
     #[derive(Debug, Clone)]
     pub struct PanelItem {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) panel_item_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<PanelItemEvent>>,
+        >,
     }
     impl PanelItem {
         pub(crate) fn from_id(
@@ -3149,8 +3223,13 @@ pub mod item_panel {
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 16007573185838633179u64);
-            PanelItem { core }
+            let panel_item_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 16007573185838633179u64).into(),
+            );
+            PanelItem {
+                core,
+                panel_item_event,
+            }
         }
         pub fn as_item(self) -> super::Item {
             super::Item { core: self.core }
@@ -3177,11 +3256,15 @@ pub mod item_panel {
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl PanelItemAspect for PanelItem {}
     impl ItemAspect for PanelItem {}
     impl SpatialRefAspect for PanelItem {}
     impl OwnedAspect for PanelItem {}
     impl SpatialAspect for PanelItem {}
+    impl PanelItemAspect for PanelItem {
+        fn recv_panel_item_event(&self) -> Option<PanelItemEvent> {
+            self.panel_item_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum PanelItemEvent {
         ToplevelParentChanged { parent_id: u64 },
@@ -3368,9 +3451,7 @@ pub mod item_panel {
     }
     ///An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.).
     pub trait PanelItemAspect: crate::node::NodeType + super::ItemAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
-        fn recv_panel_item_event(&self) -> Option<PanelItemEvent> {
-            self.recv_event(16007573185838633179u64)
-        }
+        fn recv_panel_item_event(&self) -> Option<PanelItemEvent>;
         ///Apply the cursor as a material to a model.
         fn apply_cursor_material(
             &self,
@@ -3688,6 +3769,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     #[derive(Debug, Clone)]
     pub struct PanelItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) panel_item_ui_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<PanelItemUiEvent>>,
+        >,
     }
     impl PanelItemUi {
         pub(crate) fn from_id(
@@ -3698,8 +3782,13 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 11713374794499719853u64);
-            PanelItemUi { core }
+            let panel_item_ui_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 11713374794499719853u64).into(),
+            );
+            PanelItemUi {
+                core,
+                panel_item_ui_event,
+            }
         }
     }
     impl crate::node::NodeType for PanelItemUi {
@@ -3715,7 +3804,11 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl PanelItemUiAspect for PanelItemUi {}
+    impl PanelItemUiAspect for PanelItemUi {
+        fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent> {
+            self.panel_item_ui_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum PanelItemUiEvent {
         CreateItem { item: PanelItem, initial_data: PanelItemInitData },
@@ -3779,14 +3872,18 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     }
     ///
     pub trait PanelItemUiAspect: crate::node::NodeType + std::fmt::Debug {
-        fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent> {
-            self.recv_event(11713374794499719853u64)
-        }
+        fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent>;
     }
     ///
     #[derive(Debug, Clone)]
     pub struct PanelItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+        pub(crate) item_acceptor_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemAcceptorEvent>>,
+        >,
+        pub(crate) panel_item_acceptor_event: std::sync::Arc<
+            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<PanelItemAcceptorEvent>>,
+        >,
     }
     impl PanelItemAcceptor {
         pub(crate) fn from_id(
@@ -3797,12 +3894,22 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             let core = std::sync::Arc::new(
                 crate::node::NodeCore::new(client.clone(), id, owned),
             );
-            client.registry.add_aspect(id, 6398932320740499836u64);
-            PanelItemAcceptor { core }
+            let item_acceptor_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 10274055739447304636u64).into(),
+            );
+            let panel_item_acceptor_event = std::sync::Arc::new(
+                client.registry.add_aspect(id, 6398932320740499836u64).into(),
+            );
+            PanelItemAcceptor {
+                core,
+                item_acceptor_event,
+                panel_item_acceptor_event,
+            }
         }
         pub fn as_item_acceptor(self) -> super::ItemAcceptor {
             super::ItemAcceptor {
                 core: self.core,
+                item_acceptor_event: self.item_acceptor_event,
             }
         }
         pub fn as_spatial_ref(self) -> super::SpatialRef {
@@ -3827,11 +3934,19 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             serializer.serialize_u64(self.core.id)
         }
     }
-    impl PanelItemAcceptorAspect for PanelItemAcceptor {}
-    impl ItemAcceptorAspect for PanelItemAcceptor {}
+    impl ItemAcceptorAspect for PanelItemAcceptor {
+        fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
+            self.item_acceptor_event.blocking_lock().try_recv().ok()
+        }
+    }
     impl SpatialRefAspect for PanelItemAcceptor {}
     impl OwnedAspect for PanelItemAcceptor {}
     impl SpatialAspect for PanelItemAcceptor {}
+    impl PanelItemAcceptorAspect for PanelItemAcceptor {
+        fn recv_panel_item_acceptor_event(&self) -> Option<PanelItemAcceptorEvent> {
+            self.panel_item_acceptor_event.blocking_lock().try_recv().ok()
+        }
+    }
     #[derive(Debug)]
     pub enum PanelItemAcceptorEvent {
         CaptureItem { item: PanelItem, initial_data: PanelItemInitData },
@@ -3881,9 +3996,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     }
     ///
     pub trait PanelItemAcceptorAspect: crate::node::NodeType + super::ItemAcceptorAspect + super::SpatialRefAspect + super::OwnedAspect + super::SpatialAspect + std::fmt::Debug {
-        fn recv_panel_item_acceptor_event(&self) -> Option<PanelItemAcceptorEvent> {
-            self.recv_event(6398932320740499836u64)
-        }
+        fn recv_panel_item_acceptor_event(&self) -> Option<PanelItemAcceptorEvent>;
         ///
         fn capture_item(
             &self,

@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::iter::once;
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 fn main() {
@@ -201,7 +202,7 @@ impl Tokenize for Protocol {
 		let aspects = self
 			.aspects
 			.iter()
-			.map(|a| a.tokenize(generate_node, partial_eq));
+			.map(|a| a.blocking_read().tokenize(generate_node, partial_eq));
 		let interface = self
 			.interface
 			.as_ref()
@@ -348,7 +349,6 @@ impl Tokenize for Aspect {
 	fn tokenize(&self, generate_node: bool, _partial_eq: bool) -> TokenStream {
 		let node_name = Ident::new(&self.name, Span::call_site());
 		let description = &self.description;
-		let aspect_id = self.id;
 		let server_members = self.members.iter().filter(|m| m.side == Side::Server);
 
 		let aspect_trait_name = Ident::new(
@@ -398,35 +398,130 @@ impl Tokenize for Aspect {
 		let server_side_members =
 			server_members.map(|m| generate_server_member(None, self.id, &self.name, m));
 
+		fn aspect_filter(a: &Aspect) -> bool {
+			a.name.to_case(Case::Snake) != "owned"
+				&& a.members.iter().any(|m| m.side == Side::Client)
+		}
+
 		let conversion_functions = self
-			.inherits
+			.inherited_aspects
 			.iter()
-			.filter(|i| i.to_case(Case::Snake) != "owned")
-			.map(|i| {
-				let inherited_aspect = Ident::new(&i.to_case(Case::UpperCamel), Span::call_site());
-				let conversion_fn_name =
-					Ident::new(&format!("as_{}", i.to_case(Case::Snake)), Span::call_site());
+			.filter(|i| i.blocking_read().name.to_case(Case::Snake) != "owned")
+			.map(|aspect| {
+				let a = aspect.blocking_read();
+				let inherited_aspect =
+					Ident::new(&a.name.to_case(Case::UpperCamel), Span::call_site());
+				let conversion_fn_name = Ident::new(
+					&format!("as_{}", a.name.to_case(Case::Snake)),
+					Span::call_site(),
+				);
+				let inherited_aspects = a
+					.inherited_aspects
+					.iter()
+					.map(|aspect| aspect.blocking_read())
+					.collect::<Vec<_>>();
+				let fields = inherited_aspects
+					.iter()
+					.chain([&a])
+					.filter(|a| aspect_filter(a))
+					.map(|aspect| {
+						let event_name = Ident::new(
+							&format!("{}_event", aspect.name.to_case(Case::Snake)),
+							Span::call_site(),
+						);
+						quote! {
+							#event_name: self.#event_name,
+						}
+					});
 
 				quote! {
 					pub fn #conversion_fn_name(self) -> super::#inherited_aspect {
 						super::#inherited_aspect {
 							core: self.core,
+							#(#fields)*
 						}
 					}
 				}
 			});
-		let impl_inherits = self
-			.inherits
+		let inherited_aspects = self
+			.inherited_aspects
 			.iter()
-			.map(|i| {
-				Ident::new(
+			.map(|aspect| aspect.blocking_read())
+			.collect::<Vec<_>>();
+		let get_aspects_iter = || {
+			inherited_aspects
+				.iter()
+				.map(|v| v.deref())
+				.chain([self])
+				.filter(|a| aspect_filter(a))
+		};
+		let event_fields = get_aspects_iter().map(|a| {
+			let event_name = Ident::new(
+				&format!("{}_event", a.name.to_case(Case::Snake)),
+				Span::call_site()
+			);
+			let event_type = Ident::new(
+				&format!("{}Event", a.name.to_case(Case::Pascal)),
+				Span::call_site()
+			);
+			quote! {
+				pub(crate) #event_name: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<#event_type>>>,
+			}
+		});
+		let from_id_add_aspects = get_aspects_iter().map(|a| {
+			let aspect_id = a.id;
+			let event_name = Ident::new(
+				&format!("{}_event", a.name.to_case(Case::Snake)),
+				Span::call_site(),
+			);
+			quote! {
+				let #event_name = std::sync::Arc::new(client.registry.add_aspect::<>(id, #aspect_id).into());
+			}
+		});
+		let from_id_event_fields = get_aspects_iter().map(|a| {
+			let event_name = Ident::new(
+				&format!("{}_event", a.name.to_case(Case::Snake)),
+				Span::call_site(),
+			);
+			quote! {
+				#event_name,
+			}
+		});
+		let impl_traits = inherited_aspects
+			.iter()
+			.map(|v| v.deref())
+			.chain([self])
+			.map(|a| {
+				let i = &a.name;
+				let aspect_trait_name = Ident::new(
 					&format!("{}Aspect", i.to_case(Case::Pascal)),
 					Span::call_site(),
-				)
-			})
-			.map(|i| {
-				quote! {
-					impl #i for #node_name {}
+				);
+				if a.members.iter().any(|m| m.side == Side::Client) {
+					let recv_event_method_name = Ident::new(
+						&format!("recv_{}_event", i.to_case(Case::Snake)),
+						Span::call_site(),
+					);
+					let event_type = Ident::new(
+						&format!("{}Event", i.to_case(Case::Pascal)),
+						Span::call_site(),
+					);
+					let event_name = Ident::new(
+						&format!("{}_event", i.to_case(Case::Snake)),
+						Span::call_site(),
+					);
+
+					quote! {
+						impl #aspect_trait_name for #node_name {
+							fn #recv_event_method_name(&self) -> Option<#event_type> {
+								self.#event_name.blocking_lock().try_recv().ok()
+							}
+						}
+					}
+				} else {
+					quote! {
+						impl #aspect_trait_name for #node_name {}
+					}
 				}
 			})
 			.reduce(|a, b| quote!(#a #b))
@@ -436,13 +531,15 @@ impl Tokenize for Aspect {
 			#[derive(Debug, Clone)]
 			pub struct #node_name {
 				pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
+				#(#event_fields)*
 			}
 			impl #node_name {
 				pub(crate) fn from_id(client: &std::sync::Arc<crate::client::ClientHandle>, id: u64, owned: bool) -> Self {
 					let core = std::sync::Arc::new(crate::node::NodeCore::new(client.clone(), id, owned));
-					client.registry.add_aspect::<>(id, #aspect_id);
+					#(#from_id_add_aspects)*
 					#node_name {
-						core
+						core,
+						#(#from_id_event_fields)*
 					}
 				}
 				#(#conversion_functions)*
@@ -457,8 +554,7 @@ impl Tokenize for Aspect {
 					serializer.serialize_u64(self.core.id)
 				}
 			}
-			impl #aspect_trait_name for #node_name {}
-			#impl_inherits
+			#impl_traits
 		});
 
 		let events_method = if self.members.iter().any(|m| m.side == Side::Client) {
@@ -468,9 +564,7 @@ impl Tokenize for Aspect {
 			);
 			let id = self.id;
 			quote! {
-				fn #recv_event_method_name(&self) -> Option<#event_name> {
-					self.recv_event(#id)
-				}
+				fn #recv_event_method_name(&self) -> Option<#event_name>;
 			}
 		} else {
 			Default::default()
