@@ -12,8 +12,8 @@ homepage = "https://stardustxr.org"
 nix = { version = "0.27.1", features = ["socket", "uio", "fs"] }
 serde = { version = "1.0.196", features = ["derive"] }
 rustc-hash = "2.0.0"
-thiserror = "1.0.56"
-tokio = { version = "1.36.0", features = [
+thiserror = "2.0.16"
+tokio = { version = "1.38.0", features = [
 	"sync",
 	"macros",
 	"net",
@@ -22,7 +22,7 @@ tokio = { version = "1.36.0", features = [
 	"parking_lot",
 ] }
 tracing = "0.1.40"
-dirs = "5.0.1"
+dirs = "6.0.0"
 global_counter = "0.2.2"
 
 # values
