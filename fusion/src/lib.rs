@@ -9,7 +9,9 @@ pub use client::*;
 use serde::Serialize;
 pub use stardust_xr as core;
 pub use stardust_xr::values;
-use stardust_xr::{messenger::MethodResponse, scenegraph::ScenegraphError};
+use stardust_xr::{
+	messenger::MethodResponse, scenegraph::ScenegraphError, schemas::flex::serialize,
+};
 
 use crate::node::NodeError;
 
@@ -52,6 +54,29 @@ impl<T: Serialize> TypedMethodResponse<T> {
 	}
 	pub fn wrap<E: Error, F: FnOnce() -> Result<T, E>>(self, f: F) {
 		self.send(f())
+	}
+	pub fn wrap_async<E: Error>(
+		self,
+		f: impl Future<Output = Result<(T, Vec<OwnedFd>), E>> + Send + 'static,
+	) {
+		tokio::task::spawn(async move {
+			let (value, fds) = match f.await {
+				Ok(d) => d,
+				Err(e) => {
+					self.0.send(Err(ScenegraphError::MemberError {
+						error: e.to_string(),
+					}));
+					return;
+				}
+			};
+			let Ok(serialized) = serialize(value) else {
+				self.0.send(Err(ScenegraphError::MemberError {
+					error: "Internal: Failed to serialize".to_string(),
+				}));
+				return;
+			};
+			self.0.send(Ok((&serialized, fds)));
+		});
 	}
 }
 impl<T: Serialize> Debug for TypedMethodResponse<T> {
