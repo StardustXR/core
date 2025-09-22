@@ -23,9 +23,9 @@ fnv = "1.0.7"
 thiserror = "2.0.16"
 
 #dbus stuff
-nanoid = "0.4.0"
-zbus = { version = "5.11.0", features = ["tokio"], default-features = false }
 tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
+zbus = { version = "5.11.0", features = ["tokio"], default-features = false }
+nanoid = "0.4.0"
 futures-util = "0.3.30"
 
 [build-dependencies]

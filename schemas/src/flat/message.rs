@@ -28,8 +28,10 @@ pub mod stardust_xr {
 		type Inner = Message<'a>;
 		#[inline]
 		unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-			Self {
-				_tab: unsafe { flatbuffers::Table::new(buf, loc) },
+			unsafe {
+				Self {
+					_tab: flatbuffers::Table::new(buf, loc),
+				}
 			}
 		}
 	}
@@ -52,8 +54,13 @@ pub mod stardust_xr {
 			Message { _tab: table }
 		}
 		#[allow(unused_mut)]
-		pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
-			_fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+		pub fn create<
+			'bldr: 'args,
+			'args: 'mut_bldr,
+			'mut_bldr,
+			A: flatbuffers::Allocator + 'bldr,
+		>(
+			_fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,
 			args: &'args MessageArgs<'args>,
 		) -> flatbuffers::WIPOffset<Message<'bldr>> {
 			let mut builder = MessageBuilder::new(_fbb);
@@ -201,11 +208,11 @@ pub mod stardust_xr {
 		}
 	}
 
-	pub struct MessageBuilder<'a: 'b, 'b> {
-		fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+	pub struct MessageBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
+		fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
 		start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 	}
-	impl<'a: 'b, 'b> MessageBuilder<'a, 'b> {
+	impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
 		#[inline]
 		pub fn add_type_(&mut self, type_: u8) {
 			self.fbb_.push_slot::<u8>(Message::VT_TYPE_, type_, 0);
@@ -238,7 +245,9 @@ pub mod stardust_xr {
 				.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_DATA, data);
 		}
 		#[inline]
-		pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MessageBuilder<'a, 'b> {
+		pub fn new(
+			_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
+		) -> MessageBuilder<'a, 'b, A> {
 			let start = _fbb.start_table();
 			MessageBuilder {
 				fbb_: _fbb,
@@ -290,9 +299,9 @@ pub mod stardust_xr {
 		}
 	}
 	impl MessageT {
-		pub fn pack<'b>(
+		pub fn pack<'b, A: flatbuffers::Allocator + 'b>(
 			&self,
-			_fbb: &mut flatbuffers::FlatBufferBuilder<'b>,
+			_fbb: &mut flatbuffers::FlatBufferBuilder<'b, A>,
 		) -> flatbuffers::WIPOffset<Message<'b>> {
 			let type_ = self.type_;
 			let message_id = self.message_id;
@@ -322,7 +331,9 @@ pub mod stardust_xr {
 	/// catch every error, or be maximally performant. For the
 	/// previous, unchecked, behavior use
 	/// `root_as_message_unchecked`.
-	pub fn root_as_message(buf: &[u8]) -> Result<Message, flatbuffers::InvalidFlatbuffer> {
+	pub fn root_as_message<'b>(
+		buf: &'b [u8],
+	) -> Result<Message<'b>, flatbuffers::InvalidFlatbuffer> {
 		flatbuffers::root::<Message>(buf)
 	}
 	#[inline]
@@ -332,9 +343,9 @@ pub mod stardust_xr {
 	/// catch every error, or be maximally performant. For the
 	/// previous, unchecked, behavior use
 	/// `size_prefixed_root_as_message_unchecked`.
-	pub fn size_prefixed_root_as_message(
-		buf: &[u8],
-	) -> Result<Message, flatbuffers::InvalidFlatbuffer> {
+	pub fn size_prefixed_root_as_message<'b>(
+		buf: &'b [u8],
+	) -> Result<Message<'b>, flatbuffers::InvalidFlatbuffer> {
 		flatbuffers::size_prefixed_root::<Message>(buf)
 	}
 	#[inline]
@@ -367,27 +378,27 @@ pub mod stardust_xr {
 	/// Assumes, without verification, that a buffer of bytes contains a Message and returns it.
 	/// # Safety
 	/// Callers must trust the given bytes do indeed contain a valid `Message`.
-	pub unsafe fn root_as_message_unchecked(buf: &[u8]) -> Message {
+	pub unsafe fn root_as_message_unchecked<'b>(buf: &'b [u8]) -> Message<'b> {
 		unsafe { flatbuffers::root_unchecked::<Message>(buf) }
 	}
 	#[inline]
 	/// Assumes, without verification, that a buffer of bytes contains a size prefixed Message and returns it.
 	/// # Safety
 	/// Callers must trust the given bytes do indeed contain a valid size prefixed `Message`.
-	pub unsafe fn size_prefixed_root_as_message_unchecked(buf: &[u8]) -> Message {
+	pub unsafe fn size_prefixed_root_as_message_unchecked<'b>(buf: &'b [u8]) -> Message<'b> {
 		unsafe { flatbuffers::size_prefixed_root_unchecked::<Message>(buf) }
 	}
 	#[inline]
-	pub fn finish_message_buffer<'a, 'b>(
-		fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+	pub fn finish_message_buffer<'a, 'b, A: flatbuffers::Allocator + 'a>(
+		fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
 		root: flatbuffers::WIPOffset<Message<'a>>,
 	) {
 		fbb.finish(root, None);
 	}
 
 	#[inline]
-	pub fn finish_size_prefixed_message_buffer<'a, 'b>(
-		fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+	pub fn finish_size_prefixed_message_buffer<'a, 'b, A: flatbuffers::Allocator + 'a>(
+		fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,
 		root: flatbuffers::WIPOffset<Message<'a>>,
 	) {
 		fbb.finish_size_prefixed(root, None);
