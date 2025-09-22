@@ -31,7 +31,7 @@ pub mod root {
     pub struct Root {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) root_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<RootEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<RootEvent>>,
         >,
     }
     impl Root {
@@ -70,7 +70,7 @@ pub mod root {
     impl SpatialRefAspect for Root {}
     impl RootAspect for Root {
         fn recv_root_event(&self) -> Option<RootEvent> {
-            self.root_event.blocking_lock().try_recv().ok()
+            self.root_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -682,7 +682,7 @@ pub mod spatial {
     pub struct Zone {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) zone_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ZoneEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ZoneEvent>>,
         >,
     }
     impl Zone {
@@ -726,7 +726,7 @@ pub mod spatial {
     impl SpatialRefAspect for Zone {}
     impl ZoneAspect for Zone {
         fn recv_zone_event(&self) -> Option<ZoneEvent> {
-            self.zone_event.blocking_lock().try_recv().ok()
+            self.zone_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -2097,7 +2097,7 @@ pub mod input {
     pub struct InputMethod {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) input_method_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<InputMethodEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<InputMethodEvent>>,
         >,
     }
     impl InputMethod {
@@ -2150,7 +2150,7 @@ pub mod input {
     impl OwnedAspect for InputMethod {}
     impl InputMethodAspect for InputMethod {
         fn recv_input_method_event(&self) -> Option<InputMethodEvent> {
-            self.input_method_event.blocking_lock().try_recv().ok()
+            self.input_method_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -2327,7 +2327,7 @@ pub mod input {
     pub struct InputHandler {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) input_handler_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<InputHandlerEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<InputHandlerEvent>>,
         >,
     }
     impl InputHandler {
@@ -2374,7 +2374,7 @@ pub mod input {
     impl SpatialRefAspect for InputHandler {}
     impl InputHandlerAspect for InputHandler {
         fn recv_input_handler_event(&self) -> Option<InputHandlerEvent> {
-            self.input_handler_event.blocking_lock().try_recv().ok()
+            self.input_handler_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -2556,7 +2556,7 @@ pub mod item {
     pub struct ItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
         >,
     }
     impl ItemAcceptor {
@@ -2603,7 +2603,7 @@ pub mod item {
     impl SpatialRefAspect for ItemAcceptor {}
     impl ItemAcceptorAspect for ItemAcceptor {
         fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
-            self.item_acceptor_event.blocking_lock().try_recv().ok()
+            self.item_acceptor_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -2661,7 +2661,7 @@ pub mod item {
     pub struct ItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_ui_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemUiEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemUiEvent>>,
         >,
     }
     impl ItemUi {
@@ -2694,7 +2694,7 @@ pub mod item {
     }
     impl ItemUiAspect for ItemUi {
         fn recv_item_ui_event(&self) -> Option<ItemUiEvent> {
-            self.item_ui_event.blocking_lock().try_recv().ok()
+            self.item_ui_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -2844,7 +2844,7 @@ pub mod item_camera {
     pub struct CameraItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) camera_item_ui_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<CameraItemUiEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<CameraItemUiEvent>>,
         >,
     }
     impl CameraItemUi {
@@ -2880,7 +2880,7 @@ pub mod item_camera {
     }
     impl CameraItemUiAspect for CameraItemUi {
         fn recv_camera_item_ui_event(&self) -> Option<CameraItemUiEvent> {
-            self.camera_item_ui_event.blocking_lock().try_recv().ok()
+            self.camera_item_ui_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -2950,10 +2950,10 @@ pub mod item_camera {
     pub struct CameraItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
         >,
         pub(crate) camera_item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<
+            std::sync::Mutex<
                 tokio::sync::mpsc::UnboundedReceiver<CameraItemAcceptorEvent>,
             >,
         >,
@@ -3009,7 +3009,7 @@ pub mod item_camera {
     }
     impl ItemAcceptorAspect for CameraItemAcceptor {
         fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
-            self.item_acceptor_event.blocking_lock().try_recv().ok()
+            self.item_acceptor_event.lock().unwrap().try_recv().ok()
         }
     }
     impl SpatialRefAspect for CameraItemAcceptor {}
@@ -3017,7 +3017,7 @@ pub mod item_camera {
     impl SpatialAspect for CameraItemAcceptor {}
     impl CameraItemAcceptorAspect for CameraItemAcceptor {
         fn recv_camera_item_acceptor_event(&self) -> Option<CameraItemAcceptorEvent> {
-            self.camera_item_acceptor_event.blocking_lock().try_recv().ok()
+            self.camera_item_acceptor_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -3213,7 +3213,7 @@ pub mod item_panel {
     pub struct PanelItem {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) panel_item_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemEvent>>,
         >,
     }
     impl PanelItem {
@@ -3264,7 +3264,7 @@ pub mod item_panel {
     impl SpatialAspect for PanelItem {}
     impl PanelItemAspect for PanelItem {
         fn recv_panel_item_event(&self) -> Option<PanelItemEvent> {
-            self.panel_item_event.blocking_lock().try_recv().ok()
+            self.panel_item_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -3772,7 +3772,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     pub struct PanelItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) panel_item_ui_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemUiEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemUiEvent>>,
         >,
     }
     impl PanelItemUi {
@@ -3808,7 +3808,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     }
     impl PanelItemUiAspect for PanelItemUi {
         fn recv_panel_item_ui_event(&self) -> Option<PanelItemUiEvent> {
-            self.panel_item_ui_event.blocking_lock().try_recv().ok()
+            self.panel_item_ui_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]
@@ -3881,10 +3881,10 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     pub struct PanelItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
+            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
         >,
         pub(crate) panel_item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<
+            std::sync::Mutex<
                 tokio::sync::mpsc::UnboundedReceiver<PanelItemAcceptorEvent>,
             >,
         >,
@@ -3940,7 +3940,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     }
     impl ItemAcceptorAspect for PanelItemAcceptor {
         fn recv_item_acceptor_event(&self) -> Option<ItemAcceptorEvent> {
-            self.item_acceptor_event.blocking_lock().try_recv().ok()
+            self.item_acceptor_event.lock().unwrap().try_recv().ok()
         }
     }
     impl SpatialRefAspect for PanelItemAcceptor {}
@@ -3948,7 +3948,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     impl SpatialAspect for PanelItemAcceptor {}
     impl PanelItemAcceptorAspect for PanelItemAcceptor {
         fn recv_panel_item_acceptor_event(&self) -> Option<PanelItemAcceptorEvent> {
-            self.panel_item_acceptor_event.blocking_lock().try_recv().ok()
+            self.panel_item_acceptor_event.lock().unwrap().try_recv().ok()
         }
     }
     #[derive(Debug)]

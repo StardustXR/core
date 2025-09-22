@@ -463,7 +463,7 @@ impl Tokenize for Aspect {
 				Span::call_site()
 			);
 			quote! {
-				pub(crate) #event_name: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<#event_type>>>,
+				pub(crate) #event_name: std::sync::Arc<std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<#event_type>>>,
 			}
 		});
 		let from_id_add_aspects = get_aspects_iter().map(|a| {
@@ -512,7 +512,7 @@ impl Tokenize for Aspect {
 					quote! {
 						impl #aspect_trait_name for #node_name {
 							fn #recv_event_method_name(&self) -> Option<#event_type> {
-								self.#event_name.blocking_lock().try_recv().ok()
+								self.#event_name.lock().unwrap().try_recv().ok()
 							}
 						}
 					}
