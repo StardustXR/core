@@ -2,12 +2,9 @@ use crate::{
 	client::ClientHandle,
 	fields::FieldAspect,
 	node::NodeResult,
-	protocol::item_panel::{
-		Geometry, INTERFACE_NODE_ID, PanelItemAcceptor, PanelItemUi, SurfaceId,
-		create_panel_item_acceptor, register_panel_item_ui,
-	},
 	spatial::{SpatialRefAspect, Transform},
 };
+pub use crate::protocol::item_panel::*;
 use std::sync::Arc;
 
 impl Copy for Geometry {}
