@@ -92,7 +92,7 @@ pub trait NodeType: Sized + Send + Sync + 'static {
 	}
 }
 
-pub(crate) struct NodeCore {
+pub struct NodeCore {
 	pub client: Arc<ClientHandle>,
 	pub id: u64,
 	pub(crate) owned: bool,

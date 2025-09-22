@@ -52,7 +52,7 @@ trait EventSender: Any + Send + Sync + 'static {
 	);
 }
 
-struct Sender<Event: EventParser>(mpsc::Sender<Event>);
+struct Sender<Event: EventParser>(mpsc::UnboundedSender<Event>);
 impl<Event: EventParser> EventSender for Sender<Event> {
 	fn send_signal(
 		&self,
@@ -62,7 +62,7 @@ impl<Event: EventParser> EventSender for Sender<Event> {
 		fds: Vec<OwnedFd>,
 	) {
 		if let Ok(parsed) = Event::parse_signal(client, signal_id, data, fds) {
-			self.0.send(parsed);
+			_ = self.0.send(parsed);
 		}
 	}
 
@@ -75,7 +75,7 @@ impl<Event: EventParser> EventSender for Sender<Event> {
 		response: MethodResponse,
 	) {
 		if let Ok(parsed) = Event::parse_method(client, method_id, data, fds, response) {
-			self.0.send(parsed);
+			_ = self.0.send(parsed);
 		}
 	}
 }
@@ -99,8 +99,12 @@ impl NodeRegistry {
 		}
 	}
 
-	pub fn add_aspect<E: EventParser>(&self, node_id: u64, aspect_id: u64) -> mpsc::Receiver<E> {
-		let (tx, rx) = mpsc::channel(64); // Reasonable buffer size
+	pub fn add_aspect<E: EventParser>(
+		&self,
+		node_id: u64,
+		aspect_id: u64,
+	) -> mpsc::UnboundedReceiver<E> {
+		let (tx, rx) = mpsc::unbounded_channel(); // Reasonable buffer size
 		self.aspects
 			.insert(MemberInfo { node_id, aspect_id }, Box::new(Sender(tx)));
 		rx
@@ -131,7 +135,7 @@ impl scenegraph::Scenegraph for NodeRegistry {
 				node_id: id,
 				aspect_id: aspect,
 			})
-			.ok_or_else(|| ScenegraphError::AspectNotFound)?;
+			.ok_or(ScenegraphError::AspectNotFound)?;
 		aspect.value().send_signal(&client, signal, data, fds);
 		Ok(())
 	}

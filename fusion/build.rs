@@ -3,10 +3,8 @@ use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
 use stardust_xr_schemas::protocol::*;
-use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::iter::once;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
@@ -465,7 +463,7 @@ impl Tokenize for Aspect {
 				Span::call_site()
 			);
 			quote! {
-				pub(crate) #event_name: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<#event_type>>>,
+				pub(crate) #event_name: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<#event_type>>>,
 			}
 		});
 		let from_id_add_aspects = get_aspects_iter().map(|a| {
@@ -562,7 +560,6 @@ impl Tokenize for Aspect {
 				&format!("recv_{}_event", self.name.to_case(Case::Snake)),
 				Span::call_site(),
 			);
-			let id = self.id;
 			quote! {
 				fn #recv_event_method_name(&self) -> Option<#event_name>;
 			}

@@ -31,7 +31,7 @@ pub mod root {
     pub struct Root {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) root_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<RootEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<RootEvent>>,
         >,
     }
     impl Root {
@@ -682,7 +682,7 @@ pub mod spatial {
     pub struct Zone {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) zone_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ZoneEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ZoneEvent>>,
         >,
     }
     impl Zone {
@@ -2097,7 +2097,7 @@ pub mod input {
     pub struct InputMethod {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) input_method_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<InputMethodEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<InputMethodEvent>>,
         >,
     }
     impl InputMethod {
@@ -2327,7 +2327,7 @@ pub mod input {
     pub struct InputHandler {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) input_handler_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<InputHandlerEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<InputHandlerEvent>>,
         >,
     }
     impl InputHandler {
@@ -2556,7 +2556,7 @@ pub mod item {
     pub struct ItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemAcceptorEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
         >,
     }
     impl ItemAcceptor {
@@ -2661,7 +2661,7 @@ pub mod item {
     pub struct ItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_ui_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemUiEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemUiEvent>>,
         >,
     }
     impl ItemUi {
@@ -2844,7 +2844,7 @@ pub mod item_camera {
     pub struct CameraItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) camera_item_ui_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<CameraItemUiEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<CameraItemUiEvent>>,
         >,
     }
     impl CameraItemUi {
@@ -2950,10 +2950,12 @@ pub mod item_camera {
     pub struct CameraItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemAcceptorEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
         >,
         pub(crate) camera_item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<CameraItemAcceptorEvent>>,
+            tokio::sync::Mutex<
+                tokio::sync::mpsc::UnboundedReceiver<CameraItemAcceptorEvent>,
+            >,
         >,
     }
     impl CameraItemAcceptor {
@@ -3211,7 +3213,7 @@ pub mod item_panel {
     pub struct PanelItem {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) panel_item_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<PanelItemEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemEvent>>,
         >,
     }
     impl PanelItem {
@@ -3770,7 +3772,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     pub struct PanelItemUi {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) panel_item_ui_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<PanelItemUiEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<PanelItemUiEvent>>,
         >,
     }
     impl PanelItemUi {
@@ -3879,10 +3881,12 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     pub struct PanelItemAcceptor {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
         pub(crate) item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<ItemAcceptorEvent>>,
+            tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ItemAcceptorEvent>>,
         >,
         pub(crate) panel_item_acceptor_event: std::sync::Arc<
-            tokio::sync::Mutex<tokio::sync::mpsc::Receiver<PanelItemAcceptorEvent>>,
+            tokio::sync::Mutex<
+                tokio::sync::mpsc::UnboundedReceiver<PanelItemAcceptorEvent>,
+            >,
         >,
     }
     impl PanelItemAcceptor {
