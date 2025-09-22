@@ -23,6 +23,7 @@ pub mod client;
 pub mod drawable;
 pub mod fields;
 pub mod input;
+pub mod items;
 pub mod objects;
 mod protocol;
 pub mod root;
