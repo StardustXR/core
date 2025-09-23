@@ -2,7 +2,8 @@
 //! Replaces the old Scenegraph with a more efficient single-lookup system.
 
 use crate::client::ClientHandle;
-use dashmap::DashMap;
+use parking_lot::Mutex;
+use rustc_hash::FxHashMap;
 use stardust_xr::{
 	messenger::MethodResponse,
 	scenegraph::{self, ScenegraphError},
@@ -52,6 +53,7 @@ trait EventSender: Any + Send + Sync + 'static {
 	);
 }
 
+#[derive(Debug, Clone)]
 struct Sender<Event: EventParser>(mpsc::UnboundedSender<Event>);
 impl<Event: EventParser> EventSender for Sender<Event> {
 	fn send_signal(
@@ -88,14 +90,14 @@ struct MemberInfo {
 
 pub struct NodeRegistry {
 	client: Weak<ClientHandle>,
-	aspects: DashMap<MemberInfo, Box<dyn EventSender>>,
+	aspects: Mutex<FxHashMap<MemberInfo, Box<dyn EventSender>>>,
 }
 
 impl NodeRegistry {
 	pub fn new(client: Weak<ClientHandle>) -> Self {
 		Self {
 			client,
-			aspects: DashMap::new(),
+			aspects: Mutex::new(FxHashMap::default()),
 		}
 	}
 
@@ -106,12 +108,15 @@ impl NodeRegistry {
 	) -> mpsc::UnboundedReceiver<E> {
 		let (tx, rx) = mpsc::unbounded_channel(); // Reasonable buffer size
 		self.aspects
+			.lock()
 			.insert(MemberInfo { node_id, aspect_id }, Box::new(Sender(tx)));
 		rx
 	}
 
 	pub fn remove_node(&self, node_id: u64) {
-		self.aspects.retain(|info, _| info.node_id != node_id);
+		self.aspects
+			.lock()
+			.retain(|info, _| info.node_id != node_id);
 	}
 }
 impl scenegraph::Scenegraph for NodeRegistry {
@@ -129,14 +134,14 @@ impl scenegraph::Scenegraph for NodeRegistry {
 			));
 		};
 
-		let aspect = self
-			.aspects
+		let aspects = self.aspects.lock();
+		aspects
 			.get(&MemberInfo {
 				node_id: id,
 				aspect_id: aspect,
 			})
-			.ok_or(ScenegraphError::AspectNotFound)?;
-		aspect.value().send_signal(&client, signal, data, fds);
+			.ok_or(ScenegraphError::AspectNotFound)?
+			.send_signal(&client, signal, data, fds);
 		Ok(())
 	}
 
@@ -156,15 +161,14 @@ impl scenegraph::Scenegraph for NodeRegistry {
 			return;
 		};
 
-		let Some(aspect) = self.aspects.get(&MemberInfo {
+		let aspects = self.aspects.lock();
+		let Some(aspect) = aspects.get(&MemberInfo {
 			node_id: id,
 			aspect_id: aspect,
 		}) else {
 			response.send(Err(ScenegraphError::AspectNotFound));
 			return;
 		};
-		aspect
-			.value()
-			.execute_method(&client, method, data, fds, response);
+		aspect.execute_method(&client, method, data, fds, response);
 	}
 }
