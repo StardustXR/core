@@ -42,6 +42,28 @@ pub enum QueryEvent<Q: ObjectRegistryQueryable> {
 	MatchLost(ObjectInfo),
 }
 
+#[macro_export]
+macro_rules! impl_queryable_for_proxy {
+	($($T:ident),*) => {
+		$(impl $crate::dbus::object_registry_query::ObjectRegistryQueryable for $T<'static> {
+			async fn try_new(
+				connection: &::zbus::Connection,
+				object: &$crate::dbus::object_registry::ObjectInfo,
+				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+			) -> Option<Self> {
+				use ::zbus::proxy::Defaults;
+				let interface = $T::INTERFACE.as_ref()?.to_string();
+				if !contains_interface(&interface) {
+					return None;
+				}
+				Some(
+					object.to_proxy(connection, interface).await.ok()?.into(),
+				)
+			}
+		})*
+	};
+}
+
 impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
 	pub fn new<
 		C: Fn(QueryEvent<Q>) -> F + 'static + Send + Sync,

@@ -1,5 +1,7 @@
 use zbus::Result;
 
+use crate::impl_queryable_for_proxy;
+
 #[zbus::proxy(interface = "org.stardustxr.SpatialRef")]
 pub trait SpatialRef {
 	#[zbus(property)]
@@ -41,3 +43,11 @@ pub trait CaptureZoneable {
 	fn capture(&self) -> Result<()>;
 	fn release(&self) -> Result<()>;
 }
+
+impl_queryable_for_proxy!(
+	SpatialRefProxy,
+	FieldRefProxy,
+	PlaySpaceProxy,
+	ZoneableProxy,
+	CaptureZoneableProxy
+);
