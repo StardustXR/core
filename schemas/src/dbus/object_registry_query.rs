@@ -1,6 +1,7 @@
 use std::{
 	collections::{HashMap, HashSet},
 	marker::PhantomData,
+	ops::{Deref, DerefMut},
 	sync::Arc,
 	time::Duration,
 };
@@ -11,6 +12,7 @@ use tokio::{
 	task::AbortHandle,
 	time::timeout,
 };
+use variadics_please::all_tuples;
 use zbus::{
 	Connection, Proxy, fdo,
 	names::{BusName, OwnedBusName},
@@ -29,8 +31,8 @@ pub struct ObjectRegistryQuery<Q: ObjectRegistryQueryable> {
 pub trait ObjectRegistryQueryable: Sized + 'static + Send + Sync {
 	fn try_new(
 		connection: &Connection,
-		object: ObjectInfo,
-		contains_interface: impl Fn(&str) -> bool + Send + Sync,
+		object: &ObjectInfo,
+		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 	) -> impl std::future::Future<Output = Option<Self>> + Send + Sync;
 }
 
@@ -64,19 +66,54 @@ impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
 	}
 }
 
-impl<T: From<Proxy<'static>> + Defaults + 'static + Send + Sync> ObjectRegistryQueryable for T {
+impl<T: ProxyImpl<'static> + Defaults + Send + Sync + From<Proxy<'static>>> ObjectRegistryQueryable
+	for ObjectProxy<T>
+{
 	async fn try_new(
 		connection: &Connection,
-		object: ObjectInfo,
-		contains_interface: impl Fn(&str) -> bool + Send + Sync,
+		object: &ObjectInfo,
+		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 	) -> Option<Self> {
-		let interface = Self::INTERFACE.as_ref()?.to_string();
+		let interface = T::INTERFACE.as_ref()?.to_string();
 		if !contains_interface(&interface) {
 			return None;
 		}
-		Some(object.to_proxy(connection, interface).await.ok()?.into())
+		Some(ObjectProxy(
+			object.to_proxy(connection, interface).await.ok()?.into(),
+		))
 	}
 }
+
+pub struct ObjectProxy<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static>(pub T);
+impl<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static> Deref for ObjectProxy<T> {
+	type Target = T;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+impl<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static> DerefMut for ObjectProxy<T> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
+macro_rules! impl_queryable {
+    ($($T:ident),*) => {
+        impl<$($T: ObjectRegistryQueryable),*> ObjectRegistryQueryable for ($($T,)*) {
+			#[allow(unused_variables)]
+			async fn try_new(
+				connection: &Connection,
+				object: &ObjectInfo,
+				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+			) -> Option<Self> {
+				Some(($($T::try_new(connection, object, contains_interface).await?,)*))
+			}
+        }
+    };
+}
+
+all_tuples!(impl_queryable, 0, 15, T);
 
 impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
 	async fn new_match(
@@ -121,7 +158,7 @@ impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
 			return;
 		};
 		let already_matching = matching_objects.read().await.contains(&object);
-		let new_data = Q::try_new(&connection, object.clone(), |interface| {
+		let new_data = Q::try_new(&connection, &object, &|interface| {
 			interfaces.contains_key(interface)
 		})
 		.await;
@@ -213,7 +250,7 @@ impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
 				bus_name: name.clone(),
 				object_path: object_path.clone(),
 			};
-			let Some(query_item) = Q::try_new(&connection, object.clone(), |interface| {
+			let Some(query_item) = Q::try_new(&connection, &object, &|interface| {
 				interfaces.contains_key(interface)
 			})
 			.await
