@@ -27,6 +27,7 @@ tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
 zbus = { version = "5.11.0", features = ["blocking-api", "tokio"], default-features = false }
 nanoid = "0.4.0"
 futures-util = "0.3.30"
+variadics_please = "1.1.0"
 
 [build-dependencies]
 manifest-dir-macros = "0.1.18"

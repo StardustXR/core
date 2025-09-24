@@ -43,9 +43,9 @@ impl ObjectInfo {
 }
 
 #[derive(Debug)]
-struct InternalBusRecord([AbortHandle; 2]);
+pub(in crate::dbus) struct InternalBusRecord([AbortHandle; 2]);
 impl InternalBusRecord {
-	fn new(
+	pub(in crate::dbus) fn new(
 		name: OwnedBusName,
 		object_manager: fdo::ObjectManagerProxy<'static>,
 		objects_tx: watch::Sender<Objects>,

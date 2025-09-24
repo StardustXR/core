@@ -1,5 +1,6 @@
 pub mod interfaces;
 pub mod object_registry;
+pub mod object_registry_query;
 
 use zbus::{
 	Connection, Result, conn, fdo::ObjectManager, proxy::Builder, zvariant::OwnedObjectPath,
