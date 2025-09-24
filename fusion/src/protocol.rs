@@ -59,6 +59,17 @@ pub mod root {
             &self.core
         }
     }
+    impl std::hash::Hash for Root {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Root {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Root {}
     impl serde::Serialize for Root {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -374,6 +385,17 @@ pub mod spatial {
             &self.core
         }
     }
+    impl std::hash::Hash for SpatialRef {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for SpatialRef {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for SpatialRef {}
     impl serde::Serialize for SpatialRef {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -516,6 +538,17 @@ pub mod spatial {
             &self.core
         }
     }
+    impl std::hash::Hash for Spatial {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Spatial {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Spatial {}
     impl serde::Serialize for Spatial {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -713,6 +746,17 @@ pub mod spatial {
             &self.core
         }
     }
+    impl std::hash::Hash for Zone {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Zone {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Zone {}
     impl serde::Serialize for Zone {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1013,6 +1057,17 @@ pub mod field {
             &self.core
         }
     }
+    impl std::hash::Hash for FieldRef {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for FieldRef {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for FieldRef {}
     impl serde::Serialize for FieldRef {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1194,6 +1249,17 @@ pub mod field {
             &self.core
         }
     }
+    impl std::hash::Hash for Field {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Field {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Field {}
     impl serde::Serialize for Field {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1348,6 +1414,17 @@ pub mod audio {
             &self.core
         }
     }
+    impl std::hash::Hash for Sound {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Sound {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Sound {}
     impl serde::Serialize for Sound {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1550,6 +1627,17 @@ pub mod drawable {
             &self.core
         }
     }
+    impl std::hash::Hash for Lines {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Lines {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Lines {}
     impl serde::Serialize for Lines {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1617,6 +1705,17 @@ pub mod drawable {
             &self.core
         }
     }
+    impl std::hash::Hash for Model {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Model {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Model {}
     impl serde::Serialize for Model {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1688,6 +1787,17 @@ pub mod drawable {
             &self.core
         }
     }
+    impl std::hash::Hash for ModelPart {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for ModelPart {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for ModelPart {}
     impl serde::Serialize for ModelPart {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -1774,6 +1884,17 @@ pub mod drawable {
             &self.core
         }
     }
+    impl std::hash::Hash for Text {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Text {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Text {}
     impl serde::Serialize for Text {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2036,6 +2157,17 @@ pub mod input {
             &self.core
         }
     }
+    impl std::hash::Hash for InputMethodRef {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for InputMethodRef {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for InputMethodRef {}
     impl serde::Serialize for InputMethodRef {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2136,6 +2268,17 @@ pub mod input {
             &self.core
         }
     }
+    impl std::hash::Hash for InputMethod {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for InputMethod {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for InputMethod {}
     impl serde::Serialize for InputMethod {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2361,6 +2504,17 @@ pub mod input {
             &self.core
         }
     }
+    impl std::hash::Hash for InputHandler {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for InputHandler {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for InputHandler {}
     impl serde::Serialize for InputHandler {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2519,6 +2673,17 @@ pub mod item {
             &self.core
         }
     }
+    impl std::hash::Hash for Item {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for Item {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for Item {}
     impl serde::Serialize for Item {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2590,6 +2755,17 @@ pub mod item {
             &self.core
         }
     }
+    impl std::hash::Hash for ItemAcceptor {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for ItemAcceptor {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for ItemAcceptor {}
     impl serde::Serialize for ItemAcceptor {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2684,6 +2860,17 @@ pub mod item {
             &self.core
         }
     }
+    impl std::hash::Hash for ItemUi {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for ItemUi {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for ItemUi {}
     impl serde::Serialize for ItemUi {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2822,6 +3009,17 @@ pub mod item_camera {
             &self.core
         }
     }
+    impl std::hash::Hash for CameraItem {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for CameraItem {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for CameraItem {}
     impl serde::Serialize for CameraItem {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2870,6 +3068,17 @@ pub mod item_camera {
             &self.core
         }
     }
+    impl std::hash::Hash for CameraItemUi {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for CameraItemUi {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for CameraItemUi {}
     impl serde::Serialize for CameraItemUi {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -2999,6 +3208,17 @@ pub mod item_camera {
             &self.core
         }
     }
+    impl std::hash::Hash for CameraItemAcceptor {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for CameraItemAcceptor {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for CameraItemAcceptor {}
     impl serde::Serialize for CameraItemAcceptor {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -3250,6 +3470,17 @@ pub mod item_panel {
             &self.core
         }
     }
+    impl std::hash::Hash for PanelItem {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for PanelItem {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for PanelItem {}
     impl serde::Serialize for PanelItem {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -3811,6 +4042,17 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self.core
         }
     }
+    impl std::hash::Hash for PanelItemUi {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for PanelItemUi {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for PanelItemUi {}
     impl serde::Serialize for PanelItemUi {
         fn serialize<S: serde::Serializer>(
             &self,
@@ -3948,6 +4190,17 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self.core
         }
     }
+    impl std::hash::Hash for PanelItemAcceptor {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.core.id.hash(state);
+        }
+    }
+    impl std::cmp::PartialEq for PanelItemAcceptor {
+        fn eq(&self, other: &Self) -> bool {
+            self.core.id == other.core.id
+        }
+    }
+    impl std::cmp::Eq for PanelItemAcceptor {}
     impl serde::Serialize for PanelItemAcceptor {
         fn serialize<S: serde::Serializer>(
             &self,

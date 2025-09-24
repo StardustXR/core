@@ -547,6 +547,17 @@ impl Tokenize for Aspect {
 					&self.core
 				}
 			}
+			impl std::hash::Hash for #node_name {
+				fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+					self.core.id.hash(state);
+				}
+			}
+			impl std::cmp::PartialEq for #node_name {
+				fn eq(&self, other: &Self) -> bool {
+					self.core.id == other.core.id
+				}
+			}
+			impl std::cmp::Eq for #node_name {}
 			impl serde::Serialize for #node_name {
 				fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
 					serializer.serialize_u64(self.core.id)
