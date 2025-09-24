@@ -90,7 +90,7 @@ struct MemberInfo {
 
 pub struct NodeRegistry {
 	client: Weak<ClientHandle>,
-	aspects: Mutex<FxHashMap<MemberInfo, Box<dyn EventSender>>>,
+	aspects: Mutex<FxHashMap<MemberInfo, Arc<dyn EventSender>>>,
 }
 
 impl NodeRegistry {
@@ -109,7 +109,7 @@ impl NodeRegistry {
 		let (tx, rx) = mpsc::unbounded_channel(); // Reasonable buffer size
 		self.aspects
 			.lock()
-			.insert(MemberInfo { node_id, aspect_id }, Box::new(Sender(tx)));
+			.insert(MemberInfo { node_id, aspect_id }, Arc::new(Sender(tx)));
 		rx
 	}
 
@@ -134,14 +134,16 @@ impl scenegraph::Scenegraph for NodeRegistry {
 			));
 		};
 
-		let aspects = self.aspects.lock();
-		aspects
+		let aspect = self
+			.aspects
+			.lock()
 			.get(&MemberInfo {
 				node_id: id,
 				aspect_id: aspect,
 			})
 			.ok_or(ScenegraphError::AspectNotFound)?
-			.send_signal(&client, signal, data, fds);
+			.clone();
+		aspect.send_signal(&client, signal, data, fds);
 		Ok(())
 	}
 
@@ -161,11 +163,15 @@ impl scenegraph::Scenegraph for NodeRegistry {
 			return;
 		};
 
-		let aspects = self.aspects.lock();
-		let Some(aspect) = aspects.get(&MemberInfo {
-			node_id: id,
-			aspect_id: aspect,
-		}) else {
+		let Some(aspect) = self
+			.aspects
+			.lock()
+			.get(&MemberInfo {
+				node_id: id,
+				aspect_id: aspect,
+			})
+			.cloned()
+		else {
 			response.send(Err(ScenegraphError::AspectNotFound));
 			return;
 		};
