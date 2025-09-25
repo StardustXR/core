@@ -16,18 +16,22 @@ use zbus::{
 	Connection, Proxy, fdo,
 	names::{BusName, OwnedBusName},
 	proxy::{Defaults, ProxyImpl},
-	zvariant::OwnedObjectPath,
+	zvariant::{ObjectPath, OwnedObjectPath},
 };
 
-use crate::dbus::ObjectInfo;
+use crate::dbus::{
+	ObjectInfo,
+	interfaces::SpatialRefProxy,
+	object_registry::{InternalBusRecord, ObjectRegistry, Objects},
+};
 
-pub struct ObjectRegistryQuery<Q: ObjectRegistryQueryable> {
+pub struct ObjectQuery<Q: Queryable> {
 	update_task_handle: AbortHandle,
-	callback_handle: AbortHandle,
-	_phantom_data: PhantomData<Q>,
+	callback_handle: Option<AbortHandle>,
+	event_reader: Option<mpsc::Receiver<QueryEvent<Q>>>,
 }
 
-pub trait ObjectRegistryQueryable: Sized + 'static + Send + Sync {
+pub trait Queryable: Sized + 'static + Send + Sync {
 	fn try_new(
 		connection: &Connection,
 		object: &ObjectInfo,
@@ -35,7 +39,7 @@ pub trait ObjectRegistryQueryable: Sized + 'static + Send + Sync {
 	) -> impl std::future::Future<Output = Option<Self>> + Send + Sync;
 }
 
-pub enum QueryEvent<Q: ObjectRegistryQueryable> {
+pub enum QueryEvent<Q: Queryable + Send + Sync> {
 	NewMatch(ObjectInfo, Q),
 	MatchModified(ObjectInfo, Q),
 	MatchLost(ObjectInfo),
@@ -44,7 +48,7 @@ pub enum QueryEvent<Q: ObjectRegistryQueryable> {
 #[macro_export]
 macro_rules! impl_queryable_for_proxy {
 	($($T:ident),*) => {
-		$(impl $crate::dbus::query::ObjectRegistryQueryable for $T<'static> {
+		$(impl $crate::dbus::query::Queryable for $T<'static> {
 			async fn try_new(
 				connection: &::zbus::Connection,
 				object: &$crate::dbus::ObjectInfo,
@@ -63,31 +67,22 @@ macro_rules! impl_queryable_for_proxy {
 	};
 }
 
-impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
-	pub fn new<
-		C: Fn(QueryEvent<Q>) -> F + 'static + Send + Sync,
-		F: Future<Output = ()> + 'static + Send + Sync,
-	>(
-		connection: Connection,
-		event_handler: C,
-	) -> Self {
-		let (tx, mut rx) = mpsc::channel(32);
-		let callback_handle = tokio::spawn(async move {
-			while let Some(e) = rx.recv().await {
-				event_handler(e).await;
-			}
-		})
-		.abort_handle();
+impl<Q: Queryable> ObjectQuery<Q> {
+	pub fn new(connection: Connection) -> Self {
+		let (tx, rx) = mpsc::channel(32);
 		let update_task_handle = tokio::spawn(Self::update_task(connection, tx)).abort_handle();
 		Self {
 			update_task_handle,
-			callback_handle,
-			_phantom_data: PhantomData,
+			callback_handle: None,
+			event_reader: Some(rx),
 		}
+	}
+	pub fn get_event_receiver(&mut self) -> Option<mpsc::Receiver<QueryEvent<Q>>> {
+		self.event_reader.take()
 	}
 }
 
-impl<T: ProxyImpl<'static> + Defaults + Send + Sync + From<Proxy<'static>>> ObjectRegistryQueryable
+impl<T: ProxyImpl<'static> + Defaults + Send + Sync + From<Proxy<'static>>> Queryable
 	for ObjectProxy<T>
 {
 	async fn try_new(
@@ -121,7 +116,7 @@ impl<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static> DerefMut for Ob
 
 macro_rules! impl_queryable {
     ($($T:ident),*) => {
-        impl<$($T: ObjectRegistryQueryable),*> ObjectRegistryQueryable for ($($T,)*) {
+        impl<$($T: Queryable),*> Queryable for ($($T,)*) {
 			#[allow(unused_variables)]
 			async fn try_new(
 				connection: &Connection,
@@ -136,7 +131,7 @@ macro_rules! impl_queryable {
 
 all_tuples!(impl_queryable, 0, 15, T);
 
-impl<Q: ObjectRegistryQueryable> ObjectRegistryQuery<Q> {
+impl<Q: Queryable> ObjectQuery<Q> {
 	async fn new_match(
 		tx: &mpsc::Sender<QueryEvent<Q>>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
@@ -372,7 +367,7 @@ struct NamespaceHandler {
 	interface_removed: AbortHandle,
 }
 impl NamespaceHandler {
-	async fn dismiss<Q: ObjectRegistryQueryable>(
+	async fn dismiss<Q: Queryable>(
 		self,
 		tx: &mpsc::Sender<QueryEvent<Q>>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
@@ -385,7 +380,7 @@ impl NamespaceHandler {
 			.cloned()
 			.collect::<Vec<_>>();
 		for object in owned_objects {
-			ObjectRegistryQuery::match_lost(tx, object.clone(), matching_objects.clone()).await;
+			ObjectQuery::match_lost(tx, object.clone(), matching_objects.clone()).await;
 		}
 	}
 }
@@ -393,5 +388,65 @@ impl Drop for NamespaceHandler {
 	fn drop(&mut self) {
 		self.interface_added.abort();
 		self.interface_removed.abort();
+	}
+}
+
+mod test {
+	use std::{sync::{
+		Arc,
+		atomic::{AtomicBool, Ordering},
+	}, time::Duration};
+
+	use tokio::time::sleep;
+use zbus::{Connection, fdo::ObjectManager, interface};
+
+	use crate::dbus::query::ObjectQuery;
+
+	struct TestInterface;
+	#[interface(name = "org.stardustxr.TestInterface", proxy())]
+	impl TestInterface {
+		fn hello(&self) {
+			println!("hello world");
+		}
+	}
+	impl_queryable_for_proxy!(TestInterfaceProxy);
+
+	// #[tokio::test]
+	async fn query() {
+		let query_conn = Connection::session().await.unwrap();
+		let other_conn = Connection::session().await.unwrap();
+		_ = other_conn.object_server().at("/", ObjectManager).await;
+		_ = other_conn
+			.object_server()
+			.at("/org/stardustxr/core/schemas/test", TestInterface)
+			.await;
+		let match_lost = Arc::new(AtomicBool::new(false));
+		let match_gained = Arc::new(AtomicBool::new(false));
+		let mut query = ObjectQuery::<TestInterfaceProxy>::new(query_conn);
+		let mut event = query.get_event_receiver().unwrap();
+		tokio::spawn({
+			let match_lost = match_lost.clone();
+			let match_gained = match_gained.clone();
+			async move {
+				while let Some(e) = event.recv().await {
+					match e {
+						super::QueryEvent::NewMatch(_object_info, p) => {
+							_ = p.hello().await;
+							match_gained.store(true, Ordering::Relaxed);
+						}
+						super::QueryEvent::MatchModified(_object_info, _) => {}
+						super::QueryEvent::MatchLost(_object_info) => {
+							match_lost.store(true, Ordering::Relaxed);
+						}
+					}
+				}
+			}
+		});
+		sleep(Duration::from_millis(1)).await;
+		assert!(match_gained.load(Ordering::Relaxed));
+		assert!(!match_lost.load(Ordering::Relaxed));
+		drop(other_conn);
+		sleep(Duration::from_millis(1)).await;
+		assert!(match_lost.load(Ordering::Relaxed));
 	}
 }
