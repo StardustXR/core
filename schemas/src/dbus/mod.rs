@@ -2,6 +2,7 @@ pub mod interfaces;
 pub mod object_registry;
 #[macro_use]
 pub mod query;
+pub mod list_query;
 
 use zbus::{
 	Connection, Proxy, Result, conn,

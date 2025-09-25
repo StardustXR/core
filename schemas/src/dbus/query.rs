@@ -7,7 +7,11 @@ use std::{
 	time::Duration,
 };
 use tokio::{
-	sync::{RwLock, RwLockReadGuard, mpsc, watch},
+	sync::{
+		RwLock, RwLockReadGuard,
+		mpsc::{self, error::TryRecvError},
+		watch,
+	},
 	task::AbortHandle,
 	time::timeout,
 };
@@ -22,12 +26,13 @@ use zbus::{
 use crate::dbus::{
 	ObjectInfo,
 	interfaces::SpatialRefProxy,
-	object_registry::{InternalBusRecord, ObjectRegistry, Objects},
+	list_query::{ListQueryMapper, ObjectListQuery},
+	object_registry::{ObjectRegistry, Objects},
 };
 
 pub struct ObjectQuery<Q: Queryable> {
 	update_task_handle: AbortHandle,
-	event_reader: Option<mpsc::Receiver<QueryEvent<Q>>>,
+	event_reader: mpsc::Receiver<QueryEvent<Q>>,
 }
 
 pub trait Queryable: Sized + 'static + Send + Sync {
@@ -72,11 +77,19 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		let update_task_handle = tokio::spawn(Self::update_task(connection, tx)).abort_handle();
 		Self {
 			update_task_handle,
-			event_reader: Some(rx),
+			event_reader: rx,
 		}
 	}
-	pub fn get_event_receiver(&mut self) -> Option<mpsc::Receiver<QueryEvent<Q>>> {
-		self.event_reader.take()
+	pub async fn recv_event(&mut self) -> Option<QueryEvent<Q>> {
+		self.event_reader.recv().await
+	}
+	pub fn try_recv_event(&mut self) -> Result<QueryEvent<Q>, TryRecvError> {
+		self.event_reader.try_recv()
+	}
+	pub fn to_list_query<T: Send + Sync + 'static>(
+		self,
+	) -> (ObjectListQuery<T>, ListQueryMapper<Q, T>) {
+		ObjectListQuery::from_query(self)
 	}
 }
 
@@ -359,7 +372,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 				buses.insert(name, handles);
 			} else if old_owner.is_some()
 				&& new_owner.is_none()
-				&& let Some(handles) = buses.remove(&name)
+				&& let Some(handles) = dbg!(buses.remove(&name))
 			{
 				handles.dismiss(&tx, matching_objects.clone()).await;
 			}
@@ -369,6 +382,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 	}
 }
 
+#[derive(Debug)]
 struct NamespaceHandler {
 	name: OwnedBusName,
 	interface_added: AbortHandle,
@@ -422,7 +436,7 @@ mod test {
 	}
 	impl_queryable_for_proxy!(TestInterfaceProxy);
 
-	// #[tokio::test]
+	#[tokio::test]
 	async fn query() {
 		let query_conn = Connection::session().await.unwrap();
 		let other_conn = Connection::session().await.unwrap();
@@ -434,12 +448,12 @@ mod test {
 		let match_lost = Arc::new(AtomicBool::new(false));
 		let match_gained = Arc::new(AtomicBool::new(false));
 		let mut query = ObjectQuery::<TestInterfaceProxy>::new(query_conn);
-		let mut event = query.get_event_receiver().unwrap();
+		println!("hello world");
 		tokio::spawn({
 			let match_lost = match_lost.clone();
 			let match_gained = match_gained.clone();
 			async move {
-				while let Some(e) = event.recv().await {
+				while let Some(e) = query.recv_event().await {
 					match e {
 						super::QueryEvent::NewMatch(_object_info, p) => {
 							_ = p.hello().await;
@@ -453,11 +467,11 @@ mod test {
 				}
 			}
 		});
-		sleep(Duration::from_millis(1)).await;
+		sleep(Duration::from_millis(250)).await;
 		assert!(match_gained.load(Ordering::Relaxed));
 		assert!(!match_lost.load(Ordering::Relaxed));
 		drop(other_conn);
-		sleep(Duration::from_millis(1)).await;
+		sleep(Duration::from_millis(250)).await;
 		assert!(match_lost.load(Ordering::Relaxed));
 	}
 }

@@ -15,9 +15,9 @@ use zbus::{
 use crate::dbus::ObjectInfo;
 
 #[derive(Debug)]
-pub(in crate::dbus) struct InternalBusRecord([AbortHandle; 2]);
+struct InternalBusRecord([AbortHandle; 2]);
 impl InternalBusRecord {
-	pub(in crate::dbus) fn new(
+	fn new(
 		name: OwnedBusName,
 		object_manager: fdo::ObjectManagerProxy<'static>,
 		objects_tx: watch::Sender<Objects>,
