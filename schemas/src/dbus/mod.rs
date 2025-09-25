@@ -1,9 +1,14 @@
 pub mod interfaces;
 pub mod object_registry;
-pub mod object_registry_query;
+#[macro_use]
+pub mod query;
 
 use zbus::{
-	Connection, Result, conn, fdo::ObjectManager, proxy::Builder, zvariant::OwnedObjectPath,
+	Connection, Proxy, Result, conn,
+	fdo::ObjectManager,
+	names::{InterfaceName, OwnedBusName},
+	proxy::{Builder, Defaults},
+	zvariant::OwnedObjectPath,
 };
 
 pub async fn connect_client() -> zbus::Result<zbus::Connection> {
@@ -31,5 +36,35 @@ pub fn random_object_name() -> OwnedObjectPath {
 async fn connect_client_test() {
 	for _ in 0..32 {
 		let _ = connect_client().await.unwrap();
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ObjectInfo {
+	pub bus_name: OwnedBusName,
+	pub object_path: OwnedObjectPath,
+}
+impl ObjectInfo {
+	pub async fn to_proxy(
+		&self,
+		conn: &Connection,
+		interface: impl TryInto<InterfaceName<'static>, Error = zbus::names::Error>,
+	) -> Result<Proxy<'static>> {
+		Proxy::new(
+			conn,
+			self.bus_name.clone(),
+			self.object_path.clone(),
+			interface,
+		)
+		.await
+	}
+	pub async fn to_typed_proxy<P: From<Proxy<'static>> + Defaults + 'static>(
+		&self,
+		conn: &Connection,
+	) -> Result<P> {
+		Ok(self
+			.to_proxy(conn, P::INTERFACE.as_ref().unwrap().to_string())
+			.await?
+			.into())
 	}
 }

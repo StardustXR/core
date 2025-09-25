@@ -1,6 +1,5 @@
-use zbus::Result;
-
 use crate::impl_queryable_for_proxy;
+use zbus::Result;
 
 #[zbus::proxy(interface = "org.stardustxr.SpatialRef")]
 pub trait SpatialRef {

@@ -1,3 +1,4 @@
+use futures_util::StreamExt as _;
 use std::{
 	collections::{HashMap, HashSet},
 	marker::PhantomData,
@@ -5,8 +6,6 @@ use std::{
 	sync::Arc,
 	time::Duration,
 };
-
-use futures_util::StreamExt as _;
 use tokio::{
 	sync::{RwLock, RwLockReadGuard, mpsc, watch},
 	task::AbortHandle,
@@ -20,7 +19,7 @@ use zbus::{
 	zvariant::OwnedObjectPath,
 };
 
-use crate::dbus::object_registry::{InternalBusRecord, ObjectInfo, ObjectRegistry, Objects};
+use crate::dbus::ObjectInfo;
 
 pub struct ObjectRegistryQuery<Q: ObjectRegistryQueryable> {
 	update_task_handle: AbortHandle,
@@ -45,10 +44,10 @@ pub enum QueryEvent<Q: ObjectRegistryQueryable> {
 #[macro_export]
 macro_rules! impl_queryable_for_proxy {
 	($($T:ident),*) => {
-		$(impl $crate::dbus::object_registry_query::ObjectRegistryQueryable for $T<'static> {
+		$(impl $crate::dbus::query::ObjectRegistryQueryable for $T<'static> {
 			async fn try_new(
 				connection: &::zbus::Connection,
-				object: &$crate::dbus::object_registry::ObjectInfo,
+				object: &$crate::dbus::ObjectInfo,
 				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 			) -> Option<Self> {
 				use ::zbus::proxy::Defaults;

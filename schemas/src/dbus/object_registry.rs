@@ -12,35 +12,7 @@ use zbus::{
 	zvariant::OwnedObjectPath,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ObjectInfo {
-	pub bus_name: OwnedBusName,
-	pub object_path: OwnedObjectPath,
-}
-impl ObjectInfo {
-	pub async fn to_proxy(
-		&self,
-		conn: &Connection,
-		interface: impl TryInto<InterfaceName<'static>, Error = zbus::names::Error>,
-	) -> Result<Proxy<'static>> {
-		Proxy::new(
-			conn,
-			self.bus_name.clone(),
-			self.object_path.clone(),
-			interface,
-		)
-		.await
-	}
-	pub async fn to_typed_proxy<P: From<Proxy<'static>> + Defaults + 'static>(
-		&self,
-		conn: &Connection,
-	) -> Result<P> {
-		Ok(self
-			.to_proxy(conn, P::INTERFACE.as_ref().unwrap().to_string())
-			.await?
-			.into())
-	}
-}
+use crate::dbus::ObjectInfo;
 
 #[derive(Debug)]
 pub(in crate::dbus) struct InternalBusRecord([AbortHandle; 2]);
