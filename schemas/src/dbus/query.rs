@@ -27,7 +27,6 @@ use crate::dbus::{
 
 pub struct ObjectQuery<Q: Queryable> {
 	update_task_handle: AbortHandle,
-	callback_handle: Option<AbortHandle>,
 	event_reader: Option<mpsc::Receiver<QueryEvent<Q>>>,
 }
 
@@ -73,12 +72,21 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		let update_task_handle = tokio::spawn(Self::update_task(connection, tx)).abort_handle();
 		Self {
 			update_task_handle,
-			callback_handle: None,
 			event_reader: Some(rx),
 		}
 	}
 	pub fn get_event_receiver(&mut self) -> Option<mpsc::Receiver<QueryEvent<Q>>> {
 		self.event_reader.take()
+	}
+}
+
+impl<T: Queryable> Queryable for Option<T> {
+	async fn try_new(
+		connection: &Connection,
+		object: &ObjectInfo,
+		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+	) -> Option<Self> {
+		Some(T::try_new(connection, object, contains_interface).await)
 	}
 }
 
@@ -392,13 +400,16 @@ impl Drop for NamespaceHandler {
 }
 
 mod test {
-	use std::{sync::{
-		Arc,
-		atomic::{AtomicBool, Ordering},
-	}, time::Duration};
+	use std::{
+		sync::{
+			Arc,
+			atomic::{AtomicBool, Ordering},
+		},
+		time::Duration,
+	};
 
 	use tokio::time::sleep;
-use zbus::{Connection, fdo::ObjectManager, interface};
+	use zbus::{Connection, fdo::ObjectManager, interface};
 
 	use crate::dbus::query::ObjectQuery;
 
