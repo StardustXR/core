@@ -4,7 +4,7 @@ use std::{
 	marker::PhantomData,
 	ops::{Deref, DerefMut},
 	sync::Arc,
-	time::Duration,
+	time::{Duration, Instant},
 };
 use tokio::{
 	sync::{
@@ -12,7 +12,7 @@ use tokio::{
 		mpsc::{self, error::TryRecvError},
 		watch,
 	},
-	task::AbortHandle,
+	task::{AbortHandle, JoinSet},
 	time::timeout,
 };
 use variadics_please::all_tuples;
@@ -159,6 +159,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		object: ObjectInfo,
 		data: Q,
 	) {
+		println!("new match");
 		matching_objects.write().await.insert(object.clone());
 		_ = tx.send(QueryEvent::NewMatch(object, data)).await;
 	}
@@ -329,20 +330,22 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		let mut buses: HashMap<OwnedBusName, _> = {
 			let names = dbus_proxy.list_names().await?;
 			let mut buses = HashMap::new();
-
+			let mut joinset = JoinSet::new();
+			let instant = Instant::now();
 			for name in names {
-				let Some(handles) = Self::setup_namespace(
+				joinset.spawn(Self::setup_namespace(
 					connection.clone(),
 					tx.clone(),
-					name.clone(),
+					name,
 					matching_objects.clone(),
-				)
-				.await
-				else {
-					continue;
-				};
-				buses.insert(name, handles);
+				));
 			}
+			while let Some(v) = joinset.join_next().await {
+				if let Ok(Some(handler)) = v {
+					buses.insert(handler.name.clone(), handler);
+				}
+			}
+			println!("main index took: {}ms", instant.elapsed().as_millis());
 
 			buses
 		};
@@ -419,10 +422,11 @@ mod test {
 			Arc,
 			atomic::{AtomicBool, Ordering},
 		},
+		thread,
 		time::Duration,
 	};
 
-	use tokio::time::sleep;
+	use tokio::{sync::Notify, time::sleep};
 	use zbus::{Connection, fdo::ObjectManager, interface};
 
 	use crate::dbus::query::ObjectQuery;
@@ -438,13 +442,24 @@ mod test {
 
 	#[tokio::test]
 	async fn query() {
+		let notify = Arc::new(Notify::new());
+		let notify_2 = Arc::new(Notify::new());
+		let thread = thread::spawn(move || {
+			let rt = tokio::runtime::Builder::new_current_thread()
+				.enable_all()
+				.build()
+				.unwrap();
+			rt.block_on(async move {
+				let other_conn = Connection::session().await.unwrap();
+				_ = other_conn.object_server().at("/", ObjectManager).await;
+				_ = other_conn
+					.object_server()
+					.at("/org/stardustxr/core/schemas/test", TestInterface)
+					.await;
+				notify_2.notified().await;
+			})
+		});
 		let query_conn = Connection::session().await.unwrap();
-		let other_conn = Connection::session().await.unwrap();
-		_ = other_conn.object_server().at("/", ObjectManager).await;
-		_ = other_conn
-			.object_server()
-			.at("/org/stardustxr/core/schemas/test", TestInterface)
-			.await;
 		let match_lost = Arc::new(AtomicBool::new(false));
 		let match_gained = Arc::new(AtomicBool::new(false));
 		let mut query = ObjectQuery::<TestInterfaceProxy>::new(query_conn);
@@ -470,8 +485,9 @@ mod test {
 		sleep(Duration::from_millis(250)).await;
 		assert!(match_gained.load(Ordering::Relaxed));
 		assert!(!match_lost.load(Ordering::Relaxed));
-		drop(other_conn);
+		notify.notify_one();
 		sleep(Duration::from_millis(250)).await;
 		assert!(match_lost.load(Ordering::Relaxed));
+		thread.join().unwrap();
 	}
 }
