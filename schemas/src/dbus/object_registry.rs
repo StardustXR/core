@@ -216,7 +216,7 @@ impl ObjectRegistry {
 			.ok()?;
 
 		let managed_objects = tokio::time::timeout(
-			Duration::from_millis(5),
+			Duration::from_millis(50),
 			object_manager.get_managed_objects(),
 		)
 		.await

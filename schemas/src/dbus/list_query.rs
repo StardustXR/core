@@ -1,10 +1,10 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, ops::Deref, sync::Arc};
 
 use tokio::sync::RwLock;
 
 use crate::dbus::{
 	ObjectInfo,
-	query::{ObjectQuery, QueryEvent, Queryable},
+	query::{ObjectQuery, QueryContext, QueryEvent, Queryable},
 };
 
 pub struct ObjectListQuery<T: Send + Sync + 'static> {
@@ -17,9 +17,9 @@ impl<T: Send + Sync + 'static> ObjectListQuery<T> {
 	pub fn iter_blocking(&self) -> impl Deref<Target = HashMap<ObjectInfo, T>> {
 		self.list.blocking_read()
 	}
-	pub fn from_query<Q: Queryable>(
-		query: ObjectQuery<Q>,
-	) -> (ObjectListQuery<T>, ListQueryMapper<Q, T>) {
+	pub fn from_query<Q: Queryable<Ctx>, Ctx: QueryContext>(
+		query: ObjectQuery<Q, Ctx>,
+	) -> (ObjectListQuery<T>, ListQueryMapper<Q, T, Ctx>) {
 		let list: Arc<RwLock<HashMap<ObjectInfo, T>>> = Arc::default();
 		(
 			ObjectListQuery { list: list.clone() },
@@ -27,14 +27,16 @@ impl<T: Send + Sync + 'static> ObjectListQuery<T> {
 		)
 	}
 }
-impl<Q: Queryable, T: Send + Sync + 'static> ListQueryMapper<Q, T> {
+impl<Q: Queryable<Ctx>, T: Send + Sync + 'static, Ctx: QueryContext> ListQueryMapper<Q, T, Ctx> {
 	/// this should be used with tokio::spawn
-	pub async fn init(mut self, mapper: impl AsyncFn(ListEvent<Q>) -> Option<T>) {
+	pub async fn init(mut self, mapper: impl AsyncFn(ListEvent<Q, Ctx>) -> Option<T>) {
 		while let Some(e) = self.query.recv_event().await {
 			let (obj, e) = match e {
 				QueryEvent::NewMatch(obj, v) => (obj, ListEvent::NewMatch(v)),
 				QueryEvent::MatchModified(obj, v) => (obj, ListEvent::Modified(v)),
 				QueryEvent::MatchLost(obj) => (obj, ListEvent::MatchLost),
+				// this is never triggered
+				QueryEvent::PhantomVariant(_) => continue,
 			};
 			let op = mapper(e).await;
 			let mut list = self.list.write().await;
@@ -46,14 +48,15 @@ impl<Q: Queryable, T: Send + Sync + 'static> ListQueryMapper<Q, T> {
 	}
 }
 
-pub enum ListEvent<Q: Queryable> {
+pub enum ListEvent<Q: Queryable<Ctx>, Ctx: QueryContext> {
 	NewMatch(Q),
 	Modified(Q),
 	MatchLost,
+	PhantomVariant(PhantomData<Ctx>),
 }
-pub struct ListQueryMapper<Q: Queryable, T: Send + Sync + 'static> {
+pub struct ListQueryMapper<Q: Queryable<Ctx>, T: Send + Sync + 'static, Ctx: QueryContext> {
 	list: Arc<RwLock<HashMap<ObjectInfo, T>>>,
-	query: ObjectQuery<Q>,
+	query: ObjectQuery<Q, Ctx>,
 }
 
 mod test {
@@ -84,21 +87,23 @@ mod test {
 		let query_conn = Connection::session().await.unwrap();
 		let other_conn = Connection::session().await.unwrap();
 		_ = other_conn.object_server().at("/", ObjectManager).await;
-		let (query, mapper) = ObjectQuery::<TestInterfaceProxy>::new(query_conn).to_list_query();
+		let (query, mapper) =
+			ObjectQuery::<TestInterfaceProxy, _>::new(query_conn, ()).to_list_query();
 		tokio::spawn(mapper.init(async |e| match e {
 			ListEvent::NewMatch(_) => Some(()),
 			ListEvent::Modified(_) => Some(()),
 			ListEvent::MatchLost => dbg!(None),
+			_ => None,
 		}));
 		assert_eq!(query.iter().await.len(), 0);
 		_ = other_conn
 			.object_server()
 			.at("/org/stardustxr/core/schemas/test", TestInterface)
 			.await;
-		sleep(Duration::from_millis(250)).await;
+		sleep(Duration::from_millis(500)).await;
 		assert_eq!(query.iter().await.len(), 1);
 		drop(other_conn);
-		sleep(Duration::from_millis(250)).await;
+		sleep(Duration::from_millis(5)).await;
 		assert_eq!(query.iter().await.len(), 0);
 	}
 }

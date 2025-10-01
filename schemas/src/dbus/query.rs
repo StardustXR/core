@@ -30,31 +30,36 @@ use crate::dbus::{
 	object_registry::{ObjectRegistry, Objects},
 };
 
-pub struct ObjectQuery<Q: Queryable> {
+pub struct ObjectQuery<Q: Queryable<Ctx>, Ctx: QueryContext> {
 	update_task_handle: AbortHandle,
-	event_reader: mpsc::Receiver<QueryEvent<Q>>,
+	event_reader: mpsc::Receiver<QueryEvent<Q, Ctx>>,
 }
 
-pub trait Queryable: Sized + 'static + Send + Sync {
+pub trait Queryable<Ctx: QueryContext>: Sized + 'static + Send + Sync {
 	fn try_new(
 		connection: &Connection,
+		ctx: &Arc<Ctx>,
 		object: &ObjectInfo,
 		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
-	) -> impl std::future::Future<Output = Option<Self>> + Send + Sync;
+	) -> impl std::future::Future<Output = Option<Self>> + Send;
 }
 
-pub enum QueryEvent<Q: Queryable + Send + Sync> {
+pub trait QueryContext: Sized + 'static + Send + Sync {}
+
+pub enum QueryEvent<Q: Queryable<Ctx> + Send + Sync, Ctx: QueryContext> {
 	NewMatch(ObjectInfo, Q),
 	MatchModified(ObjectInfo, Q),
 	MatchLost(ObjectInfo),
+	PhantomVariant(PhantomData<Ctx>),
 }
 
 #[macro_export]
 macro_rules! impl_queryable_for_proxy {
 	($($T:ident),*) => {
-		$(impl $crate::dbus::query::Queryable for $T<'static> {
+		$(impl<Ctx: $crate::dbus::query::QueryContext> $crate::dbus::query::Queryable<Ctx> for $T<'static> {
 			async fn try_new(
 				connection: &::zbus::Connection,
+				_ctx: &std::sync::Arc<Ctx>,
 				object: &$crate::dbus::ObjectInfo,
 				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 			) -> Option<Self> {
@@ -71,43 +76,50 @@ macro_rules! impl_queryable_for_proxy {
 	};
 }
 
-impl<Q: Queryable> ObjectQuery<Q> {
-	pub fn new(connection: Connection) -> Self {
+impl<Q, Ctx> ObjectQuery<Q, Ctx>
+where
+	Ctx: QueryContext,
+	Q: Queryable<Ctx>,
+{
+	pub fn new(connection: Connection, context: impl Into<Arc<Ctx>>) -> Self {
 		let (tx, rx) = mpsc::channel(32);
-		let update_task_handle = tokio::spawn(Self::update_task(connection, tx)).abort_handle();
+		let update_task_handle =
+			tokio::spawn(Self::update_task(context.into(), connection, tx)).abort_handle();
 		Self {
 			update_task_handle,
 			event_reader: rx,
 		}
 	}
-	pub async fn recv_event(&mut self) -> Option<QueryEvent<Q>> {
+	pub async fn recv_event(&mut self) -> Option<QueryEvent<Q, Ctx>> {
 		self.event_reader.recv().await
 	}
-	pub fn try_recv_event(&mut self) -> Result<QueryEvent<Q>, TryRecvError> {
+	pub fn try_recv_event(&mut self) -> Result<QueryEvent<Q, Ctx>, TryRecvError> {
 		self.event_reader.try_recv()
 	}
 	pub fn to_list_query<T: Send + Sync + 'static>(
 		self,
-	) -> (ObjectListQuery<T>, ListQueryMapper<Q, T>) {
+	) -> (ObjectListQuery<T>, ListQueryMapper<Q, T, Ctx>) {
 		ObjectListQuery::from_query(self)
 	}
 }
 
-impl<T: Queryable> Queryable for Option<T> {
+impl<T: Queryable<Ctx>, Ctx: QueryContext> Queryable<Ctx> for Option<T> {
 	async fn try_new(
 		connection: &Connection,
+		ctx: &Arc<Ctx>,
 		object: &ObjectInfo,
 		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 	) -> Option<Self> {
-		Some(T::try_new(connection, object, contains_interface).await)
+		Some(T::try_new(connection, ctx, object, contains_interface).await)
 	}
 }
 
-impl<T: ProxyImpl<'static> + Defaults + Send + Sync + From<Proxy<'static>>> Queryable
-	for ObjectProxy<T>
+impl<T: ProxyImpl<'static> + Defaults + Send + Sync + From<Proxy<'static>>, Ctx: QueryContext>
+	Queryable<Ctx> for ObjectProxy<T>
 {
 	async fn try_new(
 		connection: &Connection,
+		_ctx: &Arc<Ctx>,
 		object: &ObjectInfo,
 		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 	) -> Option<Self> {
@@ -137,14 +149,15 @@ impl<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static> DerefMut for Ob
 
 macro_rules! impl_queryable {
     ($($T:ident),*) => {
-        impl<$($T: Queryable),*> Queryable for ($($T,)*) {
+        impl<Ctx: QueryContext, $($T: Queryable<Ctx>),*> Queryable<Ctx> for ($($T,)*) {
 			#[allow(unused_variables)]
 			async fn try_new(
 				connection: &Connection,
+				ctx: &Arc<Ctx>,
 				object: &ObjectInfo,
 				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 			) -> Option<Self> {
-				Some(($($T::try_new(connection, object, contains_interface).await?,)*))
+				Some(($($T::try_new(connection, ctx, object, contains_interface).await?,)*))
 			}
         }
     };
@@ -152,19 +165,18 @@ macro_rules! impl_queryable {
 
 all_tuples!(impl_queryable, 0, 15, T);
 
-impl<Q: Queryable> ObjectQuery<Q> {
+impl<Q: Queryable<Ctx>, Ctx: QueryContext> ObjectQuery<Q, Ctx> {
 	async fn new_match(
-		tx: &mpsc::Sender<QueryEvent<Q>>,
+		tx: &mpsc::Sender<QueryEvent<Q, Ctx>>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
 		object: ObjectInfo,
 		data: Q,
 	) {
-		println!("new match");
 		matching_objects.write().await.insert(object.clone());
 		_ = tx.send(QueryEvent::NewMatch(object, data)).await;
 	}
 	async fn match_lost(
-		tx: &mpsc::Sender<QueryEvent<Q>>,
+		tx: &mpsc::Sender<QueryEvent<Q, Ctx>>,
 		object: ObjectInfo,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
 	) {
@@ -172,8 +184,9 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		_ = tx.send(QueryEvent::MatchLost(object)).await;
 	}
 	async fn handle_interface_change(
+		ctx: Arc<Ctx>,
 		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q>>,
+		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 		name: OwnedBusName,
 		object_manager: fdo::ObjectManagerProxy<'static>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
@@ -196,7 +209,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 			return;
 		};
 		let already_matching = matching_objects.read().await.contains(&object);
-		let new_data = Q::try_new(&connection, &object, &|interface| {
+		let new_data = Q::try_new(&connection, &ctx, &object, &|interface| {
 			interfaces.contains_key(interface)
 		})
 		.await;
@@ -214,8 +227,9 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		};
 	}
 	async fn handle_interface_added(
+		ctx: Arc<Ctx>,
 		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q>>,
+		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 		name: OwnedBusName,
 		object_manager: fdo::ObjectManagerProxy<'static>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
@@ -228,6 +242,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 				continue;
 			};
 			Self::handle_interface_change(
+				ctx.clone(),
 				connection.clone(),
 				tx.clone(),
 				name.clone(),
@@ -239,8 +254,9 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		}
 	}
 	async fn handle_interface_removed(
+		ctx: Arc<Ctx>,
 		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q>>,
+		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 		name: OwnedBusName,
 		object_manager: fdo::ObjectManagerProxy<'static>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
@@ -253,6 +269,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 				continue;
 			};
 			Self::handle_interface_change(
+				ctx.clone(),
 				connection.clone(),
 				tx.clone(),
 				name.clone(),
@@ -264,8 +281,9 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		}
 	}
 	async fn setup_namespace(
+		ctx: Arc<Ctx>,
 		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q>>,
+		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 		name: OwnedBusName,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
 	) -> Option<NamespaceHandler> {
@@ -275,7 +293,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 			return None;
 		};
 		let Ok(Ok(objects)) = timeout(
-			Duration::from_millis(5),
+			Duration::from_millis(100),
 			object_manager_proxy.get_managed_objects(),
 		)
 		.await
@@ -288,7 +306,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 				bus_name: name.clone(),
 				object_path: object_path.clone(),
 			};
-			let Some(query_item) = Q::try_new(&connection, &object, &|interface| {
+			let Some(query_item) = Q::try_new(&connection, &ctx, &object, &|interface| {
 				interfaces.contains_key(interface)
 			})
 			.await
@@ -299,6 +317,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		}
 
 		let interface_added = tokio::spawn(Self::handle_interface_added(
+			ctx.clone(),
 			connection.clone(),
 			tx.clone(),
 			name.clone(),
@@ -308,6 +327,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		.abort_handle();
 
 		let interface_removed = tokio::spawn(Self::handle_interface_removed(
+			ctx.clone(),
 			connection.clone(),
 			tx.clone(),
 			name.clone(),
@@ -322,8 +342,9 @@ impl<Q: Queryable> ObjectQuery<Q> {
 		})
 	}
 	async fn update_task(
+		ctx: Arc<Ctx>,
 		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q>>,
+		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 	) -> zbus::Result<()> {
 		let matching_objects: Arc<RwLock<HashSet<ObjectInfo>>> = Arc::default();
 		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
@@ -331,9 +352,9 @@ impl<Q: Queryable> ObjectQuery<Q> {
 			let names = dbus_proxy.list_names().await?;
 			let mut buses = HashMap::new();
 			let mut joinset = JoinSet::new();
-			let instant = Instant::now();
 			for name in names {
 				joinset.spawn(Self::setup_namespace(
+					ctx.clone(),
 					connection.clone(),
 					tx.clone(),
 					name,
@@ -345,7 +366,6 @@ impl<Q: Queryable> ObjectQuery<Q> {
 					buses.insert(handler.name.clone(), handler);
 				}
 			}
-			println!("main index took: {}ms", instant.elapsed().as_millis());
 
 			buses
 		};
@@ -363,6 +383,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 
 			if old_owner.is_none() && new_owner.is_some() {
 				let Some(handles) = Self::setup_namespace(
+					ctx.clone(),
 					connection.clone(),
 					tx.clone(),
 					name.clone(),
@@ -375,7 +396,7 @@ impl<Q: Queryable> ObjectQuery<Q> {
 				buses.insert(name, handles);
 			} else if old_owner.is_some()
 				&& new_owner.is_none()
-				&& let Some(handles) = dbg!(buses.remove(&name))
+				&& let Some(handles) = buses.remove(&name)
 			{
 				handles.dismiss(&tx, matching_objects.clone()).await;
 			}
@@ -392,9 +413,9 @@ struct NamespaceHandler {
 	interface_removed: AbortHandle,
 }
 impl NamespaceHandler {
-	async fn dismiss<Q: Queryable>(
+	async fn dismiss<Q: Queryable<Ctx>, Ctx: QueryContext>(
 		self,
-		tx: &mpsc::Sender<QueryEvent<Q>>,
+		tx: &mpsc::Sender<QueryEvent<Q, Ctx>>,
 		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
 	) {
 		let owned_objects = matching_objects
@@ -429,7 +450,7 @@ mod test {
 	use tokio::{sync::Notify, time::sleep};
 	use zbus::{Connection, fdo::ObjectManager, interface};
 
-	use crate::dbus::query::ObjectQuery;
+	use crate::dbus::query::{ObjectQuery, QueryContext};
 
 	struct TestInterface;
 	#[interface(name = "org.stardustxr.TestInterface", proxy())]
@@ -439,11 +460,13 @@ mod test {
 		}
 	}
 	impl_queryable_for_proxy!(TestInterfaceProxy);
+	impl QueryContext for () {}
 
 	#[tokio::test]
 	async fn query() {
+		console_subscriber::init();
 		let notify = Arc::new(Notify::new());
-		let notify_2 = Arc::new(Notify::new());
+		let notify_2 = notify.clone();
 		let thread = thread::spawn(move || {
 			let rt = tokio::runtime::Builder::new_current_thread()
 				.enable_all()
@@ -451,6 +474,7 @@ mod test {
 				.unwrap();
 			rt.block_on(async move {
 				let other_conn = Connection::session().await.unwrap();
+				println!("name: {:?}", other_conn.unique_name());
 				_ = other_conn.object_server().at("/", ObjectManager).await;
 				_ = other_conn
 					.object_server()
@@ -462,8 +486,7 @@ mod test {
 		let query_conn = Connection::session().await.unwrap();
 		let match_lost = Arc::new(AtomicBool::new(false));
 		let match_gained = Arc::new(AtomicBool::new(false));
-		let mut query = ObjectQuery::<TestInterfaceProxy>::new(query_conn);
-		println!("hello world");
+		let mut query = ObjectQuery::<TestInterfaceProxy, ()>::new(query_conn, ());
 		tokio::spawn({
 			let match_lost = match_lost.clone();
 			let match_gained = match_gained.clone();
@@ -478,15 +501,16 @@ mod test {
 						super::QueryEvent::MatchLost(_object_info) => {
 							match_lost.store(true, Ordering::Relaxed);
 						}
+						super::QueryEvent::PhantomVariant(_) => {}
 					}
 				}
 			}
 		});
-		sleep(Duration::from_millis(250)).await;
+		sleep(Duration::from_millis(500)).await;
 		assert!(match_gained.load(Ordering::Relaxed));
 		assert!(!match_lost.load(Ordering::Relaxed));
 		notify.notify_one();
-		sleep(Duration::from_millis(250)).await;
+		sleep(Duration::from_millis(5)).await;
 		assert!(match_lost.load(Ordering::Relaxed));
 		thread.join().unwrap();
 	}

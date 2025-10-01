@@ -28,6 +28,7 @@ zbus = { version = "5.11.0", features = ["blocking-api", "tokio"], default-featu
 nanoid = "0.4.0"
 futures-util = "0.3.30"
 variadics_please = "1.1.0"
+console-subscriber = { version = "0.4.1", features = ["parking_lot"] }
 
 [build-dependencies]
 manifest-dir-macros = "0.1.18"
