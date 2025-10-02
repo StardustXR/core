@@ -1,0 +1,63 @@
+use std::{
+	collections::HashMap,
+	sync::{Arc, LazyLock},
+};
+
+use parking_lot::Mutex;
+use stardust_xr::schemas::dbus::{
+	interfaces::{FieldRefProxy, SpatialRefProxy},
+	query::{QueryContext, Queryable},
+};
+
+use crate::{
+	ClientHandle,
+	fields::FieldRef,
+	objects::{FieldRefProxyExt, SpatialRefProxyExt as _},
+	spatial::SpatialRef,
+};
+
+impl QueryContext for ClientHandle {}
+
+impl Queryable<ClientHandle> for SpatialRef {
+	async fn try_new(
+		connection: &zbus::Connection,
+		ctx: &Arc<ClientHandle>,
+		object: &stardust_xr::schemas::dbus::ObjectInfo,
+		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+	) -> Option<Self> {
+		static CACHE: LazyLock<Mutex<HashMap<u64, SpatialRef>>> = LazyLock::new(Mutex::default);
+		let proxy = SpatialRefProxy::try_new(connection, ctx, object, contains_interface).await?;
+		let id = proxy.uid().await.ok()?;
+		let v = CACHE.lock().get(&id).cloned();
+		Some(match v {
+			Some(v) => v,
+			None => {
+				let spatial_ref = proxy.import(ctx).await?;
+				CACHE.lock().insert(id, spatial_ref.clone());
+				spatial_ref
+			}
+		})
+	}
+}
+
+impl Queryable<ClientHandle> for FieldRef {
+	async fn try_new(
+		connection: &zbus::Connection,
+		ctx: &Arc<ClientHandle>,
+		object: &stardust_xr::schemas::dbus::ObjectInfo,
+		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+	) -> Option<Self> {
+		static CACHE: LazyLock<Mutex<HashMap<u64, FieldRef>>> = LazyLock::new(Mutex::default);
+		let proxy = FieldRefProxy::try_new(connection, ctx, object, contains_interface).await?;
+		let id = proxy.uid().await.ok()?;
+		let v = CACHE.lock().get(&id).cloned();
+		Some(match v {
+			Some(v) => v,
+			None => {
+				let spatial_ref = proxy.import(ctx).await?;
+				CACHE.lock().insert(id, spatial_ref.clone());
+				spatial_ref
+			}
+		})
+	}
+}
