@@ -71,7 +71,11 @@ mod test {
 	use tokio::time::sleep;
 	use zbus::{Connection, fdo::ObjectManager, interface};
 
-	use crate::dbus::{list_query::ListEvent, query::ObjectQuery};
+	use crate::dbus::{
+		list_query::ListEvent,
+		object_registry::{self, ObjectRegistry},
+		query::ObjectQuery,
+	};
 
 	struct TestInterface;
 	#[interface(name = "org.stardustxr.TestInterface.list", proxy())]
@@ -87,23 +91,26 @@ mod test {
 		let query_conn = Connection::session().await.unwrap();
 		let other_conn = Connection::session().await.unwrap();
 		_ = other_conn.object_server().at("/", ObjectManager).await;
+		let object_registry = ObjectRegistry::new(&query_conn).await.unwrap();
 		let (query, mapper) =
-			ObjectQuery::<TestInterfaceProxy, _>::new(query_conn, ()).to_list_query();
+			ObjectQuery::<TestInterfaceProxy, _>::new(object_registry.clone(), ()).to_list_query();
 		tokio::spawn(mapper.init(async |e| match e {
 			ListEvent::NewMatch(_) => Some(()),
 			ListEvent::Modified(_) => Some(()),
-			ListEvent::MatchLost => dbg!(None),
+			ListEvent::MatchLost => None,
 			_ => None,
 		}));
 		assert_eq!(query.iter().await.len(), 0);
+		sleep(Duration::from_millis(50)).await;
 		_ = other_conn
 			.object_server()
 			.at("/org/stardustxr/core/schemas/test", TestInterface)
-			.await;
-		sleep(Duration::from_millis(500)).await;
+			.await
+			.unwrap();
+		sleep(Duration::from_millis(50)).await;
 		assert_eq!(query.iter().await.len(), 1);
 		drop(other_conn);
-		sleep(Duration::from_millis(5)).await;
+		sleep(Duration::from_millis(50)).await;
 		assert_eq!(query.iter().await.len(), 0);
 	}
 }

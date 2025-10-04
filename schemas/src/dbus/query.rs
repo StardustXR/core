@@ -9,6 +9,7 @@ use std::{
 use tokio::{
 	sync::{
 		RwLock, RwLockReadGuard,
+		broadcast::error::RecvError,
 		mpsc::{self, error::TryRecvError},
 		watch,
 	},
@@ -81,10 +82,10 @@ where
 	Ctx: QueryContext,
 	Q: Queryable<Ctx>,
 {
-	pub fn new(connection: Connection, context: impl Into<Arc<Ctx>>) -> Self {
+	pub fn new(object_registry: Arc<ObjectRegistry>, context: impl Into<Arc<Ctx>>) -> Self {
 		let (tx, rx) = mpsc::channel(32);
 		let update_task_handle =
-			tokio::spawn(Self::update_task(context.into(), connection, tx)).abort_handle();
+			tokio::spawn(Self::update_task(context.into(), object_registry, tx)).abort_handle();
 		Self {
 			update_task_handle,
 			event_reader: rx,
@@ -168,272 +169,83 @@ all_tuples!(impl_queryable, 0, 15, T);
 impl<Q: Queryable<Ctx>, Ctx: QueryContext> ObjectQuery<Q, Ctx> {
 	async fn new_match(
 		tx: &mpsc::Sender<QueryEvent<Q, Ctx>>,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
+		matching_objects: &mut HashSet<ObjectInfo>,
 		object: ObjectInfo,
 		data: Q,
 	) {
-		matching_objects.write().await.insert(object.clone());
+		matching_objects.insert(object.clone());
 		_ = tx.send(QueryEvent::NewMatch(object, data)).await;
 	}
 	async fn match_lost(
 		tx: &mpsc::Sender<QueryEvent<Q, Ctx>>,
 		object: ObjectInfo,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
+		matching_objects: &mut HashSet<ObjectInfo>,
 	) {
-		matching_objects.write().await.remove(&object);
+		matching_objects.remove(&object);
 		_ = tx.send(QueryEvent::MatchLost(object)).await;
-	}
-	async fn handle_interface_change(
-		ctx: Arc<Ctx>,
-		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
-		name: OwnedBusName,
-		object_manager: fdo::ObjectManagerProxy<'static>,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
-		object_path: OwnedObjectPath,
-	) {
-		let object = ObjectInfo {
-			bus_name: name.clone(),
-			object_path,
-		};
-
-		let Ok(Ok(objects)) = timeout(
-			Duration::from_millis(5),
-			object_manager.get_managed_objects(),
-		)
-		.await
-		else {
-			return;
-		};
-		let Some(interfaces) = objects.get(&object.object_path) else {
-			return;
-		};
-		let already_matching = matching_objects.read().await.contains(&object);
-		let new_data = Q::try_new(&connection, &ctx, &object, &|interface| {
-			interfaces.contains_key(interface)
-		})
-		.await;
-		match (new_data, already_matching) {
-			(Some(q), true) => {
-				_ = tx.send(QueryEvent::MatchModified(object, q)).await;
-			}
-			(Some(q), false) => {
-				Self::new_match(&tx, matching_objects.clone(), object, q).await;
-			}
-			(None, true) => {
-				Self::match_lost(&tx, object, matching_objects.clone()).await;
-			}
-			(None, false) => {}
-		};
-	}
-	async fn handle_interface_added(
-		ctx: Arc<Ctx>,
-		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
-		name: OwnedBusName,
-		object_manager: fdo::ObjectManagerProxy<'static>,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
-	) {
-		let Ok(mut stream) = object_manager.receive_interfaces_added().await else {
-			return;
-		};
-		while let Some(interface_added) = stream.next().await {
-			let Ok(args) = interface_added.args() else {
-				continue;
-			};
-			Self::handle_interface_change(
-				ctx.clone(),
-				connection.clone(),
-				tx.clone(),
-				name.clone(),
-				object_manager.clone(),
-				matching_objects.clone(),
-				args.object_path.into_owned().into(),
-			)
-			.await;
-		}
-	}
-	async fn handle_interface_removed(
-		ctx: Arc<Ctx>,
-		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
-		name: OwnedBusName,
-		object_manager: fdo::ObjectManagerProxy<'static>,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
-	) {
-		let Ok(mut stream) = object_manager.receive_interfaces_removed().await else {
-			return;
-		};
-		while let Some(interface_removed) = stream.next().await {
-			let Ok(args) = interface_removed.args() else {
-				continue;
-			};
-			Self::handle_interface_change(
-				ctx.clone(),
-				connection.clone(),
-				tx.clone(),
-				name.clone(),
-				object_manager.clone(),
-				matching_objects.clone(),
-				args.object_path.into_owned().into(),
-			)
-			.await;
-		}
-	}
-	async fn setup_namespace(
-		ctx: Arc<Ctx>,
-		connection: Connection,
-		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
-		name: OwnedBusName,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
-	) -> Option<NamespaceHandler> {
-		let Ok(object_manager_proxy) =
-			fdo::ObjectManagerProxy::new(&connection, name.clone(), "/").await
-		else {
-			return None;
-		};
-		let Ok(Ok(objects)) = timeout(
-			Duration::from_millis(100),
-			object_manager_proxy.get_managed_objects(),
-		)
-		.await
-		else {
-			return None;
-		};
-
-		for (object_path, interfaces) in objects.iter() {
-			let object = ObjectInfo {
-				bus_name: name.clone(),
-				object_path: object_path.clone(),
-			};
-			let Some(query_item) = Q::try_new(&connection, &ctx, &object, &|interface| {
-				interfaces.contains_key(interface)
-			})
-			.await
-			else {
-				continue;
-			};
-			Self::new_match(&tx, matching_objects.clone(), object, query_item).await;
-		}
-
-		let interface_added = tokio::spawn(Self::handle_interface_added(
-			ctx.clone(),
-			connection.clone(),
-			tx.clone(),
-			name.clone(),
-			object_manager_proxy.clone(),
-			matching_objects.clone(),
-		))
-		.abort_handle();
-
-		let interface_removed = tokio::spawn(Self::handle_interface_removed(
-			ctx.clone(),
-			connection.clone(),
-			tx.clone(),
-			name.clone(),
-			object_manager_proxy.clone(),
-			matching_objects.clone(),
-		))
-		.abort_handle();
-		Some(NamespaceHandler {
-			name,
-			interface_added,
-			interface_removed,
-		})
 	}
 	async fn update_task(
 		ctx: Arc<Ctx>,
-		connection: Connection,
+		object_registry: Arc<ObjectRegistry>,
 		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 	) -> zbus::Result<()> {
-		let matching_objects: Arc<RwLock<HashSet<ObjectInfo>>> = Arc::default();
-		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
-		let mut buses: HashMap<OwnedBusName, _> = {
-			let names = dbus_proxy.list_names().await?;
-			let mut buses = HashMap::new();
-			let mut joinset = JoinSet::new();
-			for name in names {
-				joinset.spawn(Self::setup_namespace(
-					ctx.clone(),
-					connection.clone(),
-					tx.clone(),
-					name,
-					matching_objects.clone(),
-				));
-			}
-			while let Some(v) = joinset.join_next().await {
-				if let Ok(Some(handler)) = v {
-					buses.insert(handler.name.clone(), handler);
+		let mut matching_objects: HashSet<ObjectInfo> = HashSet::new();
+		let connection = object_registry.get_connection();
+		let v = object_registry
+			.get_watch()
+			.borrow()
+			.object_to_interfaces
+			.clone();
+
+		for (object, interfaces) in v {
+			let data = Q::try_new(connection, &ctx, &object, &|i| interfaces.contains(i)).await;
+			let already_matching = matching_objects.contains(&object);
+			match (data, already_matching) {
+				(None, true) => Self::match_lost(&tx, object, &mut matching_objects).await,
+				(None, false) => {}
+				(Some(data), true) => {
+					_ = tx.send(QueryEvent::MatchModified(object, data)).await;
+				}
+				(Some(data), false) => {
+					Self::new_match(&tx, &mut matching_objects, object, data).await
 				}
 			}
+		}
 
-			buses
-		};
-
-		let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
-		while let Some(signal) = name_owner_changed_stream.next().await {
-			let args = signal.args().unwrap();
-			let name: OwnedBusName = args.name.clone().into();
-			if matches!(&args.name, BusName::WellKnown(_)) {
-				continue;
-			}
-
-			let old_owner = args.old_owner.as_ref();
-			let new_owner = args.new_owner.as_ref();
-
-			if old_owner.is_none() && new_owner.is_some() {
-				let Some(handles) = Self::setup_namespace(
-					ctx.clone(),
-					connection.clone(),
-					tx.clone(),
-					name.clone(),
-					matching_objects.clone(),
-				)
-				.await
-				else {
-					continue;
+		let mut recv = object_registry.get_object_changed_receiver();
+		loop {
+			let objs = match recv.recv().await {
+				Ok(objs) => objs,
+				Err(RecvError::Closed) => break,
+				Err(RecvError::Lagged(_)) => continue,
+			};
+			for object in objs {
+				let interfaces = object_registry
+					.get_watch()
+					.borrow()
+					.object_to_interfaces
+					.get(&object)
+					.cloned();
+				let data = if let Some(interfaces) = interfaces {
+					Q::try_new(connection, &ctx, &object, &|i| interfaces.contains(i)).await
+				} else {
+					None
 				};
-				buses.insert(name, handles);
-			} else if old_owner.is_some()
-				&& new_owner.is_none()
-				&& let Some(handles) = buses.remove(&name)
-			{
-				handles.dismiss(&tx, matching_objects.clone()).await;
+				let already_matching = matching_objects.contains(&object);
+				match (data, already_matching) {
+					(None, true) => Self::match_lost(&tx, object, &mut matching_objects).await,
+					(None, false) => {}
+					(Some(data), true) => {
+						_ = tx.send(QueryEvent::MatchModified(object, data)).await;
+					}
+					(Some(data), false) => {
+						Self::new_match(&tx, &mut matching_objects, object, data).await
+					}
+				}
 			}
 		}
 
 		Ok(())
-	}
-}
-
-#[derive(Debug)]
-struct NamespaceHandler {
-	name: OwnedBusName,
-	interface_added: AbortHandle,
-	interface_removed: AbortHandle,
-}
-impl NamespaceHandler {
-	async fn dismiss<Q: Queryable<Ctx>, Ctx: QueryContext>(
-		self,
-		tx: &mpsc::Sender<QueryEvent<Q, Ctx>>,
-		matching_objects: Arc<RwLock<HashSet<ObjectInfo>>>,
-	) {
-		let owned_objects = matching_objects
-			.read()
-			.await
-			.iter()
-			.filter(|v| v.bus_name == self.name)
-			.cloned()
-			.collect::<Vec<_>>();
-		for object in owned_objects {
-			ObjectQuery::match_lost(tx, object.clone(), matching_objects.clone()).await;
-		}
-	}
-}
-impl Drop for NamespaceHandler {
-	fn drop(&mut self) {
-		self.interface_added.abort();
-		self.interface_removed.abort();
 	}
 }
 
@@ -450,7 +262,10 @@ mod test {
 	use tokio::{sync::Notify, time::sleep};
 	use zbus::{Connection, fdo::ObjectManager, interface};
 
-	use crate::dbus::query::{ObjectQuery, QueryContext};
+	use crate::dbus::{
+		object_registry::ObjectRegistry,
+		query::{ObjectQuery, QueryContext},
+	};
 
 	struct TestInterface;
 	#[interface(name = "org.stardustxr.TestInterface", proxy())]
@@ -464,29 +279,18 @@ mod test {
 
 	#[tokio::test]
 	async fn query() {
-		console_subscriber::init();
-		let notify = Arc::new(Notify::new());
-		let notify_2 = notify.clone();
-		let thread = thread::spawn(move || {
-			let rt = tokio::runtime::Builder::new_current_thread()
-				.enable_all()
-				.build()
-				.unwrap();
-			rt.block_on(async move {
-				let other_conn = Connection::session().await.unwrap();
-				println!("name: {:?}", other_conn.unique_name());
-				_ = other_conn.object_server().at("/", ObjectManager).await;
-				_ = other_conn
-					.object_server()
-					.at("/org/stardustxr/core/schemas/test", TestInterface)
-					.await;
-				notify_2.notified().await;
-			})
-		});
+		let other_conn = Connection::session().await.unwrap();
+		println!("name: {:?}", other_conn.unique_name());
+		_ = other_conn.object_server().at("/", ObjectManager).await;
+		_ = other_conn
+			.object_server()
+			.at("/org/stardustxr/core/schemas/test", TestInterface)
+			.await;
 		let query_conn = Connection::session().await.unwrap();
+		let object_registry = ObjectRegistry::new(&query_conn).await.unwrap();
 		let match_lost = Arc::new(AtomicBool::new(false));
 		let match_gained = Arc::new(AtomicBool::new(false));
-		let mut query = ObjectQuery::<TestInterfaceProxy, ()>::new(query_conn, ());
+		let mut query = ObjectQuery::<TestInterfaceProxy, ()>::new(object_registry, ());
 		tokio::spawn({
 			let match_lost = match_lost.clone();
 			let match_gained = match_gained.clone();
@@ -506,12 +310,11 @@ mod test {
 				}
 			}
 		});
-		sleep(Duration::from_millis(500)).await;
+		sleep(Duration::from_millis(50)).await;
 		assert!(match_gained.load(Ordering::Relaxed));
 		assert!(!match_lost.load(Ordering::Relaxed));
-		notify.notify_one();
-		sleep(Duration::from_millis(5)).await;
+		drop(other_conn);
+		sleep(Duration::from_millis(50)).await;
 		assert!(match_lost.load(Ordering::Relaxed));
-		thread.join().unwrap();
 	}
 }
