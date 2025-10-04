@@ -28,17 +28,17 @@ pub trait PlaySpace {
 	// fn set_bounds(&self, bounds: Vec<(f64, f64)>) -> Result<()>;
 }
 
-#[zbus::proxy(interface = "org.stardustxr.Zoneable")]
+#[zbus::proxy(interface = "org.stardustxr.Reparentable")]
 /// You need to implement at least SpatialRef but optionally FieldRef
-pub trait Zoneable {
+pub trait Reparentable {
 	/// Ask the zoneable to parent itself to the given SpatialRef
 	fn parent(&self, new_parent: u64) -> Result<()>;
 	/// Set the transform of the zoneable relative to the given SpatialRef to zero
 	fn reset_transform(&self, spatial_ref: u64) -> Result<()>;
 }
-#[zbus::proxy(interface = "org.stardustxr.CaptureZoneable")]
+#[zbus::proxy(interface = "org.stardustxr.ReparentLock")]
 /// You need to implement Zoneable
-pub trait CaptureZoneable {
+pub trait ReparentLock {
 	fn capture(&self) -> Result<()>;
 	fn release(&self) -> Result<()>;
 }
@@ -47,6 +47,6 @@ impl_queryable_for_proxy!(
 	SpatialRefProxy,
 	FieldRefProxy,
 	PlaySpaceProxy,
-	ZoneableProxy,
-	CaptureZoneableProxy
+	ReparentableProxy,
+	ReparentLockProxy
 );
