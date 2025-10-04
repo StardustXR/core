@@ -32,6 +32,8 @@ pub mod spatial;
 pub mod query_impl;
 
 pub use stardust_xr::schemas::dbus::query as query;
+pub use stardust_xr::schemas::dbus::list_query as list_query;
+pub use stardust_xr::schemas::impl_queryable_for_proxy;
 
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);
 impl<T: Serialize> TypedMethodResponse<T> {
