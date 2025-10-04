@@ -31,6 +31,8 @@ pub mod scenegraph;
 pub mod spatial;
 pub mod query_impl;
 
+pub use stardust_xr::schemas::dbus::query as query;
+
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);
 impl<T: Serialize> TypedMethodResponse<T> {
 	pub fn send_ok(self, value: T) {
