@@ -18,10 +18,19 @@ use crate::{
 
 impl QueryContext for ClientHandle {}
 
-impl Queryable<ClientHandle> for SpatialRef {
+pub trait ClientQueryContext: QueryContext {
+	fn get_client_handle(self: &Arc<Self>) -> &Arc<ClientHandle>;
+}
+impl ClientQueryContext for ClientHandle {
+    fn get_client_handle(self: &Arc<Self>) -> &Arc<ClientHandle> {
+		self
+    }
+}
+
+impl<Ctx: ClientQueryContext> Queryable<Ctx> for SpatialRef {
 	async fn try_new(
 		connection: &zbus::Connection,
-		ctx: &Arc<ClientHandle>,
+		ctx: &Arc<Ctx>,
 		object: &stardust_xr::schemas::dbus::ObjectInfo,
 		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 	) -> Option<Self> {
@@ -32,7 +41,7 @@ impl Queryable<ClientHandle> for SpatialRef {
 		Some(match v {
 			Some(v) => v,
 			None => {
-				let spatial_ref = proxy.import(ctx).await?;
+				let spatial_ref = proxy.import(ctx.get_client_handle()).await?;
 				CACHE.lock().insert(id, spatial_ref.clone());
 				spatial_ref
 			}
@@ -40,10 +49,10 @@ impl Queryable<ClientHandle> for SpatialRef {
 	}
 }
 
-impl Queryable<ClientHandle> for FieldRef {
+impl<Ctx: ClientQueryContext> Queryable<Ctx> for FieldRef {
 	async fn try_new(
 		connection: &zbus::Connection,
-		ctx: &Arc<ClientHandle>,
+		ctx: &Arc<Ctx>,
 		object: &stardust_xr::schemas::dbus::ObjectInfo,
 		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
 	) -> Option<Self> {
@@ -54,7 +63,7 @@ impl Queryable<ClientHandle> for FieldRef {
 		Some(match v {
 			Some(v) => v,
 			None => {
-				let spatial_ref = proxy.import(ctx).await?;
+				let spatial_ref = proxy.import(ctx.get_client_handle()).await?;
 				CACHE.lock().insert(id, spatial_ref.clone());
 				spatial_ref
 			}
