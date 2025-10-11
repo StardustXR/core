@@ -130,8 +130,8 @@ pub struct ObjectRegistry {
 }
 impl ObjectRegistry {
 	pub async fn new(connection: &Connection) -> Result<Arc<Self>> {
-		let objects = Self::get_all_objects(connection).await?;
-		let (objects_tx, objects_rx) = watch::channel(objects);
+		// Initialize with empty objects - the update_task will populate them
+		let (objects_tx, objects_rx) = watch::channel(Objects::default());
 		let (changed_tx, _) = broadcast::channel(16);
 
 		let abort_handle = tokio::spawn(Self::update_task(
@@ -157,26 +157,34 @@ impl ObjectRegistry {
 		objects_rx: watch::Receiver<Objects>,
 		changed_tx: broadcast::Sender<Vec<ObjectInfo>>,
 	) -> Result<()> {
+		// Initialize by scanning all existing services and creating tasks only for those with ObjectManager
 		let mut buses: HashMap<OwnedBusName, InternalBusRecord> = {
 			let names = Self::get_bus_names(&connection).await?;
 			let mut buses = HashMap::new();
+			let mut objects = Objects::default();
 
 			for name in names {
-				let Ok(object_manager_proxy) =
-					fdo::ObjectManagerProxy::new(&connection, name.clone(), "/").await
-				else {
-					continue;
-				};
-
-				let bus_record = InternalBusRecord::new(
+				// Only create tasks for services that actually implement ObjectManager
+				if let Some(object_manager) = Self::add_objects_for_name(
+					&connection,
 					name.clone(),
-					object_manager_proxy,
-					objects_tx.clone(),
-					changed_tx.clone(),
-				);
-				buses.insert(name, bus_record);
+					Some(changed_tx.clone()),
+					&mut objects,
+				)
+				.await
+				{
+					let bus_record = InternalBusRecord::new(
+						name.clone(),
+						object_manager,
+						objects_tx.clone(),
+						changed_tx.clone(),
+					);
+					buses.insert(name, bus_record);
+				}
 			}
 
+			// Send the initial objects state
+			let _ = objects_tx.send(objects);
 			buses
 		};
 
@@ -241,20 +249,6 @@ impl ObjectRegistry {
 			.filter(|n| !matches!(n.as_ref(), BusName::WellKnown(_))))
 	}
 
-	async fn get_all_objects(connection: &Connection) -> Result<Objects> {
-		let names = Self::get_bus_names(connection).await?;
-
-		let mut objects = Objects::default();
-
-		for name in names {
-			if matches!(name.as_ref(), BusName::WellKnown(_)) {
-				continue;
-			}
-			Self::add_objects_for_name(connection, name, None, &mut objects).await;
-		}
-
-		Ok(objects)
-	}
 
 	async fn add_objects_for_name(
 		connection: &Connection,
