@@ -19,7 +19,7 @@ use zbus::{
 use crate::dbus::ObjectInfo;
 
 #[derive(Debug)]
-struct InternalBusRecord([AbortHandle; 2]);
+struct InternalBusRecord(AbortHandle);
 impl InternalBusRecord {
 	fn new(
 		name: OwnedBusName,
@@ -27,92 +27,93 @@ impl InternalBusRecord {
 		objects_tx: watch::Sender<Objects>,
 		changed_tx: broadcast::Sender<Vec<ObjectInfo>>,
 	) -> Self {
-		let name_2 = name.clone();
-		let object_manager_2 = object_manager.clone();
-		let objects_tx_2 = objects_tx.clone();
-		let changed_tx_2 = changed_tx.clone();
-		InternalBusRecord([
-			tokio::spawn(async move {
-				let Ok(mut interfaces_added_stream) =
-					object_manager.clone().receive_interfaces_added().await
-				else {
-					return;
-				};
-				while let Some(interface_added) = interfaces_added_stream.next().await {
-					let Ok(args) = interface_added.args() else {
-						continue;
-					};
-					let obj = ObjectInfo {
-						bus_name: name.clone(),
-						object_path: args.object_path.clone().into(),
-					};
-					objects_tx.send_if_modified(|objects| {
-						let mut changed = false;
-						for interface in args.interfaces_and_properties().keys() {
-							if objects
-								.interface_to_objects
-								.entry(interface.to_string())
-								.or_default()
-								.insert(obj.clone())
-							{
-								changed = true
-							};
-						}
-						objects
-							.object_to_interfaces
-							.entry(obj.clone())
-							.or_default()
-							.extend(
-								args.interfaces_and_properties()
-									.keys()
-									.map(|i| i.to_string()),
-							);
-						changed
-					});
-					_ = changed_tx.send(vec![obj]);
-				}
-			})
-			.abort_handle(),
-			tokio::spawn(async move {
-				let Ok(mut interfaces_removed_stream) =
-					object_manager_2.receive_interfaces_removed().await
-				else {
-					return;
-				};
-				while let Some(interface_removed) = interfaces_removed_stream.next().await {
-					let Ok(args) = interface_removed.args() else {
-						continue;
-					};
-					let obj = ObjectInfo {
-						bus_name: name_2.clone(),
-						object_path: args.object_path.clone().into(),
-					};
-					objects_tx_2.send_if_modified(|objects| {
-						let mut changed = false;
-						for interface in args.interfaces().as_ref() {
-							let Some(object_interface) =
-								objects.interface_to_objects.get_mut(&interface.to_string())
-							else {
-								continue;
-							};
+		let abort_handle = tokio::spawn(async move {
+			let Ok(mut interfaces_added_stream) =
+				object_manager.receive_interfaces_added().await
+			else {
+				return;
+			};
+			let Ok(mut interfaces_removed_stream) =
+				object_manager.receive_interfaces_removed().await
+			else {
+				return;
+			};
 
-							if object_interface.remove(&obj) {
-								changed = true;
-							};
-						}
-						changed
-					});
-					_ = changed_tx_2.send(vec![obj]);
+			loop {
+				tokio::select! {
+					interface_added = interfaces_added_stream.next() => {
+						let Some(interface_added) = interface_added else {
+							break;
+						};
+						let Ok(args) = interface_added.args() else {
+							continue;
+						};
+						let obj = ObjectInfo {
+							bus_name: name.clone(),
+							object_path: args.object_path.clone().into(),
+						};
+						objects_tx.send_if_modified(|objects| {
+							let mut changed = false;
+							for interface in args.interfaces_and_properties().keys() {
+								if objects
+									.interface_to_objects
+									.entry(interface.to_string())
+									.or_default()
+									.insert(obj.clone())
+								{
+									changed = true
+								};
+							}
+							objects
+								.object_to_interfaces
+								.entry(obj.clone())
+								.or_default()
+								.extend(
+									args.interfaces_and_properties()
+										.keys()
+										.map(|i| i.to_string()),
+								);
+							changed
+						});
+						_ = changed_tx.send(vec![obj]);
+					}
+					interface_removed = interfaces_removed_stream.next() => {
+						let Some(interface_removed) = interface_removed else {
+							break;
+						};
+						let Ok(args) = interface_removed.args() else {
+							continue;
+						};
+						let obj = ObjectInfo {
+							bus_name: name.clone(),
+							object_path: args.object_path.clone().into(),
+						};
+						objects_tx.send_if_modified(|objects| {
+							let mut changed = false;
+							for interface in args.interfaces().as_ref() {
+								let Some(object_interface) =
+									objects.interface_to_objects.get_mut(&interface.to_string())
+								else {
+									continue;
+								};
+								if object_interface.remove(&obj) {
+									changed = true;
+								};
+							}
+							changed
+						});
+						_ = changed_tx.send(vec![obj]);
+					}
 				}
-			})
-			.abort_handle(),
-		])
+			}
+		})
+		.abort_handle();
+		InternalBusRecord(abort_handle)
 	}
 }
 impl Drop for InternalBusRecord {
 	fn drop(&mut self) {
-		self.0[0].abort();
-		self.0[1].abort();
+		self.0.abort();
 	}
 }
 
