@@ -24,6 +24,7 @@ thiserror = "2.0.16"
 
 #dbus stuff
 tokio = { version = "1.38.0", features = ["rt", "sync", "macros", "time"] }
+tokio-stream = "0.1.17"
 zbus = { version = "5.11.0", features = ["blocking-api", "tokio"], default-features = false }
 nanoid = "0.4.0"
 futures-util = "0.3.30"

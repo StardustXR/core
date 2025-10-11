@@ -9,6 +9,7 @@ use tokio::{
 	sync::{Notify, broadcast, watch},
 	task::AbortHandle,
 };
+use tokio_stream::StreamMap;
 use zbus::{
 	Connection, Proxy, Result, fdo,
 	names::{BusName, InterfaceName, OwnedBusName, OwnedInterfaceName},
@@ -18,104 +19,6 @@ use zbus::{
 
 use crate::dbus::ObjectInfo;
 
-#[derive(Debug)]
-struct InternalBusRecord(AbortHandle);
-impl InternalBusRecord {
-	fn new(
-		name: OwnedBusName,
-		object_manager: fdo::ObjectManagerProxy<'static>,
-		objects_tx: watch::Sender<Objects>,
-		changed_tx: broadcast::Sender<Vec<ObjectInfo>>,
-	) -> Self {
-		let abort_handle = tokio::spawn(async move {
-			let Ok(mut interfaces_added_stream) =
-				object_manager.receive_interfaces_added().await
-			else {
-				return;
-			};
-			let Ok(mut interfaces_removed_stream) =
-				object_manager.receive_interfaces_removed().await
-			else {
-				return;
-			};
-
-			loop {
-				tokio::select! {
-					interface_added = interfaces_added_stream.next() => {
-						let Some(interface_added) = interface_added else {
-							break;
-						};
-						let Ok(args) = interface_added.args() else {
-							continue;
-						};
-						let obj = ObjectInfo {
-							bus_name: name.clone(),
-							object_path: args.object_path.clone().into(),
-						};
-						objects_tx.send_if_modified(|objects| {
-							let mut changed = false;
-							for interface in args.interfaces_and_properties().keys() {
-								if objects
-									.interface_to_objects
-									.entry(interface.to_string())
-									.or_default()
-									.insert(obj.clone())
-								{
-									changed = true
-								};
-							}
-							objects
-								.object_to_interfaces
-								.entry(obj.clone())
-								.or_default()
-								.extend(
-									args.interfaces_and_properties()
-										.keys()
-										.map(|i| i.to_string()),
-								);
-							changed
-						});
-						_ = changed_tx.send(vec![obj]);
-					}
-					interface_removed = interfaces_removed_stream.next() => {
-						let Some(interface_removed) = interface_removed else {
-							break;
-						};
-						let Ok(args) = interface_removed.args() else {
-							continue;
-						};
-						let obj = ObjectInfo {
-							bus_name: name.clone(),
-							object_path: args.object_path.clone().into(),
-						};
-						objects_tx.send_if_modified(|objects| {
-							let mut changed = false;
-							for interface in args.interfaces().as_ref() {
-								let Some(object_interface) =
-									objects.interface_to_objects.get_mut(&interface.to_string())
-								else {
-									continue;
-								};
-								if object_interface.remove(&obj) {
-									changed = true;
-								};
-							}
-							changed
-						});
-						_ = changed_tx.send(vec![obj]);
-					}
-				}
-			}
-		})
-		.abort_handle();
-		InternalBusRecord(abort_handle)
-	}
-}
-impl Drop for InternalBusRecord {
-	fn drop(&mut self) {
-		self.0.abort();
-	}
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct Objects {
@@ -155,86 +58,142 @@ impl ObjectRegistry {
 	async fn update_task(
 		connection: Connection,
 		objects_tx: watch::Sender<Objects>,
-		objects_rx: watch::Receiver<Objects>,
+		_objects_rx: watch::Receiver<Objects>,
 		changed_tx: broadcast::Sender<Vec<ObjectInfo>>,
 	) -> Result<()> {
-		// Initialize by scanning all existing services and creating tasks only for those with ObjectManager
-		let mut buses: HashMap<OwnedBusName, InternalBusRecord> = {
-			let names = Self::get_bus_names(&connection).await?;
-			let mut buses = HashMap::new();
-			let mut objects = Objects::default();
+		// Initialize objects and two StreamMaps
+		let mut objects = Objects::default();
+		let mut interfaces_added_streams = StreamMap::new();
+		let mut interfaces_removed_streams = StreamMap::new();
 
-			for name in names {
-				// Only create tasks for services that actually implement ObjectManager
-				if let Some(object_manager) = Self::add_objects_for_name(
-					&connection,
-					name.clone(),
-					Some(changed_tx.clone()),
-					&mut objects,
-				)
-				.await
-				{
-					let bus_record = InternalBusRecord::new(
-						name.clone(),
-						object_manager,
-						objects_tx.clone(),
-						changed_tx.clone(),
-					);
-					buses.insert(name, bus_record);
+		// Scan existing services and add streams for those with ObjectManager
+		let names = Self::get_bus_names(&connection).await?;
+		for name in names {
+			if let Some(object_manager) = Self::add_objects_for_name(
+				&connection,
+				name.clone(),
+				Some(changed_tx.clone()),
+				&mut objects,
+			)
+			.await
+			{
+				if let Ok(added_stream) = object_manager.receive_interfaces_added().await {
+					interfaces_added_streams.insert(name.clone(), added_stream);
+				}
+				if let Ok(removed_stream) = object_manager.receive_interfaces_removed().await {
+					interfaces_removed_streams.insert(name, removed_stream);
 				}
 			}
+		}
 
-			// Send the initial objects state
-			let _ = objects_tx.send(objects);
-			buses
-		};
+		// Send initial objects state
+		let _ = objects_tx.send(objects.clone());
 
+		// Set up D-Bus name change monitoring
 		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
 		let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
-		while let Some(signal) = name_owner_changed_stream.next().await {
-			let mut objects = objects_rx.borrow().clone();
-			let mut updated = false;
-			let args = signal.args().unwrap();
-			let name: OwnedBusName = args.name.clone().into();
-			if matches!(&args.name, BusName::WellKnown(_)) {
-				continue;
-			}
-			// println!("updating for bus {name}");
-			let old_owner = args.old_owner.as_ref();
-			let new_owner = args.new_owner.as_ref();
 
-			if old_owner.is_none() && new_owner.is_some() {
-				// New bus appeared
-				// println!("new bus {name} appeared");
-				if let Some(object_manager) = Self::add_objects_for_name(
-					&connection,
-					name.clone(),
-					Some(changed_tx.clone()),
-					&mut objects,
-				)
-				.await
-				{
-					buses.insert(
-						name.clone(),
-						InternalBusRecord::new(
-							name,
-							object_manager,
-							objects_tx.clone(),
-							changed_tx.clone(),
-						),
-					);
-					updated = true;
+		// Main event loop
+		loop {
+			tokio::select! {
+				// Handle service lifecycle (NameOwnerChanged)
+				Some(signal) = name_owner_changed_stream.next() => {
+					let Ok(args) = signal.args() else { continue; };
+					let name: OwnedBusName = args.name.clone().into();
+					if matches!(&args.name, BusName::WellKnown(_)) {
+						continue;
+					}
+
+					let old_owner = args.old_owner.as_ref();
+					let new_owner = args.new_owner.as_ref();
+
+					if old_owner.is_none() && new_owner.is_some() {
+						// New service appeared
+						if let Some(object_manager) = Self::add_objects_for_name(
+							&connection,
+							name.clone(),
+							Some(changed_tx.clone()),
+							&mut objects,
+						)
+						.await
+						{
+							if let Ok(added_stream) = object_manager.receive_interfaces_added().await {
+								interfaces_added_streams.insert(name.clone(), added_stream);
+							}
+							if let Ok(removed_stream) = object_manager.receive_interfaces_removed().await {
+								interfaces_removed_streams.insert(name.clone(), removed_stream);
+							}
+							let _ = objects_tx.send(objects.clone());
+						}
+					} else if old_owner.is_some() && new_owner.is_none() {
+						// Service disappeared
+						Self::remove_objects_for_bus(&mut objects, name.clone(), changed_tx.clone());
+						interfaces_added_streams.remove(&name);
+						interfaces_removed_streams.remove(&name);
+						let _ = objects_tx.send(objects.clone());
+					}
 				}
-			} else if old_owner.is_some() && new_owner.is_none() {
-				// Bus disappeared
-				// println!("bus {name} disappeared");
-				Self::remove_objects_for_bus(&mut objects, name.clone(), changed_tx.clone());
-				buses.remove::<OwnedBusName>(&name);
-				updated = true;
-			}
-			if updated {
-				// println!("Sending new objects {objects:?}");
-				let _ = objects_tx.send(objects.clone());
+
+				// Handle InterfacesAdded events
+				Some((service_name, signal)) = interfaces_added_streams.next() => {
+					if let Ok(args) = signal.args() {
+						let obj = ObjectInfo {
+							bus_name: service_name,
+							object_path: args.object_path.clone().into(),
+						};
+						objects_tx.send_if_modified(|objects| {
+							let mut changed = false;
+							for interface in args.interfaces_and_properties().keys() {
+								if objects
+									.interface_to_objects
+									.entry(interface.to_string())
+									.or_default()
+									.insert(obj.clone())
+								{
+									changed = true
+								};
+							}
+							objects
+								.object_to_interfaces
+								.entry(obj.clone())
+								.or_default()
+								.extend(
+									args.interfaces_and_properties()
+										.keys()
+										.map(|i| i.to_string()),
+								);
+							changed
+						});
+						_ = changed_tx.send(vec![obj]);
+					}
+				}
+
+				// Handle InterfacesRemoved events
+				Some((service_name, signal)) = interfaces_removed_streams.next() => {
+					if let Ok(args) = signal.args() {
+						let obj = ObjectInfo {
+							bus_name: service_name,
+							object_path: args.object_path.clone().into(),
+						};
+						objects_tx.send_if_modified(|objects| {
+							let mut changed = false;
+							for interface in args.interfaces().as_ref() {
+								let Some(object_interface) =
+									objects.interface_to_objects.get_mut(&interface.to_string())
+								else {
+									continue;
+								};
+								if object_interface.remove(&obj) {
+									changed = true;
+								};
+							}
+							changed
+						});
+						_ = changed_tx.send(vec![obj]);
+					}
+				}
+
+				else => break,
 			}
 		}
 
@@ -249,6 +208,7 @@ impl ObjectRegistry {
 			.into_iter()
 			.filter(|n| !matches!(n.as_ref(), BusName::WellKnown(_))))
 	}
+
 
 
 	async fn add_objects_for_name(
