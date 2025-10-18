@@ -1,23 +1,23 @@
 use dirs::runtime_dir;
-use std::io::{Error, ErrorKind};
+use std::{
+	io::{Error, ErrorKind},
+	path::PathBuf,
+	str::FromStr,
+};
 use tokio::net::UnixStream;
 
 /// Connect to the first available stardust server, opening a Tokio UnixStream to its socket.
 pub async fn connect() -> Result<UnixStream, std::io::Error> {
-	// Is here so if you launch a stardust client from another stardust client, and somehow errored your way
-	// into an invalid value, it resolves it somehow
-	let stardust_instance: u8 = std::env::var("STARDUST_INSTANCE")
-		.ok()
-		.and_then(|s| s.parse::<u8>().ok())
-		.unwrap_or(0);
-	unsafe {
-		std::env::set_var("STARDUST_INSTANCE", stardust_instance.to_string());
+	let mut socket_path = std::env::var_os("STARDUST_INSTANCE")
+		.map(PathBuf::from)
+		.unwrap_or_else(|| PathBuf::from_str("stardust-0").unwrap());
+	if !socket_path.has_root() {
+		socket_path = runtime_dir()
+		.ok_or_else(|| Error::from(ErrorKind::AddrNotAvailable))?
+		.join(socket_path);
 	}
 
 	// Tries to connect the client to the server.
-	let socket_path = runtime_dir()
-		.ok_or_else(|| Error::from(ErrorKind::AddrNotAvailable))?
-		.join(format!("stardust-{stardust_instance}"));
 	UnixStream::connect(socket_path).await
 }
 
