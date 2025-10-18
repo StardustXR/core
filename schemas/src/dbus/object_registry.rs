@@ -19,7 +19,6 @@ use zbus::{
 
 use crate::dbus::ObjectInfo;
 
-
 #[derive(Clone, Debug, Default)]
 pub struct Objects {
 	pub interface_to_objects: HashMap<String, HashSet<ObjectInfo>>,
@@ -61,6 +60,10 @@ impl ObjectRegistry {
 		_objects_rx: watch::Receiver<Objects>,
 		changed_tx: broadcast::Sender<Vec<ObjectInfo>>,
 	) -> Result<()> {
+		// Set up D-Bus name change monitoring
+		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
+		let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
+
 		// Initialize objects and two StreamMaps
 		let mut objects = Objects::default();
 		let mut interfaces_added_streams = StreamMap::new();
@@ -88,10 +91,6 @@ impl ObjectRegistry {
 
 		// Send initial objects state
 		let _ = objects_tx.send(objects.clone());
-
-		// Set up D-Bus name change monitoring
-		let dbus_proxy = fdo::DBusProxy::new(&connection).await?;
-		let mut name_owner_changed_stream = dbus_proxy.receive_name_owner_changed().await?;
 
 		// Main event loop
 		loop {
@@ -208,8 +207,6 @@ impl ObjectRegistry {
 			.into_iter()
 			.filter(|n| !matches!(n.as_ref(), BusName::WellKnown(_))))
 	}
-
-
 
 	async fn add_objects_for_name(
 		connection: &Connection,
