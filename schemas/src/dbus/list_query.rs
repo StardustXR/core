@@ -87,11 +87,11 @@ mod test {
 	impl_queryable_for_proxy!(TestInterfaceProxy);
 
 	#[tokio::test]
-	async fn query() {
+	async fn list_query_test() {
 		let query_conn = Connection::session().await.unwrap();
 		let other_conn = Connection::session().await.unwrap();
 		_ = other_conn.object_server().at("/", ObjectManager).await;
-		let object_registry = ObjectRegistry::new(&query_conn).await.unwrap();
+		let object_registry = ObjectRegistry::new(&query_conn).await;
 		let (query, mapper) =
 			ObjectQuery::<TestInterfaceProxy, _>::new(object_registry.clone(), ()).to_list_query();
 		tokio::spawn(mapper.init(async |e| match e {

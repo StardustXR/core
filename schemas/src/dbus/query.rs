@@ -1,4 +1,9 @@
-use futures_util::StreamExt as _;
+use crate::dbus::{
+	ObjectInfo,
+	interfaces::SpatialRefProxy,
+	list_query::{ListQueryMapper, ObjectListQuery},
+	object_registry::{ObjectRegistry, Objects},
+};
 use std::{
 	collections::{HashMap, HashSet},
 	marker::PhantomData,
@@ -19,16 +24,9 @@ use tokio::{
 use variadics_please::all_tuples;
 use zbus::{
 	Connection, Proxy, fdo,
-	names::{BusName, OwnedBusName},
+	names::{BusName, InterfaceName, OwnedBusName},
 	proxy::{Defaults, ProxyImpl},
 	zvariant::{ObjectPath, OwnedObjectPath},
-};
-
-use crate::dbus::{
-	ObjectInfo,
-	interfaces::SpatialRefProxy,
-	list_query::{ListQueryMapper, ObjectListQuery},
-	object_registry::{ObjectRegistry, Objects},
 };
 
 pub struct ObjectQuery<Q: Queryable<Ctx>, Ctx: QueryContext> {
@@ -41,17 +39,35 @@ pub trait Queryable<Ctx: QueryContext>: Sized + 'static + Send + Sync {
 		connection: &Connection,
 		ctx: &Arc<Ctx>,
 		object: &ObjectInfo,
-		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+		contains_interface: &(impl Fn(&InterfaceName) -> bool + Send + Sync),
 	) -> impl std::future::Future<Output = Option<Self>> + Send;
 }
-
 pub trait QueryContext: Sized + 'static + Send + Sync {}
+impl QueryContext for () {}
 
 pub enum QueryEvent<Q: Queryable<Ctx> + Send + Sync, Ctx: QueryContext> {
 	NewMatch(ObjectInfo, Q),
 	MatchModified(ObjectInfo, Q),
 	MatchLost(ObjectInfo),
 	PhantomVariant(PhantomData<Ctx>),
+}
+impl<Q: Queryable<Ctx> + Send + Sync + std::fmt::Debug, Ctx: QueryContext + std::fmt::Debug>
+	std::fmt::Debug for QueryEvent<Q, Ctx>
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::NewMatch(arg0, arg1) => {
+				f.debug_tuple("NewMatch").field(arg0).field(arg1).finish()
+			}
+			Self::MatchModified(arg0, arg1) => f
+				.debug_tuple("MatchModified")
+				.field(arg0)
+				.field(arg1)
+				.finish(),
+			Self::MatchLost(arg0) => f.debug_tuple("MatchLost").field(arg0).finish(),
+			Self::PhantomVariant(arg0) => f.debug_tuple("PhantomVariant").field(arg0).finish(),
+		}
+	}
 }
 
 #[macro_export]
@@ -62,16 +78,14 @@ macro_rules! impl_queryable_for_proxy {
 				connection: &::zbus::Connection,
 				_ctx: &std::sync::Arc<Ctx>,
 				object: &$crate::dbus::ObjectInfo,
-				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+				contains_interface: &(impl Fn(&zbus::names::InterfaceName) -> bool + Send + Sync),
 			) -> Option<Self> {
 				use ::zbus::proxy::Defaults;
-				let interface = $T::INTERFACE.as_ref()?.to_string();
+				let interface = $T::INTERFACE.as_ref()?;
 				if !contains_interface(&interface) {
 					return None;
 				}
-				Some(
-					object.to_proxy(connection, interface).await.ok()?.into(),
-				)
+				object.to_typed_proxy::<Self>(connection).await.ok()
 			}
 		})*
 	};
@@ -104,47 +118,14 @@ where
 	}
 }
 
-impl<T: Queryable<Ctx>, Ctx: QueryContext> Queryable<Ctx> for Option<T> {
+impl<Q: Queryable<Ctx>, Ctx: QueryContext> Queryable<Ctx> for Option<Q> {
 	async fn try_new(
 		connection: &Connection,
 		ctx: &Arc<Ctx>,
 		object: &ObjectInfo,
-		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+		contains_interface: &(impl Fn(&InterfaceName) -> bool + Send + Sync),
 	) -> Option<Self> {
-		Some(T::try_new(connection, ctx, object, contains_interface).await)
-	}
-}
-
-impl<T: ProxyImpl<'static> + Defaults + Send + Sync + From<Proxy<'static>>, Ctx: QueryContext>
-	Queryable<Ctx> for ObjectProxy<T>
-{
-	async fn try_new(
-		connection: &Connection,
-		_ctx: &Arc<Ctx>,
-		object: &ObjectInfo,
-		contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
-	) -> Option<Self> {
-		let interface = T::INTERFACE.as_ref()?.to_string();
-		if !contains_interface(&interface) {
-			return None;
-		}
-		Some(ObjectProxy(
-			object.to_proxy(connection, interface).await.ok()?.into(),
-		))
-	}
-}
-
-pub struct ObjectProxy<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static>(pub T);
-impl<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static> Deref for ObjectProxy<T> {
-	type Target = T;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
-impl<T: Defaults + Send + Sync + From<Proxy<'static>> + 'static> DerefMut for ObjectProxy<T> {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
+		Some(Q::try_new(connection, ctx, object, contains_interface).await)
 	}
 }
 
@@ -156,7 +137,7 @@ macro_rules! impl_queryable {
 				connection: &Connection,
 				ctx: &Arc<Ctx>,
 				object: &ObjectInfo,
-				contains_interface: &(impl Fn(&str) -> bool + Send + Sync),
+				contains_interface: &(impl Fn(&zbus::names::InterfaceName) -> bool + Send + Sync),
 			) -> Option<Self> {
 				Some(($($T::try_new(connection, ctx, object, contains_interface).await?,)*))
 			}
@@ -189,16 +170,17 @@ impl<Q: Queryable<Ctx>, Ctx: QueryContext> ObjectQuery<Q, Ctx> {
 		object_registry: Arc<ObjectRegistry>,
 		tx: mpsc::Sender<QueryEvent<Q, Ctx>>,
 	) -> zbus::Result<()> {
+		let mut recv = object_registry.get_object_events_receiver();
 		let mut matching_objects: HashSet<ObjectInfo> = HashSet::new();
 		let connection = object_registry.get_connection();
-		let v = object_registry
-			.get_watch()
-			.borrow()
-			.object_to_interfaces
-			.clone();
+		let watch = object_registry.get_watch();
+		let v = watch.borrow().object_to_interfaces.clone();
 
 		for (object, interfaces) in v {
-			let data = Q::try_new(connection, &ctx, &object, &|i| interfaces.contains(i)).await;
+			let data = Q::try_new(connection, &ctx, &object, &|i| {
+				interfaces.iter().any(|f| i == f)
+			})
+			.await;
 			let already_matching = matching_objects.contains(&object);
 			match (data, already_matching) {
 				(None, true) => Self::match_lost(&tx, object, &mut matching_objects).await,
@@ -212,35 +194,39 @@ impl<Q: Queryable<Ctx>, Ctx: QueryContext> ObjectQuery<Q, Ctx> {
 			}
 		}
 
-		let mut recv = object_registry.get_object_changed_receiver();
 		loop {
-			let objs = match recv.recv().await {
+			let object_event = match recv.recv().await {
 				Ok(objs) => objs,
 				Err(RecvError::Closed) => break,
 				Err(RecvError::Lagged(_)) => continue,
 			};
-			for object in objs {
-				let interfaces = object_registry
-					.get_watch()
-					.borrow()
-					.object_to_interfaces
-					.get(&object)
-					.cloned();
-				let data = if let Some(interfaces) = interfaces {
-					Q::try_new(connection, &ctx, &object, &|i| interfaces.contains(i)).await
-				} else {
-					None
-				};
-				let already_matching = matching_objects.contains(&object);
-				match (data, already_matching) {
-					(None, true) => Self::match_lost(&tx, object, &mut matching_objects).await,
-					(None, false) => {}
-					(Some(data), true) => {
-						_ = tx.send(QueryEvent::MatchModified(object, data)).await;
-					}
-					(Some(data), false) => {
-						Self::new_match(&tx, &mut matching_objects, object, data).await
-					}
+			let Some(v) = watch
+				.borrow()
+				.object_to_interfaces
+				.get(&object_event.object)
+				.cloned()
+			else {
+				Self::match_lost(&tx, object_event.object, &mut matching_objects).await;
+				continue;
+			};
+			let data = Q::try_new(connection, &ctx, &object_event.object, &|i| {
+				v.iter().any(|j| i == j)
+			})
+			.await;
+
+			let already_matching = matching_objects.contains(&object_event.object);
+			match (data, already_matching) {
+				(None, true) => {
+					Self::match_lost(&tx, object_event.object, &mut matching_objects).await
+				}
+				(None, false) => {}
+				(Some(data), true) => {
+					_ = tx
+						.send(QueryEvent::MatchModified(object_event.object, data))
+						.await;
+				}
+				(Some(data), false) => {
+					Self::new_match(&tx, &mut matching_objects, object_event.object, data).await
 				}
 			}
 		}
@@ -249,7 +235,12 @@ impl<Q: Queryable<Ctx>, Ctx: QueryContext> ObjectQuery<Q, Ctx> {
 	}
 }
 
-mod test {
+#[tokio::test]
+async fn query_test() {
+	use crate::dbus::{
+		object_registry::ObjectRegistry,
+		query::{ObjectQuery, QueryContext},
+	};
 	use std::{
 		sync::{
 			Arc,
@@ -258,63 +249,70 @@ mod test {
 		thread,
 		time::Duration,
 	};
-
 	use tokio::{sync::Notify, time::sleep};
 	use zbus::{Connection, fdo::ObjectManager, interface};
 
-	use crate::dbus::{
-		object_registry::ObjectRegistry,
-		query::{ObjectQuery, QueryContext},
-	};
-
 	struct TestInterface;
-	#[interface(name = "org.stardustxr.TestInterface", proxy())]
+	#[interface(name = "org.stardustxr.Query.TestInterface", proxy())]
 	impl TestInterface {
 		fn hello(&self) {
 			println!("hello world");
 		}
 	}
 	impl_queryable_for_proxy!(TestInterfaceProxy);
-	impl QueryContext for () {}
 
-	#[tokio::test]
-	async fn query() {
-		let other_conn = Connection::session().await.unwrap();
-		println!("name: {:?}", other_conn.unique_name());
-		_ = other_conn.object_server().at("/", ObjectManager).await;
-		_ = other_conn
-			.object_server()
-			.at("/org/stardustxr/core/schemas/test", TestInterface)
-			.await;
-		let query_conn = Connection::session().await.unwrap();
-		let object_registry = ObjectRegistry::new(&query_conn).await.unwrap();
-		let match_lost = Arc::new(AtomicBool::new(false));
-		let match_gained = Arc::new(AtomicBool::new(false));
-		let mut query = ObjectQuery::<TestInterfaceProxy, ()>::new(object_registry, ());
-		tokio::spawn({
-			let match_lost = match_lost.clone();
-			let match_gained = match_gained.clone();
-			async move {
-				while let Some(e) = query.recv_event().await {
-					match e {
-						super::QueryEvent::NewMatch(_object_info, p) => {
-							_ = p.hello().await;
-							match_gained.store(true, Ordering::Relaxed);
-						}
-						super::QueryEvent::MatchModified(_object_info, _) => {}
-						super::QueryEvent::MatchLost(_object_info) => {
-							match_lost.store(true, Ordering::Relaxed);
-						}
-						super::QueryEvent::PhantomVariant(_) => {}
-					}
-				}
+	tokio::task::spawn(async {
+		tokio::time::sleep(Duration::from_secs(10)).await;
+		panic!("Took too long to run");
+	});
+
+	let service_conn = zbus::conn::Builder::session()
+		.unwrap()
+		.serve_at("/", zbus::fdo::ObjectManager)
+		.unwrap()
+		.serve_at("/org/stardustxr/TestObject", TestInterface)
+		.unwrap()
+		.build()
+		.await
+		.unwrap();
+	println!("name: {:?}", service_conn.unique_name());
+
+	let scan_conn = Connection::session().await.unwrap();
+	let object_registry = ObjectRegistry::new(&scan_conn).await;
+
+	println!(
+		"Objects updated: {:#?}",
+		object_registry.get_watch().borrow().clone()
+	);
+	// let mut watch = object_registry.get_watch();
+	// tokio::task::spawn(async move {
+	// 	while !matches!(watch.changed().await, Ok(())) {
+	// 		println!("Object registry changed: {:#?}", watch.borrow());
+	// 	}
+	// });
+
+	let mut query = ObjectQuery::<TestInterfaceProxy, ()>::new(object_registry, ());
+
+	while let Some(e) = query.recv_event().await {
+		println!("New event: {e:#?}");
+		if let QueryEvent::NewMatch(object_info, p) = e {
+			println!("New match to query, {object_info:#?}");
+			if object_info.object_path.as_str() == "/org/stardustxr/TestObject" {
+				p.hello().await.unwrap();
+				break;
 			}
-		});
-		sleep(Duration::from_millis(50)).await;
-		assert!(match_gained.load(Ordering::Relaxed));
-		assert!(!match_lost.load(Ordering::Relaxed));
-		drop(other_conn);
-		sleep(Duration::from_millis(50)).await;
-		assert!(match_lost.load(Ordering::Relaxed));
+		}
+	}
+
+	drop(service_conn);
+	println!("Dropping the other connection");
+	while let Some(e) = query.recv_event().await {
+		println!("New event: {e:#?}");
+		if let QueryEvent::MatchLost(object_info) = e {
+			println!("Dropped match to query, {object_info:#?}");
+			if object_info.object_path.as_str() == "/org/stardustxr/TestObject" {
+				break;
+			}
+		}
 	}
 }
