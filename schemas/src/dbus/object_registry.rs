@@ -187,11 +187,11 @@ impl ObjectRegistry {
 										.keys()
 										.map(|n| n.to_owned().into())
 										.collect();
-									Some(dbg!(ObjectEvent {
+									Some(ObjectEvent {
 										object,
 										interfaces,
 										added: true,
-									}))
+									})
 								}
 							});
 						let interfaces_removed = interfaces_removed_stream
