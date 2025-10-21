@@ -26,7 +26,7 @@ pub mod root {
         pub root: u64,
         pub spatial_anchors: stardust_xr::values::Map<String, u64>,
     }
-    ///
+    ///The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
     #[derive(Debug, Clone)]
     pub struct Root {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -151,7 +151,7 @@ pub mod root {
             }
         }
     }
-    ///
+    ///The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
     pub trait RootAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_root_event(&self) -> Option<RootEvent>;
         ///Get the current state. Useful to check the state before you initialize your application!
@@ -1008,7 +1008,7 @@ pub mod field {
         ///Torus aligned to the XZ plane
         Torus(TorusShape),
     }
-    ///Information about raymarching a field
+    ///Information about raymarching a field. All vectors are relative to the spatial reference used.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct RayMarchResult {
         pub ray_origin: stardust_xr::values::Vector3<f32>,
@@ -1030,7 +1030,7 @@ pub mod field {
         pub radius_a: f32,
         pub radius_b: f32,
     }
-    ///A node that is spatial and contains an SDF
+    ///A reference to a signed distance field that you can sample
     #[derive(Debug, Clone)]
     pub struct FieldRef {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -1080,7 +1080,7 @@ pub mod field {
     impl FieldRefAspect for FieldRef {}
     #[derive(Debug)]
     pub enum FieldRefEvent {}
-    ///A node that is spatial and contains an SDF
+    ///A reference to a signed distance field that you can sample
     pub trait FieldRefAspect: crate::node::NodeType + super::SpatialRefAspect + std::fmt::Debug {
         ///Get the distance to the surface of this field relative to the `point` in `space`
         async fn distance(
@@ -1216,7 +1216,7 @@ pub mod field {
             }
         }
     }
-    ///An owned field with adjustable shape
+    ///A signed distance field with adjustable shape. Replaces colliders.
     #[derive(Debug, Clone)]
     pub struct Field {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -1275,7 +1275,7 @@ pub mod field {
     impl FieldAspect for Field {}
     #[derive(Debug)]
     pub enum FieldEvent {}
-    ///An owned field with adjustable shape
+    ///A signed distance field with adjustable shape. Replaces colliders.
     pub trait FieldAspect: crate::node::NodeType + super::FieldRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
         ///Set the shape of this field (and its parameters)
         fn set_shape(&self, shape: Shape) -> crate::node::NodeResult<()> {
@@ -1384,7 +1384,7 @@ pub mod audio {
     use super::*;
     pub(crate) const INTERFACE_VERSION: u32 = 1u32;
     pub(crate) const INTERFACE_NODE_ID: u64 = 10u64;
-    ///Simple spatial audio source
+    ///Simple spatial point audio source
     #[derive(Debug, Clone)]
     pub struct Sound {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -1439,7 +1439,7 @@ pub mod audio {
     impl SoundAspect for Sound {}
     #[derive(Debug)]
     pub enum SoundEvent {}
-    ///Simple spatial audio source
+    ///Simple spatial point audio source
     pub trait SoundAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Play sound effect
         fn play(&self) -> crate::node::NodeResult<()> {
@@ -1597,7 +1597,7 @@ pub mod drawable {
         pub text_align_y: YAlign,
         pub bounds: Option<TextBounds>,
     }
-    ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
+    ///A collection of polylines drawn by the server. Meant for debug, so the spatial transform affects point positions but the thickness is in world space. Any mesh made to represent these lines cannot be distorted.
     #[derive(Debug, Clone)]
     pub struct Lines {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -1652,7 +1652,7 @@ pub mod drawable {
     impl LinesAspect for Lines {}
     #[derive(Debug)]
     pub enum LinesEvent {}
-    ///A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi
+    ///A collection of polylines drawn by the server. Meant for debug, so the spatial transform affects point positions but the thickness is in world space. Any mesh made to represent these lines cannot be distorted.
     pub trait LinesAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Replace all polylines with the given lines
         fn set_lines(&self, lines: &[Line]) -> crate::node::NodeResult<()> {
@@ -2094,14 +2094,7 @@ pub mod input {
         pub proximal: Joint,
         pub metacarpal: Joint,
     }
-    ///A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
-    #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-    pub struct Pointer {
-        pub origin: stardust_xr::values::Vector3<f32>,
-        pub orientation: stardust_xr::values::Quaternion,
-        pub deepest_point: stardust_xr::values::Vector3<f32>,
-    }
-    ///A fully articulated and tracked hand.
+    ///A fully articulated and tracked hand according to OpenXR spec for its coordinate system and joints.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct Hand {
         pub right: bool,
@@ -2113,6 +2106,13 @@ pub mod input {
         pub palm: Joint,
         pub wrist: Joint,
         pub elbow: Option<Joint>,
+    }
+    ///A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
+    #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+    pub struct Pointer {
+        pub origin: stardust_xr::values::Vector3<f32>,
+        pub orientation: stardust_xr::values::Quaternion,
+        pub deepest_point: stardust_xr::values::Vector3<f32>,
     }
     ///Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -2465,7 +2465,7 @@ pub mod input {
             Ok(())
         }
     }
-    ///Handle raw input events.
+    ///Receives input from input methods.
     #[derive(Debug, Clone)]
     pub struct InputHandler {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -2584,7 +2584,7 @@ pub mod input {
             }
         }
     }
-    ///Handle raw input events.
+    ///Receives input from input methods.
     pub trait InputHandlerAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         fn recv_input_handler_event(&self) -> Option<InputHandlerEvent>;
     }

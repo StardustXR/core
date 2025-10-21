@@ -17,15 +17,15 @@ signal "set_sky_light" side="server" {
 struct "LinePoint" {
 	description "A single point on a line"
 
-	field "point" type="vec3"
-	field "thickness" type="float"
-	field "color" type="color"
+	field "point" type="vec3" description="The position of the point relative to the Lines node"
+	field "thickness" type="float" description="Thickness in meters, world space"
+	field "color" type="color" description="Color of the point, premultiplied alpha"
 }
 struct "Line" {
 	description "A single continuous polyline"
 
 	field "points" type="vec" member_type="struct" struct="LinePoint"
-	field "cyclic" type="bool"
+	field "cyclic" type="bool" description="Cyclic if first point connects to the last point"
 }
 signal "create_lines" side="server" {
 	description "Create a lines node"
@@ -37,7 +37,7 @@ signal "create_lines" side="server" {
 	return type="node" node="Lines" id_argument="id"
 }
 aspect "Lines" {
-	description "A collection of polylines drawn by the server. Makes prototyping UI and drawing gizmos easier as well as just looks sci-fi"
+	description "A collection of polylines drawn by the server. Meant for debug, so the spatial transform affects point positions but the thickness is in world space. Any mesh made to represent these lines cannot be distorted."
 	inherits "Spatial"
 
 	signal "set_lines" side="server" {
@@ -77,7 +77,7 @@ aspect "Model" {
 		description "Bind a model part to the node with the ID input."
 
 		argument "id" type="id"
-		argument "part_path" type="string"
+		argument "part_path" type="string" description="GTLF formatted path string"
 		return type="node" node="ModelPart" id_argument="id"
 	}
 }
@@ -132,8 +132,8 @@ struct "TextBounds" {
 struct "TextStyle" {
 	description ""
 
-	field "character_height" type="float"
-	field "color" type="color"
+	field "character_height" type="float" description="Height of a character in meters"
+	field "color" type="color" description="Premultiplied text color"
 	field "font" type="resource" optional=true
 	field "text_align_x" type="enum" enum="XAlign"
 	field "text_align_y" type="enum" enum="YAlign"

@@ -5,14 +5,14 @@ description r#"
 "#
 
 struct "RayMarchResult" {
-	description "Information about raymarching a field"
+	description "Information about raymarching a field. All vectors are relative to the spatial reference used."
 
-	field "ray_origin" type="vec3"
-	field "ray_direction" type="vec3"
-	field "min_distance" type="float"
-	field "deepest_point_distance" type="float"
-	field "ray_length" type="float"
-	field "ray_steps" type="uint"
+	field "ray_origin" type="vec3" description="Origin of the ray"
+	field "ray_direction" type="vec3" description="Direction of the ray"
+	field "min_distance" type="float" description="How close to or far inside the field the ray got. If less than zero, the ray intersected the field."
+	field "deepest_point_distance" type="float" description="The distance to the point on the ray that has the least distance to the field/most distance inside it. Useful for finding a \"near miss\" point or how close to the core of the field you're pointing."
+	field "ray_length" type="float" description="Maximum length of the ray"
+	field "ray_steps" type="uint" description="Number of steps taken"
 }
 
 method "import_field_ref" side="server" {
@@ -22,7 +22,7 @@ method "import_field_ref" side="server" {
 	return type="node" aspect="FieldRef"
 }
 aspect "FieldRef" {
-	description "A node that is spatial and contains an SDF"
+	description "A reference to a signed distance field that you can sample"
 	inherits "SpatialRef"
 
 	method "distance" side="server" {
@@ -87,7 +87,7 @@ signal "create_field" side="server" {
 	return type="node" node="Field" id_argument="id"
 }
 aspect "Field" {
-	description "An owned field with adjustable shape"
+	description "A signed distance field with adjustable shape. Replaces colliders."
 	inherits "Spatial"
 	inherits "FieldRef"
 

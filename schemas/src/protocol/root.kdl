@@ -11,12 +11,12 @@ struct "ClientState" {
 	description "The persistent state of a Stardust client."
 
 	field "data"            type="bytes"  optional=true description="Data specific to your client, put anything you like here and it'll be saved/restored intact."
-	field "root"            type="id"                   description="The root node of this client."
-	field "spatial_anchors" type="map" value_type="id"  description="Spatials that will be in the same place you left them."
+	field "root"            type="id"                   description="Where the client's root should be positioned on reload."
+	field "spatial_anchors" type="map"  value_type="id" description="Spatials that will be in the same place you left them."
 }
 
 aspect "Root" {
-	description ""
+	description "The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to."
 	inherits "SpatialRef"
 
 

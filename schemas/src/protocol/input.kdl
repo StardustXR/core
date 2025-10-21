@@ -5,15 +5,15 @@ description ""
 struct "Joint" {
 	description "A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server."
 
-	field "position" type="vec3"
-	field "rotation" type="quat"
-	field "radius"   type="float"
-	field "distance" type="float"
+	field "position" type="vec3" description="Position of the joint relative to the input handler's field."
+	field "rotation" type="quat" description="Orientation of the joint relative to the input handler's field."
+	field "radius"   type="float" description="Radius of the joint in meters."
+	field "distance" type="float" description="Distance from the center of the joint to the input handler's field"
 }
 struct "Finger" {
 	description ""
 
-	field "tip"          type="struct" struct="Joint"
+	field "tip"          type="struct" struct="Joint" description="Joint inside the fingertip offset by the radius."
 	field "distal"       type="struct" struct="Joint"
 	field "intermediate" type="struct" struct="Joint"
 	field "proximal"     type="struct" struct="Joint"
@@ -27,18 +27,8 @@ struct "Thumb" {
 	field "proximal"   type="struct" struct="Joint"
 	field "metacarpal" type="struct" struct="Joint"
 }
-struct "Pointer" {
-	description "A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller."
-
-	field "origin" type="vec3"
-	field "orientation" type="quat"
-	field "deepest_point" type="vec3" description=r#"
-	The point that is the most inside the input handler's field.
-	Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.
-	"#
-}
 struct "Hand" {
-	description "A fully articulated and tracked hand."
+	description "A fully articulated and tracked hand according to OpenXR spec for its coordinate system and joints."
 
 	field "right"  type="bool"
 	field "thumb"  type="struct" struct="Thumb"
@@ -49,6 +39,16 @@ struct "Hand" {
 	field "palm"   type="struct" struct="Joint"
 	field "wrist"  type="struct" struct="Joint"
 	field "elbow"  type="struct" struct="Joint" optional=true
+}
+struct "Pointer" {
+	description "A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller."
+
+	field "origin" type="vec3"
+	field "orientation" type="quat"
+	field "deepest_point" type="vec3" description=r#"
+	The point that is the most inside the input handler's field.
+	Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.
+	"#
 }
 struct "Tip" {
 	description "Represents a controller, pen tip, spatial cursor, etc. that is just a single point."
@@ -158,7 +158,7 @@ signal "create_input_handler" side="server" {
 	return type="node" node="InputHandler" id_argument="id"
 }
 aspect "InputHandler" {
-	description "Handle raw input events."
+	description "Receives input from input methods."
 	inherits "Spatial"
 
 	signal "input" side="client" {
