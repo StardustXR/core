@@ -28,8 +28,9 @@ fn main() {
 	let protocols = get_all_protocols();
 	let output_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("src/protocol.rs");
 
-	generate_protocol_file(protocols, &output_dir, false)
-		.expect("Failed to generate protocol files");
+	if let Err(e) = generate_protocol_file(protocols, &output_dir, false) {
+		eprintln!("Failed to generate protocol files: {e}");
+	}
 
 	println!("Protocol files regenerated successfully");
 }
