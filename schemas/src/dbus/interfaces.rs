@@ -46,10 +46,19 @@ pub trait ReparentLock {
 	fn unlock(&self) -> Result<()>;
 }
 
+#[zbus::proxy(interface = "org.stardustxr.Destroy")]
+/// Destroy an object.
+/// Implement SpatialRef and/or FieldRef for spatial context.
+/// This trait might be implemented on the root to close the whole client or individual objects to delete.
+pub trait Destroy {
+	fn destroy(&self) -> Result<()>;
+}
+
 impl_queryable_for_proxy!(
 	SpatialRefProxy,
 	FieldRefProxy,
 	PlaySpaceProxy,
 	ReparentableProxy,
-	ReparentLockProxy
+	ReparentLockProxy,
+	DestroyProxy
 );
