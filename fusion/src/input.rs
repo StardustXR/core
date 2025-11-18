@@ -17,7 +17,7 @@ use crate::{
 	node::NodeResult,
 	spatial::{SpatialRefAspect, Transform},
 };
-use glam::{Quat, vec3a};
+use glam::{FloatExt, Quat, Vec3A, vec3a};
 use stardust_xr::values::*;
 use std::hash::Hash;
 
@@ -118,6 +118,216 @@ impl Default for Tip {
 			origin: [0.0; 3].into(),
 			orientation: Quat::IDENTITY.into(),
 		}
+	}
+}
+
+// these heuristics made possible by https://github.com/ultraleap/UnityPlugin/blob/1c49cc1205ef3cae8b27b8e24e1fcf84fdad721c/Packages/Tracking/Core/Runtime/Scripts/Utils/HandUtils.cs
+// thank you Leap Motion!! you will be missed :(
+impl Finger {
+	pub fn length(&self) -> f32 {
+		let metacarpal_position: Vec3A = self.metacarpal.position.into();
+		let proximal_position: Vec3A = self.proximal.position.into();
+		let intermediate_position: Vec3A = self.intermediate.position.into();
+		let distal_position: Vec3A = self.distal.position.into();
+		let tip_position: Vec3A = self.tip.position.into();
+
+		metacarpal_position.distance(proximal_position)
+			+ proximal_position.distance(intermediate_position)
+			+ intermediate_position.distance(distal_position)
+			+ distal_position.distance(tip_position)
+	}
+
+	pub fn direction(&self) -> Vector3<f32> {
+		let metacarpal_position: Vec3A = self.metacarpal.position.into();
+		let tip_position: Vec3A = self.tip.position.into();
+
+		let direction = (metacarpal_position - tip_position).normalize();
+		direction.into()
+	}
+}
+
+impl Thumb {
+	pub fn length(&self) -> f32 {
+		let metacarpal_position: Vec3A = self.metacarpal.position.into();
+		let proximal_position: Vec3A = self.proximal.position.into();
+		let distal_position: Vec3A = self.distal.position.into();
+		let tip_position: Vec3A = self.tip.position.into();
+
+		metacarpal_position.distance(proximal_position)
+			+ proximal_position.distance(distal_position)
+			+ distal_position.distance(tip_position)
+	}
+
+	pub fn direction(&self) -> Vector3<f32> {
+		let metacarpal_position: Vec3A = self.metacarpal.position.into();
+		let tip_position: Vec3A = self.tip.position.into();
+
+		let direction = (metacarpal_position - tip_position).normalize();
+		direction.into()
+	}
+}
+
+impl Hand {
+	/// The direction vector pointing out of the palm
+	pub fn palm_normal(&self) -> Vector3<f32> {
+		(Quat::from(self.palm.rotation) * vec3a(0.0, 1.0, 0.0)).into()
+	}
+	/// The direction vector pointing from the palm to thumb
+	pub fn radial_axis(&self) -> Vector3<f32> {
+		(Quat::from(self.palm.rotation)
+			* if self.right {
+				vec3a(1.0, 0.0, 0.0)
+			} else {
+				vec3a(-1.0, 0.0, 0.0)
+			})
+		.into()
+	}
+	/// The direction vector pointing from the palm towards fingers.
+	pub fn distal_axis(&self) -> Vector3<f32> {
+		(Quat::from(self.palm.rotation) * vec3a(0.0, 0.0, -1.0)).into()
+	}
+
+	pub fn finger_curl(&self, finger: &Finger) -> f32 {
+		let distal_axis: Vec3A = self.distal_axis().into();
+		let direction: Vec3A = finger.direction().into();
+		direction.dot(-distal_axis).remap(-1.0, 1.0, 0.0, 1.0)
+	}
+
+	pub fn thumb_curl(&self) -> f32 {
+		let radial_axis: Vec3A = self.radial_axis().into();
+		let thumb_direction: Vec3A = self.thumb.direction().into();
+		thumb_direction.dot(-radial_axis).remap(-1.0, 1.0, 0.0, 1.0)
+	}
+
+	pub fn pinch_distance(&self, finger: &Finger) -> f32 {
+		let thumb_tip: Vec3A = self.thumb.tip.position.into();
+		let index_tip: Vec3A = finger.tip.position.into();
+		thumb_tip.distance(index_tip)
+	}
+
+	/// Unstabilized pinch position
+	pub fn pinch_position(&self) -> Vector3<f32> {
+		let thumb_tip: Vec3A = self.thumb.tip.position.into();
+		let index_tip: Vec3A = self.index.tip.position.into();
+
+		((2.0 * thumb_tip + index_tip) * 0.3333333).into()
+	}
+
+	/// A decent approximation of where the hand will pinch even if index and thumb are far apart.
+	pub fn predicted_pinch_position(&self) -> Vector3<f32> {
+		let thumb_tip: Vec3A = self.thumb.tip.position.into();
+		let index_tip: Vec3A = self.index.tip.position.into();
+
+		let index_knuckle: Vec3A = self.index.proximal.position.into();
+		let index_length = self.index.length();
+
+		let radial_axis: Vec3A = self.radial_axis().into();
+		let palm_normal: Vec3A = self.palm_normal().into();
+		let distal_axis: Vec3A = self.distal_axis().into();
+
+		let thumb_influence = (thumb_tip - index_knuckle)
+			.normalize()
+			.dot(radial_axis)
+			.remap(0.0, 1.0, 0.5, 0.0);
+
+		let mut predicted_pinch_point = index_knuckle
+			+ palm_normal * index_length * 0.85
+			+ distal_axis * index_length * 0.20
+			+ radial_axis * index_length * 0.20;
+
+		predicted_pinch_point = predicted_pinch_point.lerp(thumb_tip, thumb_influence);
+		predicted_pinch_point = predicted_pinch_point.lerp(index_tip, 0.15);
+
+		predicted_pinch_point.into()
+	}
+
+	/// Predicted Pinch Position without influence from the thumb or index tip.
+	/// Useful for calculating extremely stable pinch calculations.
+	/// Not good for visualising the pinch point - recommended to use PredictedPinchPosition instead
+	pub fn stable_pinch_position(&self) -> Vector3<f32> {
+		let index_knuckle: Vec3A = self.index.proximal.position.into();
+
+		let index_length = self.index.length();
+
+		let radial_axis: Vec3A = self.radial_axis().into();
+		let palm_normal: Vec3A = self.palm_normal().into();
+		let distal_axis: Vec3A = self.distal_axis().into();
+
+		let stable_pinch_position = index_knuckle
+			+ palm_normal * index_length * 0.85
+			+ distal_axis * index_length * 0.20
+			+ radial_axis * index_length * 0.20;
+
+		stable_pinch_position.into()
+	}
+
+	fn hand_scale(&self) -> f32 {
+		let index_metacarpal: Vec3A = self.index.metacarpal.position.into();
+		let index_proximal: Vec3A = self.index.proximal.position.into();
+
+		let middle_metacarpal: Vec3A = self.middle.metacarpal.position.into();
+		let middle_proximal: Vec3A = self.middle.proximal.position.into();
+
+		let ring_metacarpal: Vec3A = self.ring.metacarpal.position.into();
+		let ring_proximal: Vec3A = self.ring.proximal.position.into();
+
+		let little_metacarpal: Vec3A = self.little.metacarpal.position.into();
+		let little_proximal: Vec3A = self.little.proximal.position.into();
+
+		let index_metacarpal_length = index_metacarpal.distance(index_proximal);
+		let middle_metacarpal_length = middle_metacarpal.distance(middle_proximal);
+		let ring_metacarpal_length = ring_metacarpal.distance(ring_proximal);
+		let little_metacarpal_length = little_metacarpal.distance(little_proximal);
+
+		let mut scale = 0.0;
+
+		scale += index_metacarpal_length / 0.06812;
+		scale += middle_metacarpal_length / 0.06460;
+		scale += ring_metacarpal_length / 0.05800;
+		scale += little_metacarpal_length / 0.05369;
+
+		scale / 4.0
+	}
+
+	/// Confidence value from 0-1 of how strong this hand is pinching.
+	pub fn pinch_strength(&self) -> f32 {
+		let thumb_tip: Vec3A = self.thumb.tip.position.into();
+		let index_tip: Vec3A = self.index.tip.position.into();
+		let middle_tip: Vec3A = self.middle.tip.position.into();
+		let ring_tip: Vec3A = self.ring.tip.position.into();
+		let little_tip: Vec3A = self.little.tip.position.into();
+
+		let min_distance = index_tip
+			.distance_squared(thumb_tip)
+			.min(middle_tip.distance_squared(thumb_tip))
+			.min(ring_tip.distance_squared(thumb_tip))
+			.min(little_tip.distance_squared(thumb_tip))
+			.sqrt();
+
+		let scale = self.hand_scale();
+		let distance_zero = 0.0600 * scale;
+		let distance_one = 0.0220 * scale;
+
+		((min_distance - distance_zero) / (distance_one - distance_zero)).clamp(0.0, 1.0)
+	}
+
+	/// Confidence value from 0-1 of how strong this hand is making a fist.
+	pub fn fist_strength(&self) -> f32 {
+		let radial_axis: Vec3A = self.radial_axis().into();
+		let distal_axis: Vec3A = self.distal_axis().into();
+
+		let thumb_direction: Vec3A = self.thumb.direction().into();
+		let index_direction: Vec3A = self.index.direction().into();
+		let middle_direction: Vec3A = self.middle.direction().into();
+		let ring_direction: Vec3A = self.ring.direction().into();
+		let little_direction: Vec3A = self.little.direction().into();
+
+		(thumb_direction.dot(-radial_axis)
+			+ index_direction.dot(-distal_axis)
+			+ middle_direction.dot(-distal_axis)
+			+ ring_direction.dot(-distal_axis)
+			+ little_direction.dot(-distal_axis))
+		.remap(-5.0, 5.0, 0.0, 1.0)
 	}
 }
 
