@@ -137,11 +137,10 @@ impl Finger {
 	}
 
 	pub fn direction(&self) -> Vector3<f32> {
-		let metacarpal_position: Vec3A = self.metacarpal.position.into();
+		let proximal_position: Vec3A = self.proximal.position.into();
 		let tip_position: Vec3A = self.tip.position.into();
 
-		let direction = (tip_position - metacarpal_position).normalize();
-		direction.into()
+		(tip_position - proximal_position).normalize().into()
 	}
 }
 
@@ -156,11 +155,10 @@ impl Thumb {
 	}
 
 	pub fn direction(&self) -> Vector3<f32> {
-		let metacarpal_position: Vec3A = self.metacarpal.position.into();
+		let proximal_position: Vec3A = self.proximal.position.into();
 		let tip_position: Vec3A = self.tip.position.into();
 
-		let direction = (tip_position - metacarpal_position).normalize();
-		direction.into()
+		(tip_position - proximal_position).normalize().into()
 	}
 }
 
