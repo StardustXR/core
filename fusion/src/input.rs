@@ -124,15 +124,14 @@ impl Default for Tip {
 // these heuristics made possible by https://github.com/ultraleap/UnityPlugin/blob/1c49cc1205ef3cae8b27b8e24e1fcf84fdad721c/Packages/Tracking/Core/Runtime/Scripts/Utils/HandUtils.cs
 // thank you Leap Motion!! you will be missed :(
 impl Finger {
+	/// length of finger from knuckle to tip
 	pub fn length(&self) -> f32 {
-		let metacarpal_position: Vec3A = self.metacarpal.position.into();
 		let proximal_position: Vec3A = self.proximal.position.into();
 		let intermediate_position: Vec3A = self.intermediate.position.into();
 		let distal_position: Vec3A = self.distal.position.into();
 		let tip_position: Vec3A = self.tip.position.into();
 
-		metacarpal_position.distance(proximal_position)
-			+ proximal_position.distance(intermediate_position)
+		proximal_position.distance(intermediate_position)
 			+ intermediate_position.distance(distal_position)
 			+ distal_position.distance(tip_position)
 	}
@@ -141,28 +140,26 @@ impl Finger {
 		let metacarpal_position: Vec3A = self.metacarpal.position.into();
 		let tip_position: Vec3A = self.tip.position.into();
 
-		let direction = (metacarpal_position - tip_position).normalize();
+		let direction = (tip_position - metacarpal_position).normalize();
 		direction.into()
 	}
 }
 
 impl Thumb {
+	/// length of finger from knuckle to tip
 	pub fn length(&self) -> f32 {
-		let metacarpal_position: Vec3A = self.metacarpal.position.into();
 		let proximal_position: Vec3A = self.proximal.position.into();
 		let distal_position: Vec3A = self.distal.position.into();
 		let tip_position: Vec3A = self.tip.position.into();
 
-		metacarpal_position.distance(proximal_position)
-			+ proximal_position.distance(distal_position)
-			+ distal_position.distance(tip_position)
+		proximal_position.distance(distal_position) + distal_position.distance(tip_position)
 	}
 
 	pub fn direction(&self) -> Vector3<f32> {
 		let metacarpal_position: Vec3A = self.metacarpal.position.into();
 		let tip_position: Vec3A = self.tip.position.into();
 
-		let direction = (metacarpal_position - tip_position).normalize();
+		let direction = (tip_position - metacarpal_position).normalize();
 		direction.into()
 	}
 }
@@ -170,15 +167,15 @@ impl Thumb {
 impl Hand {
 	/// The direction vector pointing out of the palm
 	pub fn palm_normal(&self) -> Vector3<f32> {
-		(Quat::from(self.palm.rotation) * vec3a(0.0, 1.0, 0.0)).into()
+		(Quat::from(self.palm.rotation) * vec3a(0.0, -1.0, 0.0)).into()
 	}
 	/// The direction vector pointing from the palm to thumb
 	pub fn radial_axis(&self) -> Vector3<f32> {
 		(Quat::from(self.palm.rotation)
 			* if self.right {
-				vec3a(1.0, 0.0, 0.0)
-			} else {
 				vec3a(-1.0, 0.0, 0.0)
+			} else {
+				vec3a(1.0, 0.0, 0.0)
 			})
 		.into()
 	}
@@ -213,6 +210,26 @@ impl Hand {
 		((2.0 * thumb_tip + index_tip) * 0.3333333).into()
 	}
 
+	/// Predicted Pinch Position without influence from the thumb or index tip.
+	/// Useful for calculating extremely stable pinch calculations.
+	/// Not good for visualising the pinch point - recommended to use PredictedPinchPosition instead
+	pub fn stable_pinch_position(&self) -> Vector3<f32> {
+		let index_knuckle: Vec3A = self.index.proximal.position.into();
+
+		let index_length = self.index.length();
+
+		let radial_axis: Vec3A = self.radial_axis().into();
+		let palm_normal: Vec3A = self.palm_normal().into();
+		let distal_axis: Vec3A = self.distal_axis().into();
+
+		let stable_pinch_position = index_knuckle
+			+ (palm_normal * index_length * 0.85)
+			+ (distal_axis * index_length * 0.20)
+			+ (radial_axis * index_length * 0.20);
+
+		stable_pinch_position.into()
+	}
+
 	/// A decent approximation of where the hand will pinch even if index and thumb are far apart.
 	pub fn predicted_pinch_position(&self) -> Vector3<f32> {
 		let thumb_tip: Vec3A = self.thumb.tip.position.into();
@@ -239,26 +256,6 @@ impl Hand {
 		predicted_pinch_point = predicted_pinch_point.lerp(index_tip, 0.15);
 
 		predicted_pinch_point.into()
-	}
-
-	/// Predicted Pinch Position without influence from the thumb or index tip.
-	/// Useful for calculating extremely stable pinch calculations.
-	/// Not good for visualising the pinch point - recommended to use PredictedPinchPosition instead
-	pub fn stable_pinch_position(&self) -> Vector3<f32> {
-		let index_knuckle: Vec3A = self.index.proximal.position.into();
-
-		let index_length = self.index.length();
-
-		let radial_axis: Vec3A = self.radial_axis().into();
-		let palm_normal: Vec3A = self.palm_normal().into();
-		let distal_axis: Vec3A = self.distal_axis().into();
-
-		let stable_pinch_position = index_knuckle
-			+ palm_normal * index_length * 0.85
-			+ distal_axis * index_length * 0.20
-			+ radial_axis * index_length * 0.20;
-
-		stable_pinch_position.into()
 	}
 
 	fn hand_scale(&self) -> f32 {
