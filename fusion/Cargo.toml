@@ -2,12 +2,12 @@
 edition = "2024"
 rust-version = "1.85"
 name = "stardust-xr-fusion"
-version = "0.45.0"
+version.workspace = true
 authors = ["Nova King <technobaboo@proton.me>"]
 description = "High level client library for the Stardust XR display server"
-license = "MIT"
-repository = "https://github.com/StardustXR/stardust-xr/"
-homepage = "https://stardustxr.org"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [features]
 default = []
@@ -32,7 +32,10 @@ tokio = { version = "1.38.0", features = [
 ] }
 xkbcommon = { version = "0.9.0", default-features = false, optional = true }
 tracing = "0.1.37"
-zbus = { version = "5.11.0", features = ["blocking-api", "tokio"], default-features = false }
+zbus = { version = "5.11.0", features = [
+	"blocking-api",
+	"tokio",
+], default-features = false }
 stardust-xr = { path = "../core" }
 
 [build-dependencies]
