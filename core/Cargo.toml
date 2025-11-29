@@ -30,4 +30,4 @@ color-eyre = "0.6.2"
 shiva-color-rs = "0.0.1"
 mint = { version = "0.5.9", features = ["serde"] }
 
-stardust-xr-schemas = { path = "../schemas" }
+stardust-xr-schemas = { version = "2.0.0", path = "../schemas" }
