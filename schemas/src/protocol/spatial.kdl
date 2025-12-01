@@ -1,7 +1,7 @@
 version (u32)1
 interface (u64)1
 description r#"
-	A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+	A node with spatial attributes (position, rotation, scale).
 
 	Equivalent to a Transform in Unity, Spatial in Godot, etc.
 "#
@@ -32,7 +32,7 @@ aspect "SpatialRef" {
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	"#
-	
+
 	method "get_local_bounding_box" side="server" {
 		description "Get the bounding box of this spatial and its children relative to another spatial"
 		return type="struct" struct="BoundingBox"
@@ -55,12 +55,11 @@ signal "create_spatial" side="server" {
     argument "id" type="id"
 	argument "parent" type="node" aspect="SpatialRef"
 	argument "transform" type="struct" struct="transform"
-	argument "zoneable" type="bool"
 	return type="node" aspect="Spatial" id_argument="id"
 }
 aspect "Spatial" {
 	description r#"
-		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+		A node with spatial attributes (position, rotation, scale).
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	"#
@@ -92,65 +91,9 @@ aspect "Spatial" {
 		argument "parent" type="node" aspect="SpatialRef"
 	}
 
-	signal "set_zoneable" side="server" {
-		description r#"
-			Set if this spatial is zoneable or not.
-			You may want to set this to false when being grabbed or interacted with, then back to true when it's floating inert in space.
-		"#
-		argument "zoneable" type="bool"
-	}
-
 	method "export_spatial" side="server" {
 		description "Return a UUID representing this node's SpatialRef that you can send to other clients"
 
 		return type="id"
-	}
-}
-
-signal "create_zone" side="server" {
-	description r#"
-	    Create a zone given a field, this zone will become inactive if the field is dropped.
-        Keep in mind the zone and its field are different spatials, they can move independently.
-    "#
-    
-    argument "id" type="id"
-	argument "parent" type="node" aspect="SpatialRef"
-	argument "transform" type="struct" struct="Transform"
-	argument "field" type="node" aspect="field"
-	return type="node" node="zone" id_argument="id"
-}
-aspect "Zone" {
-	description r#"
-		Node to manipulate spatial nodes across clients.
-	"#
-    inherits "Spatial"
-
-	signal "update" side="server" {
-		description ""
-	}
-	signal "capture" side="server" {
-		description ""
-		argument "spatial" type="node" aspect="SpatialRef"
-	}
-	signal "release" side="server" {
-		description ""
-		argument "spatial" type="node" aspect="SpatialRef"
-	}
-
-	signal "enter" side="client" {
-		description ""
-		argument "spatial" type="node" aspect="SpatialRef"
-	}
-	signal "capture" side="client" {
-		description ""
-		argument "spatial" type="node" aspect="Spatial"
-	}
-	signal "release" side="client" {
-		description ""
-		argument "id" type="id"
-	}
-	signal "leave" side="client" {
-		description ""
-		argument "id" type="id"
 	}
 }

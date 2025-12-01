@@ -15,7 +15,7 @@
 //! Zones can see zoneable spatials if they're closer to the surface of the field than any zone that captured them, so no zones can steal and hoard them.
 
 pub use crate::protocol::spatial::*;
-use crate::{client::ClientHandle, fields::FieldAspect, node::NodeResult};
+use crate::{client::ClientHandle, node::NodeResult};
 use stardust_xr::values::*;
 use std::{hash::Hash, sync::Arc};
 
@@ -148,33 +148,9 @@ impl Spatial {
 	pub fn create(
 		spatial_parent: &impl SpatialRefAspect,
 		transform: Transform,
-		zoneable: bool,
 	) -> NodeResult<Self> {
 		let client = spatial_parent.client();
-		create_spatial(
-			client,
-			client.generate_id(),
-			spatial_parent,
-			transform,
-			zoneable,
-		)
-	}
-}
-
-impl Zone {
-	pub fn create(
-		spatial_parent: &impl SpatialRefAspect,
-		transform: Transform,
-		field: &impl FieldAspect,
-	) -> NodeResult<Self> {
-		let client = spatial_parent.client();
-		create_zone(
-			client,
-			client.generate_id(),
-			spatial_parent,
-			transform,
-			field,
-		)
+		create_spatial(client, client.generate_id(), spatial_parent, transform)
 	}
 }
 
@@ -187,7 +163,6 @@ async fn fusion_spatial() {
 	let spatial = Spatial::create(
 		client.get_root(),
 		Transform::from_translation_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
-		false,
 	)
 	.unwrap();
 	let bounding_box = spatial
@@ -205,73 +180,10 @@ async fn fusion_spatial_import_export() {
 	let exported = Spatial::create(
 		client.get_root(),
 		Transform::from_translation_scale([1.0, 0.5, 0.1], [0.5, 0.5, 0.5]),
-		false,
 	)
 	.unwrap();
 	let uid = exported.export_spatial().await.unwrap();
 	let imported = SpatialRef::import(&client.handle(), uid).await.unwrap();
 	let relative_transform = imported.get_transform(&exported).await.unwrap();
 	assert_eq!(relative_transform, Transform::identity());
-}
-
-#[tokio::test]
-async fn fusion_zone() {
-	use crate::node::NodeType;
-	use crate::root::*;
-	let mut client = crate::Client::connect().await.expect("Couldn't connect");
-
-	let root = crate::spatial::Spatial::create(client.get_root(), Transform::none(), true).unwrap();
-
-	let gyro_gem = stardust_xr::values::ResourceID::new_namespaced("fusion", "gyro_gem");
-	let _model = crate::drawable::Model::create(&root, Transform::none(), &gyro_gem).unwrap();
-
-	let field = crate::fields::Field::create(
-		client.get_root(),
-		Transform::identity(),
-		crate::fields::Shape::Sphere(0.1),
-	)
-	.unwrap();
-
-	let mut zone_spatials: rustc_hash::FxHashMap<u64, SpatialRef> = Default::default();
-
-	let zone = Zone::create(client.get_root(), Transform::none(), &field).unwrap();
-
-	let event_loop = client.sync_event_loop(|client, stop| {
-		while let Some(event) = client.get_root().recv_root_event() {
-			match event {
-				RootEvent::Ping { response } => {
-					response.send_ok(());
-				}
-				RootEvent::Frame { info: _ } => zone.update().unwrap(),
-				RootEvent::SaveState { response } => response.send_ok(ClientState::default()),
-			}
-		}
-		while let Some(zone_event) = zone.recv_zone_event() {
-			match zone_event {
-				ZoneEvent::Enter { spatial } => {
-					println!("Spatial {spatial:?} entered zone");
-					zone.capture(&spatial).unwrap();
-					zone_spatials.insert(spatial.id(), spatial);
-				}
-				ZoneEvent::Capture { spatial } => {
-					println!("Spatial {spatial:?} was captured");
-					zone.release(&spatial).unwrap();
-				}
-				ZoneEvent::Release { id } => {
-					println!("Spatial {id} was released");
-					root.set_local_transform(Transform::from_translation([0.0, 1.0, 0.0]))
-						.unwrap();
-					zone.update().unwrap();
-				}
-				ZoneEvent::Leave { id } => {
-					println!("Spatial {id} left zone");
-					stop.stop();
-				}
-			}
-		}
-	});
-	tokio::time::timeout(std::time::Duration::from_secs(1), event_loop)
-		.await
-		.unwrap()
-		.unwrap();
 }

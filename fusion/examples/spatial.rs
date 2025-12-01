@@ -22,7 +22,6 @@ async fn main() {
 		&ResourceID::new_namespaced("fusion", "gyro"),
 	)
 	.unwrap();
-	gyro.set_zoneable(true).unwrap();
 
 	let client_handle = client.handle();
 	let mut elapsed: f32 = client

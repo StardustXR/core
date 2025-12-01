@@ -508,7 +508,7 @@ pub mod spatial {
         }
     }
     /**
-		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+		A node with spatial attributes (position, rotation, scale).
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	*/
@@ -563,7 +563,7 @@ pub mod spatial {
     #[derive(Debug)]
     pub enum SpatialEvent {}
     /**
-		A node with spatial attributes (position, rotation, scale) that can be manipulated by zones if zoneable.
+		A node with spatial attributes (position, rotation, scale).
 
 		Equivalent to a Transform in Unity, Spatial in Godot, etc.
 	*/
@@ -659,26 +659,6 @@ pub mod spatial {
             );
             Ok(())
         }
-        /**
-			Set if this spatial is zoneable or not.
-			You may want to set this to false when being grabbed or interacted with, then back to true when it's floating inert in space.
-		*/
-        fn set_zoneable(&self, zoneable: bool) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
-            let data = (zoneable);
-            self.node()
-                .send_signal(
-                    17785849468685298036u64,
-                    14580454097816778715u64,
-                    &data,
-                    _fds,
-                )?;
-            let (zoneable) = data;
-            tracing::trace!(
-                ? zoneable, "Sent signal to server, {}::{}", "Spatial", "set_zoneable"
-            );
-            Ok(())
-        }
         ///Return a UUID representing this node's SpatialRef that you can send to other clients
         async fn export_spatial(&self) -> crate::node::NodeResult<u64> {
             {
@@ -706,205 +686,6 @@ pub mod spatial {
                 );
                 Ok(deserialized)
             }
-        }
-    }
-    /**
-		Node to manipulate spatial nodes across clients.
-	*/
-    #[derive(Debug, Clone)]
-    pub struct Zone {
-        pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
-        pub(crate) zone_event: std::sync::Arc<
-            std::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<ZoneEvent>>,
-        >,
-    }
-    impl Zone {
-        pub(crate) fn from_id(
-            client: &std::sync::Arc<crate::client::ClientHandle>,
-            id: u64,
-            owned: bool,
-        ) -> Self {
-            let core = std::sync::Arc::new(
-                crate::node::NodeCore::new(client.clone(), id, owned),
-            );
-            let zone_event = std::sync::Arc::new(
-                client.registry.add_aspect(id, 8505905936867072296u64).into(),
-            );
-            Zone { core, zone_event }
-        }
-        pub fn as_spatial(self) -> super::Spatial {
-            super::Spatial { core: self.core }
-        }
-        pub fn as_spatial_ref(self) -> super::SpatialRef {
-            super::SpatialRef {
-                core: self.core,
-            }
-        }
-    }
-    impl crate::node::NodeType for Zone {
-        fn node(&self) -> &crate::node::NodeCore {
-            &self.core
-        }
-    }
-    impl std::hash::Hash for Zone {
-        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-            self.core.id.hash(state);
-        }
-    }
-    impl std::cmp::PartialEq for Zone {
-        fn eq(&self, other: &Self) -> bool {
-            self.core.id == other.core.id
-        }
-    }
-    impl std::cmp::Eq for Zone {}
-    impl serde::Serialize for Zone {
-        fn serialize<S: serde::Serializer>(
-            &self,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error> {
-            serializer.serialize_u64(self.core.id)
-        }
-    }
-    impl SpatialAspect for Zone {}
-    impl OwnedAspect for Zone {}
-    impl SpatialRefAspect for Zone {}
-    impl ZoneAspect for Zone {
-        fn recv_zone_event(&self) -> Option<ZoneEvent> {
-            self.zone_event.lock().unwrap().try_recv().ok()
-        }
-    }
-    #[derive(Debug)]
-    pub enum ZoneEvent {
-        Enter { spatial: SpatialRef },
-        Capture { spatial: Spatial },
-        Release { id: u64 },
-        Leave { id: u64 },
-    }
-    impl crate::scenegraph::EventParser for ZoneEvent {
-        const ASPECT_ID: u64 = 8505905936867072296u64;
-        fn parse_signal(
-            _client: &std::sync::Arc<crate::client::ClientHandle>,
-            signal_id: u64,
-            _data: &[u8],
-            _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
-            match signal_id {
-                17714309963407960406u64 => {
-                    let (spatial): (u64) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
-                    tracing::trace!(
-                        ? spatial, "Got signal from server, {}::{}", "Zone", "enter"
-                    );
-                    Ok(ZoneEvent::Enter {
-                        spatial: SpatialRef::from_id(_client, spatial, false),
-                    })
-                }
-                11313548931929469818u64 => {
-                    let (spatial): (u64) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
-                    tracing::trace!(
-                        ? spatial, "Got signal from server, {}::{}", "Zone", "capture"
-                    );
-                    Ok(ZoneEvent::Capture {
-                        spatial: Spatial::from_id(_client, spatial, false),
-                    })
-                }
-                11905596878821798323u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
-                    tracing::trace!(
-                        ? id, "Got signal from server, {}::{}", "Zone", "release"
-                    );
-                    Ok(ZoneEvent::Release { id: id })
-                }
-                2707764513383459725u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
-                    tracing::trace!(
-                        ? id, "Got signal from server, {}::{}", "Zone", "leave"
-                    );
-                    Ok(ZoneEvent::Leave { id: id })
-                }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-            }
-        }
-        fn parse_method(
-            _client: &std::sync::Arc<crate::client::ClientHandle>,
-            method_id: u64,
-            _data: &[u8],
-            _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
-            match method_id {
-                _ => {
-                    let _ = response
-                        .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
-                        );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
-                }
-            }
-        }
-    }
-    /**
-		Node to manipulate spatial nodes across clients.
-	*/
-    pub trait ZoneAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
-        fn recv_zone_event(&self) -> Option<ZoneEvent>;
-        ///
-        fn update(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
-            let data = ();
-            self.node()
-                .send_signal(
-                    8505905936867072296u64,
-                    4876473203673722513u64,
-                    &data,
-                    _fds,
-                )?;
-            let () = data;
-            tracing::trace!("Sent signal to server, {}::{}", "Zone", "update");
-            Ok(())
-        }
-        ///
-        fn capture(
-            &self,
-            spatial: &impl SpatialRefAspect,
-        ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
-            let data = (spatial.node().id);
-            self.node()
-                .send_signal(
-                    8505905936867072296u64,
-                    11313548931929469818u64,
-                    &data,
-                    _fds,
-                )?;
-            let (spatial) = data;
-            tracing::trace!(
-                ? spatial, "Sent signal to server, {}::{}", "Zone", "capture"
-            );
-            Ok(())
-        }
-        ///
-        fn release(
-            &self,
-            spatial: &impl SpatialRefAspect,
-        ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
-            let data = (spatial.node().id);
-            self.node()
-                .send_signal(
-                    8505905936867072296u64,
-                    11905596878821798323u64,
-                    &data,
-                    _fds,
-                )?;
-            let (spatial) = data;
-            tracing::trace!(
-                ? spatial, "Sent signal to server, {}::{}", "Zone", "release"
-            );
-            Ok(())
         }
     }
     ///Import a spatial ref from a UUID generated by Spatial::export_spatial
@@ -944,48 +725,21 @@ pub mod spatial {
         id: u64,
         parent: &impl SpatialRefAspect,
         transform: Transform,
-        zoneable: bool,
     ) -> crate::node::NodeResult<Spatial> {
         {
             let mut _fds = Vec::new();
-            let data = (id, parent.node().id, transform, zoneable);
+            let data = (id, parent.node().id, transform);
             let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(1u64, 0u64, 3949276749019911643u64, &serialized_data, _fds)?;
-            let (id, parent, transform, zoneable) = data;
+            let (id, parent, transform) = data;
             tracing::trace!(
-                ? id, ? parent, ? transform, ? zoneable, "Sent signal to server, {}::{}",
+                ? id, ? parent, ? transform, "Sent signal to server, {}::{}",
                 "Interface", "create_spatial"
             );
         }
         Ok(Spatial::from_id(_client, id, true))
-    }
-    /**
-	    Create a zone given a field, this zone will become inactive if the field is dropped.
-        Keep in mind the zone and its field are different spatials, they can move independently.
-    */
-    pub fn create_zone(
-        _client: &std::sync::Arc<crate::client::ClientHandle>,
-        id: u64,
-        parent: &impl SpatialRefAspect,
-        transform: Transform,
-        field: &impl FieldAspect,
-    ) -> crate::node::NodeResult<Zone> {
-        {
-            let mut _fds = Vec::new();
-            let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
-            _client
-                .message_sender_handle
-                .signal(1u64, 0u64, 7282214243246353525u64, &serialized_data, _fds)?;
-            let (id, parent, transform, field) = data;
-            tracing::trace!(
-                ? id, ? parent, ? transform, ? field, "Sent signal to server, {}::{}",
-                "Interface", "create_zone"
-            );
-        }
-        Ok(Zone::from_id(_client, id, true))
     }
 }
 #[allow(unused_imports)]
