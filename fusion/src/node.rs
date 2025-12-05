@@ -2,12 +2,10 @@
 
 use crate::client::ClientHandle;
 use serde::{Serialize, de::DeserializeOwned};
-use stardust_xr::{
+use stardust_xr_wire::{
+	flex::{FlexSerializeError, deserialize, flexbuffers::DeserializationError, serialize},
 	messenger::MessengerError,
 	scenegraph::ScenegraphError,
-	schemas::flex::{
-		FlexSerializeError, deserialize, flexbuffers::DeserializationError, serialize,
-	},
 };
 use std::{fmt::Debug, os::fd::OwnedFd, sync::Arc, vec::Vec};
 use thiserror::Error;

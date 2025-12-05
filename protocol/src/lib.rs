@@ -1,24 +1,20 @@
 use self::parser::convert;
 use kdl::{KdlDocument, KdlError};
-use std::{
-	collections::{HashMap, HashSet},
-	sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 use thiserror::Error;
-use tokio::sync::RwLock;
 
 mod parser;
 
-pub const ROOT_PROTOCOL: &str = include_str!("root.kdl");
-pub const NODE_PROTOCOL: &str = include_str!("node.kdl");
-pub const SPATIAL_PROTOCOL: &str = include_str!("spatial.kdl");
-pub const FIELD_PROTOCOL: &str = include_str!("field.kdl");
-pub const AUDIO_PROTOCOL: &str = include_str!("audio.kdl");
-pub const DRAWABLE_PROTOCOL: &str = include_str!("drawable.kdl");
-pub const INPUT_PROTOCOL: &str = include_str!("input.kdl");
-pub const ITEM_PROTOCOL: &str = include_str!("item.kdl");
-pub const ITEM_CAMERA_PROTOCOL: &str = include_str!("item_camera.kdl");
-pub const ITEM_PANEL_PROTOCOL: &str = include_str!("item_panel.kdl");
+pub const ROOT_PROTOCOL: &str = include_str!("../idl/root.kdl");
+pub const NODE_PROTOCOL: &str = include_str!("../idl/node.kdl");
+pub const SPATIAL_PROTOCOL: &str = include_str!("../idl/spatial.kdl");
+pub const FIELD_PROTOCOL: &str = include_str!("../idl/field.kdl");
+pub const AUDIO_PROTOCOL: &str = include_str!("../idl/audio.kdl");
+pub const DRAWABLE_PROTOCOL: &str = include_str!("../idl/drawable.kdl");
+pub const INPUT_PROTOCOL: &str = include_str!("../idl/input.kdl");
+pub const ITEM_PROTOCOL: &str = include_str!("../idl/item.kdl");
+pub const ITEM_CAMERA_PROTOCOL: &str = include_str!("../idl/item_camera.kdl");
+pub const ITEM_PANEL_PROTOCOL: &str = include_str!("../idl/item_panel.kdl");
 
 #[derive(Debug)]
 pub struct Protocol {
@@ -28,7 +24,7 @@ pub struct Protocol {
 	pub custom_enums: Vec<CustomEnum>,
 	pub custom_structs: Vec<CustomStruct>,
 	pub custom_unions: Vec<CustomUnion>,
-	pub aspects: Vec<Arc<RwLock<Aspect>>>,
+	pub aspects: Vec<Aspect>,
 }
 impl Protocol {
 	pub fn parse(sbs: &str) -> Result<Self, ParseError> {
@@ -71,14 +67,14 @@ pub struct UnionOption {
 	pub _type: ArgumentType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Aspect {
 	pub name: String,
 	pub id: u64, // FNV hash (https://crates.io/crates/fnv) of the aspect name
 	pub description: String,
 	pub inherits: Vec<String>,
 	pub members: Vec<Member>,
-	pub inherited_aspects: Vec<Arc<RwLock<Aspect>>>,
+	pub inherited_aspects: Vec<Aspect>,
 }
 
 #[derive(Debug, Clone)]
@@ -180,16 +176,10 @@ pub fn resolve_inherits(protocols: &mut [&mut Protocol]) -> Result<(), String> {
 	for (protocol_idx, protocol) in protocols.iter().enumerate() {
 		for (aspect_idx, aspect) in protocol.aspects.iter().enumerate() {
 			if aspect_locations
-				.insert(
-					aspect.blocking_read().name.clone(),
-					(protocol_idx, aspect_idx),
-				)
+				.insert(aspect.name.clone(), (protocol_idx, aspect_idx))
 				.is_some()
 			{
-				return Err(format!(
-					"Duplicate aspect name: {}",
-					aspect.blocking_read().name
-				));
+				return Err(format!("Duplicate aspect name: {}", aspect.name));
 			}
 		}
 	}
@@ -199,31 +189,22 @@ pub fn resolve_inherits(protocols: &mut [&mut Protocol]) -> Result<(), String> {
 		let aspect_count = protocols[protocol_idx].aspects.len();
 		for aspect_idx in 0..aspect_count {
 			// Get the current aspect's inherits list (we need to clone to avoid borrow checker issues)
-			let current_inherits = protocols[protocol_idx].aspects[aspect_idx]
-				.blocking_read()
-				.inherits
-				.clone();
+			let current_inherits = protocols[protocol_idx].aspects[aspect_idx].inherits.clone();
 
 			// Resolve the full inheritance chain
 			let resolved_inherits = resolve_aspect_inheritance_chain(
-				&protocols[protocol_idx].aspects[aspect_idx]
-					.blocking_read()
-					.name,
+				&protocols[protocol_idx].aspects[aspect_idx].name,
 				&current_inherits,
 				&aspect_locations,
 				protocols,
 			)?;
 
 			// Update the aspect's inherits list with the resolved chain
-			protocols[protocol_idx].aspects[aspect_idx]
-				.blocking_write()
-				.inherits = resolved_inherits
+			protocols[protocol_idx].aspects[aspect_idx].inherits = resolved_inherits
 				.iter()
-				.map(|aspect| aspect.blocking_read().name.clone())
+				.map(|aspect| aspect.name.clone())
 				.collect();
-			protocols[protocol_idx].aspects[aspect_idx]
-				.blocking_write()
-				.inherited_aspects = resolved_inherits;
+			protocols[protocol_idx].aspects[aspect_idx].inherited_aspects = resolved_inherits;
 		}
 	}
 
@@ -236,7 +217,7 @@ fn resolve_aspect_inheritance_chain(
 	direct_inherits: &[String],
 	aspect_locations: &HashMap<String, (usize, usize)>,
 	protocols: &[&mut Protocol],
-) -> Result<Vec<Arc<RwLock<Aspect>>>, String> {
+) -> Result<Vec<Aspect>, String> {
 	let mut resolved = Vec::new();
 	let mut visited = HashSet::new();
 	let mut visiting = HashSet::new(); // Track aspects currently being processed to detect cycles
@@ -265,9 +246,7 @@ fn resolve_aspect_inheritance_chain(
 			visited.insert(current_aspect.clone());
 
 			// Add its dependencies to the stack
-			let inherited_aspects = &protocols[protocol_idx].aspects[aspect_idx]
-				.blocking_read()
-				.inherits;
+			let inherited_aspects = &protocols[protocol_idx].aspects[aspect_idx].inherits;
 			for inherited in inherited_aspects {
 				if !visited.contains(inherited) {
 					to_visit.push(inherited.clone());

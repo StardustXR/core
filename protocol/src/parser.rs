@@ -3,9 +3,8 @@ use fnv::FnvHasher;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue, NodeKey};
 use std::{
 	fmt::Display,
-	hash::{DefaultHasher, Hash, Hasher},
+	hash::{Hash, Hasher},
 };
-use thiserror::Error;
 
 pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 	let version = get_protocol_version(&document)?;
@@ -58,7 +57,6 @@ pub fn convert(document: KdlDocument) -> Result<Protocol, ParseError> {
 		.iter()
 		.filter(|n| n.name().value() == "aspect")
 		.map(convert_aspect)
-		.map(|v| v.map(|a| Arc::new(RwLock::new(a))))
 		.collect::<Result<Vec<_>, ParseError>>()?;
 	Ok(Protocol {
 		version,

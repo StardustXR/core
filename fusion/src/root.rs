@@ -3,7 +3,7 @@ use crate::spatial::{SpatialRef, SpatialRefAspect};
 use rustc_hash::FxHashMap;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use stardust_xr::schemas::flex::flexbuffers::{self, SerializationError};
+use stardust_xr_wire::flex::flexbuffers::{self, SerializationError};
 use std::sync::Arc;
 
 pub use crate::protocol::root::*;

@@ -1,5 +1,5 @@
 use glam::Quat;
-use stardust_xr::values::{ResourceID, color::rgba_linear};
+use stardust_xr_wire::values::{ResourceID, color::rgba_linear};
 use stardust_xr_fusion::{
 	Client,
 	drawable::{MaterialParameter, Model, ModelPartAspect},

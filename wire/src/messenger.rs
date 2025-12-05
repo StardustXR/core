@@ -1,13 +1,13 @@
 //! Symmetrical messenger for both client and server.
 
+use crate::message::{Message as FlatMessage, MessageArgs, root_as_message};
 use crate::scenegraph::{self, ScenegraphError};
+use flatbuffers::{self, InvalidFlatbuffer};
 use global_counter::primitive::exact::CounterU64;
 use nix::cmsg_space;
 use nix::fcntl::{FcntlArg, fcntl};
 use nix::sys::socket::{ControlMessage, ControlMessageOwned, MsgFlags, recvmsg, sendmsg};
 use rustc_hash::FxHashMap;
-use stardust_xr_schemas::flat::flatbuffers::{self, InvalidFlatbuffer};
-use stardust_xr_schemas::flat::message::{Message as FlatMessage, MessageArgs, root_as_message};
 use std::io::{IoSlice, IoSliceMut};
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::sync::Arc;

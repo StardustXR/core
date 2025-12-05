@@ -9,7 +9,7 @@ use serde::{
 		SerializeTupleStruct, SerializeTupleVariant,
 	},
 };
-use std::{borrow::BorrowMut, cell::RefCell, f32::consts::PI, fmt::Display, marker::PhantomData};
+use std::{fmt::Display, marker::PhantomData};
 
 mod datamap;
 pub use datamap::*;
@@ -1178,6 +1178,7 @@ fn round_trip_flex_serialize() {
 	use mint::{Quaternion, Vector2, Vector3};
 	use serde::{Deserialize, Serialize};
 	use serde_repr::{Deserialize_repr, Serialize_repr};
+	use std::f32::consts::PI;
 	#[derive(Debug, PartialEq, Clone, Serialize_repr, Deserialize_repr)]
 	#[repr(u32)]
 	enum TestEnum {

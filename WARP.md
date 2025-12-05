@@ -6,9 +6,10 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 This is the **stardust-xr** core library repository, providing the fundamental connection library between Stardust XR servers and clients. It consists of three main crates organized as a Cargo workspace:
 
-- **core** (`stardust-xr`): Base library for the Stardust XR display server with client/server connection handling
-- **fusion** (`stardust-xr-fusion`): High-level client library with abstractions for nodes, event loops, and XR interactions  
-- **schemas** (`stardust-xr-schemas`): Protocol schemas generated from FlatBuffers and KDL protocol definitions
+- **wire** (`stardust-xr-wire`): Base library for the Stardust XR display server with client/server connection handling
+- **protocol** (`stardust-xr-protocol`): Protocol schemas generated from FlatBuffers and KDL protocol definitions
+- **gluon** (`stardust-xr-gluon`): D-Bus object based utilities
+- **fusion** (`stardust-xr-fusion`): High-level client library with abstractions for nodes and event loops
 
 This is an XR (extended reality) framework that uses Unix domain sockets for client-server communication and supports spatial computing with 3D transformations, zones, input handling, and drawable objects.
 
@@ -18,11 +19,6 @@ This is an XR (extended reality) framework that uses Unix domain sockets for cli
 ```bash
 # Build all crates in workspace
 cargo build
-
-# Build specific crate
-cargo build -p stardust-xr
-cargo build -p stardust-xr-fusion  
-cargo build -p stardust-xr-schemas
 
 # Build with all features
 cargo build --all-features
@@ -75,7 +71,7 @@ This requires `flatc` (FlatBuffers compiler) to be installed and available in PA
 
 ### Fusion High-Level API
 - **Node System**: Hierarchical spatial nodes with aspects (traits) like `Spatial`, `Drawable`, `Input`
-- **Event Loop**: Sync and async event loop patterns for handling server messages  
+- **Event Loop**: Sync and async event loop patterns for handling server messages
 - **Client**: Connection management and resource setup
 - **Aspects**: Modular functionality via trait system (similar to components/mixins)
 
@@ -87,14 +83,14 @@ This requires `flatc` (FlatBuffers compiler) to be installed and available in PA
 
 ### Key Concepts
 - **Spatial Nodes**: 3D transforms with parent-child relationships
-- **Zones**: Areas that can capture and manipulate spatial objects across clients  
+- **Zones**: Areas that can capture and manipulate spatial objects across clients
 - **Aspects**: Trait-like functionality that can be composed on nodes
 - **Signals**: One-way communication (client→server or server→client)
 - **Methods**: Request-response communication patterns
 
 ## Environment Variables
 
-- `STARDUST_INSTANCE`: Server instance number (default: 0)  
+- `STARDUST_INSTANCE`: Server instance number (default: 0)
 - `STARDUST_RES_PREFIXES`: Resource path prefixes (colon-separated)
 - `STARDUST_REGEN_FBS`: Enable FlatBuffer schema regeneration during build
 
@@ -110,7 +106,7 @@ This requires `flatc` (FlatBuffers compiler) to be installed and available in PA
 
 Resources are resolved using prefix paths configured via:
 1. Runtime environment variable `STARDUST_RES_PREFIXES`
-2. Compile-time environment variable `STARDUST_RES_PREFIXES`  
+2. Compile-time environment variable `STARDUST_RES_PREFIXES`
 3. Paths provided to `Client::setup_resources()`
 4. Project-local resources via `project_local_resources!("path")` macro
 
@@ -125,10 +121,10 @@ Resources are resolved using prefix paths configured via:
 
 ### Fusion-Specific
 - `glam`: 3D mathematics library
-- `zbus`: D-Bus integration for system services  
+- `zbus`: D-Bus integration for system services
 - `xkbcommon`: Keyboard mapping (optional feature)
 
-### Schemas-Specific  
+### Schemas-Specific
 - `flatbuffers`: Binary serialization format
 - `flexbuffers`: Dynamic/schema-less serialization
 - `kdl`: Human-readable data format for protocols

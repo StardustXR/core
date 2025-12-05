@@ -4,11 +4,13 @@ pub mod object_registry;
 pub mod query;
 pub mod list_query;
 
+pub use zbus;
+
 use zbus::{
 	Connection, Proxy, Result, conn,
 	fdo::ObjectManager,
 	names::{InterfaceName, OwnedBusName},
-	proxy::{Builder, Defaults},
+	proxy::Defaults,
 	zvariant::OwnedObjectPath,
 };
 

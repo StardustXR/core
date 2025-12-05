@@ -10,7 +10,7 @@ fn main() {
 	}
 
 	println!("cargo:rerun-if-changed=fbs");
-	let out_dir = PathBuf::from_str(path!("src/flat")).unwrap();
+	let out_dir = PathBuf::from_str(path!("src")).unwrap();
 	fs::create_dir_all(&out_dir).unwrap();
 
 	let files: Vec<_> = fs::read_dir(directory_relative_path!("fbs"))

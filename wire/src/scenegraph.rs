@@ -1,5 +1,5 @@
+use crate::flex::flexbuffers::DeserializationError;
 use crate::messenger::MethodResponse;
-use stardust_xr_schemas::flex::flexbuffers::DeserializationError;
 use std::os::unix::io::OwnedFd;
 use thiserror::Error;
 

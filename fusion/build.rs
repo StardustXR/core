@@ -2,10 +2,9 @@ use color_eyre::Result;
 use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
-use stardust_xr_schemas::protocol::*;
+use stardust_xr_protocol::*;
 use std::env;
 use std::fs;
-use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 fn main() {
@@ -118,7 +117,7 @@ pub fn generate_protocol_file(
 		.collect::<Vec<_>>();
 
 	let mut protocol_definitions = protocols.iter_mut().map(|(p, _)| p).collect::<Vec<_>>();
-	stardust_xr_schemas::protocol::resolve_inherits(&mut protocol_definitions).unwrap();
+	stardust_xr_protocol::resolve_inherits(&mut protocol_definitions).unwrap();
 
 	// panic!("{protocol_definitions:# ?}");
 
@@ -201,7 +200,7 @@ impl Tokenize for Protocol {
 		let aspects = self
 			.aspects
 			.iter()
-			.map(|a| a.blocking_read().tokenize(generate_node, partial_eq));
+			.map(|a| a.tokenize(generate_node, partial_eq));
 		let interface = self
 			.interface
 			.as_ref()
@@ -405,23 +404,19 @@ impl Tokenize for Aspect {
 		let conversion_functions = self
 			.inherited_aspects
 			.iter()
-			.filter(|i| i.blocking_read().name.to_case(Case::Snake) != "owned")
+			.filter(|i| i.name.to_case(Case::Snake) != "owned")
 			.map(|aspect| {
-				let a = aspect.blocking_read();
+				let a = aspect;
 				let inherited_aspect =
 					Ident::new(&a.name.to_case(Case::UpperCamel), Span::call_site());
 				let conversion_fn_name = Ident::new(
 					&format!("as_{}", a.name.to_case(Case::Snake)),
 					Span::call_site(),
 				);
-				let inherited_aspects = a
+				let fields = a
 					.inherited_aspects
 					.iter()
-					.map(|aspect| aspect.blocking_read())
-					.collect::<Vec<_>>();
-				let fields = inherited_aspects
-					.iter()
-					.chain([&a])
+					.chain([a])
 					.filter(|a| aspect_filter(a))
 					.map(|aspect| {
 						let event_name = Ident::new(
@@ -442,15 +437,9 @@ impl Tokenize for Aspect {
 					}
 				}
 			});
-		let inherited_aspects = self
-			.inherited_aspects
-			.iter()
-			.map(|aspect| aspect.blocking_read())
-			.collect::<Vec<_>>();
 		let get_aspects_iter = || {
-			inherited_aspects
+			self.inherited_aspects
 				.iter()
-				.map(|v| v.deref())
 				.chain([self])
 				.filter(|a| aspect_filter(a))
 		};
@@ -486,9 +475,9 @@ impl Tokenize for Aspect {
 				#event_name,
 			}
 		});
-		let impl_traits = inherited_aspects
+		let impl_traits = self
+			.inherited_aspects
 			.iter()
-			.map(|v| v.deref())
 			.chain([self])
 			.map(|a| {
 				let i = &a.name;
@@ -654,7 +643,7 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 				member._type,
 				quote! {
 					#opcode => {
-						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr::schemas::flex::deserialize(_data)?;
+						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr_wire::flex::deserialize(_data)?;
 
 						#debug
 						Ok(#event_name::#variant_name { #(#field_uses,)* #response_sender })
@@ -671,18 +660,18 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 		impl crate::scenegraph::EventParser for #event_name {
 			const ASPECT_ID: u64 = #opcode;
 
-			fn parse_signal(_client: &std::sync::Arc<crate::client::ClientHandle>, signal_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+			fn parse_signal(_client: &std::sync::Arc<crate::client::ClientHandle>, signal_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
 				match signal_id {
 					#(#signal_matches)*
-					_ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+					_ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
 				}
 			}
-			fn parse_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr::messenger::MethodResponse) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+			fn parse_method(_client: &std::sync::Arc<crate::client::ClientHandle>, method_id: u64, _data: &[u8], _fds: Vec<std::os::fd::OwnedFd>, response: stardust_xr_wire::messenger::MethodResponse) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
 				match method_id {
 					#(#method_matches)*
 					_ => {
-						let _ = response.send(Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound));
-						Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+						let _ = response.send(Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound));
+						Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
 					}
 				}
 			}
@@ -745,7 +734,7 @@ fn generate_server_member(
 				quote! {
 					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+					let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
 					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)?;
 
 					let (#(#arguments),*) = data;
@@ -812,9 +801,9 @@ fn generate_server_member(
 						let (#(#arguments),*) = &data;
 						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
 					}
-					let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+					let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
 					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
-					let result: #deserializeable_type = stardust_xr::schemas::flex::deserialize(&message)?;
+					let result: #deserializeable_type = stardust_xr_wire::flex::deserialize(&message)?;
 					let deserialized = #deserialize;
 					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
 					Ok(deserialized)
@@ -878,7 +867,7 @@ fn generate_argument_deserialize(
 		}
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
-			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<stardust_xr::values::Map<String, _>, crate::node::NodeError>>()?)
+			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<stardust_xr_wire::values::Map<String, _>, crate::node::NodeError>>()?)
 		}
 		ArgumentType::Fd => {
 			quote!(_fds.remove(0))
@@ -966,34 +955,34 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 		ArgumentType::Vec2(t) => {
 			let t = generate_argument_type(t, true);
 			if !owned {
-				quote!(impl Into<stardust_xr::values::Vector2<#t>>)
+				quote!(impl Into<stardust_xr_wire::values::Vector2<#t>>)
 			} else {
-				quote!(stardust_xr::values::Vector2<#t>)
+				quote!(stardust_xr_wire::values::Vector2<#t>)
 			}
 		}
 		ArgumentType::Vec3(t) => {
 			let t = generate_argument_type(t, true);
 			if !owned {
-				quote!(impl Into<stardust_xr::values::Vector3<#t>>)
+				quote!(impl Into<stardust_xr_wire::values::Vector3<#t>>)
 			} else {
-				quote!(stardust_xr::values::Vector3<#t>)
+				quote!(stardust_xr_wire::values::Vector3<#t>)
 			}
 		}
 		ArgumentType::Quat => {
 			if !owned {
-				quote!(impl Into<stardust_xr::values::Quaternion>)
+				quote!(impl Into<stardust_xr_wire::values::Quaternion>)
 			} else {
-				quote!(stardust_xr::values::Quaternion)
+				quote!(stardust_xr_wire::values::Quaternion)
 			}
 		}
 		ArgumentType::Mat4 => {
 			if !owned {
-				quote!(impl Into<stardust_xr::values::Mat4>)
+				quote!(impl Into<stardust_xr_wire::values::Mat4>)
 			} else {
-				quote!(stardust_xr::values::Mat4)
+				quote!(stardust_xr_wire::values::Mat4)
 			}
 		}
-		ArgumentType::Color => quote!(stardust_xr::values::Color),
+		ArgumentType::Color => quote!(stardust_xr_wire::values::Color),
 		ArgumentType::Bytes => {
 			if !owned {
 				quote!(&[u8])
@@ -1020,24 +1009,24 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			let t = generate_argument_type(t, true);
 
 			if !owned {
-				quote!(&stardust_xr::values::Map<String, #t>)
+				quote!(&stardust_xr_wire::values::Map<String, #t>)
 			} else {
-				quote!(stardust_xr::values::Map<String, #t>)
+				quote!(stardust_xr_wire::values::Map<String, #t>)
 			}
 		}
 		ArgumentType::NodeID => quote!(u64),
 		ArgumentType::Datamap => {
 			if !owned {
-				quote!(&stardust_xr::values::Datamap)
+				quote!(&stardust_xr_wire::values::Datamap)
 			} else {
-				quote!(stardust_xr::values::Datamap)
+				quote!(stardust_xr_wire::values::Datamap)
 			}
 		}
 		ArgumentType::ResourceID => {
 			if !owned {
-				quote!(&stardust_xr::values::ResourceID)
+				quote!(&stardust_xr_wire::values::ResourceID)
 			} else {
-				quote!(stardust_xr::values::ResourceID)
+				quote!(stardust_xr_wire::values::ResourceID)
 			}
 		}
 		ArgumentType::Enum(e) => {

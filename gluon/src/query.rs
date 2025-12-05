@@ -1,37 +1,27 @@
-use crate::dbus::{
+use crate::{
 	ObjectInfo,
-	interfaces::SpatialRefProxy,
 	list_query::{ListQueryMapper, ObjectListQuery},
-	object_registry::{ObjectRegistry, Objects},
+	object_registry::ObjectRegistry,
 };
-use std::{
-	collections::{HashMap, HashSet},
-	marker::PhantomData,
-	ops::{Deref, DerefMut},
-	sync::Arc,
-	time::{Duration, Instant},
-};
+use std::{collections::HashSet, marker::PhantomData, sync::Arc};
 use tokio::{
 	sync::{
-		RwLock, RwLockReadGuard,
 		broadcast::error::RecvError,
 		mpsc::{self, error::TryRecvError},
-		watch,
 	},
-	task::{AbortHandle, JoinSet},
-	time::timeout,
+	task::AbortHandle,
 };
 use variadics_please::all_tuples;
-use zbus::{
-	Connection, Proxy, fdo,
-	names::{BusName, InterfaceName, OwnedBusName},
-	proxy::{Defaults, ProxyImpl},
-	zvariant::{ObjectPath, OwnedObjectPath},
-};
+use zbus::{Connection, names::InterfaceName};
 
 pub struct ObjectQuery<Q: Queryable<Ctx>, Ctx: QueryContext> {
 	update_task_handle: AbortHandle,
 	event_reader: mpsc::Receiver<QueryEvent<Q, Ctx>>,
+}
+impl<Q: Queryable<Ctx>, Ctx: QueryContext> Drop for ObjectQuery<Q, Ctx> {
+	fn drop(&mut self) {
+		self.update_task_handle.abort();
+	}
 }
 
 pub trait Queryable<Ctx: QueryContext>: Sized + 'static + Send + Sync {
@@ -73,11 +63,11 @@ impl<Q: Queryable<Ctx> + Send + Sync + std::fmt::Debug, Ctx: QueryContext + std:
 #[macro_export]
 macro_rules! impl_queryable_for_proxy {
 	($($T:ident),*) => {
-		$(impl<Ctx: $crate::dbus::query::QueryContext> $crate::dbus::query::Queryable<Ctx> for $T<'static> {
+		$(impl<Ctx: $crate::query::QueryContext> $crate::query::Queryable<Ctx> for $T<'static> {
 			async fn try_new(
 				connection: &::zbus::Connection,
 				_ctx: &std::sync::Arc<Ctx>,
-				object: &$crate::dbus::ObjectInfo,
+				object: &$crate::ObjectInfo,
 				contains_interface: &(impl Fn(&zbus::names::InterfaceName) -> bool + Send + Sync),
 			) -> Option<Self> {
 				use ::zbus::proxy::Defaults;
@@ -237,20 +227,9 @@ impl<Q: Queryable<Ctx>, Ctx: QueryContext> ObjectQuery<Q, Ctx> {
 
 #[tokio::test]
 async fn query_test() {
-	use crate::dbus::{
-		object_registry::ObjectRegistry,
-		query::{ObjectQuery, QueryContext},
-	};
-	use std::{
-		sync::{
-			Arc,
-			atomic::{AtomicBool, Ordering},
-		},
-		thread,
-		time::Duration,
-	};
-	use tokio::{sync::Notify, time::sleep};
-	use zbus::{Connection, fdo::ObjectManager, interface};
+	use crate::{object_registry::ObjectRegistry, query::ObjectQuery};
+	use std::time::Duration;
+	use zbus::{Connection, interface};
 
 	struct TestInterface;
 	#[interface(name = "org.stardustxr.Query.TestInterface", proxy())]

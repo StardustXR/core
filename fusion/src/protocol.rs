@@ -24,7 +24,7 @@ pub mod root {
     pub struct ClientState {
         pub data: Option<Vec<u8>>,
         pub root: u64,
-        pub spatial_anchors: stardust_xr::values::Map<String, u64>,
+        pub spatial_anchors: stardust_xr_wire::values::Map<String, u64>,
     }
     ///The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
     #[derive(Debug, Clone)]
@@ -97,10 +97,10 @@ pub mod root {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 2586777469268117179u64 => {
-                    let (info): (FrameInfo) = stardust_xr::schemas::flex::deserialize(
+                    let (info): (FrameInfo) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -108,7 +108,7 @@ pub mod root {
                     );
                     Ok(RootEvent::Frame { info: info })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -116,11 +116,11 @@ pub mod root {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 1374738518356883234u64 => {
-                    let (): () = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!("Method called from server, {}::{}", "Root", "ping");
                     Ok(RootEvent::Ping {
                         response: crate::TypedMethodResponse(
@@ -130,7 +130,7 @@ pub mod root {
                     })
                 }
                 6559167809188075643u64 => {
-                    let (): () = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         "Method called from server, {}::{}", "Root", "save_state"
                     );
@@ -144,9 +144,11 @@ pub mod root {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -222,7 +224,7 @@ pub mod root {
         ///Get a hashmap of all the environment variables to connect a given app to the stardust server
         async fn get_connection_environment(
             &self,
-        ) -> crate::node::NodeResult<stardust_xr::values::Map<String, String>> {
+        ) -> crate::node::NodeResult<stardust_xr_wire::values::Map<String, String>> {
             {
                 let mut _fds = Vec::new();
                 let data = ();
@@ -233,7 +235,7 @@ pub mod root {
                         "get_connection_environment"
                     );
                 }
-                let result: stardust_xr::values::Map<String, String> = self
+                let result: stardust_xr_wire::values::Map<String, String> = self
                     .node()
                     .call_method(
                         7212020743076450030u64,
@@ -247,7 +249,7 @@ pub mod root {
                     .map(|(k, a)| Ok((k, a)))
                     .collect::<
                         Result<
-                            stardust_xr::values::Map<String, _>,
+                            stardust_xr_wire::values::Map<String, _>,
                             crate::node::NodeError,
                         >,
                     >()?;
@@ -349,15 +351,15 @@ pub mod spatial {
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct BoundingBox {
-        pub center: stardust_xr::values::Vector3<f32>,
-        pub size: stardust_xr::values::Vector3<f32>,
+        pub center: stardust_xr_wire::values::Vector3<f32>,
+        pub size: stardust_xr_wire::values::Vector3<f32>,
     }
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct Transform {
-        pub translation: Option<stardust_xr::values::Vector3<f32>>,
-        pub rotation: Option<stardust_xr::values::Quaternion>,
-        pub scale: Option<stardust_xr::values::Vector3<f32>>,
+        pub translation: Option<stardust_xr_wire::values::Vector3<f32>>,
+        pub rotation: Option<stardust_xr_wire::values::Quaternion>,
+        pub scale: Option<stardust_xr_wire::values::Vector3<f32>>,
     }
     /**
 		A reference to a node with spatial attributes (position, rotation, scale).
@@ -702,7 +704,7 @@ pub mod spatial {
                 "import_spatial_ref"
             );
         }
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         let message = _client
             .message_sender_handle
             .method(1u64, 0u64, 7309812661610962094u64, &serialized_data, _fds)
@@ -711,7 +713,7 @@ pub mod spatial {
                 e,
             })?
             .into_message();
-        let result: u64 = stardust_xr::schemas::flex::deserialize(&message)?;
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
         let deserialized = SpatialRef::from_id(_client, result, false);
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -729,7 +731,7 @@ pub mod spatial {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(1u64, 0u64, 3949276749019911643u64, &serialized_data, _fds)?;
@@ -754,7 +756,7 @@ pub mod field {
     #[serde(tag = "t", content = "c")]
     pub enum Shape {
         ///Box with a given size in meters
-        Box(stardust_xr::values::Vector3<f32>),
+        Box(stardust_xr_wire::values::Vector3<f32>),
         ///Cylinder aligned to the XZ plane
         Cylinder(CylinderShape),
         ///Sphere with a given radius in meters
@@ -765,8 +767,8 @@ pub mod field {
     ///Information about raymarching a field. All vectors are relative to the spatial reference used.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct RayMarchResult {
-        pub ray_origin: stardust_xr::values::Vector3<f32>,
-        pub ray_direction: stardust_xr::values::Vector3<f32>,
+        pub ray_origin: stardust_xr_wire::values::Vector3<f32>,
+        pub ray_direction: stardust_xr_wire::values::Vector3<f32>,
         pub min_distance: f32,
         pub deepest_point_distance: f32,
         pub ray_length: f32,
@@ -840,7 +842,7 @@ pub mod field {
         async fn distance(
             &self,
             space: &impl SpatialRefAspect,
-            point: impl Into<stardust_xr::values::Vector3<f32>>,
+            point: impl Into<stardust_xr_wire::values::Vector3<f32>>,
         ) -> crate::node::NodeResult<f32> {
             {
                 let mut _fds = Vec::new();
@@ -873,8 +875,8 @@ pub mod field {
         async fn normal(
             &self,
             space: &impl SpatialRefAspect,
-            point: impl Into<stardust_xr::values::Vector3<f32>>,
-        ) -> crate::node::NodeResult<stardust_xr::values::Vector3<f32>> {
+            point: impl Into<stardust_xr_wire::values::Vector3<f32>>,
+        ) -> crate::node::NodeResult<stardust_xr_wire::values::Vector3<f32>> {
             {
                 let mut _fds = Vec::new();
                 let data = (space.node().id, point.into());
@@ -885,7 +887,7 @@ pub mod field {
                         "normal"
                     );
                 }
-                let result: stardust_xr::values::Vector3<f32> = self
+                let result: stardust_xr_wire::values::Vector3<f32> = self
                     .node()
                     .call_method(
                         10662923473076663509u64,
@@ -906,8 +908,8 @@ pub mod field {
         async fn closest_point(
             &self,
             space: &impl SpatialRefAspect,
-            point: impl Into<stardust_xr::values::Vector3<f32>>,
-        ) -> crate::node::NodeResult<stardust_xr::values::Vector3<f32>> {
+            point: impl Into<stardust_xr_wire::values::Vector3<f32>>,
+        ) -> crate::node::NodeResult<stardust_xr_wire::values::Vector3<f32>> {
             {
                 let mut _fds = Vec::new();
                 let data = (space.node().id, point.into());
@@ -918,7 +920,7 @@ pub mod field {
                         "closest_point"
                     );
                 }
-                let result: stardust_xr::values::Vector3<f32> = self
+                let result: stardust_xr_wire::values::Vector3<f32> = self
                     .node()
                     .call_method(
                         10662923473076663509u64,
@@ -939,8 +941,8 @@ pub mod field {
         async fn ray_march(
             &self,
             space: &impl SpatialRefAspect,
-            ray_origin: impl Into<stardust_xr::values::Vector3<f32>>,
-            ray_direction: impl Into<stardust_xr::values::Vector3<f32>>,
+            ray_origin: impl Into<stardust_xr_wire::values::Vector3<f32>>,
+            ray_direction: impl Into<stardust_xr_wire::values::Vector3<f32>>,
         ) -> crate::node::NodeResult<RayMarchResult> {
             {
                 let mut _fds = Vec::new();
@@ -1090,7 +1092,7 @@ pub mod field {
                 ? uid, "Called method on server, {}::{}", "Interface", "import_field_ref"
             );
         }
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         let message = _client
             .message_sender_handle
             .method(2u64, 0u64, 5844955584634021418u64, &serialized_data, _fds)
@@ -1099,7 +1101,7 @@ pub mod field {
                 e,
             })?
             .into_message();
-        let result: u64 = stardust_xr::schemas::flex::deserialize(&message)?;
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
         let deserialized = FieldRef::from_id(_client, result, false);
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1118,7 +1120,7 @@ pub mod field {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, shape);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(2u64, 0u64, 3216373392735127623u64, &serialized_data, _fds)?;
@@ -1232,12 +1234,12 @@ pub mod audio {
         id: u64,
         parent: &impl SpatialRefAspect,
         transform: Transform,
-        resource: &stardust_xr::values::ResourceID,
+        resource: &stardust_xr_wire::values::ResourceID,
     ) -> crate::node::NodeResult<Sound> {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, resource);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(10u64, 0u64, 3197851813257440734u64, &serialized_data, _fds)?;
@@ -1315,17 +1317,17 @@ pub mod drawable {
         Int(i32),
         UInt(u32),
         Float(f32),
-        Vec2(stardust_xr::values::Vector2<f32>),
-        Vec3(stardust_xr::values::Vector3<f32>),
-        Color(stardust_xr::values::Color),
-        Texture(stardust_xr::values::ResourceID),
+        Vec2(stardust_xr_wire::values::Vector2<f32>),
+        Vec3(stardust_xr_wire::values::Vector3<f32>),
+        Color(stardust_xr_wire::values::Color),
+        Texture(stardust_xr_wire::values::ResourceID),
     }
     ///A single point on a line
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct LinePoint {
-        pub point: stardust_xr::values::Vector3<f32>,
+        pub point: stardust_xr_wire::values::Vector3<f32>,
         pub thickness: f32,
-        pub color: stardust_xr::values::Color,
+        pub color: stardust_xr_wire::values::Color,
     }
     ///A single continuous polyline
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -1336,7 +1338,7 @@ pub mod drawable {
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct TextBounds {
-        pub bounds: stardust_xr::values::Vector2<f32>,
+        pub bounds: stardust_xr_wire::values::Vector2<f32>,
         pub fit: TextFit,
         pub anchor_align_x: XAlign,
         pub anchor_align_y: YAlign,
@@ -1345,8 +1347,8 @@ pub mod drawable {
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct TextStyle {
         pub character_height: f32,
-        pub color: stardust_xr::values::Color,
-        pub font: Option<stardust_xr::values::ResourceID>,
+        pub color: stardust_xr_wire::values::Color,
+        pub font: Option<stardust_xr_wire::values::ResourceID>,
         pub text_align_x: XAlign,
         pub text_align_y: YAlign,
         pub bounds: Option<TextBounds>,
@@ -1701,11 +1703,11 @@ pub mod drawable {
     ///Set the sky texture to a given HDRI file.
     pub fn set_sky_tex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
-        tex: Option<&stardust_xr::values::ResourceID>,
+        tex: Option<&stardust_xr_wire::values::ResourceID>,
     ) -> crate::node::NodeResult<()> {
         let mut _fds = Vec::new();
         let data = (tex.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?);
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
             .signal(4u64, 0u64, 4424860741442403592u64, &serialized_data, _fds)?;
@@ -1718,11 +1720,11 @@ pub mod drawable {
     ///Set the sky lighting to a given HDRI file.
     pub fn set_sky_light(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
-        light: Option<&stardust_xr::values::ResourceID>,
+        light: Option<&stardust_xr_wire::values::ResourceID>,
     ) -> crate::node::NodeResult<()> {
         let mut _fds = Vec::new();
         let data = (light.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?);
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
             .signal(4u64, 0u64, 6210987039553590011u64, &serialized_data, _fds)?;
@@ -1748,7 +1750,7 @@ pub mod drawable {
                 transform,
                 lines.iter().map(|a| Ok(a)).collect::<crate::node::NodeResult<Vec<_>>>()?,
             );
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(4u64, 0u64, 17691651736865216822u64, &serialized_data, _fds)?;
@@ -1766,12 +1768,12 @@ pub mod drawable {
         id: u64,
         parent: &impl SpatialRefAspect,
         transform: Transform,
-        model: &stardust_xr::values::ResourceID,
+        model: &stardust_xr_wire::values::ResourceID,
     ) -> crate::node::NodeResult<Model> {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, model);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(4u64, 0u64, 8647852218278439936u64, &serialized_data, _fds)?;
@@ -1795,7 +1797,7 @@ pub mod drawable {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, text, style);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(4u64, 0u64, 11386227176670607870u64, &serialized_data, _fds)?;
@@ -1826,8 +1828,8 @@ pub mod input {
     ///A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct Joint {
-        pub position: stardust_xr::values::Vector3<f32>,
-        pub rotation: stardust_xr::values::Quaternion,
+        pub position: stardust_xr_wire::values::Vector3<f32>,
+        pub rotation: stardust_xr_wire::values::Quaternion,
         pub radius: f32,
         pub distance: f32,
     }
@@ -1864,15 +1866,15 @@ pub mod input {
     ///A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct Pointer {
-        pub origin: stardust_xr::values::Vector3<f32>,
-        pub orientation: stardust_xr::values::Quaternion,
-        pub deepest_point: stardust_xr::values::Vector3<f32>,
+        pub origin: stardust_xr_wire::values::Vector3<f32>,
+        pub orientation: stardust_xr_wire::values::Quaternion,
+        pub deepest_point: stardust_xr_wire::values::Vector3<f32>,
     }
     ///Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct Tip {
-        pub origin: stardust_xr::values::Vector3<f32>,
-        pub orientation: stardust_xr::values::Quaternion,
+        pub origin: stardust_xr_wire::values::Vector3<f32>,
+        pub orientation: stardust_xr_wire::values::Quaternion,
     }
     ///Information about a given input method's state relative to an input handler. All coordinates are relative to the InputHandler.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -1880,7 +1882,7 @@ pub mod input {
         pub id: u64,
         pub input: InputDataType,
         pub distance: f32,
-        pub datamap: stardust_xr::values::Datamap,
+        pub datamap: stardust_xr_wire::values::Datamap,
         pub order: u32,
         pub captured: bool,
     }
@@ -2064,10 +2066,10 @@ pub mod input {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 6944316585732678571u64 => {
-                    let (handler, field): (u64, u64) = stardust_xr::schemas::flex::deserialize(
+                    let (handler, field): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -2080,7 +2082,7 @@ pub mod input {
                     })
                 }
                 11807638350036597049u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "InputMethod",
                         "request_capture_handler"
@@ -2090,7 +2092,7 @@ pub mod input {
                     })
                 }
                 9300665394087171854u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "InputMethod",
                         "release_handler"
@@ -2100,7 +2102,7 @@ pub mod input {
                     })
                 }
                 7635230773176050803u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "InputMethod",
                         "destroy_handler"
@@ -2109,7 +2111,7 @@ pub mod input {
                         id: id,
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -2117,15 +2119,17 @@ pub mod input {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2153,7 +2157,7 @@ pub mod input {
         ///Set the datamap of this input method
         fn set_datamap(
             &self,
-            datamap: &stardust_xr::values::Datamap,
+            datamap: &stardust_xr_wire::values::Datamap,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (datamap);
@@ -2296,10 +2300,10 @@ pub mod input {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 5305312459121645740u64 => {
-                    let (methods, data): (Vec<u64>, Vec<InputData>) = stardust_xr::schemas::flex::deserialize(
+                    let (methods, data): (Vec<u64>, Vec<InputData>) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -2317,7 +2321,7 @@ pub mod input {
                             .collect::<Result<Vec<_>, crate::node::NodeError>>()?,
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -2325,15 +2329,17 @@ pub mod input {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2349,12 +2355,12 @@ pub mod input {
         parent: &impl SpatialRefAspect,
         transform: Transform,
         initial_data: InputDataType,
-        datamap: &stardust_xr::values::Datamap,
+        datamap: &stardust_xr_wire::values::Datamap,
     ) -> crate::node::NodeResult<InputMethod> {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, initial_data, datamap);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(3u64, 0u64, 11977582531774730283u64, &serialized_data, _fds)?;
@@ -2377,7 +2383,7 @@ pub mod input {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(3u64, 0u64, 1654491336591158898u64, &serialized_data, _fds)?;
@@ -2547,12 +2553,10 @@ pub mod item {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 14821884892980204849u64 => {
-                    let (item_id): (u64) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
+                    let (item_id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? item_id, "Got signal from server, {}::{}", "ItemAcceptor",
                         "release_item"
@@ -2561,7 +2565,7 @@ pub mod item {
                         item_id: item_id,
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -2569,15 +2573,17 @@ pub mod item {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2652,10 +2658,10 @@ pub mod item {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 1751367302976798762u64 => {
-                    let (item_id, acceptor_id): (u64, u64) = stardust_xr::schemas::flex::deserialize(
+                    let (item_id, acceptor_id): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -2668,7 +2674,7 @@ pub mod item {
                     })
                 }
                 14821884892980204849u64 => {
-                    let (item_id, acceptor_id): (u64, u64) = stardust_xr::schemas::flex::deserialize(
+                    let (item_id, acceptor_id): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -2681,14 +2687,14 @@ pub mod item {
                     })
                 }
                 11215449886948753686u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "ItemUi", "destroy_item"
                     );
                     Ok(ItemUiEvent::DestroyItem { id: id })
                 }
                 3521554848760623636u64 => {
-                    let (id): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "ItemUi",
                         "destroy_acceptor"
@@ -2697,7 +2703,7 @@ pub mod item {
                         id: id,
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -2705,15 +2711,17 @@ pub mod item {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -2858,10 +2866,10 @@ pub mod item_camera {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 15524466827491111758u64 => {
-                    let (item): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (item): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? item, "Got signal from server, {}::{}", "CameraItemUi",
                         "create_item"
@@ -2871,7 +2879,7 @@ pub mod item_camera {
                     })
                 }
                 16628549773568263004u64 => {
-                    let (acceptor, acceptor_field): (u64, u64) = stardust_xr::schemas::flex::deserialize(
+                    let (acceptor, acceptor_field): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -2883,7 +2891,7 @@ pub mod item_camera {
                         acceptor_field: Field::from_id(_client, acceptor_field, false),
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -2891,15 +2899,17 @@ pub mod item_camera {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3005,10 +3015,10 @@ pub mod item_camera {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 1751367302976798762u64 => {
-                    let (item): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (item): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? item, "Got signal from server, {}::{}", "CameraItemAcceptor",
                         "capture_item"
@@ -3017,7 +3027,7 @@ pub mod item_camera {
                         item: CameraItem::from_id(_client, item, false),
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -3025,15 +3035,17 @@ pub mod item_camera {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3069,8 +3081,8 @@ pub mod item_camera {
         id: u64,
         parent: &impl SpatialRefAspect,
         transform: Transform,
-        proj_matrix: impl Into<stardust_xr::values::Mat4>,
-        px_size: impl Into<stardust_xr::values::Vector2<u32>>,
+        proj_matrix: impl Into<stardust_xr_wire::values::Mat4>,
+        px_size: impl Into<stardust_xr_wire::values::Vector2<u32>>,
     ) -> crate::node::NodeResult<CameraItem> {
         {
             let mut _fds = Vec::new();
@@ -3081,7 +3093,7 @@ pub mod item_camera {
                 proj_matrix.into(),
                 px_size.into(),
             );
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(11u64, 0u64, 16398826726504952950u64, &serialized_data, _fds)?;
@@ -3099,7 +3111,7 @@ pub mod item_camera {
     ) -> crate::node::NodeResult<()> {
         let mut _fds = Vec::new();
         let data = ();
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
             .signal(11u64, 0u64, 13470969625663359032u64, &serialized_data, _fds)?;
@@ -3120,7 +3132,7 @@ pub mod item_camera {
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(11u64, 0u64, 13070169044031356364u64, &serialized_data, _fds)?;
@@ -3150,8 +3162,8 @@ pub mod item_panel {
     ///The origin and size of the surface's "solid" part.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct Geometry {
-        pub origin: stardust_xr::values::Vector2<i32>,
-        pub size: stardust_xr::values::Vector2<u32>,
+        pub origin: stardust_xr_wire::values::Vector2<i32>,
+        pub size: stardust_xr_wire::values::Vector2<u32>,
     }
     ///The state of the panel item's toplevel.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -3159,9 +3171,9 @@ pub mod item_panel {
         pub parent: Option<u64>,
         pub title: Option<String>,
         pub app_id: Option<String>,
-        pub size: stardust_xr::values::Vector2<u32>,
-        pub min_size: Option<stardust_xr::values::Vector2<f32>>,
-        pub max_size: Option<stardust_xr::values::Vector2<f32>>,
+        pub size: stardust_xr_wire::values::Vector2<u32>,
+        pub min_size: Option<stardust_xr_wire::values::Vector2<f32>>,
+        pub max_size: Option<stardust_xr_wire::values::Vector2<f32>>,
         pub logical_rectangle: Geometry,
     }
     ///Data on positioning a child.
@@ -3260,7 +3272,7 @@ pub mod item_panel {
         ToplevelFullscreenActive { active: bool },
         ToplevelMoveRequest {},
         ToplevelResizeRequest { up: bool, down: bool, left: bool, right: bool },
-        ToplevelSizeChanged { size: stardust_xr::values::Vector2<u32> },
+        ToplevelSizeChanged { size: stardust_xr_wire::values::Vector2<u32> },
         SetCursor { geometry: Geometry },
         HideCursor {},
         CreateChild { uid: u64, info: ChildInfo },
@@ -3274,12 +3286,10 @@ pub mod item_panel {
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 1408884359956576105u64 => {
-                    let (parent_id): (u64) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
+                    let (parent_id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? parent_id, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_parent_changed"
@@ -3289,9 +3299,7 @@ pub mod item_panel {
                     })
                 }
                 566483566315648641u64 => {
-                    let (title): (String) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
+                    let (title): (String) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? title, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_title_changed"
@@ -3301,9 +3309,7 @@ pub mod item_panel {
                     })
                 }
                 8706869778156655494u64 => {
-                    let (app_id): (String) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
+                    let (app_id): (String) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? app_id, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_app_id_changed"
@@ -3313,9 +3319,7 @@ pub mod item_panel {
                     })
                 }
                 11059551561818960198u64 => {
-                    let (active): (bool) = stardust_xr::schemas::flex::deserialize(
-                        _data,
-                    )?;
+                    let (active): (bool) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? active, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_fullscreen_active"
@@ -3325,7 +3329,7 @@ pub mod item_panel {
                     })
                 }
                 3715781852227007625u64 => {
-                    let (): () = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_move_request"
@@ -3334,7 +3338,7 @@ pub mod item_panel {
                     })
                 }
                 4540754955116125050u64 => {
-                    let (up, down, left, right): (bool, bool, bool, bool) = stardust_xr::schemas::flex::deserialize(
+                    let (up, down, left, right): (bool, bool, bool, bool) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3349,7 +3353,7 @@ pub mod item_panel {
                     })
                 }
                 3665525014775618530u64 => {
-                    let (size): (stardust_xr::values::Vector2<u32>) = stardust_xr::schemas::flex::deserialize(
+                    let (size): (stardust_xr_wire::values::Vector2<u32>) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3361,7 +3365,7 @@ pub mod item_panel {
                     })
                 }
                 6092877811616586203u64 => {
-                    let (geometry): (Geometry) = stardust_xr::schemas::flex::deserialize(
+                    let (geometry): (Geometry) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3373,14 +3377,14 @@ pub mod item_panel {
                     })
                 }
                 12365625385177885025u64 => {
-                    let (): () = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         "Got signal from server, {}::{}", "PanelItem", "hide_cursor"
                     );
                     Ok(PanelItemEvent::HideCursor {})
                 }
                 13878060402106144481u64 => {
-                    let (uid, info): (u64, ChildInfo) = stardust_xr::schemas::flex::deserialize(
+                    let (uid, info): (u64, ChildInfo) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3393,7 +3397,7 @@ pub mod item_panel {
                     })
                 }
                 4614990113965355127u64 => {
-                    let (uid, geometry): (u64, Geometry) = stardust_xr::schemas::flex::deserialize(
+                    let (uid, geometry): (u64, Geometry) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3406,7 +3410,7 @@ pub mod item_panel {
                     })
                 }
                 7048616010698587017u64 => {
-                    let (uid): (u64) = stardust_xr::schemas::flex::deserialize(_data)?;
+                    let (uid): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
                     tracing::trace!(
                         ? uid, "Got signal from server, {}::{}", "PanelItem",
                         "destroy_child"
@@ -3415,7 +3419,7 @@ pub mod item_panel {
                         uid: uid,
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -3423,15 +3427,17 @@ pub mod item_panel {
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3521,7 +3527,7 @@ pub mod item_panel {
         ///Request a resize of the surface (in pixels).
         fn set_toplevel_size(
             &self,
-            size: impl Into<stardust_xr::values::Vector2<u32>>,
+            size: impl Into<stardust_xr_wire::values::Vector2<u32>>,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (size.into());
@@ -3563,7 +3569,7 @@ pub mod item_panel {
         fn pointer_motion(
             &self,
             surface: SurfaceId,
-            position: impl Into<stardust_xr::values::Vector2<f32>>,
+            position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (surface, position.into());
@@ -3610,8 +3616,8 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         fn pointer_scroll(
             &self,
             surface: SurfaceId,
-            scroll_distance: impl Into<stardust_xr::values::Vector2<f32>>,
-            scroll_steps: impl Into<stardust_xr::values::Vector2<f32>>,
+            scroll_distance: impl Into<stardust_xr_wire::values::Vector2<f32>>,
+            scroll_steps: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (surface, scroll_distance.into(), scroll_steps.into());
@@ -3679,7 +3685,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self,
             surface: SurfaceId,
             uid: u32,
-            position: impl Into<stardust_xr::values::Vector2<f32>>,
+            position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (surface, uid, position.into());
@@ -3701,7 +3707,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         fn touch_move(
             &self,
             uid: u32,
-            position: impl Into<stardust_xr::values::Vector2<f32>>,
+            position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
             let data = (uid, position.into());
@@ -3837,10 +3843,10 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 15524466827491111758u64 => {
-                    let (item, initial_data): (u64, PanelItemInitData) = stardust_xr::schemas::flex::deserialize(
+                    let (item, initial_data): (u64, PanelItemInitData) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3853,7 +3859,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                     })
                 }
                 16628549773568263004u64 => {
-                    let (acceptor, acceptor_field): (u64, u64) = stardust_xr::schemas::flex::deserialize(
+                    let (acceptor, acceptor_field): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -3865,7 +3871,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                         acceptor_field: Field::from_id(_client, acceptor_field, false),
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -3873,15 +3879,17 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -3987,10 +3995,10 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             signal_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 1751367302976798762u64 => {
-                    let (item, initial_data): (u64, PanelItemInitData) = stardust_xr::schemas::flex::deserialize(
+                    let (item, initial_data): (u64, PanelItemInitData) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
@@ -4002,7 +4010,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                         initial_data: initial_data,
                     })
                 }
-                _ => Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
             }
         }
         fn parse_method(
@@ -4010,15 +4018,17 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             method_id: u64,
             _data: &[u8],
             _fds: Vec<std::os::fd::OwnedFd>,
-            response: stardust_xr::messenger::MethodResponse,
-        ) -> Result<Self, stardust_xr::scenegraph::ScenegraphError> {
+            response: stardust_xr_wire::messenger::MethodResponse,
+        ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 _ => {
                     let _ = response
                         .send(
-                            Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound),
+                            Err(
+                                stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound,
+                            ),
                         );
-                    Err(stardust_xr::scenegraph::ScenegraphError::MemberNotFound)
+                    Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound)
                 }
             }
         }
@@ -4062,7 +4072,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 "register_keymap"
             );
         }
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         let message = _client
             .message_sender_handle
             .method(12u64, 0u64, 13267771052011565359u64, &serialized_data, _fds)
@@ -4071,7 +4081,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 e,
             })?
             .into_message();
-        let result: u64 = stardust_xr::schemas::flex::deserialize(&message)?;
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -4092,7 +4102,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 ? keymap_id, "Called method on server, {}::{}", "Interface", "get_keymap"
             );
         }
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         let message = _client
             .message_sender_handle
             .method(12u64, 0u64, 18393315648981916968u64, &serialized_data, _fds)
@@ -4101,7 +4111,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 e,
             })?
             .into_message();
-        let result: String = stardust_xr::schemas::flex::deserialize(&message)?;
+        let result: String = stardust_xr_wire::flex::deserialize(&message)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -4115,7 +4125,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     ) -> crate::node::NodeResult<()> {
         let mut _fds = Vec::new();
         let data = ();
-        let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
             .signal(12u64, 0u64, 13016197282381545765u64, &serialized_data, _fds)?;
@@ -4136,7 +4146,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         {
             let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr::schemas::flex::serialize(&data)?;
+            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
                 .signal(12u64, 0u64, 793626320493717815u64, &serialized_data, _fds)?;

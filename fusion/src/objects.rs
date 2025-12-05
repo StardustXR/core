@@ -6,15 +6,12 @@ use crate::{
 	node::NodeResult,
 	spatial::{Spatial, SpatialAspect, SpatialRef},
 };
-use interfaces::FieldRefProxy;
-pub use stardust_xr::schemas::dbus::*;
-use stardust_xr::{
-	schemas::{
-		dbus::interfaces::{PlaySpaceProxy, SpatialRefProxy},
-		zbus::Connection,
-	},
-	values::Vector2,
+pub use stardust_xr_gluon::*;
+use stardust_xr_gluon::{
+	interfaces::{FieldRefProxy, PlaySpaceProxy, SpatialRefProxy},
+	zbus::Connection,
 };
+use stardust_xr_wire::values::Vector2;
 use std::sync::Arc;
 
 pub trait SpatialRefProxyExt {

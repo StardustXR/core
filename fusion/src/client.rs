@@ -4,8 +4,8 @@ use crate::node::NodeResult;
 use crate::root::{Root, RootAspect};
 use crate::{node::NodeError, scenegraph::NodeRegistry};
 use global_counter::primitive::exact::CounterU64;
-use stardust_xr::schemas::flex::flexbuffers::DeserializationError;
-use stardust_xr::{
+use stardust_xr_wire::flex::flexbuffers::DeserializationError;
+use stardust_xr_wire::{
 	client,
 	messenger::{self, MessengerError},
 	messenger::{MessageReceiver, MessageSender, MessageSenderHandle},

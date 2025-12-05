@@ -1,9 +1,7 @@
-use crate::dbus::ObjectInfo;
+use crate::ObjectInfo;
 use std::{
 	collections::{HashMap, HashSet},
-	hash::Hash,
 	sync::Arc,
-	time::Duration,
 };
 use tokio::{
 	sync::{broadcast, mpsc, watch},
@@ -11,11 +9,8 @@ use tokio::{
 };
 use tokio_stream::{StreamExt, StreamMap, wrappers::UnboundedReceiverStream};
 use zbus::{
-	Connection, Proxy, Result,
-	fdo::{self, InterfacesAdded},
-	names::{BusName, InterfaceName, OwnedBusName, OwnedInterfaceName},
-	proxy::Defaults,
-	zvariant::OwnedObjectPath,
+	Connection, Result, fdo,
+	names::{BusName, OwnedBusName, OwnedInterfaceName},
 };
 
 #[derive(Clone, Debug)]
@@ -327,69 +322,6 @@ impl ObjectRegistry {
 			.filter(|n| !matches!(n.as_ref(), BusName::WellKnown(_))))
 	}
 
-	async fn add_objects_for_name(
-		connection: &Connection,
-		name: OwnedBusName,
-		changed_tx: Option<broadcast::Sender<Vec<ObjectInfo>>>,
-		objects: &mut Objects,
-	) -> Option<fdo::ObjectManagerProxy<'static>> {
-		let object_manager = fdo::ObjectManagerProxy::new(connection, name.to_owned(), "/")
-			.await
-			.ok()?;
-
-		let managed_objects = tokio::time::timeout(
-			Duration::from_millis(50),
-			object_manager.get_managed_objects(),
-		)
-		.await
-		.ok()?
-		.ok()?;
-		let mut objs = Vec::with_capacity(managed_objects.len());
-		for (path, interfaces) in managed_objects {
-			let obj = ObjectInfo {
-				bus_name: name.clone(),
-				object_path: path.clone(),
-			};
-			for interface in interfaces.keys() {
-				objects
-					.interface_to_objects
-					.entry(interface.clone())
-					.or_default()
-					.insert(obj.clone());
-			}
-			objects
-				.object_to_interfaces
-				.entry(obj.clone())
-				.or_default()
-				.extend(interfaces.keys().cloned());
-			objs.push(obj);
-		}
-		if let Some(changed_tx) = changed_tx {
-			_ = changed_tx.send(objs);
-		}
-		Some(object_manager)
-	}
-
-	fn remove_objects_for_bus(
-		objects: &mut Objects,
-		bus_name: OwnedBusName,
-		changed_tx: broadcast::Sender<Vec<ObjectInfo>>,
-	) {
-		for object_set in objects.interface_to_objects.values_mut() {
-			object_set.retain(|obj| obj.bus_name.inner() != &bus_name);
-		}
-		let objs = objects
-			.object_to_interfaces
-			.keys()
-			.filter(|obj| obj.bus_name.inner() == &bus_name)
-			.cloned()
-			.collect();
-		objects
-			.object_to_interfaces
-			.retain(|obj, _| obj.bus_name.inner() != &bus_name);
-		_ = changed_tx.send(objs);
-	}
-
 	pub fn get_objects(&self, interface: &str) -> HashSet<ObjectInfo> {
 		self.objects_rx
 			.borrow()
@@ -418,6 +350,8 @@ impl Drop for ObjectRegistry {
 
 #[tokio::test]
 async fn object_registry_test() {
+	use std::time::Duration;
+
 	// Set up test interface
 	struct TestInterface;
 	#[zbus::interface(name = "org.stardustxr.ObjectRegistry.TestInterface")]

@@ -4,7 +4,7 @@ use crate::{
 	node::NodeResult,
 	spatial::{SpatialRefAspect, Transform},
 };
-use stardust_xr::values::*;
+use stardust_xr_wire::values::*;
 
 pub use crate::protocol::audio::*;
 

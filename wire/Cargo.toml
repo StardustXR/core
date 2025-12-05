@@ -1,16 +1,15 @@
 [package]
 edition = "2024"
-name = "stardust-xr"
+name = "stardust-xr-wire"
 version.workspace = true
 authors = ["Nova King <technobaboo@proton.me>"]
-description = "Base library for the Stardust XR display server"
+description = "Base wire/serialization format for the Stardust XR display server"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
 nix = { version = "0.27.1", features = ["socket", "uio", "fs"] }
-serde = { version = "1.0.196", features = ["derive"] }
 rustc-hash = "2.0.0"
 thiserror = "2.0.16"
 tokio = { version = "1.38.0", features = [
@@ -25,9 +24,19 @@ tracing = "0.1.40"
 dirs = "6.0.0"
 global_counter = "0.2.2"
 
+# Protocol format
+flatbuffers = "25.9.23"
+flexbuffers = { version = "25.9.23", features = [
+	"serialize_human_readable",
+	"deserialize_human_readable",
+] }
+serde = { version = "1.0.196", features = ["derive"] }
+serde_repr = "0.1.18"
+
 # values
 color-eyre = "0.6.2"
 shiva-color-rs = "0.0.1"
 mint = { version = "0.5.9", features = ["serde"] }
 
-stardust-xr-schemas = { version = "2.0.0", path = "../schemas" }
+[build-dependencies]
+manifest-dir-macros = "0.1.18"

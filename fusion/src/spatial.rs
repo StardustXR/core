@@ -16,7 +16,7 @@
 
 pub use crate::protocol::spatial::*;
 use crate::{client::ClientHandle, node::NodeResult};
-use stardust_xr::values::*;
+use stardust_xr_wire::values::*;
 use std::{hash::Hash, sync::Arc};
 
 impl Transform {

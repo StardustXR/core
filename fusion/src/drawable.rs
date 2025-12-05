@@ -6,7 +6,7 @@ use crate::{
 	node::{NodeResult, NodeType},
 	spatial::{SpatialRefAspect, Transform},
 };
-use stardust_xr::values::*;
+use stardust_xr_wire::values::*;
 
 pub use crate::protocol::drawable::*;
 
@@ -215,7 +215,7 @@ async fn fusion_text() {
 	let mut client = crate::Client::connect().await.unwrap();
 
 	let style: TextStyle = TextStyle {
-		font: Some(stardust_xr::values::ResourceID::new_namespaced(
+		font: Some(stardust_xr_wire::values::ResourceID::new_namespaced(
 			"fusion",
 			"common_case",
 		)),
@@ -237,7 +237,7 @@ async fn fusion_sky() {
 		.unwrap();
 	let client_handle = client.handle();
 	let _event_loop = client.async_event_loop();
-	let sky_resource = stardust_xr::values::ResourceID::new_namespaced("fusion", "sky");
+	let sky_resource = stardust_xr_wire::values::ResourceID::new_namespaced("fusion", "sky");
 
 	set_sky_light(&client_handle, Some(&sky_resource)).unwrap();
 	set_sky_tex(&client_handle, Some(&sky_resource)).unwrap();

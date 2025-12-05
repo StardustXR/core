@@ -4,7 +4,7 @@
 use crate::client::ClientHandle;
 use parking_lot::Mutex;
 use rustc_hash::FxHashMap;
-use stardust_xr::{
+use stardust_xr_wire::{
 	messenger::MethodResponse,
 	scenegraph::{self, ScenegraphError},
 };

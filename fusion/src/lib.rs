@@ -3,15 +3,13 @@
 #![allow(dead_code)]
 #![allow(clippy::derivable_impls)]
 
+use serde::Serialize;
+use stardust_xr_wire::{flex::serialize, messenger::MethodResponse, scenegraph::ScenegraphError};
 use std::{error::Error, fmt::Debug, marker::PhantomData, os::fd::OwnedFd};
 
 pub use client::*;
-use serde::Serialize;
-pub use stardust_xr as core;
-pub use stardust_xr::values;
-use stardust_xr::{
-	messenger::MethodResponse, scenegraph::ScenegraphError, schemas::flex::serialize,
-};
+pub use stardust_xr_gluon::*;
+pub use stardust_xr_wire::values;
 
 use crate::node::NodeError;
 
@@ -26,14 +24,10 @@ pub mod input;
 pub mod items;
 pub mod objects;
 mod protocol;
+pub mod query_impl;
 pub mod root;
 pub mod scenegraph;
 pub mod spatial;
-pub mod query_impl;
-
-pub use stardust_xr::schemas::dbus::query as query;
-pub use stardust_xr::schemas::dbus::list_query as list_query;
-pub use stardust_xr::schemas::impl_queryable_for_proxy;
 
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);
 impl<T: Serialize> TypedMethodResponse<T> {
@@ -50,7 +44,7 @@ impl<T: Serialize> TypedMethodResponse<T> {
 				return;
 			}
 		};
-		let Ok(serialized) = stardust_xr::schemas::flex::serialize(data) else {
+		let Ok(serialized) = stardust_xr_wire::flex::serialize(data) else {
 			self.0.send(Err(ScenegraphError::MemberError {
 				error: "Internal: Failed to serialize".to_string(),
 			}));

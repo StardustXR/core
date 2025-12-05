@@ -5,7 +5,7 @@ use crate::{
 	spatial::SpatialRef,
 };
 use parking_lot::Mutex;
-use stardust_xr::schemas::dbus::{
+use stardust_xr_gluon::{
 	interfaces::{FieldRefProxy, SpatialRefProxy},
 	query::{QueryContext, Queryable},
 };
@@ -30,7 +30,7 @@ impl<Ctx: ClientQueryContext> Queryable<Ctx> for SpatialRef {
 	async fn try_new(
 		connection: &zbus::Connection,
 		ctx: &Arc<Ctx>,
-		object: &stardust_xr::schemas::dbus::ObjectInfo,
+		object: &stardust_xr_gluon::ObjectInfo,
 		contains_interface: &(impl Fn(&InterfaceName) -> bool + Send + Sync),
 	) -> Option<Self> {
 		static CACHE: LazyLock<Mutex<HashMap<u64, SpatialRef>>> = LazyLock::new(Mutex::default);
@@ -52,7 +52,7 @@ impl<Ctx: ClientQueryContext> Queryable<Ctx> for FieldRef {
 	async fn try_new(
 		connection: &zbus::Connection,
 		ctx: &Arc<Ctx>,
-		object: &stardust_xr::schemas::dbus::ObjectInfo,
+		object: &stardust_xr_gluon::ObjectInfo,
 		contains_interface: &(impl Fn(&InterfaceName) -> bool + Send + Sync),
 	) -> Option<Self> {
 		static CACHE: LazyLock<Mutex<HashMap<u64, FieldRef>>> = LazyLock::new(Mutex::default);

@@ -2,7 +2,7 @@ pub use color;
 pub use mint::{Vector2, Vector3};
 pub type Quaternion = mint::Quaternion<f32>;
 pub type Mat4 = mint::ColumnMatrix4<f32>;
-pub use stardust_xr_schemas::flex::Datamap;
+pub use crate::flex::Datamap;
 pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;
 pub use rustc_hash::FxHashMap as Map;
 

@@ -18,7 +18,7 @@ use crate::{
 	spatial::{SpatialRefAspect, Transform},
 };
 use glam::{FloatExt, Quat, Vec3A, vec3a};
-use stardust_xr::values::*;
+use stardust_xr_wire::values::*;
 use std::hash::Hash;
 
 pub use crate::protocol::input::*;
@@ -407,7 +407,7 @@ async fn fusion_pointer_input_method() {
 
 	let mut client = Client::connect().await.expect("Couldn't connect");
 
-	let mut fbb = stardust_xr::schemas::flex::flexbuffers::Builder::default();
+	let mut fbb = stardust_xr_wire::flex::flexbuffers::Builder::default();
 	fbb.start_map();
 	let pointer = InputMethod::create(
 		client.get_root(),
@@ -422,7 +422,7 @@ async fn fusion_pointer_input_method() {
 			glam::Quat::from_rotation_x(std::f32::consts::PI * 0.5),
 			[0.1; 3],
 		),
-		&stardust_xr::values::ResourceID::new_namespaced("fusion", "cursor_spike"),
+		&stardust_xr_wire::values::ResourceID::new_namespaced("fusion", "cursor_spike"),
 	)
 	.unwrap();
 	let mut datamap = PointerData::default();
@@ -484,7 +484,7 @@ async fn fusion_tip_input_method() {
 		Model::create(
 			parent,
 			Transform::from_rotation_scale(rotation, [0.1; 3]),
-			&stardust_xr::values::ResourceID::new_namespaced("fusion", "cursor_spike"),
+			&stardust_xr_wire::values::ResourceID::new_namespaced("fusion", "cursor_spike"),
 		)
 		.unwrap()
 	}

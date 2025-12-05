@@ -1,0 +1,14 @@
+[package]
+edition = "2024"
+name = "stardust-xr-protocol"
+version = "2.0.0"
+authors = ["Nova King <technobaboo@protonmail.me", "Philpax"]
+description = "Stardust XR protocol, generated from custom IDL automatically"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+kdl = "4.6.0"
+fnv = "1.0.7"
+thiserror = "2.0.16"
