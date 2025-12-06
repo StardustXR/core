@@ -3591,10 +3591,10 @@ pub mod item_panel {
         fn relative_pointer_motion(
             &self,
             surface: SurfaceId,
-            offset: impl Into<stardust_xr_wire::values::Vector2<f32>>,
+            delta: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (surface, offset.into());
+            let data = (surface, delta.into());
             self.node()
                 .send_signal(
                     16007573185838633179u64,
@@ -3602,9 +3602,9 @@ pub mod item_panel {
                     &data,
                     _fds,
                 )?;
-            let (surface, offset) = data;
+            let (surface, delta) = data;
             tracing::trace!(
-                ? surface, ? offset, "Sent signal to server, {}::{}", "PanelItem",
+                ? surface, ? delta, "Sent signal to server, {}::{}", "PanelItem",
                 "relative_pointer_motion"
             );
             Ok(())
