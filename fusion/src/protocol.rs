@@ -3566,7 +3566,7 @@ pub mod item_panel {
             Ok(())
         }
         ///Send an event to set the pointer's position (in pixels, relative to top-left of surface). This will activate the pointer.
-        fn pointer_motion(
+        fn absolute_pointer_motion(
             &self,
             surface: SurfaceId,
             position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
@@ -3576,14 +3576,36 @@ pub mod item_panel {
             self.node()
                 .send_signal(
                     16007573185838633179u64,
-                    651662101921814334u64,
+                    16749501366142443858u64,
                     &data,
                     _fds,
                 )?;
             let (surface, position) = data;
             tracing::trace!(
                 ? surface, ? position, "Sent signal to server, {}::{}", "PanelItem",
-                "pointer_motion"
+                "absolute_pointer_motion"
+            );
+            Ok(())
+        }
+        ///Send an event that the pointer moved a relative amount (in pixels).
+        fn relative_pointer_motion(
+            &self,
+            surface: SurfaceId,
+            offset: impl Into<stardust_xr_wire::values::Vector2<f32>>,
+        ) -> crate::node::NodeResult<()> {
+            let mut _fds = Vec::new();
+            let data = (surface, offset.into());
+            self.node()
+                .send_signal(
+                    16007573185838633179u64,
+                    8178111286759258039u64,
+                    &data,
+                    _fds,
+                )?;
+            let (surface, offset) = data;
+            tracing::trace!(
+                ? surface, ? offset, "Sent signal to server, {}::{}", "PanelItem",
+                "relative_pointer_motion"
             );
             Ok(())
         }
