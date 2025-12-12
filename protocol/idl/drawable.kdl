@@ -2,6 +2,72 @@ version (u32)1
 interface (u64)4
 description ""
 
+
+method "import_dmatex" side="server" {
+	description "Import a Dmatex, the imported Dmatex has to be manually unregistered"
+
+	argument "size" type="union" union="DmatexPlane"
+	argument "format" type="uint" description="the texture format as a drm_fourcc"
+	argument "srgb" type="bool" description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
+	argument "array_layers" type="uint" optional=true description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
+	argument "plane_1_dmabuf_fd" type="fd" description="the underlying dmabuf fd for the first plane"
+	argument "plane_1_info" type="struct" struct="DmatexPlane"
+	argument "timeline_syncobj_fd" type="fd" description="the fd carrying info for explicit sync, using the timeline variant of the drm_syncobj"
+
+	return type="id"
+}
+
+signal "unregister_dmatex" side="server" {
+	description "Mark a Dmatex as unused, this allows the server to destroy its imported representations, this invalidates the Dmatex id"
+
+	argument "dmatex_id" type="id" 
+}
+
+method "get_primary_render_device_id" side="server" {
+	description "get the id of the primary device used for rendering, will return a render node id if possilbe"
+	
+	return type="union" union="DrmNodeId"
+}
+
+method "enumerate_dmatex_formats" side="server" {
+	description "enumerates all the Dmatex formats supported by the server"
+
+	argument "device_id" type="union" union="DrmNodeId"
+	
+	return type="struct" struct="DmatexFormatInfo"
+}
+
+struct "DmatexFormatInfo" {
+	description "Description of a format supported by the server"
+	field "format" type="uint" description="drm_fourcc for the format"
+	field "drm_modifier" type="id"
+	field "supports_srgb" type="bool"
+}
+
+struct "DmatexPlane" {
+	description "A single memory plane of a Dmatex"
+	field "drm_modifier" type="id" description="The Drm modifier of this Dmatex memory plane"
+	field "offset" type="uint" description="offset of the data relevant to this Dmatex plane in the Dmatex memory"
+	field "row_size" type="uint" description="the number of bytes between the beginning of one pixel row to the next, if the Dmatex is 1d this should be 0"
+	field "array_element_size" type="uint" description="the number of bytes between the beginning of one array element to the next, if the Dmatex is not an array texture this should be 0"
+	field "depth_slice_size" type="uint" description="the number of bytes between the beginning of one 3d slice to the next, if the Dmatex is not 3d this should be 0"
+}
+
+union "DmatexSize" {
+	description "Size and Dimensions of a Dmatex"
+
+	option type="uint" name="dim1d"
+	option type="vec2" component_type="uint" name="dim2d"
+	option type="vec3" component_type="uint" name="dim3d"
+}
+
+union "DrmNodeId" {
+	description "Drm Node Id used for selecting the correct gpu"
+
+	option type="id" name="DrmRenderNode"
+	option type="id" name="DrmPrimaryNode"
+}
+
 signal "set_sky_tex" side="server" {
 	description "Set the sky texture to a given HDRI file."
 

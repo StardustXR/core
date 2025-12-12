@@ -1309,6 +1309,21 @@ pub mod drawable {
         Exact,
         Overflow,
     }
+    ///Size and Dimensions of a Dmatex
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    #[serde(tag = "t", content = "c")]
+    pub enum DmatexSize {
+        Dim1D(u32),
+        Dim2D(stardust_xr_wire::values::Vector2<u32>),
+        Dim3D(stardust_xr_wire::values::Vector3<u32>),
+    }
+    ///Drm Node Id used for selecting the correct gpu
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    #[serde(tag = "t", content = "c")]
+    pub enum DrmNodeId {
+        DrmRenderNode(u64),
+        DrmPrimaryNode(u64),
+    }
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     #[serde(tag = "t", content = "c")]
@@ -1321,6 +1336,22 @@ pub mod drawable {
         Vec3(stardust_xr_wire::values::Vector3<f32>),
         Color(stardust_xr_wire::values::Color),
         Texture(stardust_xr_wire::values::ResourceID),
+    }
+    ///Description of a format supported by the server
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    pub struct DmatexFormatInfo {
+        pub format: u32,
+        pub drm_modifier: u64,
+        pub supports_srgb: bool,
+    }
+    ///A single memory plane of a Dmatex
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    pub struct DmatexPlane {
+        pub drm_modifier: u64,
+        pub offset: u32,
+        pub row_size: u32,
+        pub array_element_size: u32,
+        pub depth_slice_size: u32,
     }
     ///A single point on a line
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -1699,6 +1730,145 @@ pub mod drawable {
             tracing::trace!(? text, "Sent signal to server, {}::{}", "Text", "set_text");
             Ok(())
         }
+    }
+    ///Import a Dmatex, the imported Dmatex has to be manually unregistered
+    pub async fn import_dmatex(
+        _client: &std::sync::Arc<crate::client::ClientHandle>,
+        size: DmatexPlane,
+        format: u32,
+        srgb: bool,
+        array_layers: Option<u32>,
+        plane_1_dmabuf_fd: std::os::unix::io::OwnedFd,
+        plane_1_info: DmatexPlane,
+        timeline_syncobj_fd: std::os::unix::io::OwnedFd,
+    ) -> crate::node::NodeResult<u64> {
+        let mut _fds = Vec::new();
+        let data = (
+            size,
+            format,
+            srgb,
+            array_layers.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?,
+            {
+                _fds.push(plane_1_dmabuf_fd);
+                (_fds.len() - 1) as u32
+            },
+            plane_1_info,
+            {
+                _fds.push(timeline_syncobj_fd);
+                (_fds.len() - 1) as u32
+            },
+        );
+        {
+            let (
+                size,
+                format,
+                srgb,
+                array_layers,
+                plane_1_dmabuf_fd,
+                plane_1_info,
+                timeline_syncobj_fd,
+            ) = &data;
+            tracing::trace!(
+                ? size, ? format, ? srgb, ? array_layers, ? plane_1_dmabuf_fd, ?
+                plane_1_info, ? timeline_syncobj_fd, "Called method on server, {}::{}",
+                "Interface", "import_dmatex"
+            );
+        }
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let message = _client
+            .message_sender_handle
+            .method(4u64, 0u64, 5202664904415071827u64, &serialized_data, _fds)
+            .await?
+            .map_err(|e| crate::node::NodeError::ReturnedError {
+                e,
+            })?
+            .into_message();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+        let deserialized = result;
+        tracing::trace!(
+            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            "import_dmatex"
+        );
+        Ok(deserialized)
+    }
+    ///Mark a Dmatex as unused, this allows the server to destroy its imported representations, this invalidates the Dmatex id
+    pub fn unregister_dmatex(
+        _client: &std::sync::Arc<crate::client::ClientHandle>,
+        dmatex_id: u64,
+    ) -> crate::node::NodeResult<()> {
+        let mut _fds = Vec::new();
+        let data = (dmatex_id);
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        _client
+            .message_sender_handle
+            .signal(4u64, 0u64, 15846108642868241016u64, &serialized_data, _fds)?;
+        let (dmatex_id) = data;
+        tracing::trace!(
+            ? dmatex_id, "Sent signal to server, {}::{}", "Interface",
+            "unregister_dmatex"
+        );
+        Ok(())
+    }
+    ///get the id of the primary device used for rendering, will return a render node id if possilbe
+    pub async fn get_primary_render_device_id(
+        _client: &std::sync::Arc<crate::client::ClientHandle>,
+    ) -> crate::node::NodeResult<DrmNodeId> {
+        let mut _fds = Vec::new();
+        let data = ();
+        {
+            let () = &data;
+            tracing::trace!(
+                "Called method on server, {}::{}", "Interface",
+                "get_primary_render_device_id"
+            );
+        }
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let message = _client
+            .message_sender_handle
+            .method(4u64, 0u64, 16013200258148922551u64, &serialized_data, _fds)
+            .await?
+            .map_err(|e| crate::node::NodeError::ReturnedError {
+                e,
+            })?
+            .into_message();
+        let result: DrmNodeId = stardust_xr_wire::flex::deserialize(&message)?;
+        let deserialized = result;
+        tracing::trace!(
+            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            "get_primary_render_device_id"
+        );
+        Ok(deserialized)
+    }
+    ///enumerates all the Dmatex formats supported by the server
+    pub async fn enumerate_dmatex_formats(
+        _client: &std::sync::Arc<crate::client::ClientHandle>,
+        device_id: DrmNodeId,
+    ) -> crate::node::NodeResult<DmatexFormatInfo> {
+        let mut _fds = Vec::new();
+        let data = (device_id);
+        {
+            let (device_id) = &data;
+            tracing::trace!(
+                ? device_id, "Called method on server, {}::{}", "Interface",
+                "enumerate_dmatex_formats"
+            );
+        }
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let message = _client
+            .message_sender_handle
+            .method(4u64, 0u64, 14109465327684673699u64, &serialized_data, _fds)
+            .await?
+            .map_err(|e| crate::node::NodeError::ReturnedError {
+                e,
+            })?
+            .into_message();
+        let result: DmatexFormatInfo = stardust_xr_wire::flex::deserialize(&message)?;
+        let deserialized = result;
+        tracing::trace!(
+            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            "enumerate_dmatex_formats"
+        );
+        Ok(deserialized)
     }
     ///Set the sky texture to a given HDRI file.
     pub fn set_sky_tex(
