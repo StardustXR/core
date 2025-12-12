@@ -1336,6 +1336,7 @@ pub mod drawable {
         Vec3(stardust_xr_wire::values::Vector3<f32>),
         Color(stardust_xr_wire::values::Color),
         Texture(stardust_xr_wire::values::ResourceID),
+        Dmatex(DmatexMaterialParam),
     }
     ///Description of a format supported by the server
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -1365,6 +1366,13 @@ pub mod drawable {
     pub struct Line {
         pub points: Vec<LinePoint>,
         pub cyclic: bool,
+    }
+    ///Dmatex Material Parameter info
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    pub struct DmatexMaterialParam {
+        pub dmatex_id: u64,
+        pub acquire_point: u64,
+        pub release_point: u64,
     }
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
