@@ -16,14 +16,19 @@ pub mod root {
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct FrameInfo {
+        ///The time between this frame and last frame's display time, in seconds.
         pub delta: f32,
+        ///The total time in seconds the client has been connected to the server.
         pub elapsed: f32,
     }
     ///The persistent state of a Stardust client.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct ClientState {
+        ///Data specific to your client, put anything you like here and it'll be saved/restored intact.
         pub data: Option<Vec<u8>>,
+        ///Where the client's root should be positioned on reload.
         pub root: u64,
+        ///Spatials that will be in the same place you left them.
         pub spatial_anchors: stardust_xr_wire::values::Map<String, u64>,
     }
     ///The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
@@ -767,23 +772,33 @@ pub mod field {
     ///Information about raymarching a field. All vectors are relative to the spatial reference used.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct RayMarchResult {
+        ///Origin of the ray
         pub ray_origin: stardust_xr_wire::values::Vector3<f32>,
+        ///Direction of the ray
         pub ray_direction: stardust_xr_wire::values::Vector3<f32>,
+        ///How close to or far inside the field the ray got. If less than zero, the ray intersected the field.
         pub min_distance: f32,
+        ///The distance to the point on the ray that has the least distance to the field/most distance inside it. Useful for finding a "near miss" point or how close to the core of the field you're pointing.
         pub deepest_point_distance: f32,
+        ///Maximum length of the ray
         pub ray_length: f32,
+        ///Number of steps taken
         pub ray_steps: u32,
     }
     ///Cylinder shape info
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct CylinderShape {
+        ///Length of the cylinder along the Y axis
         pub length: f32,
+        ///Radius of the cylinder along the XZ plane
         pub radius: f32,
     }
     ///Torus shape info
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct TorusShape {
+        ///Radius of the ring along the XZ plane
         pub radius_a: f32,
+        ///Radius of the tube
         pub radius_b: f32,
     }
     ///A reference to a signed distance field that you can sample
@@ -1341,6 +1356,7 @@ pub mod drawable {
     ///Description of a format supported by the server
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct DmatexFormatInfo {
+        ///drm_fourcc for the format
         pub format: u32,
         pub drm_modifier: u64,
         pub supports_srgb: bool,
@@ -1348,30 +1364,42 @@ pub mod drawable {
     ///A single memory plane of a Dmatex
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct DmatexPlane {
+        ///The Drm modifier of this Dmatex memory plane
         pub drm_modifier: u64,
+        ///offset of the data relevant to this Dmatex plane in the Dmatex memory
         pub offset: u32,
+        ///the number of bytes between the beginning of one pixel row to the next, if the Dmatex is 1d this should be 0
         pub row_size: u32,
+        ///the number of bytes between the beginning of one array element to the next, if the Dmatex is not an array texture this should be 0
         pub array_element_size: u32,
+        ///the number of bytes between the beginning of one 3d slice to the next, if the Dmatex is not 3d this should be 0
         pub depth_slice_size: u32,
     }
     ///A single point on a line
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct LinePoint {
+        ///The position of the point relative to the Lines node
         pub point: stardust_xr_wire::values::Vector3<f32>,
+        ///Thickness in meters, world space
         pub thickness: f32,
+        ///Color of the point, premultiplied alpha
         pub color: stardust_xr_wire::values::Color,
     }
     ///A single continuous polyline
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct Line {
         pub points: Vec<LinePoint>,
+        ///Cyclic if first point connects to the last point
         pub cyclic: bool,
     }
     ///Dmatex Material Parameter info
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct DmatexMaterialParam {
+        ///The Id of the Dmatex to be applied as the texture
         pub dmatex_id: u64,
+        ///the point the timeline reaches once the client is done mutating the texture
         pub acquire_point: u64,
+        ///the point the  timeline reaches once the server is done with the dmatex and the client can access it again
         pub release_point: u64,
     }
     ///
@@ -1385,7 +1413,9 @@ pub mod drawable {
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct TextStyle {
+        ///Height of a character in meters
         pub character_height: f32,
+        ///Premultiplied text color
         pub color: stardust_xr_wire::values::Color,
         pub font: Option<stardust_xr_wire::values::ResourceID>,
         pub text_align_x: XAlign,
@@ -2006,14 +2036,19 @@ pub mod input {
     ///A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct Joint {
+        ///Position of the joint relative to the input handler's field.
         pub position: stardust_xr_wire::values::Vector3<f32>,
+        ///Orientation of the joint relative to the input handler's field.
         pub rotation: stardust_xr_wire::values::Quaternion,
+        ///Radius of the joint in meters.
         pub radius: f32,
+        ///Distance from the center of the joint to the input handler's field
         pub distance: f32,
     }
     ///
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct Finger {
+        ///Joint inside the fingertip offset by the radius.
         pub tip: Joint,
         pub distal: Joint,
         pub intermediate: Joint,
@@ -2046,6 +2081,10 @@ pub mod input {
     pub struct Pointer {
         pub origin: stardust_xr_wire::values::Vector3<f32>,
         pub orientation: stardust_xr_wire::values::Quaternion,
+        /**
+	The point that is the most inside the input handler's field.
+	Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.
+	*/
         pub deepest_point: stardust_xr_wire::values::Vector3<f32>,
     }
     ///Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
@@ -2057,11 +2096,17 @@ pub mod input {
     ///Information about a given input method's state. All coordinates are relative to the InputHandler.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct InputData {
+        ///Used to uniquely identify the input method so state can be tracked across input events.
         pub id: u64,
+        ///All vectors and quaternions are relative to the input handler if deserialized.
         pub input: InputDataType,
+        ///Closest distance from the input handler to the field.
         pub distance: f32,
+        ///Non-spatial data in a map.
         pub datamap: stardust_xr_wire::values::Datamap,
+        ///There are [order] objects that got this input data before this one.
         pub order: u32,
+        ///Is this input handler capturing this input method?
         pub captured: bool,
     }
     ///Node representing a spatial input device
@@ -3383,12 +3428,19 @@ pub mod item_panel {
     ///The state of the panel item's toplevel.
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct ToplevelInfo {
+        ///The UID of the panel item of the parent of this toplevel, if it exists
         pub parent: Option<u64>,
+        ///Equivalent to the window title
         pub title: Option<String>,
+        ///Application identifier, see <https://standards.freedesktop.org/desktop-entry-spec/>
         pub app_id: Option<String>,
+        ///Current size in pixels
         pub size: stardust_xr_wire::values::Vector2<u32>,
+        ///Recommended minimum size in pixels
         pub min_size: Option<stardust_xr_wire::values::Vector2<f32>>,
+        ///Recommended maximum size in pixels
         pub max_size: Option<stardust_xr_wire::values::Vector2<f32>>,
+        ///Surface geometry
         pub logical_rectangle: Geometry,
     }
     ///Data on positioning a child.
@@ -3397,7 +3449,9 @@ pub mod item_panel {
         pub id: u64,
         pub parent: SurfaceId,
         pub geometry: Geometry,
+        ///Relative to parent. 0 is same level, -1 is below, 1 is above, etc.
         pub z_order: i32,
+        ///Whether this child receives input or is purely visual.
         pub receives_input: bool,
     }
     ///The init data for the panel item.
@@ -3406,7 +3460,9 @@ pub mod item_panel {
         pub cursor: Option<Geometry>,
         pub toplevel: ToplevelInfo,
         pub children: Vec<ChildInfo>,
+        ///The surface, if any, that has exclusive input to the pointer.
         pub pointer_grab: Option<SurfaceId>,
+        ///The surface, if any, that has exclusive input to the keyboard.
         pub keyboard_grab: Option<SurfaceId>,
     }
     ///An item that represents a toplevel 2D window's surface (base window) and all its children (context menus, modals, etc.).

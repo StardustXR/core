@@ -322,11 +322,7 @@ impl Tokenize for CustomStruct {
 		let name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
 		let description = &self.description;
 
-		let argument_decls = self
-			.fields
-			.iter()
-			.map(|a| generate_argument_decl(a, true))
-			.map(|d| quote!(pub #d));
+		let argument_decls = self.fields.iter().map(|a| generate_pub_field_decl(a, true));
 
 		let derive = if partial_eq {
 			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
@@ -944,6 +940,19 @@ fn generate_argument_decl(argument: &Argument, returned: bool) -> TokenStream {
 		_type = quote!(Option<#_type>);
 	}
 	quote!(#name: #_type)
+}
+fn generate_pub_field_decl(argument: &Argument, returned: bool) -> TokenStream {
+	let name = Ident::new(&argument.name.to_case(Case::Snake), Span::call_site());
+	let mut _type = generate_argument_type(&argument._type, returned);
+	if argument.optional {
+		_type = quote!(Option<#_type>);
+	}
+	let description = argument
+		.description
+		.as_ref()
+		.map(|d| quote!(#[doc = #d]))
+		.unwrap_or_default();
+	quote!(#description pub #name: #_type)
 }
 fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStream {
 	match argument_type {
