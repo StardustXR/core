@@ -1351,6 +1351,7 @@ pub mod drawable {
         Vec3(stardust_xr_wire::values::Vector3<f32>),
         Color(stardust_xr_wire::values::Color),
         Texture(stardust_xr_wire::values::ResourceID),
+        ///only accepts 2d Dmatexs without array layers
         Dmatex(DmatexMaterialParam),
     }
     ///Description of a format supported by the server
@@ -1399,7 +1400,7 @@ pub mod drawable {
         pub dmatex_id: u64,
         ///the point the timeline reaches once the client is done mutating the texture
         pub acquire_point: u64,
-        ///the point the  timeline reaches once the server is done with the dmatex and the client can access it again
+        ///the point the timeline reaches once the server is done with the dmatex and the client can access it again
         pub release_point: u64,
     }
     ///
@@ -1847,7 +1848,7 @@ pub mod drawable {
         );
         Ok(())
     }
-    ///get the id of the primary device used for rendering, will return a render node id if possilbe
+    ///get the id of the primary device used for rendering, will return a render node id if possible
     pub async fn get_primary_render_device_id(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
     ) -> crate::node::NodeResult<DrmNodeId> {
@@ -1881,7 +1882,7 @@ pub mod drawable {
     pub async fn enumerate_dmatex_formats(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         device_id: DrmNodeId,
-    ) -> crate::node::NodeResult<DmatexFormatInfo> {
+    ) -> crate::node::NodeResult<Vec<DmatexFormatInfo>> {
         let mut _fds = Vec::new();
         let data = (device_id);
         {
@@ -1900,8 +1901,13 @@ pub mod drawable {
                 e,
             })?
             .into_message();
-        let result: DmatexFormatInfo = stardust_xr_wire::flex::deserialize(&message)?;
-        let deserialized = result;
+        let result: Vec<DmatexFormatInfo> = stardust_xr_wire::flex::deserialize(
+            &message,
+        )?;
+        let deserialized = result
+            .into_iter()
+            .map(|a| Ok(a))
+            .collect::<Result<Vec<_>, crate::node::NodeError>>()?;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
             "enumerate_dmatex_formats"

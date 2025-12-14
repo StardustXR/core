@@ -24,7 +24,7 @@ signal "unregister_dmatex" side="server" {
 }
 
 method "get_primary_render_device_id" side="server" {
-	description "get the id of the primary device used for rendering, will return a render node id if possilbe"
+	description "get the id of the primary device used for rendering, will return a render node id if possible"
 	
 	return type="union" union="DrmNodeId"
 }
@@ -34,7 +34,7 @@ method "enumerate_dmatex_formats" side="server" {
 
 	argument "device_id" type="union" union="DrmNodeId"
 	
-	return type="struct" struct="DmatexFormatInfo"
+	return type="vec" member_type="struct" struct="DmatexFormatInfo"
 }
 
 struct "DmatexFormatInfo" {
@@ -117,7 +117,7 @@ struct "DmatexMaterialParam" {
 	description "Dmatex Material Parameter info"
 	field "dmatex_id" type="id" description="The Id of the Dmatex to be applied as the texture"
 	field "acquire_point" type="id" description="the point the timeline reaches once the client is done mutating the texture"
-	field "release_point" type="id" description="the point the  timeline reaches once the server is done with the dmatex and the client can access it again"
+	field "release_point" type="id" description="the point the timeline reaches once the server is done with the dmatex and the client can access it again"
 }
 
 union "MaterialParameter" {
@@ -131,7 +131,7 @@ union "MaterialParameter" {
 	option type="vec3"
 	option type="color"
 	option type="resource" name="texture"
-	option type="struct" struct="DmatexMaterialParam" name="dmatex"
+	option type="struct" struct="DmatexMaterialParam" name="dmatex" description="only accepts 2d Dmatexs without array layers"
 }
 signal "load_model" side="server" {
 	description "Load a GLTF model into a Model node"
