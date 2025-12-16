@@ -64,7 +64,7 @@ union "InputDataType" {
 	option type="struct" struct="Tip"
 }
 struct "InputData" {
-	description "Information about a given input method's state relative to an input handler. All coordinates are relative to the InputHandler."
+	description "Information about a given input method's state. All coordinates are relative to the InputHandler."
 
 	field "id"       type="id" description="Used to uniquely identify the input method so state can be tracked across input events."
 	field "input"    type="struct" struct="InputDataType" description="All vectors and quaternions are relative to the input handler if deserialized."
@@ -100,18 +100,31 @@ aspect "InputMethodRef" {
 	}
 }
 aspect "InputMethod" {
-	description "Node representing a spatial input device"
+	description r#"
+	Node representing a spatial input device.
+
+	Each input method is different, and has heuristics that apply to the specific device that drives it.
+	For example, a mouse is a perfectly stable pointer that slides in 2D space, so picking the first thing it hits makes sense.
+	On the other hand, a pointer attached to a controller is inherently shaky and so giving it some fuzzier heuristics (such as sending input to near misses by angle) helps make input more reliable.
+
+	So because of that, the true state of the input method is updated whenever the device gets an event.
+
+	The handler order is updated for 2 reasons:
+	1. Send input to every handler that the user might reasonably be trying to interact with.
+	2. The order lets the handler show the user how likely it is to be picked (via signifiers), so the user can adjust their input device.
+
+	The capture system is a collaborative effort between the input method and the handler to make sure that:
+	1. The input method decides what recieves input, for security and reliability (if the client with an input handler freezes, it won't lock up the entire input method).
+	2. The handler can request temporary exclusive access to the input method, to prevent input collisions (if I'm grabbing something, i don't want anything else to interfere or assume it is being grabbed with a pinch gesture).
+	3. The heuristics of the input method and handler are both considered (e.g. the input method for a hand might send input only to nearby handlers, but then the handler requests a capture when it is pinched. This would make a handler with a field intersecing another that does not use pinch differentiated, and therefore improves reliability.).
+	"#
 	inherits "Spatial"
 	inherits "InputMethodRef"
 
-	signal "set_input" side="server" {
-		description "Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing."
+	signal "update_state" side="server" {
+		description "Set the input data of this input method. You must keep the same input data type throughout the entire thing."
 
 		argument "input" type="struct" struct="InputDataType"
-	}
-	signal "set_datamap" side="server" {
-		description "Set the datamap of this input method"
-
 		argument "datamap" type="datamap"
 	}
 	signal "set_handler_order" side="server" {
@@ -161,10 +174,20 @@ aspect "InputHandler" {
 	description "Receives input from input methods."
 	inherits "Spatial"
 
-	signal "input" side="client" {
-		description "The new state of all the input methods that are sending data to this handler."
+	signal "input_sent" side="client" {
+		description "An input method just started sending input to this handler."
 
-		argument "methods" type="vec" member_type="node" aspect="InputMethodRef"
-		argument "data" type="vec" member_type="struct" struct="InputData"
+		argument "method" type="node" aspect="InputMethodRef"
+		argument "data" type="struct" struct="InputData"
+	}
+	signal "input_updated" side="client" {
+		description "An input method's data has been updated. The input data's ID matches the original method's data ID."
+
+		argument "data" type="struct" struct="InputData"
+	}
+	signal "input_left" side="client" {
+		description "An input method just stopped sending input to this handler."
+
+		argument "method" type="id"
 	}
 }

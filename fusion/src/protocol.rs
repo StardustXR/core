@@ -1876,7 +1876,7 @@ pub mod input {
         pub origin: stardust_xr_wire::values::Vector3<f32>,
         pub orientation: stardust_xr_wire::values::Quaternion,
     }
-    ///Information about a given input method's state relative to an input handler. All coordinates are relative to the InputHandler.
+    ///Information about a given input method's state. All coordinates are relative to the InputHandler.
     #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
     pub struct InputData {
         pub id: u64,
@@ -1980,7 +1980,24 @@ pub mod input {
             Ok(())
         }
     }
-    ///Node representing a spatial input device
+    /**
+	Node representing a spatial input device.
+
+	Each input method is different, and has heuristics that apply to the specific device that drives it.
+	For example, a mouse is a perfectly stable pointer that slides in 2D space, so picking the first thing it hits makes sense.
+	On the other hand, a pointer attached to a controller is inherently shaky and so giving it some fuzzier heuristics (such as sending input to near misses by angle) helps make input more reliable.
+
+	So because of that, the true state of the input method is updated whenever the device gets an event.
+
+	The handler order is updated for 2 reasons:
+	1. Send input to every handler that the user might reasonably be trying to interact with.
+	2. The order lets the handler show the user how likely it is to be picked (via signifiers), so the user can adjust their input device.
+
+	The capture system is a collaborative effort between the input method and the handler to make sure that:
+	1. The input method decides what recieves input, for security and reliability (if the client with an input handler freezes, it won't lock up the entire input method).
+	2. The handler can request temporary exclusive access to the input method, to prevent input collisions (if I'm grabbing something, i don't want anything else to interfere or assume it is being grabbed with a pinch gesture).
+	3. The heuristics of the input method and handler are both considered (e.g. the input method for a hand might send input only to nearby handlers, but then the handler requests a capture when it is pinched. This would make a handler with a field intersecing another that does not use pinch differentiated, and therefore improves reliability.).
+	*/
     #[derive(Debug, Clone)]
     pub struct InputMethod {
         pub(crate) core: std::sync::Arc<crate::node::NodeCore>,
@@ -2134,43 +2151,45 @@ pub mod input {
             }
         }
     }
-    ///Node representing a spatial input device
+    /**
+	Node representing a spatial input device.
+
+	Each input method is different, and has heuristics that apply to the specific device that drives it.
+	For example, a mouse is a perfectly stable pointer that slides in 2D space, so picking the first thing it hits makes sense.
+	On the other hand, a pointer attached to a controller is inherently shaky and so giving it some fuzzier heuristics (such as sending input to near misses by angle) helps make input more reliable.
+
+	So because of that, the true state of the input method is updated whenever the device gets an event.
+
+	The handler order is updated for 2 reasons:
+	1. Send input to every handler that the user might reasonably be trying to interact with.
+	2. The order lets the handler show the user how likely it is to be picked (via signifiers), so the user can adjust their input device.
+
+	The capture system is a collaborative effort between the input method and the handler to make sure that:
+	1. The input method decides what recieves input, for security and reliability (if the client with an input handler freezes, it won't lock up the entire input method).
+	2. The handler can request temporary exclusive access to the input method, to prevent input collisions (if I'm grabbing something, i don't want anything else to interfere or assume it is being grabbed with a pinch gesture).
+	3. The heuristics of the input method and handler are both considered (e.g. the input method for a hand might send input only to nearby handlers, but then the handler requests a capture when it is pinched. This would make a handler with a field intersecing another that does not use pinch differentiated, and therefore improves reliability.).
+	*/
     pub trait InputMethodAspect: crate::node::NodeType + super::InputMethodRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
         fn recv_input_method_event(&self) -> Option<InputMethodEvent>;
-        ///Set the spatial input component of this input method. You must keep the same input data type throughout the entire thing.
-        fn set_input(&self, input: InputDataType) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
-            let data = (input);
-            self.node()
-                .send_signal(
-                    14883688361483968991u64,
-                    17348904196349853573u64,
-                    &data,
-                    _fds,
-                )?;
-            let (input) = data;
-            tracing::trace!(
-                ? input, "Sent signal to server, {}::{}", "InputMethod", "set_input"
-            );
-            Ok(())
-        }
-        ///Set the datamap of this input method
-        fn set_datamap(
+        ///Set the input data of this input method. You must keep the same input data type throughout the entire thing.
+        fn update_state(
             &self,
+            input: InputDataType,
             datamap: &stardust_xr_wire::values::Datamap,
         ) -> crate::node::NodeResult<()> {
             let mut _fds = Vec::new();
-            let data = (datamap);
+            let data = (input, datamap);
             self.node()
                 .send_signal(
                     14883688361483968991u64,
-                    9666763984937627751u64,
+                    9469903295692537735u64,
                     &data,
                     _fds,
                 )?;
-            let (datamap) = data;
+            let (input, datamap) = data;
             tracing::trace!(
-                ? datamap, "Sent signal to server, {}::{}", "InputMethod", "set_datamap"
+                ? input, ? datamap, "Sent signal to server, {}::{}", "InputMethod",
+                "update_state"
             );
             Ok(())
         }
@@ -2291,7 +2310,9 @@ pub mod input {
     }
     #[derive(Debug)]
     pub enum InputHandlerEvent {
-        Input { methods: Vec<InputMethodRef>, data: Vec<InputData> },
+        InputSent { method: InputMethodRef, data: InputData },
+        InputUpdated { data: InputData },
+        InputLeft { method: u64 },
     }
     impl crate::scenegraph::EventParser for InputHandlerEvent {
         const ASPECT_ID: u64 = 537028132086008694u64;
@@ -2302,23 +2323,39 @@ pub mod input {
             _fds: Vec<std::os::fd::OwnedFd>,
         ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
-                5305312459121645740u64 => {
-                    let (methods, data): (Vec<u64>, Vec<InputData>) = stardust_xr_wire::flex::deserialize(
+                1784186157485816199u64 => {
+                    let (method, data): (u64, InputData) = stardust_xr_wire::flex::deserialize(
                         _data,
                     )?;
                     tracing::trace!(
-                        ? methods, ? data, "Got signal from server, {}::{}",
-                        "InputHandler", "input"
+                        ? method, ? data, "Got signal from server, {}::{}",
+                        "InputHandler", "input_sent"
                     );
-                    Ok(InputHandlerEvent::Input {
-                        methods: methods
-                            .into_iter()
-                            .map(|a| Ok(InputMethodRef::from_id(_client, a, false)))
-                            .collect::<Result<Vec<_>, crate::node::NodeError>>()?,
-                        data: data
-                            .into_iter()
-                            .map(|a| Ok(a))
-                            .collect::<Result<Vec<_>, crate::node::NodeError>>()?,
+                    Ok(InputHandlerEvent::InputSent {
+                        method: InputMethodRef::from_id(_client, method, false),
+                        data: data,
+                    })
+                }
+                12767704399235128028u64 => {
+                    let (data): (InputData) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                    )?;
+                    tracing::trace!(
+                        ? data, "Got signal from server, {}::{}", "InputHandler",
+                        "input_updated"
+                    );
+                    Ok(InputHandlerEvent::InputUpdated {
+                        data: data,
+                    })
+                }
+                6474489366123796070u64 => {
+                    let (method): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    tracing::trace!(
+                        ? method, "Got signal from server, {}::{}", "InputHandler",
+                        "input_left"
+                    );
+                    Ok(InputHandlerEvent::InputLeft {
+                        method: method,
                     })
                 }
                 _ => Err(stardust_xr_wire::scenegraph::ScenegraphError::MemberNotFound),
