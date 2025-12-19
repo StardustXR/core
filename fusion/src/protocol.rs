@@ -1396,7 +1396,7 @@ pub mod drawable {
     ///Dmatex Material Parameter info
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct DmatexMaterialParam {
-        ///The Id of the Dmatex to be applied as the texture
+        ///The id of the Dmatex to be applied as the texture
         pub dmatex_id: u64,
         ///the point the timeline reaches once the client is done mutating the texture
         pub acquire_point: u64,
@@ -1770,7 +1770,7 @@ pub mod drawable {
             Ok(())
         }
     }
-    ///Import a Dmatex, the imported Dmatex has to be manually unregistered
+    ///Import a Dmatex, the imported Dmatex has to be manually unregistered, the returned id is Client Local
     pub async fn import_dmatex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         size: DmatexPlane,
@@ -1830,7 +1830,69 @@ pub mod drawable {
         );
         Ok(deserialized)
     }
-    ///Mark a Dmatex as unused, this allows the server to destroy its imported representations, this invalidates the Dmatex id
+    ///Exports a Dmatex Uid for sharing between clients
+    pub async fn export_dmatex_uid(
+        _client: &std::sync::Arc<crate::client::ClientHandle>,
+        dmatex_id: u64,
+    ) -> crate::node::NodeResult<u64> {
+        let mut _fds = Vec::new();
+        let data = (dmatex_id);
+        {
+            let (dmatex_id) = &data;
+            tracing::trace!(
+                ? dmatex_id, "Called method on server, {}::{}", "Interface",
+                "export_dmatex_uid"
+            );
+        }
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let message = _client
+            .message_sender_handle
+            .method(4u64, 0u64, 2247267269053194767u64, &serialized_data, _fds)
+            .await?
+            .map_err(|e| crate::node::NodeError::ReturnedError {
+                e,
+            })?
+            .into_message();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+        let deserialized = result;
+        tracing::trace!(
+            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            "export_dmatex_uid"
+        );
+        Ok(deserialized)
+    }
+    ///Imports a shared Dmatex Uid, holding this id will keep the underlying dmatex alive
+    pub async fn import_dmatex_uid(
+        _client: &std::sync::Arc<crate::client::ClientHandle>,
+        dmatex_uid: u64,
+    ) -> crate::node::NodeResult<u64> {
+        let mut _fds = Vec::new();
+        let data = (dmatex_uid);
+        {
+            let (dmatex_uid) = &data;
+            tracing::trace!(
+                ? dmatex_uid, "Called method on server, {}::{}", "Interface",
+                "import_dmatex_uid"
+            );
+        }
+        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let message = _client
+            .message_sender_handle
+            .method(4u64, 0u64, 5604115908701744320u64, &serialized_data, _fds)
+            .await?
+            .map_err(|e| crate::node::NodeError::ReturnedError {
+                e,
+            })?
+            .into_message();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+        let deserialized = result;
+        tracing::trace!(
+            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            "import_dmatex_uid"
+        );
+        Ok(deserialized)
+    }
+    ///Mark a Dmatex as unused, once all ids referencing the same Dmatex are unregisterd the server may destroy its internal representation of the Dmatex, this invalidates the used handle
     pub fn unregister_dmatex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         dmatex_id: u64,
@@ -1848,7 +1910,7 @@ pub mod drawable {
         );
         Ok(())
     }
-    ///get the id of the primary device used for rendering, will return a render node id if possible
+    ///get the id of the primary device used for rendering, will return a render node id if supported by the driver
     pub async fn get_primary_render_device_id(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
     ) -> crate::node::NodeResult<DrmNodeId> {

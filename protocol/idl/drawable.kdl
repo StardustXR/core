@@ -4,7 +4,7 @@ description ""
 
 
 method "import_dmatex" side="server" {
-	description "Import a Dmatex, the imported Dmatex has to be manually unregistered"
+	description "Import a Dmatex, the imported Dmatex has to be manually unregistered, the returned id is Client Local"
 
 	argument "size" type="union" union="DmatexPlane"
 	argument "format" type="uint" description="the texture format as a drm_fourcc"
@@ -17,14 +17,28 @@ method "import_dmatex" side="server" {
 	return type="id"
 }
 
+method "export_dmatex_uid" side="server" {
+	description "Exports a Dmatex Uid for sharing between clients"
+	argument "dmatex_id" type="id"
+
+	return type="id"
+}
+
+method "import_dmatex_uid" side="server" {
+	description "Imports a shared Dmatex Uid, holding this id will keep the underlying dmatex alive"
+	argument "dmatex_uid" type="id"
+
+	return type="id"
+}
+
 signal "unregister_dmatex" side="server" {
-	description "Mark a Dmatex as unused, this allows the server to destroy its imported representations, this invalidates the Dmatex id"
+	description "Mark a Dmatex as unused, once all ids referencing the same Dmatex are unregisterd the server may destroy its internal representation of the Dmatex, this invalidates the used handle"
 
 	argument "dmatex_id" type="id" 
 }
 
 method "get_primary_render_device_id" side="server" {
-	description "get the id of the primary device used for rendering, will return a render node id if possible"
+	description "get the id of the primary device used for rendering, will return a render node id if supported by the driver"
 	
 	return type="union" union="DrmNodeId"
 }
@@ -115,7 +129,7 @@ aspect "Lines" {
 
 struct "DmatexMaterialParam" {
 	description "Dmatex Material Parameter info"
-	field "dmatex_id" type="id" description="The Id of the Dmatex to be applied as the texture"
+	field "dmatex_id" type="id" description="The id of the Dmatex to be applied as the texture"
 	field "acquire_point" type="id" description="the point the timeline reaches once the client is done mutating the texture"
 	field "release_point" type="id" description="the point the timeline reaches once the server is done with the dmatex and the client can access it again"
 }
