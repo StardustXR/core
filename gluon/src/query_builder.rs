@@ -7,11 +7,11 @@
 //!
 //! # Architecture
 //!
-//! The pipeline flows: Query -> Cache -> Peek -> List -> Filter -> Terminal (watch/trigger_and_run)
+//! The pipeline flows: Query -> Cache -> Inspect -> List -> Filter -> Terminal (watch/trigger_and_run)
 //!
 //! - Query: Wraps ObjectQuery, yields ObjectEvent<Q>
 //! - Cache: Transforms Q -> C concurrently via JoinSet
-//! - Peek: Inspects events without filtering
+//! - Inspect: Inspects events without filtering (side-effects only)
 //! - List: Materializes stream into ObjectList with HashMap
 //! - Filter: Applies predicates on live list
 //! - Terminal: watch() or trigger_and_run() spawns task and returns handle
@@ -29,7 +29,7 @@ use tokio_stream::StreamExt;
 
 use crate::{
 	ObjectInfo,
-	query::{ObjectQuery, QueryContext, Queryable, QueryEvent},
+	query::{ObjectQuery, QueryContext, Queryable},
 };
 // ============ Core Types ============
 
@@ -92,7 +92,7 @@ pub struct QueryStream<Q: Queryable<Ctx>, Ctx: QueryContext> {
 ///
 /// Stores cache closure and internal JoinSet for concurrent cache operations.
 /// Transforms ObjectEvent<Q> -> ObjectEvent<C> by running closure on each Q.
-/// 
+///
 /// On NewMatch: spawns cache task in JoinSet (non-blocking)
 /// On completion: emits NewMatch(ObjectInfo, C) if Some(C), drops if None
 pub struct CachedStream<S, F, C> {
@@ -100,12 +100,13 @@ pub struct CachedStream<S, F, C> {
 	cache_fn: F,
 	cache_tasks: JoinSet<(ObjectInfo, Option<C>)>,
 }
-/// Wraps a stream and applies a peek closure to inspect events.
+/// Wraps a stream and applies an inspect closure to observe events.
 ///
-/// Passes events through unchanged after calling peek closure.
-pub struct PeekedStream<S, F> {
+/// Passes events through unchanged after calling inspect closure.
+/// Similar to Iterator::inspect from the standard library.
+pub struct InspectedStream<S, F> {
 	stream: S,
-	peek_fn: F,
+	inspect_fn: F,
 }
 
 /// Materializes a stream into a live list.
@@ -143,10 +144,11 @@ pub trait ObjectEventStreamExt<T>: Stream<Item = ObjectEvent<T>> + Sized {
 		Fut: Future<Output = Option<C>> + Send + 'static,
 		C: Send + 'static;
 
-	/// Inspect events via peek closure returning a future.
+	/// Inspect events via closure returning a future.
 	///
-	/// Passes events through unchanged after calling peek closure.
-	fn peek_async<F, Fut>(self, f: F) -> PeekedStream<Self, F>
+	/// Similar to Iterator::inspect - calls closure for side effects,
+	/// then passes events through unchanged.
+	fn inspect_async<F, Fut>(self, f: F) -> InspectedStream<Self, F>
 	where
 		F: Fn(&ObjectEvent<T>) -> Fut + Send + Sync + Unpin + 'static,
 		Fut: Future<Output = ()> + Send + 'static;
@@ -238,7 +240,9 @@ impl<Q: Queryable<Ctx> + Unpin, Ctx: QueryContext + Unpin> Stream for QueryStrea
 			Ok(crate::query::QueryEvent::MatchModified(info, query_data)) => {
 				Poll::Ready(Some(ObjectEvent::MatchModified(info, query_data)))
 			}
-			Ok(crate::query::QueryEvent::MatchLost(info)) => Poll::Ready(Some(ObjectEvent::MatchLost(info))),
+			Ok(crate::query::QueryEvent::MatchLost(info)) => {
+				Poll::Ready(Some(ObjectEvent::MatchLost(info)))
+			}
 			Ok(crate::query::QueryEvent::PhantomVariant(_)) => Poll::Ready(None),
 			Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
 				// No events available, register waker and return Pending
@@ -262,7 +266,7 @@ where
 
 	fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
 		let this = self.as_mut().get_mut();
-		
+
 		// First, check if any cache tasks have completed
 		if let Poll::Ready(Some(result)) = Pin::new(&mut this.cache_tasks).poll_join_next(cx) {
 			if let Ok((info, maybe_cached)) = result {
@@ -274,7 +278,7 @@ where
 				// Fall through to check stream or return Pending
 			}
 		}
-		
+
 		// Poll the underlying stream for new events
 		match Pin::new(&mut this.stream).poll_next(cx) {
 			Poll::Ready(Some(ObjectEvent::NewMatch(info, item))) => {
@@ -319,7 +323,7 @@ where
 	}
 }
 
-impl<S, F, T, Fut> Stream for PeekedStream<S, F>
+impl<S, F, T, Fut> Stream for InspectedStream<S, F>
 where
 	S: Stream<Item = ObjectEvent<T>> + Unpin,
 	T: Send + 'static,
@@ -328,12 +332,23 @@ where
 {
 	type Item = ObjectEvent<T>;
 
-	fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-		// Pass through events from underlying stream
-		// The peek closure will be called in spawned tasks, not here
-		// TODO: Implement proper peek with async closure execution
-		let this = self.get_mut();
-		Pin::new(&mut this.stream).poll_next(cx)
+	fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+		let this = self.as_mut().get_mut();
+		
+		// Poll the underlying stream for events
+		match Pin::new(&mut this.stream).poll_next(cx) {
+			Poll::Ready(Some(event)) => {
+				// Call inspect closure with reference to event
+				let inspect_fn = &this.inspect_fn;
+				let fut = inspect_fn(&event);
+				// Spawn task to execute inspection asynchronously without blocking
+				tokio::spawn(fut);
+				// Pass through event immediately
+				Poll::Ready(Some(event))
+			}
+			Poll::Ready(None) => Poll::Ready(None),
+			Poll::Pending => Poll::Pending,
+		}
 	}
 }
 
@@ -341,105 +356,120 @@ where
 
 impl<T, S> ObjectEventStreamExt<T> for S
 where
-    S: Stream<Item = ObjectEvent<T>> + Sized,
-    T: Send + 'static,
+	S: Stream<Item = ObjectEvent<T>> + Sized,
+	T: Send + 'static,
 {
-    fn cache_async<C, F, Fut>(self, f: F) -> CachedStream<Self, F, C>
-    where
-        F: Fn(T) -> Fut + Send + Sync + Unpin + Clone + 'static,
-        Fut: Future<Output = Option<C>> + Send + 'static,
-        C: Send + 'static,
-    {
-        CachedStream {
-            stream: self,
-            cache_fn: f,
-            cache_tasks: JoinSet::new(),
-        }
-    }
+	fn cache_async<C, F, Fut>(self, f: F) -> CachedStream<Self, F, C>
+	where
+		F: Fn(T) -> Fut + Send + Sync + Unpin + Clone + 'static,
+		Fut: Future<Output = Option<C>> + Send + 'static,
+		C: Send + 'static,
+	{
+		CachedStream {
+			stream: self,
+			cache_fn: f,
+			cache_tasks: JoinSet::new(),
+		}
+	}
 
-    fn peek_async<F, Fut>(self, f: F) -> PeekedStream<Self, F>
-    where
-        F: Fn(&ObjectEvent<T>) -> Fut + Send + Sync + Unpin + 'static,
-        Fut: Future<Output = ()> + Send + 'static,
-    {
-        PeekedStream { stream: self, peek_fn: f }
-    }
+	fn inspect_async<F, Fut>(self, f: F) -> InspectedStream<Self, F>
+	where
+		F: Fn(&ObjectEvent<T>) -> Fut + Send + Sync + Unpin + 'static,
+		Fut: Future<Output = ()> + Send + 'static,
+	{
+		InspectedStream {
+			stream: self,
+			inspect_fn: f,
+		}
+	}
 
-    fn list(self) -> ObjectList<Self, T> {
-        ObjectList { stream: self, list: HashMap::new(), _phantom: PhantomData }
-    }
+	fn list(self) -> ObjectList<Self, T> {
+		ObjectList {
+			stream: self,
+			list: HashMap::new(),
+			_phantom: PhantomData,
+		}
+	}
 }
 
 impl<S, T> ObjectListExt<T> for ObjectList<S, T>
 where
-    S: Stream<Item = ObjectEvent<T>> + Unpin + Send + 'static,
-    T: Send + Sync + Clone + 'static,
+	S: Stream<Item = ObjectEvent<T>> + Unpin + Send + 'static,
+	T: Send + Sync + Clone + 'static,
 {
-    fn get_list(&mut self) -> impl Future<Output = &HashMap<ObjectInfo, T>> {
-        async move {
-            if let Some(ev) = self.stream.next().await {
-                match ev {
-                    ObjectEvent::NewMatch(info, item) | ObjectEvent::MatchModified(info, item) => {
-                        self.list.insert(info, item);
-                    }
-                    ObjectEvent::MatchLost(info) => {
-                        self.list.remove(&info);
-                    }
-                }
-            }
-            &self.list
-        }
-    }
+	fn get_list(&mut self) -> impl Future<Output = &HashMap<ObjectInfo, T>> {
+		async move {
+			if let Some(ev) = self.stream.next().await {
+				match ev {
+					ObjectEvent::NewMatch(info, item) | ObjectEvent::MatchModified(info, item) => {
+						self.list.insert(info, item);
+					}
+					ObjectEvent::MatchLost(info) => {
+						self.list.remove(&info);
+					}
+				}
+			}
+			&self.list
+		}
+	}
 
-    fn filter_async<F, Fut>(self, f: F) -> FilteredObjectList<Self, F>
-    where
-        F: Fn(&T) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = bool> + Send + 'static,
-        T: Send + 'static,
-    {
-        FilteredObjectList { list: self, filter_fn: f }
-    }
+	fn filter_async<F, Fut>(self, f: F) -> FilteredObjectList<Self, F>
+	where
+		F: Fn(&T) -> Fut + Send + Sync + 'static,
+		Fut: Future<Output = bool> + Send + 'static,
+		T: Send + 'static,
+	{
+		FilteredObjectList {
+			list: self,
+			filter_fn: f,
+		}
+	}
 
-    fn watch(self) -> WatchHandle<T>
-    where
-        T: Send + Clone + 'static,
-    {
-        let (tx, watch_rx) = watch::channel(self.list.clone());
-        let mut stream = self.stream;
-        let mut list = self.list;
-        let handle = tokio::spawn(async move {
-            use tokio_stream::StreamExt;
-            while let Some(ev) = stream.next().await {
-                match ev {
-                    ObjectEvent::NewMatch(info, item) | ObjectEvent::MatchModified(info, item) => {
-                        list.insert(info, item);
-                    }
-                    ObjectEvent::MatchLost(info) => {
-                        list.remove(&info);
-                    }
-                }
-                let _ = tx.send(list.clone());
-            }
-        })
-        .abort_handle();
-        WatchHandle { watch: watch_rx, _handle: AbortOnDrop { abort_handle: handle } }
-    }
+	fn watch(self) -> WatchHandle<T>
+	where
+		T: Send + Clone + 'static,
+	{
+		let (tx, watch_rx) = watch::channel(self.list.clone());
+		let mut stream = self.stream;
+		let mut list = self.list;
+		let handle = tokio::spawn(async move {
+			use tokio_stream::StreamExt;
+			while let Some(ev) = stream.next().await {
+				match ev {
+					ObjectEvent::NewMatch(info, item) | ObjectEvent::MatchModified(info, item) => {
+						list.insert(info, item);
+					}
+					ObjectEvent::MatchLost(info) => {
+						list.remove(&info);
+					}
+				}
+				let _ = tx.send(list.clone());
+			}
+		})
+		.abort_handle();
+		WatchHandle {
+			watch: watch_rx,
+			_handle: AbortOnDrop {
+				abort_handle: handle,
+			},
+		}
+	}
 
-    fn trigger_and_run<TrigF, ActF, TrigFut, ActFut>(
-        self,
-        trigger: TrigF,
-        action: ActF,
-    ) -> AbortOnDrop
-    where
-        T: Send + Clone + 'static,
-        TrigF: Fn(&HashMap<ObjectInfo, T>) -> TrigFut + Send + Sync + 'static,
-        TrigFut: Future<Output = ()> + Send + 'static,
-        ActF: Fn(&Vec<(ObjectInfo, T)>) -> ActFut + Send + Sync + 'static,
-        ActFut: Future<Output = ()> + Send + 'static,
-    {
-        let mut stream = self.stream;
-        let mut list = self.list;
-        let handle = tokio::spawn(async move {
+	fn trigger_and_run<TrigF, ActF, TrigFut, ActFut>(
+		self,
+		trigger: TrigF,
+		action: ActF,
+	) -> AbortOnDrop
+	where
+		T: Send + Clone + 'static,
+		TrigF: Fn(&HashMap<ObjectInfo, T>) -> TrigFut + Send + Sync + 'static,
+		TrigFut: Future<Output = ()> + Send + 'static,
+		ActF: Fn(&Vec<(ObjectInfo, T)>) -> ActFut + Send + Sync + 'static,
+		ActFut: Future<Output = ()> + Send + 'static,
+	{
+		let mut stream = self.stream;
+		let mut list = self.list;
+		let handle = tokio::spawn(async move {
             use tokio_stream::StreamExt;
             loop {
                 tokio::select! {
@@ -458,57 +488,70 @@ where
             }
         })
         .abort_handle();
-        AbortOnDrop { abort_handle: handle }
-    }
+		AbortOnDrop {
+			abort_handle: handle,
+		}
+	}
 }
 
 impl<S, T, F, Fut> FilteredObjectListExt<T> for FilteredObjectList<ObjectList<S, T>, F>
 where
-    S: Stream<Item = ObjectEvent<T>> + Unpin + Send + 'static,
-    T: Send + Sync + Clone + 'static,
-    F: Fn(&T) -> Fut + Send + Sync + Clone + 'static,
-    Fut: Future<Output = bool> + Send + 'static,
+	S: Stream<Item = ObjectEvent<T>> + Unpin + Send + 'static,
+	T: Send + Sync + Clone + 'static,
+	F: Fn(&T) -> Fut + Send + Sync + Clone + 'static,
+	Fut: Future<Output = bool> + Send + 'static,
 {
-    fn watch(self) -> WatchHandle<T>
-    where
-        T: Send + Clone + 'static,
-    {
-        let (tx, watch_rx) = watch::channel(HashMap::<ObjectInfo, T>::new());
-        let mut stream = self.list.stream;
-        let mut list = self.list.list;
-        let filter_fn = self.filter_fn;
-        let handle = tokio::spawn(async move {
-            use tokio_stream::StreamExt;
-            while let Some(ev) = stream.next().await {
-                match ev {
-                    ObjectEvent::NewMatch(info, item) | ObjectEvent::MatchModified(info, item) => {
-                        if filter_fn(&item).await { list.insert(info, item); } else { list.remove(&info); }
-                    }
-                    ObjectEvent::MatchLost(info) => { list.remove(&info); }
-                }
-                let _ = tx.send(list.clone());
-            }
-        })
-        .abort_handle();
-        WatchHandle { watch: watch_rx, _handle: AbortOnDrop { abort_handle: handle } }
-    }
+	fn watch(self) -> WatchHandle<T>
+	where
+		T: Send + Clone + 'static,
+	{
+		let (tx, watch_rx) = watch::channel(HashMap::<ObjectInfo, T>::new());
+		let mut stream = self.list.stream;
+		let mut list = self.list.list;
+		let filter_fn = self.filter_fn;
+		let handle = tokio::spawn(async move {
+			use tokio_stream::StreamExt;
+			while let Some(ev) = stream.next().await {
+				match ev {
+					ObjectEvent::NewMatch(info, item) | ObjectEvent::MatchModified(info, item) => {
+						if filter_fn(&item).await {
+							list.insert(info, item);
+						} else {
+							list.remove(&info);
+						}
+					}
+					ObjectEvent::MatchLost(info) => {
+						list.remove(&info);
+					}
+				}
+				let _ = tx.send(list.clone());
+			}
+		})
+		.abort_handle();
+		WatchHandle {
+			watch: watch_rx,
+			_handle: AbortOnDrop {
+				abort_handle: handle,
+			},
+		}
+	}
 
-    fn trigger_and_run<TrigF, ActF, TrigFut, ActFut>(
-        self,
-        trigger: TrigF,
-        action: ActF,
-    ) -> AbortOnDrop
-    where
-        T: Send + Clone + 'static,
-        TrigF: Fn(&Vec<(ObjectInfo, T)>) -> TrigFut + Send + Sync + 'static,
-        TrigFut: Future<Output = ()> + Send + 'static,
-        ActF: Fn(&Vec<(ObjectInfo, T)>) -> ActFut + Send + Sync + 'static,
-        ActFut: Future<Output = ()> + Send + 'static,
-    {
-        let mut stream = self.list.stream;
-        let mut list = self.list.list;
-        let filter_fn = self.filter_fn;
-        let handle = tokio::spawn(async move {
+	fn trigger_and_run<TrigF, ActF, TrigFut, ActFut>(
+		self,
+		trigger: TrigF,
+		action: ActF,
+	) -> AbortOnDrop
+	where
+		T: Send + Clone + 'static,
+		TrigF: Fn(&Vec<(ObjectInfo, T)>) -> TrigFut + Send + Sync + 'static,
+		TrigFut: Future<Output = ()> + Send + 'static,
+		ActF: Fn(&Vec<(ObjectInfo, T)>) -> ActFut + Send + Sync + 'static,
+		ActFut: Future<Output = ()> + Send + 'static,
+	{
+		let mut stream = self.list.stream;
+		let mut list = self.list.list;
+		let filter_fn = self.filter_fn;
+		let handle = tokio::spawn(async move {
             use tokio_stream::StreamExt;
             loop {
                 tokio::select! {
@@ -534,16 +577,18 @@ where
             }
         })
         .abort_handle();
-        AbortOnDrop { abort_handle: handle }
-    }
+		AbortOnDrop {
+			abort_handle: handle,
+		}
+	}
 }
 
 // ============ Tests ============
 
 #[tokio::test]
 async fn query_stream_pipeline_test() {
-	use std::time::Duration;
 	use crate::object_registry::ObjectRegistry;
+	use std::time::Duration;
 
 	// Set up test interface
 	struct TestInterface;
@@ -600,12 +645,15 @@ async fn query_stream_pipeline_test() {
 	for _ in 0..20 {
 		if watch_rx.changed().await.is_ok() {
 			let list = watch_rx.borrow();
-			if list.iter().any(|(info, _)| info.object_path.as_str() == "/org/stardustxr/TestObject") {
+			if list
+				.iter()
+				.any(|(info, _)| info.object_path.as_str() == "/org/stardustxr/TestObject")
+			{
 				println!("Found test object in list: {} items", list.len());
 				found = true;
 				break;
 			}
-			}
+		}
 		tokio::time::sleep(Duration::from_millis(100)).await;
 	}
 	assert!(found, "Test object should appear in watch list");
@@ -630,9 +678,10 @@ async fn query_stream_pipeline_test() {
 	for _ in 0..20 {
 		if cache_rx.changed().await.is_ok() {
 			let list = cache_rx.borrow();
-			if let Some((_, cached_path)) = list.iter().find(|(info, _)| {
-				info.object_path.as_str() == "/org/stardustxr/TestObject"
-			}) {
+			if let Some((_, cached_path)) = list
+				.iter()
+				.find(|(info, _)| info.object_path.as_str() == "/org/stardustxr/TestObject")
+			{
 				println!("Found cached result: {}", cached_path);
 				assert_eq!(cached_path, "/org/stardustxr/TestObject");
 				cache_found = true;
@@ -643,8 +692,69 @@ async fn query_stream_pipeline_test() {
 	}
 	assert!(cache_found, "Cached result should appear");
 
-	// Test 3: trigger_and_run() pipeline
-	println!("\nTest 3: Trigger and run pipeline");
+	// Test 3: inspect_async() pipeline
+	println!("\nTest 3: Inspect async pipeline");
+	let (inspect_tx, mut inspect_rx) = tokio::sync::mpsc::channel::<String>(10);
+
+	let inspect_watch = registry
+		.query::<TestProxyProxy<'static>, ()>(())
+		.inspect_async(move |event| {
+			let tx = inspect_tx.clone();
+			async move {
+				let msg = match event {
+					ObjectEvent::NewMatch(info, _) => {
+						format!("NewMatch: {}", info.object_path)
+					}
+					ObjectEvent::MatchModified(info, _) => {
+						format!("MatchModified: {}", info.object_path)
+					}
+					ObjectEvent::MatchLost(info) => {
+						format!("MatchLost: {}", info.object_path)
+					}
+				};
+				_ = tx.send(msg).await;
+			}
+		})
+		.list()
+		.watch();
+
+	// Wait for inspect messages
+	let mut inspect_found = false;
+	for _ in 0..20 {
+		if let Ok(msg) = tokio::time::timeout(Duration::from_millis(100), inspect_rx.recv()).await
+		{
+			if let Some(msg) = msg {
+				println!("Inspect captured: {}", msg);
+				if msg.contains("/org/stardustxr/TestObject") {
+					inspect_found = true;
+					break;
+				}
+			}
+		}
+	}
+	assert!(inspect_found, "Inspect should capture events");
+
+	// Verify the watch still works after inspect
+	let mut inspect_watch_rx = inspect_watch.watch.clone();
+	let mut list_after_inspect = false;
+	for _ in 0..20 {
+		if inspect_watch_rx.changed().await.is_ok() {
+			let list = inspect_watch_rx.borrow();
+			if list
+				.iter()
+				.any(|(info, _)| info.object_path.as_str() == "/org/stardustxr/TestObject")
+			{
+				println!("List still has items after inspect: {}", list.len());
+				list_after_inspect = true;
+				break;
+			}
+		}
+		tokio::time::sleep(Duration::from_millis(100)).await;
+	}
+	assert!(list_after_inspect, "List should still work after inspect");
+
+	// Test 4: trigger_and_run() pipeline
+	println!("\nTest 4: Trigger and run pipeline");
 	let (trigger_tx, trigger_rx) = tokio::sync::mpsc::channel::<()>(1);
 	let (action_tx, mut action_rx) = tokio::sync::mpsc::channel::<usize>(1);
 
