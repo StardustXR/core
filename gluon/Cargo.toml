@@ -18,3 +18,4 @@ zbus = { version = "5.11.0", features = [
 nanoid = "0.4.0"
 variadics_please = "1.1.0"
 console-subscriber = { version = "0.4.1", features = ["parking_lot"] }
+futures = "0.3.31"

@@ -340,25 +340,6 @@ impl ObjectRegistry {
 	pub fn get_connection(&self) -> &zbus::Connection {
 		&self.connection
 	}
-	
-	/// Create a QueryStream for the given queryable type.
-	///
-	/// This returns a Stream that yields ObjectEvent<Q> as objects matching
-	/// the query criteria appear, change, or disappear.
-	pub fn query<Q, Ctx>(
-		self: &Arc<Self>,
-		context: impl Into<Arc<Ctx>>,
-	) -> crate::query_builder::QueryStream<Q, Ctx>
-	where
-		Q: crate::query::Queryable<Ctx>,
-		Ctx: crate::query::QueryContext,
-	{
-		let object_query = crate::query::ObjectQuery::new(self.clone(), context);
-		crate::query_builder::QueryStream {
-			query: object_query,
-			_phantom: std::marker::PhantomData,
-		}
-	}
 }
 impl Drop for ObjectRegistry {
 	fn drop(&mut self) {

@@ -3,10 +3,9 @@ pub mod object_registry;
 #[macro_use]
 pub mod query;
 pub mod list_query;
-pub mod query_builder;
+mod query_stream;
 
-pub use query_builder::{ObjectEvent, QueryStream, ObjectEventStreamExt, ObjectListExt, FilteredObjectListExt, WatchHandle, AbortOnDrop};
-
+pub use query_stream::*;
 pub use zbus;
 
 use zbus::{
