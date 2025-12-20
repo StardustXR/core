@@ -363,7 +363,9 @@ async fn fusion_input_handler() {
 		.sync_event_loop(|_, _| {
 			while let Some(input_event) = _input_handler.recv_input_handler_event() {
 				match input_event {
-					InputHandlerEvent::Input { methods: _, data } => on_input(data),
+					InputHandlerEvent::InputSent { method: _, data } => on_input(vec![data]),
+					InputHandlerEvent::InputUpdated { data } => on_input(vec![data]),
+					InputHandlerEvent::InputLeft { method: _ } => {}
 				}
 			}
 		})
@@ -452,7 +454,10 @@ async fn fusion_pointer_input_method() {
 
 						datamap.grab = sin;
 						pointer
-							.set_datamap(&Datamap::from_typed(&datamap).unwrap())
+							.update_state(
+								InputDataType::Pointer(Pointer::default()),
+								&Datamap::from_typed(&datamap).unwrap(),
+							)
 							.unwrap();
 					}
 					RootEvent::SaveState { response } => response.send_ok(Default::default()),
@@ -521,8 +526,11 @@ async fn fusion_tip_input_method() {
 						.unwrap();
 
 						datamap.grab = sin;
-						tip.set_datamap(&Datamap::from_typed(&datamap).unwrap())
-							.unwrap();
+						tip.update_state(
+							InputDataType::Tip(Tip::default()),
+							&Datamap::from_typed(&datamap).unwrap(),
+						)
+						.unwrap();
 					}
 					RootEvent::SaveState { response } => response.send_ok(Default::default()),
 				}
