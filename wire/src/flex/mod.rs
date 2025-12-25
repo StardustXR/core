@@ -9,11 +9,13 @@ use serde::{
 		SerializeTupleStruct, SerializeTupleVariant,
 	},
 };
-use std::{fmt::Display, marker::PhantomData};
+use std::{fmt::Display, marker::PhantomData, os::fd::OwnedFd};
 
 mod datamap;
 pub use datamap::*;
 pub use flexbuffers;
+
+use crate::fd::{with_fd_deserialization_ctx, with_fd_serialization_ctx};
 
 #[derive(Debug, thiserror::Error)]
 pub enum FlexSerializeError {
@@ -33,11 +35,16 @@ impl serde::ser::Error for FlexSerializeError {
 
 /// Serialize the given data into flexbuffers, stripping struct field names off
 /// and putting structs into vectors to save space and computation.
-pub fn serialize<S: Serialize>(to_serialize: S) -> Result<Vec<u8>, FlexSerializeError> {
-	let mut fbb = flexbuffers::Builder::default();
-	let fs = FlexSerializer { fbb: &mut fbb };
-	to_serialize.serialize(fs)?;
-	Ok(fbb.take_buffer())
+/// This also allows serializing file descriptors.
+pub fn serialize<S: Serialize>(
+	to_serialize: S,
+) -> Result<(Vec<u8>, Vec<OwnedFd>), FlexSerializeError> {
+	with_fd_serialization_ctx(|| {
+		let mut fbb = flexbuffers::Builder::default();
+		let fs = FlexSerializer { fbb: &mut fbb };
+		to_serialize.serialize(fs)?;
+		Ok(fbb.take_buffer())
+	})
 }
 
 struct FlexSerializer<'b> {
@@ -943,10 +950,16 @@ impl SerializeMap for FlexMapSerializer<'_> {
 /// because it strips the names off of struct fields,
 /// instead putting the values into vectors with the same
 /// order to save space and speed up deserialization.
-pub fn deserialize<'a, T: Deserialize<'a>>(data: &'a [u8]) -> Result<T, DeserializationError> {
-	let root = flexbuffers::Reader::get_root(data)?;
-	let deserializer = FlexbuffersDeserializer(root);
-	T::deserialize(deserializer)
+/// This also allows deserializing file descriptors.
+pub fn deserialize<'a, T: Deserialize<'a>>(
+	data: &'a [u8],
+	fds: impl IntoIterator<Item = OwnedFd>,
+) -> Result<T, DeserializationError> {
+	with_fd_deserialization_ctx(fds.into_iter(), || {
+		let root = flexbuffers::Reader::get_root(data)?;
+		let deserializer = FlexbuffersDeserializer(root);
+		T::deserialize(deserializer)
+	})
 }
 
 struct ReaderIteratorWrapper<'d>(ReaderIterator<&'d [u8]>);
@@ -1229,9 +1242,9 @@ fn round_trip_flex_serialize() {
 		test_struct: None,
 	};
 	test_struct.test_struct = Some(Box::new(test_struct.clone()));
-	let serialized = serialize(test_struct.clone()).unwrap();
+	let (serialized, fds) = serialize(test_struct.clone()).unwrap();
 	let flex = flexbuffers::Reader::get_root(serialized.as_slice()).unwrap();
 	println!("{flex}");
-	let deserialized: TestStruct = deserialize(&serialized).unwrap();
+	let deserialized: TestStruct = deserialize(&serialized, fds.into_iter()).unwrap();
 	assert_eq!(test_struct, deserialized, "Round trip lost data");
 }

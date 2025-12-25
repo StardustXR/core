@@ -639,7 +639,7 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 				member._type,
 				quote! {
 					#opcode => {
-						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr_wire::flex::deserialize(_data)?;
+						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
 
 						#debug
 						Ok(#event_name::#variant_name { #(#field_uses,)* #response_sender })
@@ -728,19 +728,17 @@ fn generate_server_member(
 		MemberType::Signal => {
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)?;
+					let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, fds)?;
 
 					let (#(#arguments),*) = data;
 					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
 				}
 			} else {
 				quote! {
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					self.node().send_signal(#aspect_id, #opcode, &data, _fds)?;
+					self.node().send_signal(#aspect_id, #opcode, &data)?;
 
 					let (#(#arguments),*) = data;
 					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
@@ -791,28 +789,26 @@ fn generate_server_member(
 			let deserialize = generate_argument_deserialize("result", &argument_type, false);
 			let body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
 					{
 						let (#(#arguments),*) = &data;
 						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
 					}
-					let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
-					let result: #deserializeable_type = stardust_xr_wire::flex::deserialize(&message)?;
+					let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+					let (message, message_fds) = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_components();
+					let result: #deserializeable_type = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
 					let deserialized = #deserialize;
 					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
 					Ok(deserialized)
 				}
 			} else {
 				quote! {{
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
 					{
 						let (#(#arguments),*) = &data;
 						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
 					}
-					let result: #deserializeable_type = self.node().call_method(#aspect_id, #opcode, &data, _fds).await?;
+					let result: #deserializeable_type = self.node().call_method(#aspect_id, #opcode, &data).await?;
 					let deserialized = #deserialize;
 					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
 					Ok(deserialized)
@@ -864,9 +860,6 @@ fn generate_argument_deserialize(
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
 			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<stardust_xr_wire::values::Map<String, _>, crate::node::NodeError>>()?)
-		}
-		ArgumentType::Fd => {
-			quote!(_fds.remove(0))
 		}
 		_ => quote!(#name),
 	}
@@ -923,12 +916,6 @@ fn generate_argument_serialize(
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_serialize("a", v, false);
 			quote!(#name.iter().map(|(k, a)| Ok((k, #mapping))).collect::<crate::node::NodeResult<rustc_hash::FxHashMap<String, _>>>()?)
-		}
-		ArgumentType::Fd => {
-			quote!({
-				_fds.push(#name);
-				(_fds.len() - 1) as u32
-			})
 		}
 		_ => quote!(#name),
 	}
@@ -1066,7 +1053,7 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			}
 		}
 		ArgumentType::Fd => {
-			quote!(std::os::unix::io::OwnedFd)
+			quote!(stardust_xr_wire::fd::ProtocolFd)
 		}
 	}
 }

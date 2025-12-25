@@ -107,6 +107,7 @@ pub mod root {
                 2586777469268117179u64 => {
                     let (info): (FrameInfo) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? info, "Got signal from server, {}::{}", "Root", "frame"
@@ -125,7 +126,7 @@ pub mod root {
         ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match method_id {
                 1374738518356883234u64 => {
-                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!("Method called from server, {}::{}", "Root", "ping");
                     Ok(RootEvent::Ping {
                         response: crate::TypedMethodResponse(
@@ -135,7 +136,7 @@ pub mod root {
                     })
                 }
                 6559167809188075643u64 => {
-                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         "Method called from server, {}::{}", "Root", "save_state"
                     );
@@ -164,7 +165,6 @@ pub mod root {
         ///Get the current state. Useful to check the state before you initialize your application!
         async fn get_state(&self) -> crate::node::NodeResult<ClientState> {
             {
-                let mut _fds = Vec::new();
                 let data = ();
                 {
                     let () = &data;
@@ -174,12 +174,7 @@ pub mod root {
                 }
                 let result: ClientState = self
                     .node()
-                    .call_method(
-                        7212020743076450030u64,
-                        14958324855167218950u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(7212020743076450030u64, 14958324855167218950u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -200,7 +195,6 @@ pub mod root {
             state: ClientState,
         ) -> crate::node::NodeResult<String> {
             {
-                let mut _fds = Vec::new();
                 let data = (state);
                 {
                     let (state) = &data;
@@ -211,12 +205,7 @@ pub mod root {
                 }
                 let result: String = self
                     .node()
-                    .call_method(
-                        7212020743076450030u64,
-                        530863980839400599u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(7212020743076450030u64, 530863980839400599u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -231,7 +220,6 @@ pub mod root {
             &self,
         ) -> crate::node::NodeResult<stardust_xr_wire::values::Map<String, String>> {
             {
-                let mut _fds = Vec::new();
                 let data = ();
                 {
                     let () = &data;
@@ -242,12 +230,7 @@ pub mod root {
                 }
                 let result: stardust_xr_wire::values::Map<String, String> = self
                     .node()
-                    .call_method(
-                        7212020743076450030u64,
-                        3344613215577382567u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(7212020743076450030u64, 3344613215577382567u64, &data)
                     .await?;
                 let deserialized = result
                     .into_iter()
@@ -267,18 +250,12 @@ pub mod root {
         }
         ///Set initial list of folders to look for namespaced resources in
         fn set_base_prefixes(&self, prefixes: &[String]) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (prefixes
                 .iter()
                 .map(|a| Ok(a))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_signal(
-                    7212020743076450030u64,
-                    3714507829296596139u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(7212020743076450030u64, 3714507829296596139u64, &data)?;
             let (prefixes) = data;
             tracing::trace!(
                 ? prefixes, "Sent signal to server, {}::{}", "Root", "set_base_prefixes"
@@ -287,15 +264,9 @@ pub mod root {
         }
         ///Cleanly disconnect from the server
         fn disconnect(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    7212020743076450030u64,
-                    662137628972844924u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(7212020743076450030u64, 662137628972844924u64, &data)?;
             let () = data;
             tracing::trace!("Sent signal to server, {}::{}", "Root", "disconnect");
             Ok(())
@@ -314,15 +285,9 @@ pub mod node {
     pub trait OwnedAspect: crate::node::NodeType + std::fmt::Debug {
         ///Set if this node is enabled or not. Disabled drawables won't render, input handlers won't receive input, etc.
         fn set_enabled(&self, enabled: bool) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (enabled);
             self.node()
-                .send_signal(
-                    15801764205032075891u64,
-                    13365497663235993822u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(15801764205032075891u64, 13365497663235993822u64, &data)?;
             let (enabled) = data;
             tracing::trace!(
                 ? enabled, "Sent signal to server, {}::{}", "Owned", "set_enabled"
@@ -331,15 +296,9 @@ pub mod node {
         }
         ///Destroy this node immediately. Not all nodes will have this method, those that don't can be dropped client-side without issue.
         fn destroy(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    15801764205032075891u64,
-                    8637450960623370830u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(15801764205032075891u64, 8637450960623370830u64, &data)?;
             let () = data;
             tracing::trace!("Sent signal to server, {}::{}", "Owned", "destroy");
             Ok(())
@@ -423,7 +382,6 @@ pub mod spatial {
         ///Get the bounding box of this spatial and its children relative to another spatial
         async fn get_local_bounding_box(&self) -> crate::node::NodeResult<BoundingBox> {
             {
-                let mut _fds = Vec::new();
                 let data = ();
                 {
                     let () = &data;
@@ -434,12 +392,7 @@ pub mod spatial {
                 }
                 let result: BoundingBox = self
                     .node()
-                    .call_method(
-                        14774096707642646617u64,
-                        15184457389419466387u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(14774096707642646617u64, 15184457389419466387u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -455,7 +408,6 @@ pub mod spatial {
             relative_to: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<BoundingBox> {
             {
-                let mut _fds = Vec::new();
                 let data = (relative_to.node().id);
                 {
                     let (relative_to) = &data;
@@ -466,12 +418,7 @@ pub mod spatial {
                 }
                 let result: BoundingBox = self
                     .node()
-                    .call_method(
-                        14774096707642646617u64,
-                        8077745023404307052u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(14774096707642646617u64, 8077745023404307052u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -487,7 +434,6 @@ pub mod spatial {
             relative_to: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<Transform> {
             {
-                let mut _fds = Vec::new();
                 let data = (relative_to.node().id);
                 {
                     let (relative_to) = &data;
@@ -498,12 +444,7 @@ pub mod spatial {
                 }
                 let result: Transform = self
                     .node()
-                    .call_method(
-                        14774096707642646617u64,
-                        6982810219028106561u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(14774096707642646617u64, 6982810219028106561u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -580,15 +521,9 @@ pub mod spatial {
             &self,
             transform: Transform,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (transform);
             self.node()
-                .send_signal(
-                    17785849468685298036u64,
-                    5092462149256736585u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(17785849468685298036u64, 5092462149256736585u64, &data)?;
             let (transform) = data;
             tracing::trace!(
                 ? transform, "Sent signal to server, {}::{}", "Spatial",
@@ -602,15 +537,9 @@ pub mod spatial {
             relative_to: &impl SpatialRefAspect,
             transform: Transform,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (relative_to.node().id, transform);
             self.node()
-                .send_signal(
-                    17785849468685298036u64,
-                    15020422542376308840u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(17785849468685298036u64, 15020422542376308840u64, &data)?;
             let (relative_to, transform) = data;
             tracing::trace!(
                 ? relative_to, ? transform, "Sent signal to server, {}::{}", "Spatial",
@@ -626,15 +555,9 @@ pub mod spatial {
             &self,
             parent: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (parent.node().id);
             self.node()
-                .send_signal(
-                    17785849468685298036u64,
-                    12472379656662040034u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(17785849468685298036u64, 12472379656662040034u64, &data)?;
             let (parent) = data;
             tracing::trace!(
                 ? parent, "Sent signal to server, {}::{}", "Spatial",
@@ -650,15 +573,9 @@ pub mod spatial {
             &self,
             parent: &impl SpatialRefAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (parent.node().id);
             self.node()
-                .send_signal(
-                    17785849468685298036u64,
-                    1386737540675144626u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(17785849468685298036u64, 1386737540675144626u64, &data)?;
             let (parent) = data;
             tracing::trace!(
                 ? parent, "Sent signal to server, {}::{}", "Spatial",
@@ -669,7 +586,6 @@ pub mod spatial {
         ///Return a UUID representing this node's SpatialRef that you can send to other clients
         async fn export_spatial(&self) -> crate::node::NodeResult<u64> {
             {
-                let mut _fds = Vec::new();
                 let data = ();
                 {
                     let () = &data;
@@ -679,12 +595,7 @@ pub mod spatial {
                 }
                 let result: u64 = self
                     .node()
-                    .call_method(
-                        17785849468685298036u64,
-                        3600225297814947977u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(17785849468685298036u64, 3600225297814947977u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -700,7 +611,6 @@ pub mod spatial {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         uid: u64,
     ) -> crate::node::NodeResult<SpatialRef> {
-        let mut _fds = Vec::new();
         let data = (uid);
         {
             let (uid) = &data;
@@ -709,16 +619,16 @@ pub mod spatial {
                 "import_spatial_ref"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(1u64, 0u64, 7309812661610962094u64, &serialized_data, _fds)
+            .method(1u64, 0u64, 7309812661610962094u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = SpatialRef::from_id(_client, result, false);
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -734,12 +644,11 @@ pub mod spatial {
         transform: Transform,
     ) -> crate::node::NodeResult<Spatial> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(1u64, 0u64, 3949276749019911643u64, &serialized_data, _fds)?;
+                .signal(1u64, 0u64, 3949276749019911643u64, &serialized_data, fds)?;
             let (id, parent, transform) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, "Sent signal to server, {}::{}",
@@ -860,7 +769,6 @@ pub mod field {
             point: impl Into<stardust_xr_wire::values::Vector3<f32>>,
         ) -> crate::node::NodeResult<f32> {
             {
-                let mut _fds = Vec::new();
                 let data = (space.node().id, point.into());
                 {
                     let (space, point) = &data;
@@ -871,12 +779,7 @@ pub mod field {
                 }
                 let result: f32 = self
                     .node()
-                    .call_method(
-                        10662923473076663509u64,
-                        12706699825100237095u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(10662923473076663509u64, 12706699825100237095u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -893,7 +796,6 @@ pub mod field {
             point: impl Into<stardust_xr_wire::values::Vector3<f32>>,
         ) -> crate::node::NodeResult<stardust_xr_wire::values::Vector3<f32>> {
             {
-                let mut _fds = Vec::new();
                 let data = (space.node().id, point.into());
                 {
                     let (space, point) = &data;
@@ -904,12 +806,7 @@ pub mod field {
                 }
                 let result: stardust_xr_wire::values::Vector3<f32> = self
                     .node()
-                    .call_method(
-                        10662923473076663509u64,
-                        10933809934326220183u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(10662923473076663509u64, 10933809934326220183u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -926,7 +823,6 @@ pub mod field {
             point: impl Into<stardust_xr_wire::values::Vector3<f32>>,
         ) -> crate::node::NodeResult<stardust_xr_wire::values::Vector3<f32>> {
             {
-                let mut _fds = Vec::new();
                 let data = (space.node().id, point.into());
                 {
                     let (space, point) = &data;
@@ -937,12 +833,7 @@ pub mod field {
                 }
                 let result: stardust_xr_wire::values::Vector3<f32> = self
                     .node()
-                    .call_method(
-                        10662923473076663509u64,
-                        13473947755141124846u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(10662923473076663509u64, 13473947755141124846u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -960,7 +851,6 @@ pub mod field {
             ray_direction: impl Into<stardust_xr_wire::values::Vector3<f32>>,
         ) -> crate::node::NodeResult<RayMarchResult> {
             {
-                let mut _fds = Vec::new();
                 let data = (space.node().id, ray_origin.into(), ray_direction.into());
                 {
                     let (space, ray_origin, ray_direction) = &data;
@@ -971,12 +861,7 @@ pub mod field {
                 }
                 let result: RayMarchResult = self
                     .node()
-                    .call_method(
-                        10662923473076663509u64,
-                        7352457860499612292u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(10662923473076663509u64, 7352457860499612292u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -1050,15 +935,9 @@ pub mod field {
     pub trait FieldAspect: crate::node::NodeType + super::FieldRefAspect + super::SpatialRefAspect + super::SpatialAspect + super::OwnedAspect + std::fmt::Debug {
         ///Set the shape of this field (and its parameters)
         fn set_shape(&self, shape: Shape) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (shape);
             self.node()
-                .send_signal(
-                    3948434400034960392u64,
-                    10076774457453995458u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(3948434400034960392u64, 10076774457453995458u64, &data)?;
             let (shape) = data;
             tracing::trace!(
                 ? shape, "Sent signal to server, {}::{}", "Field", "set_shape"
@@ -1068,7 +947,6 @@ pub mod field {
         ///Return a UUID representing this node's FieldRef that you can send to other clients
         async fn export_field(&self) -> crate::node::NodeResult<u64> {
             {
-                let mut _fds = Vec::new();
                 let data = ();
                 {
                     let () = &data;
@@ -1078,12 +956,7 @@ pub mod field {
                 }
                 let result: u64 = self
                     .node()
-                    .call_method(
-                        3948434400034960392u64,
-                        939650650519133349u64,
-                        &data,
-                        _fds,
-                    )
+                    .call_method(3948434400034960392u64, 939650650519133349u64, &data)
                     .await?;
                 let deserialized = result;
                 tracing::trace!(
@@ -1099,7 +972,6 @@ pub mod field {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         uid: u64,
     ) -> crate::node::NodeResult<FieldRef> {
-        let mut _fds = Vec::new();
         let data = (uid);
         {
             let (uid) = &data;
@@ -1107,16 +979,16 @@ pub mod field {
                 ? uid, "Called method on server, {}::{}", "Interface", "import_field_ref"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(2u64, 0u64, 5844955584634021418u64, &serialized_data, _fds)
+            .method(2u64, 0u64, 5844955584634021418u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = FieldRef::from_id(_client, result, false);
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1133,12 +1005,11 @@ pub mod field {
         shape: Shape,
     ) -> crate::node::NodeResult<Field> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, shape);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(2u64, 0u64, 3216373392735127623u64, &serialized_data, _fds)?;
+                .signal(2u64, 0u64, 3216373392735127623u64, &serialized_data, fds)?;
             let (id, parent, transform, shape) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? shape, "Sent signal to server, {}::{}",
@@ -1214,30 +1085,18 @@ pub mod audio {
     pub trait SoundAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Play sound effect
         fn play(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    17761155925539609649u64,
-                    18267594382511242772u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(17761155925539609649u64, 18267594382511242772u64, &data)?;
             let () = data;
             tracing::trace!("Sent signal to server, {}::{}", "Sound", "play");
             Ok(())
         }
         ///Stop sound effect
         fn stop(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    17761155925539609649u64,
-                    4968801543080236686u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(17761155925539609649u64, 4968801543080236686u64, &data)?;
             let () = data;
             tracing::trace!("Sent signal to server, {}::{}", "Sound", "stop");
             Ok(())
@@ -1252,12 +1111,11 @@ pub mod audio {
         resource: &stardust_xr_wire::values::ResourceID,
     ) -> crate::node::NodeResult<Sound> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, resource);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(10u64, 0u64, 3197851813257440734u64, &serialized_data, _fds)?;
+                .signal(10u64, 0u64, 3197851813257440734u64, &serialized_data, fds)?;
             let (id, parent, transform, resource) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? resource, "Sent signal to server, {}::{}",
@@ -1482,18 +1340,12 @@ pub mod drawable {
     pub trait LinesAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Replace all polylines with the given lines
         fn set_lines(&self, lines: &[Line]) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (lines
                 .iter()
                 .map(|a| Ok(a))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_signal(
-                    16705186951373789081u64,
-                    17689001183742889136u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16705186951373789081u64, 17689001183742889136u64, &data)?;
             let (lines) = data;
             tracing::trace!(
                 ? lines, "Sent signal to server, {}::{}", "Lines", "set_lines"
@@ -1565,14 +1417,12 @@ pub mod drawable {
             part_path: &str,
         ) -> crate::node::NodeResult<ModelPart> {
             {
-                let mut _fds = Vec::new();
                 let data = (id, part_path);
                 self.node()
                     .send_signal(
                         11775342128130118047u64,
                         18406803564448475833u64,
                         &data,
-                        _fds,
                     )?;
                 let (id, part_path) = data;
                 tracing::trace!(
@@ -1642,15 +1492,9 @@ pub mod drawable {
     pub trait ModelPartAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object.
         fn apply_holdout_material(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    7912164431074553740u64,
-                    13817793452575402942u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(7912164431074553740u64, 13817793452575402942u64, &data)?;
             let () = data;
             tracing::trace!(
                 "Sent signal to server, {}::{}", "ModelPart", "apply_holdout_material"
@@ -1663,15 +1507,9 @@ pub mod drawable {
             parameter_name: &str,
             value: MaterialParameter,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (parameter_name, value);
             self.node()
-                .send_signal(
-                    7912164431074553740u64,
-                    12609900228877593594u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(7912164431074553740u64, 12609900228877593594u64, &data)?;
             let (parameter_name, value) = data;
             tracing::trace!(
                 ? parameter_name, ? value, "Sent signal to server, {}::{}", "ModelPart",
@@ -1739,15 +1577,9 @@ pub mod drawable {
     pub trait TextAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///Set the character height in meters
         fn set_character_height(&self, height: f32) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (height);
             self.node()
-                .send_signal(
-                    3129045917168168339u64,
-                    1124886941794143568u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(3129045917168168339u64, 1124886941794143568u64, &data)?;
             let (height) = data;
             tracing::trace!(
                 ? height, "Sent signal to server, {}::{}", "Text", "set_character_height"
@@ -1756,15 +1588,9 @@ pub mod drawable {
         }
         ///Set the text content
         fn set_text(&self, text: &str) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (text);
             self.node()
-                .send_signal(
-                    3129045917168168339u64,
-                    395974856293277940u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(3129045917168168339u64, 395974856293277940u64, &data)?;
             let (text) = data;
             tracing::trace!(? text, "Sent signal to server, {}::{}", "Text", "set_text");
             Ok(())
@@ -1777,25 +1603,18 @@ pub mod drawable {
         format: u32,
         srgb: bool,
         array_layers: Option<u32>,
-        plane_1_dmabuf_fd: std::os::unix::io::OwnedFd,
+        plane_1_dmabuf_fd: stardust_xr_wire::fd::ProtocolFd,
         plane_1_info: DmatexPlane,
-        timeline_syncobj_fd: std::os::unix::io::OwnedFd,
+        timeline_syncobj_fd: stardust_xr_wire::fd::ProtocolFd,
     ) -> crate::node::NodeResult<u64> {
-        let mut _fds = Vec::new();
         let data = (
             size,
             format,
             srgb,
             array_layers.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?,
-            {
-                _fds.push(plane_1_dmabuf_fd);
-                (_fds.len() - 1) as u32
-            },
+            plane_1_dmabuf_fd,
             plane_1_info,
-            {
-                _fds.push(timeline_syncobj_fd);
-                (_fds.len() - 1) as u32
-            },
+            timeline_syncobj_fd,
         );
         {
             let (
@@ -1813,16 +1632,16 @@ pub mod drawable {
                 "Interface", "import_dmatex"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(4u64, 0u64, 5202664904415071827u64, &serialized_data, _fds)
+            .method(4u64, 0u64, 5202664904415071827u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1835,7 +1654,6 @@ pub mod drawable {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         dmatex_id: u64,
     ) -> crate::node::NodeResult<u64> {
-        let mut _fds = Vec::new();
         let data = (dmatex_id);
         {
             let (dmatex_id) = &data;
@@ -1844,16 +1662,16 @@ pub mod drawable {
                 "export_dmatex_uid"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(4u64, 0u64, 2247267269053194767u64, &serialized_data, _fds)
+            .method(4u64, 0u64, 2247267269053194767u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1866,7 +1684,6 @@ pub mod drawable {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         dmatex_uid: u64,
     ) -> crate::node::NodeResult<u64> {
-        let mut _fds = Vec::new();
         let data = (dmatex_uid);
         {
             let (dmatex_uid) = &data;
@@ -1875,16 +1692,16 @@ pub mod drawable {
                 "import_dmatex_uid"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(4u64, 0u64, 5604115908701744320u64, &serialized_data, _fds)
+            .method(4u64, 0u64, 5604115908701744320u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1897,12 +1714,11 @@ pub mod drawable {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         dmatex_id: u64,
     ) -> crate::node::NodeResult<()> {
-        let mut _fds = Vec::new();
         let data = (dmatex_id);
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
-            .signal(4u64, 0u64, 15846108642868241016u64, &serialized_data, _fds)?;
+            .signal(4u64, 0u64, 15846108642868241016u64, &serialized_data, fds)?;
         let (dmatex_id) = data;
         tracing::trace!(
             ? dmatex_id, "Sent signal to server, {}::{}", "Interface",
@@ -1914,7 +1730,6 @@ pub mod drawable {
     pub async fn get_primary_render_device_id(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
     ) -> crate::node::NodeResult<DrmNodeId> {
-        let mut _fds = Vec::new();
         let data = ();
         {
             let () = &data;
@@ -1923,16 +1738,19 @@ pub mod drawable {
                 "get_primary_render_device_id"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(4u64, 0u64, 16013200258148922551u64, &serialized_data, _fds)
+            .method(4u64, 0u64, 16013200258148922551u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: DrmNodeId = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: DrmNodeId = stardust_xr_wire::flex::deserialize(
+            &message,
+            message_fds,
+        )?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1945,7 +1763,6 @@ pub mod drawable {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         device_id: DrmNodeId,
     ) -> crate::node::NodeResult<Vec<DmatexFormatInfo>> {
-        let mut _fds = Vec::new();
         let data = (device_id);
         {
             let (device_id) = &data;
@@ -1954,17 +1771,18 @@ pub mod drawable {
                 "enumerate_dmatex_formats"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(4u64, 0u64, 14109465327684673699u64, &serialized_data, _fds)
+            .method(4u64, 0u64, 14109465327684673699u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
+            .into_components();
         let result: Vec<DmatexFormatInfo> = stardust_xr_wire::flex::deserialize(
             &message,
+            message_fds,
         )?;
         let deserialized = result
             .into_iter()
@@ -1981,12 +1799,11 @@ pub mod drawable {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         tex: Option<&stardust_xr_wire::values::ResourceID>,
     ) -> crate::node::NodeResult<()> {
-        let mut _fds = Vec::new();
         let data = (tex.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?);
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
-            .signal(4u64, 0u64, 4424860741442403592u64, &serialized_data, _fds)?;
+            .signal(4u64, 0u64, 4424860741442403592u64, &serialized_data, fds)?;
         let (tex) = data;
         tracing::trace!(
             ? tex, "Sent signal to server, {}::{}", "Interface", "set_sky_tex"
@@ -1998,12 +1815,11 @@ pub mod drawable {
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         light: Option<&stardust_xr_wire::values::ResourceID>,
     ) -> crate::node::NodeResult<()> {
-        let mut _fds = Vec::new();
         let data = (light.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?);
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
-            .signal(4u64, 0u64, 6210987039553590011u64, &serialized_data, _fds)?;
+            .signal(4u64, 0u64, 6210987039553590011u64, &serialized_data, fds)?;
         let (light) = data;
         tracing::trace!(
             ? light, "Sent signal to server, {}::{}", "Interface", "set_sky_light"
@@ -2019,17 +1835,16 @@ pub mod drawable {
         lines: &[Line],
     ) -> crate::node::NodeResult<Lines> {
         {
-            let mut _fds = Vec::new();
             let data = (
                 id,
                 parent.node().id,
                 transform,
                 lines.iter().map(|a| Ok(a)).collect::<crate::node::NodeResult<Vec<_>>>()?,
             );
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(4u64, 0u64, 17691651736865216822u64, &serialized_data, _fds)?;
+                .signal(4u64, 0u64, 17691651736865216822u64, &serialized_data, fds)?;
             let (id, parent, transform, lines) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? lines, "Sent signal to server, {}::{}",
@@ -2047,12 +1862,11 @@ pub mod drawable {
         model: &stardust_xr_wire::values::ResourceID,
     ) -> crate::node::NodeResult<Model> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, model);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(4u64, 0u64, 8647852218278439936u64, &serialized_data, _fds)?;
+                .signal(4u64, 0u64, 8647852218278439936u64, &serialized_data, fds)?;
             let (id, parent, transform, model) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? model, "Sent signal to server, {}::{}",
@@ -2071,12 +1885,11 @@ pub mod drawable {
         style: TextStyle,
     ) -> crate::node::NodeResult<Text> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, text, style);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(4u64, 0u64, 11386227176670607870u64, &serialized_data, _fds)?;
+                .signal(4u64, 0u64, 11386227176670607870u64, &serialized_data, fds)?;
             let (id, parent, transform, text, style) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? text, ? style,
@@ -2234,15 +2047,9 @@ pub mod input {
             &self,
             handler: &impl InputHandlerAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (handler.node().id);
             self.node()
-                .send_signal(
-                    2611007814387963428u64,
-                    12158986667525139020u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(2611007814387963428u64, 12158986667525139020u64, &data)?;
             let (handler) = data;
             tracing::trace!(
                 ? handler, "Sent signal to server, {}::{}", "InputMethodRef",
@@ -2255,15 +2062,9 @@ pub mod input {
             &self,
             handler: &impl InputHandlerAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (handler.node().id);
             self.node()
-                .send_signal(
-                    2611007814387963428u64,
-                    11905596878821798323u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(2611007814387963428u64, 11905596878821798323u64, &data)?;
             let (handler) = data;
             tracing::trace!(
                 ? handler, "Sent signal to server, {}::{}", "InputMethodRef", "release"
@@ -2379,6 +2180,7 @@ pub mod input {
                 6944316585732678571u64 => {
                     let (handler, field): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? handler, ? field, "Got signal from server, {}::{}",
@@ -2390,7 +2192,7 @@ pub mod input {
                     })
                 }
                 11807638350036597049u64 => {
-                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "InputMethod",
                         "request_capture_handler"
@@ -2400,7 +2202,7 @@ pub mod input {
                     })
                 }
                 9300665394087171854u64 => {
-                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "InputMethod",
                         "release_handler"
@@ -2410,7 +2212,7 @@ pub mod input {
                     })
                 }
                 7635230773176050803u64 => {
-                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "InputMethod",
                         "destroy_handler"
@@ -2468,15 +2270,9 @@ pub mod input {
             input: InputDataType,
             datamap: &stardust_xr_wire::values::Datamap,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (input, datamap);
             self.node()
-                .send_signal(
-                    14883688361483968991u64,
-                    9469903295692537735u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(14883688361483968991u64, 9469903295692537735u64, &data)?;
             let (input, datamap) = data;
             tracing::trace!(
                 ? input, ? datamap, "Sent signal to server, {}::{}", "InputMethod",
@@ -2489,18 +2285,12 @@ pub mod input {
             &self,
             handlers: &[InputHandler],
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (handlers
                 .iter()
                 .map(|a| Ok(a.node().id))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_signal(
-                    14883688361483968991u64,
-                    4447101880184876824u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(14883688361483968991u64, 4447101880184876824u64, &data)?;
             let (handlers) = data;
             tracing::trace!(
                 ? handlers, "Sent signal to server, {}::{}", "InputMethod",
@@ -2513,18 +2303,12 @@ pub mod input {
             &self,
             handlers: &[InputHandler],
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (handlers
                 .iter()
                 .map(|a| Ok(a.node().id))
                 .collect::<crate::node::NodeResult<Vec<_>>>()?);
             self.node()
-                .send_signal(
-                    14883688361483968991u64,
-                    4141712352465076448u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(14883688361483968991u64, 4141712352465076448u64, &data)?;
             let (handlers) = data;
             tracing::trace!(
                 ? handlers, "Sent signal to server, {}::{}", "InputMethod",
@@ -2617,6 +2401,7 @@ pub mod input {
                 1784186157485816199u64 => {
                     let (method, data): (u64, InputData) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? method, ? data, "Got signal from server, {}::{}",
@@ -2630,6 +2415,7 @@ pub mod input {
                 12767704399235128028u64 => {
                     let (data): (InputData) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? data, "Got signal from server, {}::{}", "InputHandler",
@@ -2640,7 +2426,10 @@ pub mod input {
                     })
                 }
                 6474489366123796070u64 => {
-                    let (method): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (method): (u64) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? method, "Got signal from server, {}::{}", "InputHandler",
                         "input_left"
@@ -2686,12 +2475,11 @@ pub mod input {
         datamap: &stardust_xr_wire::values::Datamap,
     ) -> crate::node::NodeResult<InputMethod> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, initial_data, datamap);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(3u64, 0u64, 11977582531774730283u64, &serialized_data, _fds)?;
+                .signal(3u64, 0u64, 11977582531774730283u64, &serialized_data, fds)?;
             let (id, parent, transform, initial_data, datamap) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? initial_data, ? datamap,
@@ -2709,12 +2497,11 @@ pub mod input {
         field: &impl FieldAspect,
     ) -> crate::node::NodeResult<InputHandler> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(3u64, 0u64, 1654491336591158898u64, &serialized_data, _fds)?;
+                .signal(3u64, 0u64, 1654491336591158898u64, &serialized_data, fds)?;
             let (id, parent, transform, field) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? field, "Sent signal to server, {}::{}",
@@ -2790,15 +2577,9 @@ pub mod item {
     pub trait ItemAspect: crate::node::NodeType + super::SpatialAspect + super::OwnedAspect + super::SpatialRefAspect + std::fmt::Debug {
         ///
         fn release(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    18318655529277677339u64,
-                    11905596878821798323u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(18318655529277677339u64, 11905596878821798323u64, &data)?;
             let () = data;
             tracing::trace!("Sent signal to server, {}::{}", "Item", "release");
             Ok(())
@@ -2884,7 +2665,10 @@ pub mod item {
         ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 14821884892980204849u64 => {
-                    let (item_id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (item_id): (u64) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? item_id, "Got signal from server, {}::{}", "ItemAcceptor",
                         "release_item"
@@ -2991,6 +2775,7 @@ pub mod item {
                 1751367302976798762u64 => {
                     let (item_id, acceptor_id): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? item_id, ? acceptor_id, "Got signal from server, {}::{}",
@@ -3004,6 +2789,7 @@ pub mod item {
                 14821884892980204849u64 => {
                     let (item_id, acceptor_id): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? item_id, ? acceptor_id, "Got signal from server, {}::{}",
@@ -3015,14 +2801,14 @@ pub mod item {
                     })
                 }
                 11215449886948753686u64 => {
-                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "ItemUi", "destroy_item"
                     );
                     Ok(ItemUiEvent::DestroyItem { id: id })
                 }
                 3521554848760623636u64 => {
-                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (id): (u64) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         ? id, "Got signal from server, {}::{}", "ItemUi",
                         "destroy_acceptor"
@@ -3197,7 +2983,10 @@ pub mod item_camera {
         ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 15524466827491111758u64 => {
-                    let (item): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (item): (u64) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? item, "Got signal from server, {}::{}", "CameraItemUi",
                         "create_item"
@@ -3209,6 +2998,7 @@ pub mod item_camera {
                 16628549773568263004u64 => {
                     let (acceptor, acceptor_field): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? acceptor, ? acceptor_field, "Got signal from server, {}::{}",
@@ -3346,7 +3136,10 @@ pub mod item_camera {
         ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 1751367302976798762u64 => {
-                    let (item): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (item): (u64) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? item, "Got signal from server, {}::{}", "CameraItemAcceptor",
                         "capture_item"
@@ -3386,15 +3179,9 @@ pub mod item_camera {
             &self,
             item: &impl CameraItemAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (item.node().id);
             self.node()
-                .send_signal(
-                    5036088114779304421u64,
-                    1751367302976798762u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(5036088114779304421u64, 1751367302976798762u64, &data)?;
             let (item) = data;
             tracing::trace!(
                 ? item, "Sent signal to server, {}::{}", "CameraItemAcceptor",
@@ -3413,7 +3200,6 @@ pub mod item_camera {
         px_size: impl Into<stardust_xr_wire::values::Vector2<u32>>,
     ) -> crate::node::NodeResult<CameraItem> {
         {
-            let mut _fds = Vec::new();
             let data = (
                 id,
                 parent.node().id,
@@ -3421,10 +3207,10 @@ pub mod item_camera {
                 proj_matrix.into(),
                 px_size.into(),
             );
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(11u64, 0u64, 16398826726504952950u64, &serialized_data, _fds)?;
+                .signal(11u64, 0u64, 16398826726504952950u64, &serialized_data, fds)?;
             let (id, parent, transform, proj_matrix, px_size) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? proj_matrix, ? px_size,
@@ -3437,12 +3223,11 @@ pub mod item_camera {
     pub fn register_camera_item_ui(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
     ) -> crate::node::NodeResult<()> {
-        let mut _fds = Vec::new();
         let data = ();
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
-            .signal(11u64, 0u64, 13470969625663359032u64, &serialized_data, _fds)?;
+            .signal(11u64, 0u64, 13470969625663359032u64, &serialized_data, fds)?;
         let () = data;
         tracing::trace!(
             "Sent signal to server, {}::{}", "Interface", "register_camera_item_ui"
@@ -3458,12 +3243,11 @@ pub mod item_camera {
         field: &impl FieldAspect,
     ) -> crate::node::NodeResult<CameraItemAcceptor> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(11u64, 0u64, 13070169044031356364u64, &serialized_data, _fds)?;
+                .signal(11u64, 0u64, 13070169044031356364u64, &serialized_data, fds)?;
             let (id, parent, transform, field) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? field, "Sent signal to server, {}::{}",
@@ -3628,7 +3412,10 @@ pub mod item_panel {
         ) -> Result<Self, stardust_xr_wire::scenegraph::ScenegraphError> {
             match signal_id {
                 1408884359956576105u64 => {
-                    let (parent_id): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (parent_id): (u64) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? parent_id, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_parent_changed"
@@ -3638,7 +3425,10 @@ pub mod item_panel {
                     })
                 }
                 566483566315648641u64 => {
-                    let (title): (String) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (title): (String) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? title, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_title_changed"
@@ -3648,7 +3438,10 @@ pub mod item_panel {
                     })
                 }
                 8706869778156655494u64 => {
-                    let (app_id): (String) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (app_id): (String) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? app_id, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_app_id_changed"
@@ -3658,7 +3451,10 @@ pub mod item_panel {
                     })
                 }
                 11059551561818960198u64 => {
-                    let (active): (bool) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (active): (bool) = stardust_xr_wire::flex::deserialize(
+                        _data,
+                        _fds,
+                    )?;
                     tracing::trace!(
                         ? active, "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_fullscreen_active"
@@ -3668,7 +3464,7 @@ pub mod item_panel {
                     })
                 }
                 3715781852227007625u64 => {
-                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         "Got signal from server, {}::{}", "PanelItem",
                         "toplevel_move_request"
@@ -3679,6 +3475,7 @@ pub mod item_panel {
                 4540754955116125050u64 => {
                     let (up, down, left, right): (bool, bool, bool, bool) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? up, ? down, ? left, ? right, "Got signal from server, {}::{}",
@@ -3694,6 +3491,7 @@ pub mod item_panel {
                 3665525014775618530u64 => {
                     let (size): (stardust_xr_wire::values::Vector2<u32>) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? size, "Got signal from server, {}::{}", "PanelItem",
@@ -3706,6 +3504,7 @@ pub mod item_panel {
                 6092877811616586203u64 => {
                     let (geometry): (Geometry) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? geometry, "Got signal from server, {}::{}", "PanelItem",
@@ -3716,7 +3515,7 @@ pub mod item_panel {
                     })
                 }
                 12365625385177885025u64 => {
-                    let (): () = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (): () = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         "Got signal from server, {}::{}", "PanelItem", "hide_cursor"
                     );
@@ -3725,6 +3524,7 @@ pub mod item_panel {
                 13878060402106144481u64 => {
                     let (uid, info): (u64, ChildInfo) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? uid, ? info, "Got signal from server, {}::{}", "PanelItem",
@@ -3738,6 +3538,7 @@ pub mod item_panel {
                 4614990113965355127u64 => {
                     let (uid, geometry): (u64, Geometry) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? uid, ? geometry, "Got signal from server, {}::{}", "PanelItem",
@@ -3749,7 +3550,7 @@ pub mod item_panel {
                     })
                 }
                 7048616010698587017u64 => {
-                    let (uid): (u64) = stardust_xr_wire::flex::deserialize(_data)?;
+                    let (uid): (u64) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
                     tracing::trace!(
                         ? uid, "Got signal from server, {}::{}", "PanelItem",
                         "destroy_child"
@@ -3789,15 +3590,9 @@ pub mod item_panel {
             &self,
             model_part: &impl ModelPartAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (model_part.node().id);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    12984352657777750687u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 12984352657777750687u64, &data)?;
             let (model_part) = data;
             tracing::trace!(
                 ? model_part, "Sent signal to server, {}::{}", "PanelItem",
@@ -3811,15 +3606,9 @@ pub mod item_panel {
             surface: SurfaceId,
             model_part: &impl ModelPartAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, model_part.node().id);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    5538717944649978650u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 5538717944649978650u64, &data)?;
             let (surface, model_part) = data;
             tracing::trace!(
                 ? surface, ? model_part, "Sent signal to server, {}::{}", "PanelItem",
@@ -3831,15 +3620,9 @@ pub mod item_panel {
 
         The panel item UI handler or panel item acceptor will drop the panel item if this succeeds.*/
         fn close_toplevel(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    11149391162473273576u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 11149391162473273576u64, &data)?;
             let () = data;
             tracing::trace!(
                 "Sent signal to server, {}::{}", "PanelItem", "close_toplevel"
@@ -3848,15 +3631,9 @@ pub mod item_panel {
         }
         ///Request a resize of the surface to whatever size the 2D app wants.
         fn auto_size_toplevel(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    7177229187692151305u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 7177229187692151305u64, &data)?;
             let () = data;
             tracing::trace!(
                 "Sent signal to server, {}::{}", "PanelItem", "auto_size_toplevel"
@@ -3868,15 +3645,9 @@ pub mod item_panel {
             &self,
             size: impl Into<stardust_xr_wire::values::Vector2<u32>>,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (size.into());
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    8102855835344875634u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 8102855835344875634u64, &data)?;
             let (size) = data;
             tracing::trace!(
                 ? size, "Sent signal to server, {}::{}", "PanelItem", "set_toplevel_size"
@@ -3888,15 +3659,9 @@ pub mod item_panel {
             &self,
             focused: bool,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (focused);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    3934600665134956080u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 3934600665134956080u64, &data)?;
             let (focused) = data;
             tracing::trace!(
                 ? focused, "Sent signal to server, {}::{}", "PanelItem",
@@ -3910,15 +3675,9 @@ pub mod item_panel {
             surface: SurfaceId,
             position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, position.into());
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    16749501366142443858u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 16749501366142443858u64, &data)?;
             let (surface, position) = data;
             tracing::trace!(
                 ? surface, ? position, "Sent signal to server, {}::{}", "PanelItem",
@@ -3932,15 +3691,9 @@ pub mod item_panel {
             surface: SurfaceId,
             delta: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, delta.into());
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    8178111286759258039u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 8178111286759258039u64, &data)?;
             let (surface, delta) = data;
             tracing::trace!(
                 ? surface, ? delta, "Sent signal to server, {}::{}", "PanelItem",
@@ -3955,15 +3708,9 @@ pub mod item_panel {
             button: u32,
             pressed: bool,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, button, pressed);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    1617963334017359776u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 1617963334017359776u64, &data)?;
             let (surface, button, pressed) = data;
             tracing::trace!(
                 ? surface, ? button, ? pressed, "Sent signal to server, {}::{}",
@@ -3980,15 +3727,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             scroll_distance: impl Into<stardust_xr_wire::values::Vector2<f32>>,
             scroll_steps: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, scroll_distance.into(), scroll_steps.into());
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    18077910517219850499u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 18077910517219850499u64, &data)?;
             let (surface, scroll_distance, scroll_steps) = data;
             tracing::trace!(
                 ? surface, ? scroll_distance, ? scroll_steps,
@@ -4001,15 +3742,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self,
             surface: SurfaceId,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    13177724628894942354u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 13177724628894942354u64, &data)?;
             let (surface) = data;
             tracing::trace!(
                 ? surface, "Sent signal to server, {}::{}", "PanelItem",
@@ -4025,15 +3760,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             key: u32,
             pressed: bool,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, keymap_id, key, pressed);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    18230480350930328965u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 18230480350930328965u64, &data)?;
             let (surface, keymap_id, key, pressed) = data;
             tracing::trace!(
                 ? surface, ? keymap_id, ? key, ? pressed,
@@ -4048,15 +3777,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             uid: u32,
             position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (surface, uid, position.into());
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    10543081656468919422u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 10543081656468919422u64, &data)?;
             let (surface, uid, position) = data;
             tracing::trace!(
                 ? surface, ? uid, ? position, "Sent signal to server, {}::{}",
@@ -4070,15 +3793,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             uid: u32,
             position: impl Into<stardust_xr_wire::values::Vector2<f32>>,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (uid, position.into());
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    15126475688563381777u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 15126475688563381777u64, &data)?;
             let (uid, position) = data;
             tracing::trace!(
                 ? uid, ? position, "Sent signal to server, {}::{}", "PanelItem",
@@ -4088,15 +3805,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         }
         ///Release a touch from its surface.
         fn touch_up(&self, uid: u32) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (uid);
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    6589027081119653997u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 6589027081119653997u64, &data)?;
             let (uid) = data;
             tracing::trace!(
                 ? uid, "Sent signal to server, {}::{}", "PanelItem", "touch_up"
@@ -4105,15 +3816,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         }
         ///Reset all input, such as pressed keys and pointer clicks and touches. Useful for when it's newly captured into an item acceptor to make sure no input gets stuck.
         fn reset_input(&self) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = ();
             self.node()
-                .send_signal(
-                    16007573185838633179u64,
-                    14629122800709746500u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(16007573185838633179u64, 14629122800709746500u64, &data)?;
             let () = data;
             tracing::trace!("Sent signal to server, {}::{}", "PanelItem", "reset_input");
             Ok(())
@@ -4209,6 +3914,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 15524466827491111758u64 => {
                     let (item, initial_data): (u64, PanelItemInitData) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? item, ? initial_data, "Got signal from server, {}::{}",
@@ -4222,6 +3928,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 16628549773568263004u64 => {
                     let (acceptor, acceptor_field): (u64, u64) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? acceptor, ? acceptor_field, "Got signal from server, {}::{}",
@@ -4361,6 +4068,7 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 1751367302976798762u64 => {
                     let (item, initial_data): (u64, PanelItemInitData) = stardust_xr_wire::flex::deserialize(
                         _data,
+                        _fds,
                     )?;
                     tracing::trace!(
                         ? item, ? initial_data, "Got signal from server, {}::{}",
@@ -4402,15 +4110,9 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
             &self,
             item: &impl PanelItemAspect,
         ) -> crate::node::NodeResult<()> {
-            let mut _fds = Vec::new();
             let data = (item.node().id);
             self.node()
-                .send_signal(
-                    6398932320740499836u64,
-                    1751367302976798762u64,
-                    &data,
-                    _fds,
-                )?;
+                .send_signal(6398932320740499836u64, 1751367302976798762u64, &data)?;
             let (item) = data;
             tracing::trace!(
                 ? item, "Sent signal to server, {}::{}", "PanelItemAcceptor",
@@ -4424,7 +4126,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         keymap: &str,
     ) -> crate::node::NodeResult<u64> {
-        let mut _fds = Vec::new();
         let data = (keymap);
         {
             let (keymap) = &data;
@@ -4433,16 +4134,16 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 "register_keymap"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(12u64, 0u64, 13267771052011565359u64, &serialized_data, _fds)
+            .method(12u64, 0u64, 13267771052011565359u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -4455,7 +4156,6 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         _client: &std::sync::Arc<crate::client::ClientHandle>,
         keymap_id: u64,
     ) -> crate::node::NodeResult<String> {
-        let mut _fds = Vec::new();
         let data = (keymap_id);
         {
             let (keymap_id) = &data;
@@ -4463,16 +4163,16 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
                 ? keymap_id, "Called method on server, {}::{}", "Interface", "get_keymap"
             );
         }
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-        let message = _client
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+        let (message, message_fds) = _client
             .message_sender_handle
-            .method(12u64, 0u64, 18393315648981916968u64, &serialized_data, _fds)
+            .method(12u64, 0u64, 18393315648981916968u64, &serialized_data, fds)
             .await?
             .map_err(|e| crate::node::NodeError::ReturnedError {
                 e,
             })?
-            .into_message();
-        let result: String = stardust_xr_wire::flex::deserialize(&message)?;
+            .into_components();
+        let result: String = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -4484,12 +4184,11 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
     pub fn register_panel_item_ui(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
     ) -> crate::node::NodeResult<()> {
-        let mut _fds = Vec::new();
         let data = ();
-        let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+        let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
         _client
             .message_sender_handle
-            .signal(12u64, 0u64, 13016197282381545765u64, &serialized_data, _fds)?;
+            .signal(12u64, 0u64, 13016197282381545765u64, &serialized_data, fds)?;
         let () = data;
         tracing::trace!(
             "Sent signal to server, {}::{}", "Interface", "register_panel_item_ui"
@@ -4505,12 +4204,11 @@ Scroll steps is a value in columns/rows corresponding to the wheel clicks of a m
         field: &impl FieldAspect,
     ) -> crate::node::NodeResult<PanelItemAcceptor> {
         {
-            let mut _fds = Vec::new();
             let data = (id, parent.node().id, transform, field.node().id);
-            let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
+            let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
             _client
                 .message_sender_handle
-                .signal(12u64, 0u64, 793626320493717815u64, &serialized_data, _fds)?;
+                .signal(12u64, 0u64, 793626320493717815u64, &serialized_data, fds)?;
             let (id, parent, transform, field) = data;
             tracing::trace!(
                 ? id, ? parent, ? transform, ? field, "Sent signal to server, {}::{}",
