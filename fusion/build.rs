@@ -3,10 +3,14 @@ use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
 use stardust_xr_protocol::*;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::sync::Mutex;
+
 fn main() {
 	// Watch for changes to KDL schema files
 	let schema_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
@@ -106,6 +110,48 @@ pub fn get_all_protocols() -> Vec<ProtocolInfo> {
 	]
 }
 
+static CLONE_PARTIAL_EQ_CACHE: LazyLock<Mutex<HashMap<String, bool>>> =
+	LazyLock::new(Default::default);
+fn can_impl_clone_and_partial_eq(arg: &ArgumentType) -> bool {
+	match dbg!(&arg) {
+		ArgumentType::Union(name) => *CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name).unwrap(),
+		ArgumentType::Struct(name) => *CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name).unwrap(),
+		ArgumentType::Fd => false,
+		_ => true,
+	}
+}
+fn setup_impl_clone_and_partial_eq(protocol_definitions: &[&Protocol], arg: &ArgumentType) -> bool {
+	match dbg!(&arg) {
+		ArgumentType::Union(name) | ArgumentType::Struct(name) => {
+			if let Some(v) = CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name) {
+				return *v;
+			};
+			let v = protocol_definitions
+				.iter()
+				.flat_map(|v| v.custom_unions.iter())
+				.filter(|v| &v.name == name)
+				.flat_map(|v| v.options.iter())
+				.map(|v| &v._type)
+				.chain(
+					protocol_definitions
+						.iter()
+						.flat_map(|v| v.custom_structs.iter())
+						.filter(|v| &v.name == name)
+						.flat_map(|v| v.fields.iter())
+						.map(|v| &v._type),
+				)
+				.all(|v| setup_impl_clone_and_partial_eq(protocol_definitions, v));
+			CLONE_PARTIAL_EQ_CACHE
+				.lock()
+				.unwrap()
+				.insert(name.clone(), v);
+			v
+		}
+		ArgumentType::Fd => false,
+		_ => true,
+	}
+}
+
 pub fn generate_protocol_file(
 	protocols: Vec<ProtocolInfo>,
 	file_path: &Path,
@@ -118,6 +164,25 @@ pub fn generate_protocol_file(
 
 	let mut protocol_definitions = protocols.iter_mut().map(|(p, _)| p).collect::<Vec<_>>();
 	stardust_xr_protocol::resolve_inherits(&mut protocol_definitions).unwrap();
+	let protocol_definitions = protocols.iter().map(|(p, _)| p).collect::<Vec<_>>();
+	protocol_definitions
+		.iter()
+		.flat_map(|v| v.custom_structs.iter())
+		.for_each(|v| {
+			setup_impl_clone_and_partial_eq(
+				&protocol_definitions,
+				&ArgumentType::Struct(v.name.clone()),
+			);
+		});
+	protocol_definitions
+		.iter()
+		.flat_map(|v| v.custom_unions.iter())
+		.for_each(|v| {
+			setup_impl_clone_and_partial_eq(
+				&protocol_definitions,
+				&ArgumentType::Union(v.name.clone()),
+			);
+		});
 
 	// panic!("{protocol_definitions:# ?}");
 
@@ -258,10 +323,19 @@ impl Tokenize for CustomUnion {
 			.iter()
 			.map(|e| e.tokenize(_generate_node, partial_eq));
 
-		let derive = if partial_eq {
-			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
-		} else {
-			quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+		let derive = match (
+			partial_eq,
+			can_impl_clone_and_partial_eq(&ArgumentType::Enum(self.name.clone())),
+		) {
+			(true, true) => {
+				quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+			}
+			(false, true) => {
+				quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+			}
+			(_, false) => {
+				quote!( #[derive(Debug, serde::Deserialize, serde::Serialize)] )
+			}
 		};
 		quote! {
 			#[doc = #description]
@@ -324,10 +398,19 @@ impl Tokenize for CustomStruct {
 
 		let argument_decls = self.fields.iter().map(|a| generate_pub_field_decl(a, true));
 
-		let derive = if partial_eq {
-			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
-		} else {
-			quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+		let derive = match (
+			partial_eq,
+			can_impl_clone_and_partial_eq(&ArgumentType::Struct(self.name.clone())),
+		) {
+			(true, true) => {
+				quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+			}
+			(false, true) => {
+				quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+			}
+			(_, false) => {
+				quote!( #[derive(Debug, serde::Deserialize, serde::Serialize)] )
+			}
 		};
 		quote! {
 			#[doc = #description]

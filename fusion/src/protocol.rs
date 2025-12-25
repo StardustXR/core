@@ -1223,7 +1223,7 @@ pub mod drawable {
         pub planes: u32,
     }
     ///A single memory plane of a Dmatex
-    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    #[derive(Debug, serde::Deserialize, serde::Serialize)]
     pub struct DmatexPlane {
         ///The Drm modifier of this Dmatex memory plane
         pub drm_modifier: u64,
