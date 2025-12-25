@@ -4,6 +4,7 @@
 pub mod client;
 /// Standard creation of sockets for servers
 pub mod server;
+pub mod fd;
 
 /// Message format flatbuffer
 pub mod message {

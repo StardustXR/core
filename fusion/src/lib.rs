@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 use stardust_xr_wire::{flex::serialize, messenger::MethodResponse, scenegraph::ScenegraphError};
-use std::{error::Error, fmt::Debug, marker::PhantomData, os::fd::OwnedFd};
+use std::{error::Error, fmt::Debug, marker::PhantomData};
 
 pub use client::*;
 pub use stardust_xr_gluon::*;
@@ -44,23 +44,20 @@ impl<T: Serialize> TypedMethodResponse<T> {
 				return;
 			}
 		};
-		let Ok(serialized) = stardust_xr_wire::flex::serialize(data) else {
+		let Ok((serialized, fds)) = stardust_xr_wire::flex::serialize(data) else {
 			self.0.send(Err(ScenegraphError::MemberError {
 				error: "Internal: Failed to serialize".to_string(),
 			}));
 			return;
 		};
-		self.0.send(Ok((&serialized, Vec::<OwnedFd>::new())));
+		self.0.send(Ok((&serialized, fds)));
 	}
 	pub fn wrap<E: Error, F: FnOnce() -> Result<T, E>>(self, f: F) {
 		self.send(f())
 	}
-	pub fn wrap_async<E: Error>(
-		self,
-		f: impl Future<Output = Result<(T, Vec<OwnedFd>), E>> + Send + 'static,
-	) {
+	pub fn wrap_async<E: Error>(self, f: impl Future<Output = Result<T, E>> + Send + 'static) {
 		tokio::task::spawn(async move {
-			let (value, fds) = match f.await {
+			let value = match f.await {
 				Ok(d) => d,
 				Err(e) => {
 					self.0.send(Err(ScenegraphError::MemberError {
@@ -69,7 +66,7 @@ impl<T: Serialize> TypedMethodResponse<T> {
 					return;
 				}
 			};
-			let Ok(serialized) = serialize(value) else {
+			let Ok((serialized, fds)) = serialize(value) else {
 				self.0.send(Err(ScenegraphError::MemberError {
 					error: "Internal: Failed to serialize".to_string(),
 				}));
