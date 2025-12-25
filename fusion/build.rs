@@ -113,7 +113,7 @@ pub fn get_all_protocols() -> Vec<ProtocolInfo> {
 static CLONE_PARTIAL_EQ_CACHE: LazyLock<Mutex<HashMap<String, bool>>> =
 	LazyLock::new(Default::default);
 fn can_impl_clone_and_partial_eq(arg: &ArgumentType) -> bool {
-	match dbg!(&arg) {
+	match &arg {
 		ArgumentType::Union(name) => *CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name).unwrap(),
 		ArgumentType::Struct(name) => *CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name).unwrap(),
 		ArgumentType::Fd => false,
@@ -121,7 +121,7 @@ fn can_impl_clone_and_partial_eq(arg: &ArgumentType) -> bool {
 	}
 }
 fn setup_impl_clone_and_partial_eq(protocol_definitions: &[&Protocol], arg: &ArgumentType) -> bool {
-	match dbg!(&arg) {
+	match &arg {
 		ArgumentType::Union(name) | ArgumentType::Struct(name) => {
 			if let Some(v) = CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name) {
 				return *v;
