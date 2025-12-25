@@ -10,8 +10,7 @@ method "import_dmatex" side="server" {
 	argument "format" type="uint" description="the texture format as a drm_fourcc"
 	argument "srgb" type="bool" description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
 	argument "array_layers" type="uint" optional=true description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
-	argument "plane_1_dmabuf_fd" type="fd" description="the underlying dmabuf fd for the first plane"
-	argument "plane_1_info" type="struct" struct="DmatexPlane"
+	argument "planes" type="vec" member_type="struct" struct="DmatexPlane"
 	argument "timeline_syncobj_fd" type="fd" description="the fd carrying info for explicit sync, using the timeline variant of the drm_syncobj"
 
 	return type="id"
@@ -56,11 +55,13 @@ struct "DmatexFormatInfo" {
 	field "format" type="uint" description="drm_fourcc for the format"
 	field "drm_modifier" type="id"
 	field "supports_srgb" type="bool"
+	field "planes" type="uint" description="How many memory planes does this format use"
 }
 
 struct "DmatexPlane" {
 	description "A single memory plane of a Dmatex"
 	field "drm_modifier" type="id" description="The Drm modifier of this Dmatex memory plane"
+	field "dmabuf_fd" type="fd" description="the underlying dmabuf fd for this plane"
 	field "offset" type="uint" description="offset of the data relevant to this Dmatex plane in the Dmatex memory"
 	field "row_size" type="uint" description="the number of bytes between the beginning of one pixel row to the next, if the Dmatex is 1d this should be 0"
 	field "array_element_size" type="uint" description="the number of bytes between the beginning of one array element to the next, if the Dmatex is not an array texture this should be 0"

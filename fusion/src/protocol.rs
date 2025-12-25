@@ -1219,12 +1219,16 @@ pub mod drawable {
         pub format: u32,
         pub drm_modifier: u64,
         pub supports_srgb: bool,
+        ///How many memory planes does this format use
+        pub planes: u32,
     }
     ///A single memory plane of a Dmatex
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct DmatexPlane {
         ///The Drm modifier of this Dmatex memory plane
         pub drm_modifier: u64,
+        ///the underlying dmabuf fd for this plane
+        pub dmabuf_fd: stardust_xr_wire::fd::ProtocolFd,
         ///offset of the data relevant to this Dmatex plane in the Dmatex memory
         pub offset: u32,
         ///the number of bytes between the beginning of one pixel row to the next, if the Dmatex is 1d this should be 0
@@ -1603,8 +1607,7 @@ pub mod drawable {
         format: u32,
         srgb: bool,
         array_layers: Option<u32>,
-        plane_1_dmabuf_fd: stardust_xr_wire::fd::ProtocolFd,
-        plane_1_info: DmatexPlane,
+        planes: &[DmatexPlane],
         timeline_syncobj_fd: stardust_xr_wire::fd::ProtocolFd,
     ) -> crate::node::NodeResult<u64> {
         let data = (
@@ -1612,24 +1615,15 @@ pub mod drawable {
             format,
             srgb,
             array_layers.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?,
-            plane_1_dmabuf_fd,
-            plane_1_info,
+            planes.iter().map(|a| Ok(a)).collect::<crate::node::NodeResult<Vec<_>>>()?,
             timeline_syncobj_fd,
         );
         {
-            let (
-                size,
-                format,
-                srgb,
-                array_layers,
-                plane_1_dmabuf_fd,
-                plane_1_info,
-                timeline_syncobj_fd,
-            ) = &data;
+            let (size, format, srgb, array_layers, planes, timeline_syncobj_fd) = &data;
             tracing::trace!(
-                ? size, ? format, ? srgb, ? array_layers, ? plane_1_dmabuf_fd, ?
-                plane_1_info, ? timeline_syncobj_fd, "Called method on server, {}::{}",
-                "Interface", "import_dmatex"
+                ? size, ? format, ? srgb, ? array_layers, ? planes, ?
+                timeline_syncobj_fd, "Called method on server, {}::{}", "Interface",
+                "import_dmatex"
             );
         }
         let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
