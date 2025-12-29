@@ -3,17 +3,16 @@ interface (u64)4
 description ""
 
 
-method "import_dmatex" side="server" {
+signal "import_dmatex" side="server" {
 	description "Import a Dmatex, the imported Dmatex has to be manually unregistered, the returned id is Client Local"
 
+	argument "dmatex_id" type="id"
 	argument "size" type="union" union="DmatexSize"
 	argument "format" type="uint" description="the texture format as a drm_fourcc"
 	argument "srgb" type="bool" description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
 	argument "array_layers" type="uint" optional=true description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
 	argument "planes" type="vec" member_type="struct" struct="DmatexPlane"
 	argument "timeline_syncobj_fd" type="fd" description="the fd carrying info for explicit sync, using the timeline variant of the drm_syncobj"
-
-	return type="id"
 }
 
 method "export_dmatex_uid" side="server" {
@@ -23,11 +22,10 @@ method "export_dmatex_uid" side="server" {
 	return type="id"
 }
 
-method "import_dmatex_uid" side="server" {
+signal "import_dmatex_uid" side="server" {
 	description "Imports a shared Dmatex Uid, holding this id will keep the underlying dmatex alive"
+	argument "dmatex_id" type="id"
 	argument "dmatex_uid" type="id"
-
-	return type="id"
 }
 
 signal "unregister_dmatex" side="server" {
