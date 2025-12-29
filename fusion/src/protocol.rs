@@ -1596,7 +1596,7 @@ pub mod drawable {
     ///Import a Dmatex, the imported Dmatex has to be manually unregistered, the returned id is Client Local
     pub async fn import_dmatex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
-        size: DmatexPlane,
+        size: DmatexSize,
         format: u32,
         srgb: bool,
         array_layers: Option<u32>,
