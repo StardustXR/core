@@ -37,15 +37,15 @@ signal "unregister_dmatex" side="server" {
 }
 
 method "get_primary_render_device_id" side="server" {
-	description "get the id of the primary device used for rendering, will return a render node id if supported by the driver"
+	description "get the id of the primary device used for rendering, will return a DrmRenderNode id"
 	
-	return type="union" union="DrmNodeId"
+	return type="id"
 }
 
 method "enumerate_dmatex_formats" side="server" {
 	description "enumerates all the Dmatex formats supported by the server"
 
-	argument "device_id" type="union" union="DrmNodeId"
+	argument "render_node_id" type="id"
 	
 	return type="vec" member_type="struct" struct="DmatexFormatInfo"
 }
@@ -74,13 +74,6 @@ union "DmatexSize" {
 	option type="uint" name="dim1d"
 	option type="vec2" component_type="uint" name="dim2d"
 	option type="vec3" component_type="uint" name="dim3d"
-}
-
-union "DrmNodeId" {
-	description "Drm Node Id used for selecting the correct gpu"
-
-	option type="id" name="DrmRenderNode"
-	option type="id" name="DrmPrimaryNode"
 }
 
 signal "set_sky_tex" side="server" {

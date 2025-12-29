@@ -1190,13 +1190,6 @@ pub mod drawable {
         Dim2D(stardust_xr_wire::values::Vector2<u32>),
         Dim3D(stardust_xr_wire::values::Vector3<u32>),
     }
-    ///Drm Node Id used for selecting the correct gpu
-    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
-    #[serde(tag = "t", content = "c")]
-    pub enum DrmNodeId {
-        DrmRenderNode(u64),
-        DrmPrimaryNode(u64),
-    }
     ///
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     #[serde(tag = "t", content = "c")]
@@ -1720,10 +1713,10 @@ pub mod drawable {
         );
         Ok(())
     }
-    ///get the id of the primary device used for rendering, will return a render node id if supported by the driver
+    ///get the id of the primary device used for rendering, will return a DrmRenderNode id
     pub async fn get_primary_render_device_id(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
-    ) -> crate::node::NodeResult<DrmNodeId> {
+    ) -> crate::node::NodeResult<u64> {
         let data = ();
         {
             let () = &data;
@@ -1741,10 +1734,7 @@ pub mod drawable {
                 e,
             })?
             .into_components();
-        let result: DrmNodeId = stardust_xr_wire::flex::deserialize(
-            &message,
-            message_fds,
-        )?;
+        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
         let deserialized = result;
         tracing::trace!(
             "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
@@ -1755,13 +1745,13 @@ pub mod drawable {
     ///enumerates all the Dmatex formats supported by the server
     pub async fn enumerate_dmatex_formats(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
-        device_id: DrmNodeId,
+        render_node_id: u64,
     ) -> crate::node::NodeResult<Vec<DmatexFormatInfo>> {
-        let data = (device_id);
+        let data = (render_node_id);
         {
-            let (device_id) = &data;
+            let (render_node_id) = &data;
             tracing::trace!(
-                ? device_id, "Called method on server, {}::{}", "Interface",
+                ? render_node_id, "Called method on server, {}::{}", "Interface",
                 "enumerate_dmatex_formats"
             );
         }
