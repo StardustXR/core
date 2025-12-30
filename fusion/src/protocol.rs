@@ -1594,16 +1594,18 @@ pub mod drawable {
         }
     }
     ///Import a Dmatex, the imported Dmatex has to be manually unregistered, the returned id is Client Local
-    pub async fn import_dmatex(
+    pub fn import_dmatex(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
+        dmatex_id: u64,
         size: DmatexSize,
         format: u32,
         srgb: bool,
         array_layers: Option<u32>,
         planes: &[DmatexPlane],
         timeline_syncobj_fd: stardust_xr_wire::fd::ProtocolFd,
-    ) -> crate::node::NodeResult<u64> {
+    ) -> crate::node::NodeResult<()> {
         let data = (
+            dmatex_id,
             size,
             format,
             srgb,
@@ -1611,30 +1613,17 @@ pub mod drawable {
             planes.iter().map(|a| Ok(a)).collect::<crate::node::NodeResult<Vec<_>>>()?,
             timeline_syncobj_fd,
         );
-        {
-            let (size, format, srgb, array_layers, planes, timeline_syncobj_fd) = &data;
-            tracing::trace!(
-                ? size, ? format, ? srgb, ? array_layers, ? planes, ?
-                timeline_syncobj_fd, "Called method on server, {}::{}", "Interface",
-                "import_dmatex"
-            );
-        }
         let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
-        let (message, message_fds) = _client
+        _client
             .message_sender_handle
-            .method(4u64, 0u64, 5202664904415071827u64, &serialized_data, fds)
-            .await?
-            .map_err(|e| crate::node::NodeError::ReturnedError {
-                e,
-            })?
-            .into_components();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
-        let deserialized = result;
+            .signal(4u64, 0u64, 5202664904415071827u64, &serialized_data, fds)?;
+        let (dmatex_id, size, format, srgb, array_layers, planes, timeline_syncobj_fd) = data;
         tracing::trace!(
-            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            ? dmatex_id, ? size, ? format, ? srgb, ? array_layers, ? planes, ?
+            timeline_syncobj_fd, "Sent signal to server, {}::{}", "Interface",
             "import_dmatex"
         );
-        Ok(deserialized)
+        Ok(())
     }
     ///Exports a Dmatex Uid for sharing between clients
     pub async fn export_dmatex_uid(
@@ -1667,34 +1656,22 @@ pub mod drawable {
         Ok(deserialized)
     }
     ///Imports a shared Dmatex Uid, holding this id will keep the underlying dmatex alive
-    pub async fn import_dmatex_uid(
+    pub fn import_dmatex_uid(
         _client: &std::sync::Arc<crate::client::ClientHandle>,
+        dmatex_id: u64,
         dmatex_uid: u64,
-    ) -> crate::node::NodeResult<u64> {
-        let data = (dmatex_uid);
-        {
-            let (dmatex_uid) = &data;
-            tracing::trace!(
-                ? dmatex_uid, "Called method on server, {}::{}", "Interface",
-                "import_dmatex_uid"
-            );
-        }
+    ) -> crate::node::NodeResult<()> {
+        let data = (dmatex_id, dmatex_uid);
         let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
-        let (message, message_fds) = _client
+        _client
             .message_sender_handle
-            .method(4u64, 0u64, 5604115908701744320u64, &serialized_data, fds)
-            .await?
-            .map_err(|e| crate::node::NodeError::ReturnedError {
-                e,
-            })?
-            .into_components();
-        let result: u64 = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
-        let deserialized = result;
+            .signal(4u64, 0u64, 5604115908701744320u64, &serialized_data, fds)?;
+        let (dmatex_id, dmatex_uid) = data;
         tracing::trace!(
-            "return" = ? deserialized, "Method return from server, {}::{}", "Interface",
+            ? dmatex_id, ? dmatex_uid, "Sent signal to server, {}::{}", "Interface",
             "import_dmatex_uid"
         );
-        Ok(deserialized)
+        Ok(())
     }
     ///Mark a Dmatex as unused, once all ids referencing the same Dmatex are unregisterd the server may destroy its internal representation of the Dmatex, this invalidates the used handle
     pub fn unregister_dmatex(
