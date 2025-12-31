@@ -1,9 +1,9 @@
 [package]
 edition = "2024"
 name = "stardust-xr-protocol"
-version = "2.0.0"
 authors = ["Nova King <technobaboo@protonmail.me", "Philpax"]
 description = "Stardust XR protocol, generated from custom IDL automatically"
+version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
