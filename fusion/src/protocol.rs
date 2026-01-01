@@ -1211,15 +1211,13 @@ pub mod drawable {
         ///drm_fourcc for the format
         pub format: u32,
         pub drm_modifier: u64,
-        pub supports_srgb: bool,
+        pub is_srgb: bool,
         ///How many memory planes does this format use
         pub planes: u32,
     }
     ///A single memory plane of a Dmatex
     #[derive(Debug, serde::Deserialize, serde::Serialize)]
     pub struct DmatexPlane {
-        ///The Drm modifier of this Dmatex memory plane
-        pub drm_modifier: u64,
         ///the underlying dmabuf fd for this plane
         pub dmabuf_fd: stardust_xr_wire::fd::ProtocolFd,
         ///offset of the data relevant to this Dmatex plane in the Dmatex memory
@@ -1599,6 +1597,7 @@ pub mod drawable {
         dmatex_id: u64,
         size: DmatexSize,
         format: u32,
+        drm_format_modifier: u64,
         srgb: bool,
         array_layers: Option<u32>,
         planes: &[DmatexPlane],
@@ -1608,6 +1607,7 @@ pub mod drawable {
             dmatex_id,
             size,
             format,
+            drm_format_modifier,
             srgb,
             array_layers.map(|o| Ok::<_, crate::node::NodeError>(o)).transpose()?,
             planes.iter().map(|a| Ok(a)).collect::<crate::node::NodeResult<Vec<_>>>()?,
@@ -1617,11 +1617,20 @@ pub mod drawable {
         _client
             .message_sender_handle
             .signal(4u64, 0u64, 5202664904415071827u64, &serialized_data, fds)?;
-        let (dmatex_id, size, format, srgb, array_layers, planes, timeline_syncobj_fd) = data;
+        let (
+            dmatex_id,
+            size,
+            format,
+            drm_format_modifier,
+            srgb,
+            array_layers,
+            planes,
+            timeline_syncobj_fd,
+        ) = data;
         tracing::trace!(
-            ? dmatex_id, ? size, ? format, ? srgb, ? array_layers, ? planes, ?
-            timeline_syncobj_fd, "Sent signal to server, {}::{}", "Interface",
-            "import_dmatex"
+            ? dmatex_id, ? size, ? format, ? drm_format_modifier, ? srgb, ? array_layers,
+            ? planes, ? timeline_syncobj_fd, "Sent signal to server, {}::{}",
+            "Interface", "import_dmatex"
         );
         Ok(())
     }

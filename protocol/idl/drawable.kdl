@@ -9,6 +9,7 @@ signal "import_dmatex" side="server" {
 	argument "dmatex_id" type="id"
 	argument "size" type="union" union="DmatexSize"
 	argument "format" type="uint" description="the texture format as a drm_fourcc"
+	argument "drm_format_modifier" type="id" description="The Drm modifier of this format"
 	argument "srgb" type="bool" description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
 	argument "array_layers" type="uint" optional=true description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
 	argument "planes" type="vec" member_type="struct" struct="DmatexPlane"
@@ -52,13 +53,12 @@ struct "DmatexFormatInfo" {
 	description "Description of a format supported by the server"
 	field "format" type="uint" description="drm_fourcc for the format"
 	field "drm_modifier" type="id"
-	field "supports_srgb" type="bool"
+	field "is_srgb" type="bool"
 	field "planes" type="uint" description="How many memory planes does this format use"
 }
 
 struct "DmatexPlane" {
 	description "A single memory plane of a Dmatex"
-	field "drm_modifier" type="id" description="The Drm modifier of this Dmatex memory plane"
 	field "dmabuf_fd" type="fd" description="the underlying dmabuf fd for this plane"
 	field "offset" type="uint" description="offset of the data relevant to this Dmatex plane in the Dmatex memory"
 	field "row_size" type="uint" description="the number of bytes between the beginning of one pixel row to the next, if the Dmatex is 1d this should be 0"
