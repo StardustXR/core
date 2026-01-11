@@ -16,7 +16,10 @@ use std::{
 	sync::Arc,
 	task::{Context, Poll},
 };
-use tokio::{sync::watch, task::AbortHandle};
+use tokio::{
+	sync::watch,
+	task::{AbortHandle, JoinHandle},
+};
 
 /// Generic lifecycle event for objects tracked by registry.
 ///
@@ -68,12 +71,21 @@ pub struct AbortOnDrop {
 	abort_handle: AbortHandle,
 }
 impl AbortOnDrop {
-	pub fn abort(&self) {
-		self.abort_handle.abort();
-	}
-
 	pub fn is_finished(&self) -> bool {
 		self.abort_handle.is_finished()
+	}
+}
+impl<T> From<JoinHandle<T>> for AbortOnDrop {
+	fn from(value: JoinHandle<T>) -> Self {
+		Self {
+			abort_handle: value.abort_handle(),
+		}
+	}
+}
+
+impl From<AbortHandle> for AbortOnDrop {
+	fn from(abort_handle: AbortHandle) -> Self {
+		Self { abort_handle }
 	}
 }
 impl Drop for AbortOnDrop {
@@ -458,7 +470,7 @@ mod tests {
 		assert!(!abort_handle2.is_finished(), "Task should be running");
 		let _ = trigger_tx2.send(());
 		tokio::time::sleep(Duration::from_millis(50)).await;
-		abort_handle2.abort();
+		drop(abort_handle2);
 		tokio::time::sleep(Duration::from_millis(50)).await;
 	}
 

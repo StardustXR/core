@@ -3,10 +3,14 @@ use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
 use stardust_xr_protocol::*;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::sync::Mutex;
+
 fn main() {
 	// Watch for changes to KDL schema files
 	let schema_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
@@ -106,6 +110,48 @@ pub fn get_all_protocols() -> Vec<ProtocolInfo> {
 	]
 }
 
+static CLONE_PARTIAL_EQ_CACHE: LazyLock<Mutex<HashMap<String, bool>>> =
+	LazyLock::new(Default::default);
+fn can_impl_clone_and_partial_eq(arg: &ArgumentType) -> bool {
+	match &arg {
+		ArgumentType::Union(name) => *CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name).unwrap(),
+		ArgumentType::Struct(name) => *CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name).unwrap(),
+		ArgumentType::Fd => false,
+		_ => true,
+	}
+}
+fn setup_impl_clone_and_partial_eq(protocol_definitions: &[&Protocol], arg: &ArgumentType) -> bool {
+	match &arg {
+		ArgumentType::Union(name) | ArgumentType::Struct(name) => {
+			if let Some(v) = CLONE_PARTIAL_EQ_CACHE.lock().unwrap().get(name) {
+				return *v;
+			};
+			let v = protocol_definitions
+				.iter()
+				.flat_map(|v| v.custom_unions.iter())
+				.filter(|v| &v.name == name)
+				.flat_map(|v| v.options.iter())
+				.map(|v| &v._type)
+				.chain(
+					protocol_definitions
+						.iter()
+						.flat_map(|v| v.custom_structs.iter())
+						.filter(|v| &v.name == name)
+						.flat_map(|v| v.fields.iter())
+						.map(|v| &v._type),
+				)
+				.all(|v| setup_impl_clone_and_partial_eq(protocol_definitions, v));
+			CLONE_PARTIAL_EQ_CACHE
+				.lock()
+				.unwrap()
+				.insert(name.clone(), v);
+			v
+		}
+		ArgumentType::Fd => false,
+		_ => true,
+	}
+}
+
 pub fn generate_protocol_file(
 	protocols: Vec<ProtocolInfo>,
 	file_path: &Path,
@@ -118,6 +164,25 @@ pub fn generate_protocol_file(
 
 	let mut protocol_definitions = protocols.iter_mut().map(|(p, _)| p).collect::<Vec<_>>();
 	stardust_xr_protocol::resolve_inherits(&mut protocol_definitions).unwrap();
+	let protocol_definitions = protocols.iter().map(|(p, _)| p).collect::<Vec<_>>();
+	protocol_definitions
+		.iter()
+		.flat_map(|v| v.custom_structs.iter())
+		.for_each(|v| {
+			setup_impl_clone_and_partial_eq(
+				&protocol_definitions,
+				&ArgumentType::Struct(v.name.clone()),
+			);
+		});
+	protocol_definitions
+		.iter()
+		.flat_map(|v| v.custom_unions.iter())
+		.for_each(|v| {
+			setup_impl_clone_and_partial_eq(
+				&protocol_definitions,
+				&ArgumentType::Union(v.name.clone()),
+			);
+		});
 
 	// panic!("{protocol_definitions:# ?}");
 
@@ -258,10 +323,19 @@ impl Tokenize for CustomUnion {
 			.iter()
 			.map(|e| e.tokenize(_generate_node, partial_eq));
 
-		let derive = if partial_eq {
-			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
-		} else {
-			quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+		let derive = match (
+			partial_eq,
+			can_impl_clone_and_partial_eq(&ArgumentType::Enum(self.name.clone())),
+		) {
+			(true, true) => {
+				quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+			}
+			(false, true) => {
+				quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+			}
+			(_, false) => {
+				quote!( #[derive(Debug, serde::Deserialize, serde::Serialize)] )
+			}
 		};
 		quote! {
 			#[doc = #description]
@@ -322,16 +396,21 @@ impl Tokenize for CustomStruct {
 		let name = Ident::new(&self.name.to_case(Case::Pascal), Span::call_site());
 		let description = &self.description;
 
-		let argument_decls = self
-			.fields
-			.iter()
-			.map(|a| generate_argument_decl(a, true))
-			.map(|d| quote!(pub #d));
+		let argument_decls = self.fields.iter().map(|a| generate_pub_field_decl(a, true));
 
-		let derive = if partial_eq {
-			quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
-		} else {
-			quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+		let derive = match (
+			partial_eq,
+			can_impl_clone_and_partial_eq(&ArgumentType::Struct(self.name.clone())),
+		) {
+			(true, true) => {
+				quote!( #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)] )
+			}
+			(false, true) => {
+				quote!( #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)] )
+			}
+			(_, false) => {
+				quote!( #[derive(Debug, serde::Deserialize, serde::Serialize)] )
+			}
 		};
 		quote! {
 			#[doc = #description]
@@ -643,7 +722,7 @@ fn generate_event_sender_impl(aspect: &Aspect) -> TokenStream {
 				member._type,
 				quote! {
 					#opcode => {
-						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr_wire::flex::deserialize(_data)?;
+						let (#(#field_names),*): (#(#deserialize_types),*) = stardust_xr_wire::flex::deserialize(_data, _fds)?;
 
 						#debug
 						Ok(#event_name::#variant_name { #(#field_uses,)* #response_sender })
@@ -732,19 +811,17 @@ fn generate_server_member(
 		MemberType::Signal => {
 			let mut body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds)?;
+					let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+					_client.message_sender_handle.signal(#interface_node_id, #aspect_id, #opcode, &serialized_data, fds)?;
 
 					let (#(#arguments),*) = data;
 					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
 				}
 			} else {
 				quote! {
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
-					self.node().send_signal(#aspect_id, #opcode, &data, _fds)?;
+					self.node().send_signal(#aspect_id, #opcode, &data)?;
 
 					let (#(#arguments),*) = data;
 					tracing::trace!(#arguments_debug "Sent signal to server, {}::{}", #aspect_name, #name_str);
@@ -795,28 +872,26 @@ fn generate_server_member(
 			let deserialize = generate_argument_deserialize("result", &argument_type, false);
 			let body = if let Some(interface_node_id) = &interface_node_id {
 				quote! {
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
 					{
 						let (#(#arguments),*) = &data;
 						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
 					}
-					let serialized_data = stardust_xr_wire::flex::serialize(&data)?;
-					let message = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, _fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_message();
-					let result: #deserializeable_type = stardust_xr_wire::flex::deserialize(&message)?;
+					let (serialized_data, fds) = stardust_xr_wire::flex::serialize(&data)?;
+					let (message, message_fds) = _client.message_sender_handle.method(#interface_node_id, #aspect_id, #opcode, &serialized_data, fds).await?.map_err(|e| crate::node::NodeError::ReturnedError { e })?.into_components();
+					let result: #deserializeable_type = stardust_xr_wire::flex::deserialize(&message, message_fds)?;
 					let deserialized = #deserialize;
 					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
 					Ok(deserialized)
 				}
 			} else {
 				quote! {{
-					let mut _fds = Vec::new();
 					let data = (#(#argument_uses),*);
 					{
 						let (#(#arguments),*) = &data;
 						tracing::trace!(#arguments_debug "Called method on server, {}::{}", #aspect_name, #name_str);
 					}
-					let result: #deserializeable_type = self.node().call_method(#aspect_id, #opcode, &data, _fds).await?;
+					let result: #deserializeable_type = self.node().call_method(#aspect_id, #opcode, &data).await?;
 					let deserialized = #deserialize;
 					tracing::trace!("return" = ?deserialized, "Method return from server, {}::{}", #aspect_name, #name_str);
 					Ok(deserialized)
@@ -868,9 +943,6 @@ fn generate_argument_deserialize(
 		ArgumentType::Map(v) => {
 			let mapping = generate_argument_deserialize("a", v, false);
 			quote!(#name.into_iter().map(|(k, a)| Ok((k, #mapping))).collect::<Result<stardust_xr_wire::values::Map<String, _>, crate::node::NodeError>>()?)
-		}
-		ArgumentType::Fd => {
-			quote!(_fds.remove(0))
 		}
 		_ => quote!(#name),
 	}
@@ -928,12 +1000,6 @@ fn generate_argument_serialize(
 			let mapping = generate_argument_serialize("a", v, false);
 			quote!(#name.iter().map(|(k, a)| Ok((k, #mapping))).collect::<crate::node::NodeResult<rustc_hash::FxHashMap<String, _>>>()?)
 		}
-		ArgumentType::Fd => {
-			quote!({
-				_fds.push(#name);
-				(_fds.len() - 1) as u32
-			})
-		}
 		_ => quote!(#name),
 	}
 }
@@ -944,6 +1010,19 @@ fn generate_argument_decl(argument: &Argument, returned: bool) -> TokenStream {
 		_type = quote!(Option<#_type>);
 	}
 	quote!(#name: #_type)
+}
+fn generate_pub_field_decl(argument: &Argument, returned: bool) -> TokenStream {
+	let name = Ident::new(&argument.name.to_case(Case::Snake), Span::call_site());
+	let mut _type = generate_argument_type(&argument._type, returned);
+	if argument.optional {
+		_type = quote!(Option<#_type>);
+	}
+	let description = argument
+		.description
+		.as_ref()
+		.map(|d| quote!(#[doc = #d]))
+		.unwrap_or_default();
+	quote!(#description pub #name: #_type)
 }
 fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStream {
 	match argument_type {
@@ -1057,7 +1136,7 @@ fn generate_argument_type(argument_type: &ArgumentType, owned: bool) -> TokenStr
 			}
 		}
 		ArgumentType::Fd => {
-			quote!(std::os::unix::io::OwnedFd)
+			quote!(stardust_xr_wire::fd::ProtocolFd)
 		}
 	}
 }

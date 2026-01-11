@@ -2,6 +2,78 @@ version (u32)1
 interface (u64)4
 description ""
 
+
+signal "import_dmatex" side="server" {
+	description "Import a Dmatex, the imported Dmatex has to be manually unregistered, the returned id is Client Local"
+
+	argument "dmatex_id" type="id"
+	argument "size" type="union" union="DmatexSize"
+	argument "format" type="uint" description="the texture format as a drm_fourcc"
+	argument "drm_format_modifier" type="id" description="The Drm modifier of this format"
+	argument "srgb" type="bool" description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
+	argument "array_layers" type="uint" optional=true description="try to use an SRGB color space version of the format, needed because drm_fourcc can't represent this information"
+	argument "planes" type="vec" member_type="struct" struct="DmatexPlane"
+	argument "timeline_syncobj_fd" type="fd" description="the fd carrying info for explicit sync, using the timeline variant of the drm_syncobj"
+}
+
+method "export_dmatex_uid" side="server" {
+	description "Exports a Dmatex Uid for sharing between clients"
+	argument "dmatex_id" type="id"
+
+	return type="id"
+}
+
+signal "import_dmatex_uid" side="server" {
+	description "Imports a shared Dmatex Uid, holding this id will keep the underlying dmatex alive"
+	argument "dmatex_id" type="id"
+	argument "dmatex_uid" type="id"
+}
+
+signal "unregister_dmatex" side="server" {
+	description "Mark a Dmatex as unused, once all ids referencing the same Dmatex are unregisterd the server may destroy its internal representation of the Dmatex, this invalidates the used handle"
+
+	argument "dmatex_id" type="id" 
+}
+
+method "get_primary_render_device_id" side="server" {
+	description "get the id of the primary device used for rendering, will return a DrmRenderNode id"
+	
+	return type="id"
+}
+
+method "enumerate_dmatex_formats" side="server" {
+	description "enumerates all the Dmatex formats supported by the server"
+
+	argument "render_node_id" type="id"
+	
+	return type="vec" member_type="struct" struct="DmatexFormatInfo"
+}
+
+struct "DmatexFormatInfo" {
+	description "Description of a format supported by the server"
+	field "format" type="uint" description="drm_fourcc for the format"
+	field "drm_modifier" type="id"
+	field "is_srgb" type="bool"
+	field "planes" type="uint" description="How many memory planes does this format use"
+}
+
+struct "DmatexPlane" {
+	description "A single memory plane of a Dmatex"
+	field "dmabuf_fd" type="fd" description="the underlying dmabuf fd for this plane"
+	field "offset" type="uint" description="offset of the data relevant to this Dmatex plane in the Dmatex memory"
+	field "row_size" type="uint" description="the number of bytes between the beginning of one pixel row to the next, if the Dmatex is 1d this should be 0"
+	field "array_element_size" type="uint" description="the number of bytes between the beginning of one array element to the next, if the Dmatex is not an array texture this should be 0"
+	field "depth_slice_size" type="uint" description="the number of bytes between the beginning of one 3d slice to the next, if the Dmatex is not 3d this should be 0"
+}
+
+union "DmatexSize" {
+	description "Size and Dimensions of a Dmatex"
+
+	option type="uint" name="dim1d"
+	option type="vec2" component_type="uint" name="dim2d"
+	option type="vec3" component_type="uint" name="dim3d"
+}
+
 signal "set_sky_tex" side="server" {
 	description "Set the sky texture to a given HDRI file."
 
@@ -47,6 +119,12 @@ aspect "Lines" {
 	}
 }
 
+struct "DmatexMaterialParam" {
+	description "Dmatex Material Parameter info"
+	field "dmatex_id" type="id" description="The id of the Dmatex to be applied as the texture"
+	field "acquire_point" type="id" description="the point the timeline reaches once the client is done mutating the texture"
+	field "release_point" type="id" description="the point the timeline reaches once the server is done with the dmatex and the client can access it again"
+}
 
 union "MaterialParameter" {
 	description ""
@@ -59,6 +137,7 @@ union "MaterialParameter" {
 	option type="vec3"
 	option type="color"
 	option type="resource" name="texture"
+	option type="struct" struct="DmatexMaterialParam" name="dmatex" description="only accepts 2d Dmatexs without array layers"
 }
 signal "load_model" side="server" {
 	description "Load a GLTF model into a Model node"

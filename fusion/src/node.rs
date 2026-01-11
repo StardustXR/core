@@ -7,7 +7,7 @@ use stardust_xr_wire::{
 	messenger::MessengerError,
 	scenegraph::ScenegraphError,
 };
-use std::{fmt::Debug, os::fd::OwnedFd, sync::Arc, vec::Vec};
+use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
 
 pub use crate::protocol::node::*;
@@ -106,9 +106,8 @@ impl NodeCore {
 		aspect: u64,
 		signal: u64,
 		data: &S,
-		fds: Vec<OwnedFd>,
 	) -> Result<(), NodeError> {
-		let serialized = serialize(data).map_err(|e| NodeError::Serialization { e })?;
+		let (serialized, fds) = serialize(data).map_err(|e| NodeError::Serialization { e })?;
 		self.client
 			.message_sender_handle
 			.signal(self.id, aspect, signal, &serialized, fds)
@@ -124,9 +123,8 @@ impl NodeCore {
 		aspect: u64,
 		method: u64,
 		data: &S,
-		fds: Vec<OwnedFd>,
 	) -> Result<D, NodeError> {
-		let serialized = serialize(data).map_err(|e| NodeError::Serialization { e })?;
+		let (serialized, fds) = serialize(data).map_err(|e| NodeError::Serialization { e })?;
 
 		let response = self
 			.client
@@ -139,7 +137,8 @@ impl NodeCore {
 			})?
 			.map_err(|e| NodeError::ReturnedError { e })?;
 
-		deserialize(&response.into_message()).map_err(|e| NodeError::Deserialization { e })
+		let (response, fds) = response.into_components();
+		deserialize(&response, fds).map_err(|e| NodeError::Deserialization { e })
 	}
 }
 impl NodeType for NodeCore {

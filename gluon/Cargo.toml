@@ -1,9 +1,9 @@
 [package]
 edition = "2024"
 name = "stardust-xr-gluon"
-version = "2.0.0"
 authors = ["Nova King <technobaboo@protonmail.me", "Philpax"]
 description = "D-Bus object-based (rather than service-based) crate for Stardust XR, built off zbus"
+version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -17,5 +17,4 @@ zbus = { version = "5.11.0", features = [
 ], default-features = false }
 nanoid = "0.4.0"
 variadics_please = "1.1.0"
-console-subscriber = { version = "0.4.1", features = ["parking_lot"] }
 futures = "0.3.31"
