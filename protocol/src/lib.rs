@@ -13,7 +13,7 @@ pub const AUDIO_PROTOCOL: &str = include_str!("../idl/audio.kdl");
 pub const DRAWABLE_PROTOCOL: &str = include_str!("../idl/drawable.kdl");
 pub const INPUT_PROTOCOL: &str = include_str!("../idl/input.kdl");
 pub const ITEM_PROTOCOL: &str = include_str!("../idl/item.kdl");
-pub const ITEM_CAMERA_PROTOCOL: &str = include_str!("../idl/item_camera.kdl");
+pub const CAMERA_PROTOCOL: &str = include_str!("../idl/camera.kdl");
 pub const ITEM_PANEL_PROTOCOL: &str = include_str!("../idl/item_panel.kdl");
 
 #[derive(Debug)]

@@ -119,10 +119,10 @@ aspect "Lines" {
 	}
 }
 
-struct "DmatexMaterialParam" {
-	description "Dmatex Material Parameter info"
-	field "dmatex_id" type="id" description="The id of the Dmatex to be applied as the texture"
-	field "acquire_point" type="id" description="the point the timeline reaches once the client is done mutating the texture"
+struct "DmatexSubmitInfo" {
+	description "Dmatex Submit Info"
+	field "dmatex_id" type="id" description="The id of the Dmatex to be used"
+	field "acquire_point" type="id" description="the point the timeline reaches once the client is done accessing the texture"
 	field "release_point" type="id" description="the point the timeline reaches once the server is done with the dmatex and the client can access it again"
 }
 
@@ -137,7 +137,7 @@ union "MaterialParameter" {
 	option type="vec3"
 	option type="color"
 	option type="resource" name="texture"
-	option type="struct" struct="DmatexMaterialParam" name="dmatex" description="only accepts 2d Dmatexs without array layers"
+	option type="struct" struct="DmatexSubmitInfo" name="dmatex" description="only accepts 2d Dmatexs without array layers"
 }
 signal "load_model" side="server" {
 	description "Load a GLTF model into a Model node"
