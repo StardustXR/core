@@ -96,8 +96,8 @@ pub fn get_all_protocols() -> Vec<ProtocolInfo> {
 			partial_eq: true,
 		},
 		ProtocolInfo {
-			name: "item_camera",
-			content: ITEM_CAMERA_PROTOCOL,
+			name: "camera",
+			content: CAMERA_PROTOCOL,
 			generate_node: true,
 			partial_eq: true,
 		},

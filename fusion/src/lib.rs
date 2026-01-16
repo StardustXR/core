@@ -28,6 +28,7 @@ pub mod query_impl;
 pub mod root;
 pub mod scenegraph;
 pub mod spatial;
+pub mod camera;
 
 pub struct TypedMethodResponse<T: Serialize>(pub(crate) MethodResponse, pub(crate) PhantomData<T>);
 impl<T: Serialize> TypedMethodResponse<T> {
