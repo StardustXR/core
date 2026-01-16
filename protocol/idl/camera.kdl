@@ -24,6 +24,6 @@ aspect "Camera" {
 struct "View" {
     description "A single viewpoint for a camera"
     
-    field "projection_matrix" type="mat4" description="Right-handed projection matrix with a 0..1 depth range, where the Y axis == Up"
+    field "projection_matrix" type="mat4" description="Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up"
     field "camera_relative_transform" type="struct" struct="Transform" description="Transform applied to the view, relative to the camera"
 }
