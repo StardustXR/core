@@ -702,11 +702,14 @@ pub mod field {
         pub handle_in: stardust_xr_wire::values::Vector3<f32>,
         pub anchor: stardust_xr_wire::values::Vector3<f32>,
         pub handle_out: stardust_xr_wire::values::Vector3<f32>,
+        ///Thickness of the spline tube at the point
+        pub thickness: f32,
     }
     ///Cubic bezier spline
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct CubicSplineShape {
         pub control_points: Vec<CubicControlPoint>,
+        ///Whether the spline is a closed loop
         pub cyclic: bool,
     }
     ///Cylinder shape info
@@ -2840,7 +2843,7 @@ pub mod camera {
     ///A single viewpoint for a camera
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
     pub struct View {
-        ///Right-handed projection matrix with a 0..1 depth range, where the Y axis == Up
+        ///Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up
         pub projection_matrix: stardust_xr_wire::values::Mat4,
         ///Transform applied to the view, relative to the camera
         pub camera_relative_transform: Transform,

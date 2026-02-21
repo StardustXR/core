@@ -61,6 +61,7 @@ struct "CubicControlPoint" {
 	field "handle_in" type="vec3"
 	field "anchor" type="vec3"
 	field "handle_out" type="vec3"
+	field "thickness" type="float" description="Thickness of the spline tube at the point"
 }
 
 struct "CubicSplineShape" {
