@@ -55,6 +55,20 @@ aspect "FieldRef" {
 	}
 }
 
+struct "CubicControlPoint" {
+	description "Cubic control point. All values are relative to the spline."
+
+	field "handle_in" type="vec3"
+	field "anchor" type="vec3"
+	field "handle_out" type="vec3"
+}
+
+struct "CubicSplineShape" {
+	description "Cubic bezier spline"
+
+	field "control_points" type="vec" member_type="struct" struct="CubicControlPoint"
+	field "cyclic" type="bool" description="Whether the spline is a closed loop"
+}
 
 struct "CylinderShape" {
 	description "Cylinder shape info"
@@ -74,6 +88,7 @@ union "Shape" {
 	option name="Box" type="vec3" description="Box with a given size in meters"
 	option name="Cylinder" type="struct" struct="CylinderShape" description="Cylinder aligned to the XZ plane"
 	option name="Sphere" type="float" description="Sphere with a given radius in meters"
+	option name="Spline" type="struct" struct="CubicSplineShape" description="Cubic spline shape"
 	option name="Torus" type="struct" struct="TorusShape" description="Torus aligned to the XZ plane"
 }
 

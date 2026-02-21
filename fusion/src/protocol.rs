@@ -675,6 +675,8 @@ pub mod field {
         Cylinder(CylinderShape),
         ///Sphere with a given radius in meters
         Sphere(f32),
+        ///Cubic spline shape
+        Spline(CubicSplineShape),
         ///Torus aligned to the XZ plane
         Torus(TorusShape),
     }
@@ -693,6 +695,19 @@ pub mod field {
         pub ray_length: f32,
         ///Number of steps taken
         pub ray_steps: u32,
+    }
+    ///Cubic control point. All values are relative to the spline.
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    pub struct CubicControlPoint {
+        pub handle_in: stardust_xr_wire::values::Vector3<f32>,
+        pub anchor: stardust_xr_wire::values::Vector3<f32>,
+        pub handle_out: stardust_xr_wire::values::Vector3<f32>,
+    }
+    ///Cubic bezier spline
+    #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
+    pub struct CubicSplineShape {
+        pub control_points: Vec<CubicControlPoint>,
+        pub cyclic: bool,
     }
     ///Cylinder shape info
     #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
