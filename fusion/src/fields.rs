@@ -9,6 +9,73 @@ use crate::{
 };
 
 pub use crate::protocol::field::*;
+use crate::protocol::drawable::{Line, LinePoint};
+use stardust_xr_wire::values::color::rgba_linear;
+
+impl CubicSplineShape {
+	pub fn to_lines(&self, curve_segment_count: usize) -> Line {
+		let mut points = Vec::new();
+
+		if self.control_points.len() < 2 {
+			// With fewer than 2 control points, just convert them directly
+			for cp in &self.control_points {
+				points.push(LinePoint {
+					point: cp.anchor,
+					thickness: cp.thickness,
+					color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
+				});
+			}
+		} else {
+			let segment_count = if self.cyclic {
+				self.control_points.len()
+			} else {
+				self.control_points.len() - 1
+			};
+
+			for i in 0..segment_count {
+				let p0 = &self.control_points[i];
+				let p1 = &self.control_points[(i + 1) % self.control_points.len()];
+
+				let a = p0.anchor;
+				let b = p0.handle_out;
+				let c = p1.handle_in;
+				let d = p1.anchor;
+
+				let is_last = i == segment_count - 1;
+				let include_endpoint = is_last && !self.cyclic;
+				let samples = if include_endpoint {
+					curve_segment_count + 1
+				} else {
+					curve_segment_count
+				};
+
+				for j in 0..samples {
+					let t = j as f32 / curve_segment_count as f32;
+					let inv = 1.0 - t;
+					let inv2 = inv * inv;
+					let t2 = t * t;
+
+					let x = inv2 * inv * a.x + 3.0 * inv2 * t * b.x + 3.0 * inv * t2 * c.x + t2 * t * d.x;
+					let y = inv2 * inv * a.y + 3.0 * inv2 * t * b.y + 3.0 * inv * t2 * c.y + t2 * t * d.y;
+					let z = inv2 * inv * a.z + 3.0 * inv2 * t * b.z + 3.0 * inv * t2 * c.z + t2 * t * d.z;
+
+					let thickness = inv * p0.thickness + t * p1.thickness;
+
+					points.push(LinePoint {
+						point: [x, y, z].into(),
+						thickness,
+						color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
+					});
+				}
+			}
+		}
+
+		Line {
+			points,
+			cyclic: self.cyclic,
+		}
+	}
+}
 
 impl FieldRef {
 	pub async fn import(client: &Arc<ClientHandle>, uid: u64) -> NodeResult<Self> {
@@ -261,4 +328,50 @@ async fn fusion_field_export_import() {
 		(dist_field - dist_ref).abs() < 0.001,
 		"Field and imported FieldRef should return the same distance"
 	);
+}
+
+#[tokio::test]
+async fn fusion_field_spline_to_lines() {
+	use crate::drawable::Lines;
+	use crate::Client;
+
+	let client = Client::connect().await.expect("Couldn't connect");
+	let async_event_loop = client.async_event_loop();
+	let root = async_event_loop.client_handle.get_root();
+
+	let spline_shape = CubicSplineShape {
+		control_points: vec![
+			CubicControlPoint {
+				handle_in: [-0.1, 0.0, 0.0].into(),
+				anchor: [0.0, 0.0, 0.0].into(),
+				handle_out: [0.1, 0.0, 0.0].into(),
+				thickness: 0.01,
+			},
+			CubicControlPoint {
+				handle_in: [0.0, 0.0, 0.0].into(),
+				anchor: [0.1, 0.0, 0.0].into(),
+				handle_out: [0.2, 0.0, 0.0].into(),
+				thickness: 0.01,
+			},
+			CubicControlPoint {
+				handle_in: [0.0, 0.0, 0.0].into(),
+				anchor: [0.1, 0.1, 0.0].into(),
+				handle_out: [0.1, 0.2, 0.0].into(),
+				thickness: 0.005,
+			},
+		],
+		cyclic: false,
+	};
+
+	let _field = Field::create(
+		root,
+		Transform::none(),
+		Shape::Spline(spline_shape.clone()),
+	)
+	.unwrap();
+
+	let line = spline_shape.to_lines(10);
+	let _lines = Lines::create(root, Transform::none(), &[line]).unwrap();
+
+	tokio::time::sleep(std::time::Duration::from_secs(60)).await;
 }
