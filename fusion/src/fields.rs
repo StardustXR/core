@@ -8,8 +8,8 @@ use crate::{
 	spatial::{SpatialRefAspect, Transform},
 };
 
-pub use crate::protocol::field::*;
 use crate::protocol::drawable::{Line, LinePoint};
+pub use crate::protocol::field::*;
 use stardust_xr_wire::values::color::rgba_linear;
 
 impl CubicSplineShape {
@@ -55,9 +55,18 @@ impl CubicSplineShape {
 					let inv2 = inv * inv;
 					let t2 = t * t;
 
-					let x = inv2 * inv * a.x + 3.0 * inv2 * t * b.x + 3.0 * inv * t2 * c.x + t2 * t * d.x;
-					let y = inv2 * inv * a.y + 3.0 * inv2 * t * b.y + 3.0 * inv * t2 * c.y + t2 * t * d.y;
-					let z = inv2 * inv * a.z + 3.0 * inv2 * t * b.z + 3.0 * inv * t2 * c.z + t2 * t * d.z;
+					let x = inv2 * inv * a.x
+						+ 3.0 * inv2 * t * b.x
+						+ 3.0 * inv * t2 * c.x
+						+ t2 * t * d.x;
+					let y = inv2 * inv * a.y
+						+ 3.0 * inv2 * t * b.y
+						+ 3.0 * inv * t2 * c.y
+						+ t2 * t * d.y;
+					let z = inv2 * inv * a.z
+						+ 3.0 * inv2 * t * b.z
+						+ 3.0 * inv * t2 * c.z
+						+ t2 * t * d.z;
 
 					let thickness = inv * p0.thickness + t * p1.thickness;
 
@@ -332,8 +341,8 @@ async fn fusion_field_export_import() {
 
 #[tokio::test]
 async fn fusion_field_spline_to_lines() {
-	use crate::drawable::Lines;
 	use crate::Client;
+	use crate::drawable::Lines;
 
 	let client = Client::connect().await.expect("Couldn't connect");
 	let async_event_loop = client.async_event_loop();
@@ -360,17 +369,13 @@ async fn fusion_field_spline_to_lines() {
 				thickness: 0.005,
 			},
 		],
-		cyclic: false,
+		cyclic: true,
 	};
 
-	let _field = Field::create(
-		root,
-		Transform::none(),
-		Shape::Spline(spline_shape.clone()),
-	)
-	.unwrap();
+	let _field =
+		Field::create(root, Transform::none(), Shape::Spline(spline_shape.clone())).unwrap();
 
-	let line = spline_shape.to_lines(10);
+	let line = spline_shape.to_lines(32);
 	let _lines = Lines::create(root, Transform::none(), &[line]).unwrap();
 
 	tokio::time::sleep(std::time::Duration::from_secs(60)).await;
