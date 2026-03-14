@@ -36,13 +36,13 @@ zbus = { version = "5.11.0", features = [
 	"blocking-api",
 	"tokio",
 ], default-features = false }
-stardust-xr-wire = { version = "0.50.0", path = "../wire" }
-stardust-xr-gluon = { version = "0.50.0", path = "../gluon" }
+stardust-xr-wire = { version = "0.51.0", path = "../wire" }
+stardust-xr-gluon = { version = "0.51.0", path = "../gluon" }
 
 [build-dependencies]
 convert_case = "0.8.0"
 quote = "1.0.33"
-stardust-xr-protocol = { version = "0.50.0", path = "../protocol" }
+stardust-xr-protocol = { version = "0.51.0", path = "../protocol" }
 proc-macro2 = "1.0.71"
 color-eyre = "0.6"
 syn = "2.0.106"
