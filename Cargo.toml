@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["wire", "fusion", "protocol", "gluon"]
-package.version = "0.51.0"
+package.version = "0.51.1"
 package.repository = "https://github.com/StardustXR/core/"
 package.homepage = "https://stardustxr.org"
 package.license = "MIT"
