@@ -9,7 +9,7 @@ use nix::fcntl::{FcntlArg, fcntl};
 use nix::sys::socket::{ControlMessage, ControlMessageOwned, MsgFlags, recvmsg, sendmsg};
 use rustc_hash::FxHashMap;
 use std::io::{IoSlice, IoSliceMut};
-use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, Interest};
@@ -403,8 +403,8 @@ impl MessageSender {
 			let iov = &[IoSlice::new(body)];
 			let fds = message
 				.fds
-				.into_iter()
-				.map(IntoRawFd::into_raw_fd)
+				.iter()
+				.map(AsRawFd::as_raw_fd)
 				.collect::<Vec<_>>();
 			let cmsgs = &[ControlMessage::ScmRights(&fds)];
 
