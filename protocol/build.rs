@@ -10,6 +10,6 @@ fn main() {
 		&[],
 		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
 		"protocol",
-		"./src/protocol.rs",
+		"./src/protocol",
 	);
 }
