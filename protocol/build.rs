@@ -4,7 +4,7 @@ use std::path::Path;
 fn main() {
 	gluon_codegen_rust::helpers::gen_multiple_modules(
 		&[
-			("client", Path::new("./gluon/org.stardustxr.Client.gluon")),
+			("server", Path::new("./gluon/org.stardustxr.Server.gluon")),
 			("spatial", Path::new("./gluon/org.stardustxr.Spatial.gluon")),
 		],
 		&[],
