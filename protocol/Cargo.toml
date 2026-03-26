@@ -9,6 +9,14 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-kdl = "4.6.0"
+gluon-wire = { git = "https://github.com/technobaboo/gluon" }
+binderbinder = { git = "https://github.com/technobaboo/binderbinder" }
 fnv = "1.0.7"
 thiserror = "2.0.16"
+tokio = "1.49.0"
+
+[build-dependencies]
+syn = "2"
+prettyplease = "0.2"
+gluon-parser = { git = "https://github.com/technobaboo/gluon" }
+gluon-codegen-rust = { git = "https://github.com/technobaboo/gluon" }

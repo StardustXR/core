@@ -1,0 +1,63 @@
+/// Vector3
+struct Vec3 {
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+/// Quaternion
+struct Quat {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
+}
+
+/// Transform
+struct Transform {
+    position: Vec3,
+    rotation: Quat,
+    scale: f32,
+}
+
+/// Bounding box
+struct BoundingBox {
+    center: Vec3,
+    extents: Vec3,
+}
+
+/// A reference to a node with spatial attributes (position, rotation, scale).
+/// Equivalent to a Transform in Unity, Spatial in Godot, etc.
+interface SpatialRef {}
+
+/// Spatial object
+interface Spatial {
+	/// Get the spatial ref for this spatial object.
+	get_ref() -> (spatial: Ref<SpatialRef>)
+
+	/// Get the bounding box of this spatial and its children relative to itself
+	get_local_bounding_box() -> (bounding_box: BoundingBox)
+	/// Get the bounding box of this spatial and its children relative to another spatial.
+	get_world_bounding_box(relative_to: Ref<SpatialRef>) -> (bounding_box: BoundingBox)
+
+	// /// Get the local transform of this spatial object.
+	// get_local_transform() -> (transform: Transform)
+	/// Get the transform of this spatial object.
+	get_relative_transform(relative_to: Ref<SpatialRef>) -> (transform: Transform)
+
+	/// Sets the parent of this spatial object, keeping the local transform.
+	/// It will silently error and not set the spatial parent if it is to a child of itself.
+	set_parent(parent: Ref<SpatialRef>)
+	/// Sets the parent of this spatial object, keeping its position in space.
+	/// It will silently error and not set the spatial parent if it is to a child of itself.
+	set_parent_in_place(parent: Ref<SpatialRef>)
+}
+
+/// Root interface for spatial operations.
+interface SpatialInterface {
+	/// Create a new spatial object.
+	create_spatial() -> (spatial: Ref<SpatialRef>)
+
+	/// Get the relative transform of a spatial object relative to another spatial.
+	get_relative_transform(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (transform: Transform)
+}

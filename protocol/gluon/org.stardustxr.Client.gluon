@@ -1,0 +1,7 @@
+import "org.stardustxr.Spatial.gluon" as spatial
+
+/// Proxy to your own client
+interface Client {
+	/// Get the spatial interface node.
+	spatial_interface() -> (spatial: Ref<spatial::SpatialInterface>)
+}
