@@ -1,14 +1,15 @@
 import "org.stardustxr.Types" as types
 
 /// Size of a DMA texture.
-enum DmaTexSize {
+enum DmatexSize {
 	Size1D { size: u32 },
 	Size2D { size: types::Size2 },
 	Size3D { size: types::Size3 },
 }
 
 /// Information about a DMA texture format.
-struct DmaTexFormatInfo {
+struct DmatexFormatInfo {
+	/// drm_fourcc
 	format: u32,
 	drm_modifier: u64,
 	is_srgb: bool,
@@ -16,7 +17,7 @@ struct DmaTexFormatInfo {
 }
 
 /// Information about a DMA texture plane.
-struct DmaTexPlane {
+struct DmatexPlane {
 	dmabuf_fd: Fd,
 	offset: u64,
 	row_size: u64,
@@ -25,9 +26,9 @@ struct DmaTexPlane {
 }
 
 /// Opaque reference to a dmatex. This is so that you can send buffers to other processes without being able to access them directly, for security.
-interface DmaTexRef {}
+interface DmatexRef {}
 
 /// Interface to the dmatex system.
-interface DmaTexInterface {
+interface DmatexInterface {
 	import_dmatex(size: DmaTexSize, format: u32, drm_format_modifier: u64, srgb: bool, array_layers: u32, planes: Vec<DmaTexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Ref<DmaTexRef>)
 }
