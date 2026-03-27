@@ -1,0 +1,88 @@
+import "org.stardustxr.Types" as types
+import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Dmatex" as dmatex
+
+/// Entry point for loading Models
+interface ModelInterface {
+	/// Load a GLTF model into a Model
+	load_model(model: types::Resource, parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, model_scale: types::Vec3f) -> (model: Ref<Model>)
+}
+
+/// A GLTF model loaded by the server.
+interface Model {
+	get_spatial() -> (spatial: Ref<spatial::Spatial>)
+	get_part(path: String) -> (part: Option<Ref<ModelPart>>)
+	enumerate_parts() -> (parts: Vec<Ref<ModelPart>>)
+	set_model_scale(scale: types::Vec3f)
+}
+
+/// A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.
+interface ModelPart {
+	get_part_path() -> (path: String)
+	/// Get the transform relative to the Model
+	get_model_transform() -> (transform: NonUniformTransform)
+	/// Get the transform relative to the parent ModelPart or Model
+	get_local_transform() -> (transform: NonUniformTransform)
+	/// Get the transform relative to referenced ModelPart
+	get_relative_transform(relative_to: Ref<ModelPart>) -> (transform: NonUniformTransform)
+
+	/// Set the transform relative to the Model
+	set_model_transform(transform: PartialNonUniformTransform)
+	/// Set the transform relative to the parent ModelPart or Model
+	set_local_transform(transform: PartialNonUniformTransform)
+	/// Set the transform relative to referenced ModelPart
+	set_relative_transform(relative_to: Ref<ModelPart>, transform: PartialNonUniformTransform)
+	// we might want to hardcode the known params with their types in an enum?
+	set_material_parameter(parameter_name: String, value: MaterialParameter) -> (error: Option<MaterialParamError>)
+	/// Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
+	apply_holdout_material()
+}
+
+/// Transform with non-uniform scale
+struct NonUniformTransform {
+    position: types::Vec3f,
+    rotation: types::Quatf,
+    scale: types::Vec3f,
+}
+
+/// Partial version of NonUniformTransform
+struct PartialNonUniformTransform {
+    position: Option<types::Vec3f>,
+    rotation: Option<types::Quatf>,
+    scale: Option<types::Vec3f>,
+}
+
+/// Error potentially produced when loading a model
+enum ModelLoadError {
+	NotFound,
+}
+
+/// Error potentially produced when trying to set a material paramterer
+enum MaterialParamError {
+	ParamNotFound {
+		known_params: Vec<String>,
+	},
+	IncorrectType {
+		valid_type: String,
+	},
+	/// ModelPart had apply_holdout_material called before
+	Holdout,
+}
+
+/// Material parameter values
+enum MaterialParameter {
+	Boolean { value: bool },
+	Int { value: i32 },
+	Uint { value: u32 },
+	Float { value: f32 },
+	Vec2 { value: types::Vec2f },
+	Vec3 { value: types::Vec3f },
+	Texture { value: types::Resource },
+	Dmatex { 
+		dmatex: Ref<dmatex::DmatexRef>,
+		/// After this point is reached the Server may access the texture
+		acquire_point: u64,
+		/// This point is reached once the Server is done accessing the texture
+		release_point: u64,
+	}
+}

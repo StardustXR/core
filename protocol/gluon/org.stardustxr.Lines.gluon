@@ -1,0 +1,30 @@
+import "org.stardustxr.Types" as types
+import "org.stardustxr.Spatial" as spatial
+
+/// A collection of polylines drawn by the server. Meant for debug, so the spatial transform affects point positions but the thickness is in world space. Any mesh made to represent these lines cannot be distorted.
+interface Lines {
+	get_spatial() -> (spatial: Ref<spatial::Spatial>)
+	set_lines(lines: Vec<Line>)
+}
+
+/// A single continuous polyline
+struct Line {
+	points: Vec<LinePoint>,
+	/// Whether this line is a closed loop
+	cyclic: bool,
+}
+
+/// A single point on a line
+struct LinePoint {
+	/// The position of the point relative to the Lines Spatial
+	point: types::Vec3f,
+	/// Thickness in meters, world space
+	thickness: f32,
+	/// Color of the point
+	color: types::Color,
+}
+
+/// Entry point for creating Lines
+interface LinesInterface {
+	create_lines(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, lines: Vec<Line>) -> (lines: Ref<Lines>)
+}

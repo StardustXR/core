@@ -1,0 +1,11 @@
+import "org.stardustxr.Types" as types
+/// The sky modifications will apply as long as this guard is held
+interface SkyGuard {}
+
+/// Used to modify the skybox and sky light
+interface SkyInterface {
+	/// Set the sky texture to a given equirectagular texture.
+	set_sky_tex(tex: types::Resource) -> (guard: Ref<SkyGuard>)
+	/// Set the sky lighting to a given equirectagular texture, supports HDRI images.
+	set_sky_light(tex: types::Resource) -> (guard: Ref<SkyGuard>)
+}

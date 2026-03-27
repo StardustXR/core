@@ -55,6 +55,125 @@ impl Server {
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
+    pub async fn field_interface(
+        &self,
+    ) -> Result<super::field::FieldInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.field_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn field_interface_blocking(
+        &self,
+    ) -> Result<super::field::FieldInterface, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 9u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    ///Get the dmatex interface node.
+    pub async fn dmatex_interface(
+        &self,
+    ) -> Result<super::dmatex::DmatexInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.dmatex_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn dmatex_interface_blocking(
+        &self,
+    ) -> Result<super::dmatex::DmatexInterface, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 10u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    pub async fn text_interface(
+        &self,
+    ) -> Result<super::text::TextInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.text_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn text_interface_blocking(
+        &self,
+    ) -> Result<super::text::TextInterface, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 11u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    pub async fn model_interface(
+        &self,
+    ) -> Result<super::model::ModelInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.model_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn model_interface_blocking(
+        &self,
+    ) -> Result<super::model::ModelInterface, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 12u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    pub async fn lines_interface(
+        &self,
+    ) -> Result<super::lines::LinesInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.lines_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn lines_interface_blocking(
+        &self,
+    ) -> Result<super::lines::LinesInterface, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 13u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    pub async fn sky_interface(
+        &self,
+    ) -> Result<super::sky::SkyInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.sky_interface_blocking()).await.unwrap()
+    }
+    pub fn sky_interface_blocking(
+        &self,
+    ) -> Result<super::sky::SkyInterface, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 14u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
     pub fn from_handler<H: ServerHandler>(
         obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
     ) -> Server {
@@ -109,6 +228,31 @@ pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync 
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = super::spatial::SpatialInterface> + Send + Sync;
+    fn field_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::field::FieldInterface> + Send + Sync;
+    ///Get the dmatex interface node.
+    fn dmatex_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::dmatex::DmatexInterface> + Send + Sync;
+    fn text_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::text::TextInterface> + Send + Sync;
+    fn model_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::model::ModelInterface> + Send + Sync;
+    fn lines_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::lines::LinesInterface> + Send + Sync;
+    fn sky_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::sky::SkyInterface> + Send + Sync;
     fn drop_notification_requested(
         &self,
         notifier: gluon_wire::drop_tracking::DropNotifier,
@@ -129,6 +273,30 @@ pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync 
             match transaction_code {
                 8u32 => {
                     let (spatial) = self.spatial_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                9u32 => {
+                    let (spatial) = self.field_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                10u32 => {
+                    let (spatial) = self.dmatex_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                11u32 => {
+                    let (spatial) = self.text_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                12u32 => {
+                    let (spatial) = self.model_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                13u32 => {
+                    let (spatial) = self.lines_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                14u32 => {
+                    let (spatial) = self.sky_interface(ctx).await;
                     spatial.write_owned(&mut out)?;
                 }
                 _ => {}

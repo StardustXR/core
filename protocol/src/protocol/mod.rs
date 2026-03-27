@@ -1,4 +1,9 @@
 pub mod types;
 pub mod server;
 pub mod spatial;
+pub mod field;
 pub mod dmatex;
+pub mod lines;
+pub mod model;
+pub mod text;
+pub mod sky;

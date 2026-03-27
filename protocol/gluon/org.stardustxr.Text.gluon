@@ -1,0 +1,58 @@
+import "org.stardustxr.Types" as types
+import "org.stardustxr.Spatial" as spatial
+
+/// Entry point to displaying Text.
+interface TextInterface {
+	create_text(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, text: String, style: TextStyle) -> (text: Ref<Text>)
+}
+
+/// Text rendered to work best in XR
+interface Text {
+	get_spatial() -> (spatial: spatial::Spatial)
+	/// Set the character height in meters
+	set_character_height(height: f32)
+	/// Set the text content
+	set_text(text: String)
+}
+
+/// X alignment
+enum XAlign {
+	Left,
+	Center,
+	Right,
+}
+
+/// Y alignment
+enum YAlign {
+	Top,
+	Center,
+	Bottom,
+}
+
+/// How the text fits in a box of any size
+enum TextFit {
+	Wrap,
+	Clip,
+	Squeeze,
+	Exact,
+	Overflow,
+}
+
+/// Bounds for text
+struct TextBounds {
+	/// Bounds in meters
+	bounds: types::Vec2f,
+	fit: TextFit,
+	anchor_align_x: XAlign,
+	anchor_align_y: YAlign,
+}
+
+/// Styling info for text
+struct TextStyle {
+	/// Height of a character in meters
+	character_height: f32,
+	color: types::Color,
+	text_align_x: XAlign,
+	text_align_y: YAlign,
+	bounds: Option<TextBounds>,
+}

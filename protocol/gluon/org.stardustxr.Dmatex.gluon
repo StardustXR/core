@@ -28,7 +28,7 @@ interface DmatexRef {}
 
 /// Interface to the dmatex system.
 interface DmatexInterface {
-	import_dmatex(size: DmaTexSize, format: DmatexFormat, array_layers: u32, planes: Vec<DmaTexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Ref<DmaTexRef>)
+	import_dmatex(size: DmatexSize, format: DmatexFormat, array_layers: u32, planes: Vec<DmatexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Ref<DmatexRef>)
 	enumerate_formats(render_node: u64) -> (formats: Vec<DmatexFormat>)
 	primary_render_node_id() -> (drm_render_node_id: u64)
 }

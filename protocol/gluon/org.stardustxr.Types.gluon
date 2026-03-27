@@ -31,3 +31,28 @@ struct Quatf {
     z: f32,
     w: f32,
 }
+
+/// A color in linear rgb, premultiplied alpha
+struct Color {
+	r: f32,
+	g: f32,
+	b: f32,
+	a: f32,
+}
+
+/// An identifier to a resource, such as a sound, model or texture
+enum Resource {
+	/// An absolute path to a resource, not themed at all.
+	/// You should only use this for content not included with your client.
+	Direct {
+		path: String,
+	},
+	/// A resource that is relative to a prefix, meant for resources that are included with the client.
+	/// Allows switching of prefix by the server as well to theme clients.
+	Namespaced {
+		/// Group that this resource is in, generally the client or library's name.
+		namespace: String,
+		/// Path inside namespace without the file extension, must be relative
+		path: String,
+	}
+}

@@ -1,182 +1,94 @@
 #![allow(unused, clippy::single_match, clippy::match_single_binding)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
-    protocol_name: "org.stardustxr.Dmatex",
+    protocol_name: "org.stardustxr.Lines",
     types: &[
         gluon_wire::ExternalGluonType {
-            name: "DmatexFormat",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
+            name: "Line",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(10u32),
         },
         gluon_wire::ExternalGluonType {
-            name: "DmatexPlane",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(0u32),
-        },
-        gluon_wire::ExternalGluonType {
-            name: "DmatexSize",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
+            name: "LinePoint",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
     ],
 };
-///Information about a DMA texture format.
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub struct DmatexFormat {
-    pub drm_fourcc: u32,
-    pub drm_modifier: u64,
-    pub is_srgb: bool,
+///A single continuous polyline
+#[derive(Debug, Clone, PartialEq)]
+pub struct Line {
+    pub points: Vec<LinePoint>,
+    ///Whether this line is a closed loop
+    pub cyclic: bool,
 }
-impl gluon_wire::GluonConvertable for DmatexFormat {
+impl gluon_wire::GluonConvertable for Line {
     fn write<'a, 'b: 'a>(
         &'b self,
         data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.drm_fourcc.write(data)?;
-        self.drm_modifier.write(data)?;
-        self.is_srgb.write(data)?;
+        self.points.write(data)?;
+        self.cyclic.write(data)?;
         Ok(())
     }
     fn read(
         data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let drm_fourcc = gluon_wire::GluonConvertable::read(data)?;
-        let drm_modifier = gluon_wire::GluonConvertable::read(data)?;
-        let is_srgb = gluon_wire::GluonConvertable::read(data)?;
-        Ok(DmatexFormat {
-            drm_fourcc,
-            drm_modifier,
-            is_srgb,
+        let points = gluon_wire::GluonConvertable::read(data)?;
+        let cyclic = gluon_wire::GluonConvertable::read(data)?;
+        Ok(Line { points, cyclic })
+    }
+    fn write_owned(
+        self,
+        data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.points.write_owned(data)?;
+        self.cyclic.write_owned(data)?;
+        Ok(())
+    }
+}
+///A single point on a line
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct LinePoint {
+    ///The position of the point relative to the Lines Spatial
+    pub point: super::types::Vec3F,
+    ///Thickness in meters, world space
+    pub thickness: f32,
+    ///Color of the point
+    pub color: super::types::Color,
+}
+impl gluon_wire::GluonConvertable for LinePoint {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.point.write(data)?;
+        self.thickness.write(data)?;
+        self.color.write(data)?;
+        Ok(())
+    }
+    fn read(
+        data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let point = gluon_wire::GluonConvertable::read(data)?;
+        let thickness = gluon_wire::GluonConvertable::read(data)?;
+        let color = gluon_wire::GluonConvertable::read(data)?;
+        Ok(LinePoint {
+            point,
+            thickness,
+            color,
         })
     }
     fn write_owned(
         self,
         data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.drm_fourcc.write_owned(data)?;
-        self.drm_modifier.write_owned(data)?;
-        self.is_srgb.write_owned(data)?;
-        Ok(())
-    }
-}
-///Information about a DMA texture plane.
-#[derive(Debug)]
-pub struct DmatexPlane {
-    pub dmabuf_fd: std::os::fd::OwnedFd,
-    pub offset: u64,
-    pub row_size: u64,
-    pub array_element_size: u64,
-    pub depth_slice_size: u64,
-}
-impl gluon_wire::GluonConvertable for DmatexPlane {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.dmabuf_fd.write(data)?;
-        self.offset.write(data)?;
-        self.row_size.write(data)?;
-        self.array_element_size.write(data)?;
-        self.depth_slice_size.write(data)?;
-        Ok(())
-    }
-    fn read(
-        data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let dmabuf_fd = gluon_wire::GluonConvertable::read(data)?;
-        let offset = gluon_wire::GluonConvertable::read(data)?;
-        let row_size = gluon_wire::GluonConvertable::read(data)?;
-        let array_element_size = gluon_wire::GluonConvertable::read(data)?;
-        let depth_slice_size = gluon_wire::GluonConvertable::read(data)?;
-        Ok(DmatexPlane {
-            dmabuf_fd,
-            offset,
-            row_size,
-            array_element_size,
-            depth_slice_size,
-        })
-    }
-    fn write_owned(
-        self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.dmabuf_fd.write_owned(data)?;
-        self.offset.write_owned(data)?;
-        self.row_size.write_owned(data)?;
-        self.array_element_size.write_owned(data)?;
-        self.depth_slice_size.write_owned(data)?;
-        Ok(())
-    }
-}
-///Size of a DMA texture.
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum DmatexSize {
-    Size1D { size: u32 },
-    Size2D { size: super::types::Size2 },
-    Size3D { size: super::types::Size3 },
-}
-impl gluon_wire::GluonConvertable for DmatexSize {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        match self {
-            DmatexSize::Size1D { size } => {
-                data.write_u16(0u16)?;
-                size.write(data)?;
-            }
-            DmatexSize::Size2D { size } => {
-                data.write_u16(1u16)?;
-                size.write(data)?;
-            }
-            DmatexSize::Size3D { size } => {
-                data.write_u16(2u16)?;
-                size.write(data)?;
-            }
-        };
-        Ok(())
-    }
-    fn read(
-        data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        Ok(
-            match data.read_u16()? {
-                0u16 => {
-                    let size = gluon_wire::GluonConvertable::read(data)?;
-                    DmatexSize::Size1D { size }
-                }
-                1u16 => {
-                    let size = gluon_wire::GluonConvertable::read(data)?;
-                    DmatexSize::Size2D { size }
-                }
-                2u16 => {
-                    let size = gluon_wire::GluonConvertable::read(data)?;
-                    DmatexSize::Size3D { size }
-                }
-                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
-            },
-        )
-    }
-    fn write_owned(
-        self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        match self {
-            DmatexSize::Size1D { size } => {
-                data.write_u16(0u16)?;
-                size.write_owned(data)?;
-            }
-            DmatexSize::Size2D { size } => {
-                data.write_u16(1u16)?;
-                size.write_owned(data)?;
-            }
-            DmatexSize::Size3D { size } => {
-                data.write_u16(2u16)?;
-                size.write_owned(data)?;
-            }
-        };
+        self.point.write_owned(data)?;
+        self.thickness.write_owned(data)?;
+        self.color.write_owned(data)?;
         Ok(())
     }
 }
 #[derive(Debug, Clone)]
-pub struct DmatexRef {
+pub struct Lines {
     obj: binderbinder::binder_object::BinderObjectOrRef,
     drop_notification: std::sync::Arc<
         binderbinder::binder_object::BinderObject<
@@ -184,7 +96,7 @@ pub struct DmatexRef {
         >,
     >,
 }
-impl gluon_wire::GluonConvertable for DmatexRef {
+impl gluon_wire::GluonConvertable for Lines {
     fn write<'a, 'b: 'a>(
         &'b self,
         data: &mut gluon_wire::GluonDataBuilder<'a>,
@@ -195,7 +107,7 @@ impl gluon_wire::GluonConvertable for DmatexRef {
         data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
-        Ok(DmatexRef::from_object_or_ref(obj))
+        Ok(Lines::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
@@ -204,11 +116,35 @@ impl gluon_wire::GluonConvertable for DmatexRef {
         self.obj.write_owned(data)
     }
 }
-impl DmatexRef {
-    pub fn from_handler<H: DmatexRefHandler>(
+impl Lines {
+    pub async fn get_spatial(
+        &self,
+    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.get_spatial_blocking()).await.unwrap()
+    }
+    pub fn get_spatial_blocking(
+        &self,
+    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 8u32, builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    pub fn set_lines(&self, lines: Vec<Line>) -> Result<(), gluon_wire::GluonSendError> {
+        let mut builder = gluon_wire::GluonDataBuilder::new();
+        lines.write(&mut builder)?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, builder.to_payload())?;
+        Ok(())
+    }
+    pub fn from_handler<H: LinesHandler>(
         obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
-    ) -> DmatexRef {
-        DmatexRef::from_object_or_ref(
+    ) -> Lines {
+        Lines::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
                 obj,
             ),
@@ -217,17 +153,14 @@ impl DmatexRef {
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> DmatexRef {
+    ) -> Lines {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
         let mut builder = gluon_wire::GluonDataBuilder::new();
         builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
-        DmatexRef {
-            obj,
-            drop_notification,
-        }
+        Lines { obj, drop_notification }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
         let death_notification_future = match &self.obj {
@@ -251,12 +184,17 @@ impl DmatexRef {
         }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexRef {
+impl binderbinder::binder_object::ToBinderObjectOrRef for Lines {
     fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
         self.obj.to_binder_object_or_ref()
     }
 }
-pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+    fn get_spatial(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
+    fn set_lines(&self, _ctx: gluon_wire::GluonCtx, lines: Vec<Line>);
     fn drop_notification_requested(
         &self,
         notifier: gluon_wire::drop_tracking::DropNotifier,
@@ -275,6 +213,10 @@ pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sy
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                8u32 => {
+                    let (spatial) = self.get_spatial(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
                 _ => {}
             }
             Ok(out)
@@ -297,6 +239,9 @@ pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sy
                         )
                         .await;
                 }
+                9u32 => {
+                    self.set_lines(ctx, gluon_wire::GluonConvertable::read(data)?);
+                }
                 _ => {}
             }
             Ok(())
@@ -304,7 +249,7 @@ pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sy
     }
 }
 #[derive(Debug, Clone)]
-pub struct DmatexInterface {
+pub struct LinesInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
     drop_notification: std::sync::Arc<
         binderbinder::binder_object::BinderObject<
@@ -312,7 +257,7 @@ pub struct DmatexInterface {
         >,
     >,
 }
-impl gluon_wire::GluonConvertable for DmatexInterface {
+impl gluon_wire::GluonConvertable for LinesInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
         data: &mut gluon_wire::GluonDataBuilder<'a>,
@@ -323,7 +268,7 @@ impl gluon_wire::GluonConvertable for DmatexInterface {
         data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
-        Ok(DmatexInterface::from_object_or_ref(obj))
+        Ok(LinesInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
@@ -332,43 +277,30 @@ impl gluon_wire::GluonConvertable for DmatexInterface {
         self.obj.write_owned(data)
     }
 }
-impl DmatexInterface {
-    pub async fn import_dmatex(
+impl LinesInterface {
+    pub async fn create_lines(
         &self,
-        size: DmatexSize,
-        format: DmatexFormat,
-        array_layers: u32,
-        planes: Vec<DmatexPlane>,
-        timeline_syncobj_fd: std::os::fd::OwnedFd,
-    ) -> Result<DmatexRef, gluon_wire::GluonSendError> {
+        parent: super::spatial::SpatialRef,
+        transform: super::spatial::Transform,
+        lines: Vec<Line>,
+    ) -> Result<Lines, gluon_wire::GluonSendError> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || {
-                this
-                    .import_dmatex_blocking(
-                        size,
-                        format,
-                        array_layers,
-                        planes,
-                        timeline_syncobj_fd,
-                    )
+                this.create_lines_blocking(parent, transform, lines)
             })
             .await
             .unwrap()
     }
-    pub fn import_dmatex_blocking(
+    pub fn create_lines_blocking(
         &self,
-        size: DmatexSize,
-        format: DmatexFormat,
-        array_layers: u32,
-        planes: Vec<DmatexPlane>,
-        timeline_syncobj_fd: std::os::fd::OwnedFd,
-    ) -> Result<DmatexRef, gluon_wire::GluonSendError> {
+        parent: super::spatial::SpatialRef,
+        transform: super::spatial::Transform,
+        lines: Vec<Line>,
+    ) -> Result<Lines, gluon_wire::GluonSendError> {
         let mut builder = gluon_wire::GluonDataBuilder::new();
-        size.write(&mut builder)?;
-        format.write(&mut builder)?;
-        array_layers.write(&mut builder)?;
-        planes.write(&mut builder)?;
-        timeline_syncobj_fd.write(&mut builder)?;
+        parent.write(&mut builder)?;
+        transform.write(&mut builder)?;
+        lines.write(&mut builder)?;
         let reader = self
             .obj
             .device()
@@ -377,53 +309,10 @@ impl DmatexInterface {
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
-    pub async fn enumerate_formats(
-        &self,
-        render_node: u64,
-    ) -> Result<Vec<DmatexFormat>, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.enumerate_formats_blocking(render_node))
-            .await
-            .unwrap()
-    }
-    pub fn enumerate_formats_blocking(
-        &self,
-        render_node: u64,
-    ) -> Result<Vec<DmatexFormat>, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        render_node.write(&mut builder)?;
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 9u32, builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
-    pub async fn primary_render_node_id(
-        &self,
-    ) -> Result<u64, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.primary_render_node_id_blocking())
-            .await
-            .unwrap()
-    }
-    pub fn primary_render_node_id_blocking(
-        &self,
-    ) -> Result<u64, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 10u32, builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
-    pub fn from_handler<H: DmatexInterfaceHandler>(
+    pub fn from_handler<H: LinesInterfaceHandler>(
         obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
-    ) -> DmatexInterface {
-        DmatexInterface::from_object_or_ref(
+    ) -> LinesInterface {
+        LinesInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
                 obj,
             ),
@@ -432,14 +321,14 @@ impl DmatexInterface {
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> DmatexInterface {
+    ) -> LinesInterface {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
         let mut builder = gluon_wire::GluonDataBuilder::new();
         builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
-        DmatexInterface {
+        LinesInterface {
             obj,
             drop_notification,
         }
@@ -466,30 +355,19 @@ impl DmatexInterface {
         }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexInterface {
+impl binderbinder::binder_object::ToBinderObjectOrRef for LinesInterface {
     fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
         self.obj.to_binder_object_or_ref()
     }
 }
-pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn import_dmatex(
+pub trait LinesInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+    fn create_lines(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        size: DmatexSize,
-        format: DmatexFormat,
-        array_layers: u32,
-        planes: Vec<DmatexPlane>,
-        timeline_syncobj_fd: std::os::fd::OwnedFd,
-    ) -> impl Future<Output = DmatexRef> + Send + Sync;
-    fn enumerate_formats(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        render_node: u64,
-    ) -> impl Future<Output = Vec<DmatexFormat>> + Send + Sync;
-    fn primary_render_node_id(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = u64> + Send + Sync;
+        parent: super::spatial::SpatialRef,
+        transform: super::spatial::Transform,
+        lines: Vec<Line>,
+    ) -> impl Future<Output = Lines> + Send + Sync;
     fn drop_notification_requested(
         &self,
         notifier: gluon_wire::drop_tracking::DropNotifier,
@@ -509,30 +387,15 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
                 8u32 => {
-                    let (dmatex) = self
-                        .import_dmatex(
+                    let (lines) = self
+                        .create_lines(
                             ctx,
-                            gluon_wire::GluonConvertable::read(data)?,
-                            gluon_wire::GluonConvertable::read(data)?,
                             gluon_wire::GluonConvertable::read(data)?,
                             gluon_wire::GluonConvertable::read(data)?,
                             gluon_wire::GluonConvertable::read(data)?,
                         )
                         .await;
-                    dmatex.write_owned(&mut out)?;
-                }
-                9u32 => {
-                    let (formats) = self
-                        .enumerate_formats(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(data)?,
-                        )
-                        .await;
-                    formats.write_owned(&mut out)?;
-                }
-                10u32 => {
-                    let (drm_render_node_id) = self.primary_render_node_id(ctx).await;
-                    drm_render_node_id.write_owned(&mut out)?;
+                    lines.write_owned(&mut out)?;
                 }
                 _ => {}
             }

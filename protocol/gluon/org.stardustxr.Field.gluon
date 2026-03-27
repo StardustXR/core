@@ -1,13 +1,15 @@
 import "org.stardustxr.Types" as types
 import "org.stardustxr.Spatial" as spatial
 
+/// A readonly reference to a Field, safe for sharing
 interface FieldRef {
-	spatial_ref() -> (spatial_ref: Ref<SpatialRef>)
+	spatial_ref() -> (spatial_ref: Ref<spatial::SpatialRef>)
 }
 
+/// A signed distance field with adjustable shape. 
 interface Field {
 	get_ref() -> (field: Ref<FieldRef>)
-	spatial() -> (spatial: Ref<Spatial>)
+	spatial() -> (spatial: Ref<spatial::Spatial>)
 
 	distance(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)
 	normal(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (normal: Option<types::Vec3f>)
@@ -17,15 +19,17 @@ interface Field {
 	set_shape(shape: Shape)
 }
 
+/// Root interface for field operations.
 interface FieldInterface {
 	distance(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)
 	normal(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (normal: Option<types::Vec3f>)
 	closest_point(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (point: Option<types::Vec3f>)
 	ray_march(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
 
-	create_field(parent: Ref<SpatialRef>, transform: spatial::Transform, shape: Shape) -> (field: Ref<Field>)
+	create_field(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, shape: Shape) -> (field: Ref<Field>)
 }
 
+/// Shape for a signed distance field
 enum Shape {
 	Box {
 		/// Box size in meters
@@ -34,28 +38,29 @@ enum Shape {
 	Sphere {
 		/// Sphere radius in meters
 		radius: f32
-	}
+	},
 	/// Cylinder aligned to the XZ plane
 	Cylinder {
 		/// Length of the cylinder along the Y axis
 		lenght: f32,
 		/// Radius of the cylinder along the XZ plane
 		radius: f32,
-	}
+	},
 	/// Torus aligned to the XZ plane
 	Torus {
 		/// Radius of the ring along the XZ plane
 		major_radius: f32,
 		/// Radius of the tube
 		minor_radius: f32,
-	}
+	},
 	CubicBezierSpline {
-		points: Vec<CubicBezierControlPoint>
+		points: Vec<CubicBezierControlPoint>,
 		/// Whether the spline is a closed loop
 		cyclic: bool,
 	}
 }
 
+/// Control point for cubic bezier spline
 struct CubicBezierControlPoint {
 	handle_in: types::Vec3f,
 	anchor: types::Vec3f,
@@ -64,6 +69,7 @@ struct CubicBezierControlPoint {
 	thickness: f32,
 }
 
+/// Results for a ray march against a signed distance field
 struct RayMarchResult {
 	/// How close to or far inside the field the ray got. If less than zero, the ray intersected the field.
 	min_distance: f32,
