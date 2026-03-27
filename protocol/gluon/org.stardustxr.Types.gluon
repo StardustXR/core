@@ -24,6 +24,22 @@ struct Vec3f {
     z: f32,
 }
 
+/// 4D vector
+struct Vec4f {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
+}
+
+/// Colum major matrix
+struct Mat4f {
+	x: Vec4f,
+	y: Vec4f,
+	z: Vec4f,
+	w: Vec4f,
+}
+
 /// Quaternion
 struct Quatf {
     x: f32,

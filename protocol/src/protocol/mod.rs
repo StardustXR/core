@@ -7,3 +7,4 @@ pub mod lines;
 pub mod model;
 pub mod text;
 pub mod sky;
+pub mod camera;

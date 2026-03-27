@@ -20,6 +20,14 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
+            name: "Vec4f",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+        },
+        gluon_wire::ExternalGluonType {
+            name: "Mat4f",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+        },
+        gluon_wire::ExternalGluonType {
             name: "Quatf",
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
@@ -162,6 +170,84 @@ impl gluon_wire::GluonConvertable for Vec3F {
         self.x.write_owned(data)?;
         self.y.write_owned(data)?;
         self.z.write_owned(data)?;
+        Ok(())
+    }
+}
+///4D vector
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Vec4F {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+}
+impl gluon_wire::GluonConvertable for Vec4F {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.x.write(data)?;
+        self.y.write(data)?;
+        self.z.write(data)?;
+        self.w.write(data)?;
+        Ok(())
+    }
+    fn read(
+        data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let x = gluon_wire::GluonConvertable::read(data)?;
+        let y = gluon_wire::GluonConvertable::read(data)?;
+        let z = gluon_wire::GluonConvertable::read(data)?;
+        let w = gluon_wire::GluonConvertable::read(data)?;
+        Ok(Vec4F { x, y, z, w })
+    }
+    fn write_owned(
+        self,
+        data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.x.write_owned(data)?;
+        self.y.write_owned(data)?;
+        self.z.write_owned(data)?;
+        self.w.write_owned(data)?;
+        Ok(())
+    }
+}
+///Colum major matrix
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Mat4F {
+    pub x: Vec4F,
+    pub y: Vec4F,
+    pub z: Vec4F,
+    pub w: Vec4F,
+}
+impl gluon_wire::GluonConvertable for Mat4F {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.x.write(data)?;
+        self.y.write(data)?;
+        self.z.write(data)?;
+        self.w.write(data)?;
+        Ok(())
+    }
+    fn read(
+        data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let x = gluon_wire::GluonConvertable::read(data)?;
+        let y = gluon_wire::GluonConvertable::read(data)?;
+        let z = gluon_wire::GluonConvertable::read(data)?;
+        let w = gluon_wire::GluonConvertable::read(data)?;
+        Ok(Mat4F { x, y, z, w })
+    }
+    fn write_owned(
+        self,
+        data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.x.write_owned(data)?;
+        self.y.write_owned(data)?;
+        self.z.write_owned(data)?;
+        self.w.write_owned(data)?;
         Ok(())
     }
 }
