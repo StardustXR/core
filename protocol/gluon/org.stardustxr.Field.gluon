@@ -1,0 +1,76 @@
+import "org.stardustxr.Types" as types
+import "org.stardustxr.Spatial" as spatial
+
+interface FieldRef {
+	spatial_ref() -> (spatial_ref: Ref<SpatialRef>)
+}
+
+interface Field {
+	get_ref() -> (field: Ref<FieldRef>)
+	spatial() -> (spatial: Ref<Spatial>)
+
+	distance(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)
+	normal(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (normal: Option<types::Vec3f>)
+	closest_point(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (point: Option<types::Vec3f>)
+	ray_march(space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
+	
+	set_shape(shape: Shape)
+}
+
+interface FieldInterface {
+	distance(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)
+	normal(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (normal: Option<types::Vec3f>)
+	closest_point(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (point: Option<types::Vec3f>)
+	ray_march(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
+
+	create_field(parent: Ref<SpatialRef>, transform: spatial::Transform, shape: Shape) -> (field: Ref<Field>)
+}
+
+enum Shape {
+	Box {
+		/// Box size in meters
+		size: types::Vec3f,
+	},
+	Sphere {
+		/// Sphere radius in meters
+		radius: f32
+	}
+	/// Cylinder aligned to the XZ plane
+	Cylinder {
+		/// Length of the cylinder along the Y axis
+		lenght: f32,
+		/// Radius of the cylinder along the XZ plane
+		radius: f32,
+	}
+	/// Torus aligned to the XZ plane
+	Torus {
+		/// Radius of the ring along the XZ plane
+		major_radius: f32,
+		/// Radius of the tube
+		minor_radius: f32,
+	}
+	CubicBezierSpline {
+		points: Vec<CubicBezierControlPoint>
+		/// Whether the spline is a closed loop
+		cyclic: bool,
+	}
+}
+
+struct CubicBezierControlPoint {
+	handle_in: types::Vec3f,
+	anchor: types::Vec3f,
+	handle_out: types::Vec3f,
+	/// Thickness of the spline tube at the point
+	thickness: f32,
+}
+
+struct RayMarchResult {
+	/// How close to or far inside the field the ray got. If less than zero, the ray intersected the field.
+	min_distance: f32,
+	/// The distance to the point on the ray that has the least distance to the field/most distance inside it. Useful for finding a "near miss" point or how close to the core of the field you're pointing.
+	deepest_point_distance: f32,
+	/// Maximum length of the ray
+	ray_lenght: f32,
+	/// Number of steps taken
+	ray_steps: u32,
+}

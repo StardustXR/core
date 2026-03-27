@@ -1,7 +1,10 @@
 import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Dmatex" as dmatex
 
 /// Proxy to your own client
 interface Server {
 	/// Get the spatial interface node.
 	spatial_interface() -> (spatial: Ref<spatial::SpatialInterface>)
+	/// Get the dmatex interface node.
+	dmatex_interface() -> (spatial: Ref<dmatex::DmatexInterface>)
 }

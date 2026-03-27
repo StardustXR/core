@@ -8,12 +8,10 @@ enum DmatexSize {
 }
 
 /// Information about a DMA texture format.
-struct DmatexFormatInfo {
-	/// drm_fourcc
-	format: u32,
+struct DmatexFormat {
+	drm_fourcc: u32,
 	drm_modifier: u64,
 	is_srgb: bool,
-	planes: u32,
 }
 
 /// Information about a DMA texture plane.
@@ -30,5 +28,7 @@ interface DmatexRef {}
 
 /// Interface to the dmatex system.
 interface DmatexInterface {
-	import_dmatex(size: DmaTexSize, format: u32, drm_format_modifier: u64, srgb: bool, array_layers: u32, planes: Vec<DmaTexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Ref<DmaTexRef>)
+	import_dmatex(size: DmaTexSize, format: DmatexFormat, array_layers: u32, planes: Vec<DmaTexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Ref<DmaTexRef>)
+	enumerate_formats(render_node: u64) -> (formats: Vec<DmatexFormat>)
+	primary_render_node_id() -> (drm_render_node_id: u64)
 }
