@@ -2,15 +2,15 @@ import "org.stardustxr.Types" as types
 
 /// Transform
 struct Transform {
-    position: types::Vec3,
-    rotation: types::Quat,
+    position: types::Vec3f,
+    rotation: types::Quatf,
     scale: f32,
 }
 
 /// Bounding box
 struct BoundingBox {
-    center: types::Vec3,
-    extents: types::Vec3,
+    center: types::Vec3f,
+    extents: types::Vec3f,
 }
 
 /// A reference to a node with spatial attributes (position, rotation, scale).

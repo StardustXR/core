@@ -1,4 +1,4 @@
-import "org.stardustxr.Spatial.gluon" as spatial
+import "org.stardustxr.Spatial" as spatial
 
 /// Proxy to your own client
 interface Server {
