@@ -1,29 +1,16 @@
-/// Vector3
-struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
-/// Quaternion
-struct Quat {
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32,
-}
+import "org.stardustxr.Types" as types
 
 /// Transform
 struct Transform {
-    position: Vec3,
-    rotation: Quat,
+    position: types::Vec3,
+    rotation: types::Quat,
     scale: f32,
 }
 
 /// Bounding box
 struct BoundingBox {
-    center: Vec3,
-    extents: Vec3,
+    center: types::Vec3,
+    extents: types::Vec3,
 }
 
 /// A reference to a node with spatial attributes (position, rotation, scale).
@@ -57,6 +44,9 @@ interface Spatial {
 interface SpatialInterface {
 	/// Create a new spatial object.
 	create_spatial() -> (spatial: Ref<SpatialRef>)
+
+	/// Get the relative bounding box of a spatial object relative to another spatial.
+	get_relative_bounding_box(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (bounding_box: BoundingBox)
 
 	/// Get the relative transform of a spatial object relative to another spatial.
 	get_relative_transform(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (transform: Transform)

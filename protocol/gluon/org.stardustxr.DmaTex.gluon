@@ -1,0 +1,33 @@
+import "org.stardustxr.Types.gluon" as types
+
+/// Size of a DMA texture.
+enum DmaTexSize {
+	Size1D { size: u32 },
+	Size2D { size: types::Size2 },
+	Size3D { size: types::Size3 },
+}
+
+/// Information about a DMA texture format.
+struct DmaTexFormatInfo {
+	format: u32,
+	drm_modifier: u64,
+	is_srgb: bool,
+	planes: u32,
+}
+
+/// Information about a DMA texture plane.
+struct DmaTexPlane {
+	dmabuf_fd: Fd,
+	offset: u64,
+	row_size: u64,
+	array_element_size: u64,
+	depth_slice_size: u64,
+}
+
+/// Opaque reference to a dmatex. This is so that you can send buffers to other processes without being able to read them (only apply them to materials) for security.
+interface DmaTexRef {}
+
+/// Interface to the dmatex system.
+interface DmaTexInterface {
+	import_dmatex(dmatex_id: id, size: DmaTexSize, format: u32, drm_format_modifier: u64, srgb: bool, array_layers: u32, planes: Vec<DmaTexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Ref<DmaTexRef>)
+}

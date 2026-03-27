@@ -1,0 +1,33 @@
+/// 2D vector
+struct Size2 {
+    x: u32,
+    y: u32,
+}
+
+/// 3D vector
+struct Size3 {
+    x: u32,
+    y: u32,
+    z: u32,
+}
+
+/// 2D vector
+struct Vec2f {
+    x: f32,
+    y: f32,
+}
+
+/// 3D vector
+struct Vec3f {
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+/// Quaternion
+struct Quatf {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
+}
