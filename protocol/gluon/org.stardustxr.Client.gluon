@@ -1,0 +1,28 @@
+import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Types" as types
+
+/// Information for a specific frame
+struct FrameInfo {
+	delta: f32,
+	predicted_display_time: Option<types::Timestamp>,
+}
+
+/// The persistent state of a Stardust client.
+struct ClientState {
+	/// Data specific to your client, put anything you like here and it'll be saved/restored intact.
+	data: Vec<u8>,
+	/// Where the client's root should be positioned on reload.
+	root: Ref<spatial::SpatialRef>,
+	/// Spatials that will be in the same place you left them.
+	spatial_anchors: Map<u64, Ref<spatial::SpatialRef>>,
+}
+
+// The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
+/// Client
+interface Client {
+	ping() -> ()
+	
+	frame(info: FrameInfo)
+
+	safe_state() -> (state: ClientState)
+}

@@ -35,19 +35,19 @@ pub struct NonUniformTransform {
 impl gluon_wire::GluonConvertable for NonUniformTransform {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(data)?;
-        self.rotation.write(data)?;
-        self.scale.write(data)?;
+        self.position.write(gluon_data)?;
+        self.rotation.write(gluon_data)?;
+        self.scale.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(data)?;
-        let rotation = gluon_wire::GluonConvertable::read(data)?;
-        let scale = gluon_wire::GluonConvertable::read(data)?;
+        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(NonUniformTransform {
             position,
             rotation,
@@ -56,11 +56,11 @@ impl gluon_wire::GluonConvertable for NonUniformTransform {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(data)?;
-        self.rotation.write_owned(data)?;
-        self.scale.write_owned(data)?;
+        self.position.write_owned(gluon_data)?;
+        self.rotation.write_owned(gluon_data)?;
+        self.scale.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -74,19 +74,19 @@ pub struct PartialNonUniformTransform {
 impl gluon_wire::GluonConvertable for PartialNonUniformTransform {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(data)?;
-        self.rotation.write(data)?;
-        self.scale.write(data)?;
+        self.position.write(gluon_data)?;
+        self.rotation.write(gluon_data)?;
+        self.scale.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(data)?;
-        let rotation = gluon_wire::GluonConvertable::read(data)?;
-        let scale = gluon_wire::GluonConvertable::read(data)?;
+        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(PartialNonUniformTransform {
             position,
             rotation,
@@ -95,11 +95,11 @@ impl gluon_wire::GluonConvertable for PartialNonUniformTransform {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(data)?;
-        self.rotation.write_owned(data)?;
-        self.scale.write_owned(data)?;
+        self.position.write_owned(gluon_data)?;
+        self.rotation.write_owned(gluon_data)?;
+        self.scale.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -111,20 +111,20 @@ pub enum ModelLoadError {
 impl gluon_wire::GluonConvertable for ModelLoadError {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             ModelLoadError::NotFound => {
-                data.write_u16(0u16)?;
+                gluon_data.write_u16(0u16)?;
             }
         };
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         Ok(
-            match data.read_u16()? {
+            match gluon_data.read_u16()? {
                 0u16 => ModelLoadError::NotFound,
                 v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
             },
@@ -132,11 +132,11 @@ impl gluon_wire::GluonConvertable for ModelLoadError {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             ModelLoadError::NotFound => {
-                data.write_u16(0u16)?;
+                gluon_data.write_u16(0u16)?;
             }
         };
         Ok(())
@@ -153,36 +153,36 @@ pub enum MaterialParamError {
 impl gluon_wire::GluonConvertable for MaterialParamError {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             MaterialParamError::ParamNotFound { known_params } => {
-                data.write_u16(0u16)?;
-                known_params.write(data)?;
+                gluon_data.write_u16(0u16)?;
+                known_params.write(gluon_data)?;
             }
             MaterialParamError::IncorrectType { valid_type } => {
-                data.write_u16(1u16)?;
-                valid_type.write(data)?;
+                gluon_data.write_u16(1u16)?;
+                valid_type.write(gluon_data)?;
             }
             MaterialParamError::Holdout => {
-                data.write_u16(2u16)?;
+                gluon_data.write_u16(2u16)?;
             }
         };
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         Ok(
-            match data.read_u16()? {
+            match gluon_data.read_u16()? {
                 0u16 => {
-                    let known_params = gluon_wire::GluonConvertable::read(data)?;
+                    let known_params = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParamError::ParamNotFound {
                         known_params,
                     }
                 }
                 1u16 => {
-                    let valid_type = gluon_wire::GluonConvertable::read(data)?;
+                    let valid_type = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParamError::IncorrectType {
                         valid_type,
                     }
@@ -194,19 +194,19 @@ impl gluon_wire::GluonConvertable for MaterialParamError {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             MaterialParamError::ParamNotFound { known_params } => {
-                data.write_u16(0u16)?;
-                known_params.write_owned(data)?;
+                gluon_data.write_u16(0u16)?;
+                known_params.write_owned(gluon_data)?;
             }
             MaterialParamError::IncorrectType { valid_type } => {
-                data.write_u16(1u16)?;
-                valid_type.write_owned(data)?;
+                gluon_data.write_u16(1u16)?;
+                valid_type.write_owned(gluon_data)?;
             }
             MaterialParamError::Holdout => {
-                data.write_u16(2u16)?;
+                gluon_data.write_u16(2u16)?;
             }
         };
         Ok(())
@@ -233,87 +233,87 @@ pub enum MaterialParameter {
 impl gluon_wire::GluonConvertable for MaterialParameter {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             MaterialParameter::Boolean { value } => {
-                data.write_u16(0u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(0u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Int { value } => {
-                data.write_u16(1u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(1u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Uint { value } => {
-                data.write_u16(2u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(2u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Float { value } => {
-                data.write_u16(3u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(3u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Vec2 { value } => {
-                data.write_u16(4u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(4u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Vec3 { value } => {
-                data.write_u16(5u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(5u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Texture { value } => {
-                data.write_u16(6u16)?;
-                value.write(data)?;
+                gluon_data.write_u16(6u16)?;
+                value.write(gluon_data)?;
             }
             MaterialParameter::Dmatex { dmatex, acquire_point, release_point } => {
-                data.write_u16(7u16)?;
-                dmatex.write(data)?;
-                acquire_point.write(data)?;
-                release_point.write(data)?;
+                gluon_data.write_u16(7u16)?;
+                dmatex.write(gluon_data)?;
+                acquire_point.write(gluon_data)?;
+                release_point.write(gluon_data)?;
             }
         };
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         Ok(
-            match data.read_u16()? {
+            match gluon_data.read_u16()? {
                 0u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Boolean {
                         value,
                     }
                 }
                 1u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Int { value }
                 }
                 2u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Uint { value }
                 }
                 3u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Float { value }
                 }
                 4u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Vec2 { value }
                 }
                 5u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Vec3 { value }
                 }
                 6u16 => {
-                    let value = gluon_wire::GluonConvertable::read(data)?;
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Texture {
                         value,
                     }
                 }
                 7u16 => {
-                    let dmatex = gluon_wire::GluonConvertable::read(data)?;
-                    let acquire_point = gluon_wire::GluonConvertable::read(data)?;
-                    let release_point = gluon_wire::GluonConvertable::read(data)?;
+                    let dmatex = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let acquire_point = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let release_point = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Dmatex {
                         dmatex,
                         acquire_point,
@@ -326,42 +326,42 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             MaterialParameter::Boolean { value } => {
-                data.write_u16(0u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(0u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Int { value } => {
-                data.write_u16(1u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(1u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Uint { value } => {
-                data.write_u16(2u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(2u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Float { value } => {
-                data.write_u16(3u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(3u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Vec2 { value } => {
-                data.write_u16(4u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(4u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Vec3 { value } => {
-                data.write_u16(5u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(5u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Texture { value } => {
-                data.write_u16(6u16)?;
-                value.write_owned(data)?;
+                gluon_data.write_u16(6u16)?;
+                value.write_owned(gluon_data)?;
             }
             MaterialParameter::Dmatex { dmatex, acquire_point, release_point } => {
-                data.write_u16(7u16)?;
-                dmatex.write_owned(data)?;
-                acquire_point.write_owned(data)?;
-                release_point.write_owned(data)?;
+                gluon_data.write_u16(7u16)?;
+                dmatex.write_owned(gluon_data)?;
+                acquire_point.write_owned(gluon_data)?;
+                release_point.write_owned(gluon_data)?;
             }
         };
         Ok(())
@@ -379,21 +379,21 @@ pub struct ModelInterface {
 impl gluon_wire::GluonConvertable for ModelInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write(data)
+        self.obj.write(gluon_data)
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(ModelInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write_owned(data)
+        self.obj.write_owned(gluon_data)
     }
 }
 impl ModelInterface {
@@ -419,15 +419,15 @@ impl ModelInterface {
         transform: super::spatial::Transform,
         model_scale: super::types::Vec3F,
     ) -> Result<Model, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        model.write(&mut builder)?;
-        parent.write(&mut builder)?;
-        transform.write(&mut builder)?;
-        model_scale.write(&mut builder)?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        model.write(&mut gluon_builder)?;
+        parent.write(&mut gluon_builder)?;
+        transform.write(&mut gluon_builder)?;
+        model_scale.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 8u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -448,9 +448,9 @@ impl ModelInterface {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         ModelInterface {
             obj,
             drop_notification,
@@ -500,7 +500,7 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<
         Output = Result<
@@ -515,10 +515,10 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let (model) = self
                         .load_model(
                             ctx,
-                            gluon_wire::GluonConvertable::read(data)?,
-                            gluon_wire::GluonConvertable::read(data)?,
-                            gluon_wire::GluonConvertable::read(data)?,
-                            gluon_wire::GluonConvertable::read(data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;
                     model.write_owned(&mut out)?;
@@ -531,13 +531,13 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = data.read_binder() else {
+                    let Ok(obj) = gluon_data.read_binder() else {
                         return Ok(());
                     };
                     self.drop_notification_requested(
@@ -563,21 +563,21 @@ pub struct Model {
 impl gluon_wire::GluonConvertable for Model {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write(data)
+        self.obj.write(gluon_data)
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(Model::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write_owned(data)
+        self.obj.write_owned(gluon_data)
     }
 }
 impl Model {
@@ -590,11 +590,11 @@ impl Model {
     pub fn get_spatial_blocking(
         &self,
     ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 8u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -610,12 +610,12 @@ impl Model {
         &self,
         path: String,
     ) -> Result<Option<ModelPart>, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        path.write(&mut builder)?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        path.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 9u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -631,11 +631,11 @@ impl Model {
     pub fn enumerate_parts_blocking(
         &self,
     ) -> Result<Vec<ModelPart>, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 10u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -644,9 +644,11 @@ impl Model {
         &self,
         scale: super::types::Vec3F,
     ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        scale.write(&mut builder)?;
-        self.obj.device().transact_one_way(&self.obj, 11u32, builder.to_payload())?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        scale.write(&mut gluon_builder)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: ModelHandler>(
@@ -665,9 +667,9 @@ impl Model {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         Model { obj, drop_notification }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -719,7 +721,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<
         Output = Result<
@@ -736,7 +738,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 }
                 9u32 => {
                     let (part) = self
-                        .get_part(ctx, gluon_wire::GluonConvertable::read(data)?)
+                        .get_part(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
                         .await;
                     part.write_owned(&mut out)?;
                 }
@@ -752,13 +754,13 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = data.read_binder() else {
+                    let Ok(obj) = gluon_data.read_binder() else {
                         return Ok(());
                     };
                     self.drop_notification_requested(
@@ -767,7 +769,10 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                         .await;
                 }
                 11u32 => {
-                    self.set_model_scale(ctx, gluon_wire::GluonConvertable::read(data)?);
+                    self.set_model_scale(
+                        ctx,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
+                    );
                 }
                 _ => {}
             }
@@ -787,21 +792,21 @@ pub struct ModelPart {
 impl gluon_wire::GluonConvertable for ModelPart {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write(data)
+        self.obj.write(gluon_data)
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(ModelPart::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write_owned(data)
+        self.obj.write_owned(gluon_data)
     }
 }
 impl ModelPart {
@@ -810,11 +815,11 @@ impl ModelPart {
         tokio::task::spawn_blocking(move || this.get_part_path_blocking()).await.unwrap()
     }
     pub fn get_part_path_blocking(&self) -> Result<String, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 8u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -831,11 +836,11 @@ impl ModelPart {
     pub fn get_model_transform_blocking(
         &self,
     ) -> Result<NonUniformTransform, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 9u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -852,11 +857,11 @@ impl ModelPart {
     pub fn get_local_transform_blocking(
         &self,
     ) -> Result<NonUniformTransform, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 10u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -877,12 +882,12 @@ impl ModelPart {
         &self,
         relative_to: ModelPart,
     ) -> Result<NonUniformTransform, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        relative_to.write(&mut builder)?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        relative_to.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 11u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 11u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -892,9 +897,11 @@ impl ModelPart {
         &self,
         transform: PartialNonUniformTransform,
     ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        transform.write(&mut builder)?;
-        self.obj.device().transact_one_way(&self.obj, 12u32, builder.to_payload())?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        transform.write(&mut gluon_builder)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Set the transform relative to the parent ModelPart or Model
@@ -902,9 +909,11 @@ impl ModelPart {
         &self,
         transform: PartialNonUniformTransform,
     ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        transform.write(&mut builder)?;
-        self.obj.device().transact_one_way(&self.obj, 13u32, builder.to_payload())?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        transform.write(&mut gluon_builder)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Set the transform relative to referenced ModelPart
@@ -913,10 +922,12 @@ impl ModelPart {
         relative_to: ModelPart,
         transform: PartialNonUniformTransform,
     ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        relative_to.write(&mut builder)?;
-        transform.write(&mut builder)?;
-        self.obj.device().transact_one_way(&self.obj, 14u32, builder.to_payload())?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        relative_to.write(&mut gluon_builder)?;
+        transform.write(&mut gluon_builder)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub async fn set_material_parameter(
@@ -936,21 +947,23 @@ impl ModelPart {
         parameter_name: String,
         value: MaterialParameter,
     ) -> Result<Option<MaterialParamError>, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        parameter_name.write(&mut builder)?;
-        value.write(&mut builder)?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        parameter_name.write(&mut gluon_builder)?;
+        value.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 15u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 15u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
     pub fn apply_holdout_material(&self) -> Result<(), gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        self.obj.device().transact_one_way(&self.obj, 16u32, builder.to_payload())?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 16u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: ModelPartHandler>(
@@ -969,9 +982,9 @@ impl ModelPart {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         ModelPart {
             obj,
             drop_notification,
@@ -1059,7 +1072,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<
         Output = Result<
@@ -1086,7 +1099,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                     let (transform) = self
                         .get_relative_transform(
                             ctx,
-                            gluon_wire::GluonConvertable::read(data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;
                     transform.write_owned(&mut out)?;
@@ -1095,8 +1108,8 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                     let (error) = self
                         .set_material_parameter(
                             ctx,
-                            gluon_wire::GluonConvertable::read(data)?,
-                            gluon_wire::GluonConvertable::read(data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;
                     error.write_owned(&mut out)?;
@@ -1109,13 +1122,13 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = data.read_binder() else {
+                    let Ok(obj) = gluon_data.read_binder() else {
                         return Ok(());
                     };
                     self.drop_notification_requested(
@@ -1126,20 +1139,20 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                 12u32 => {
                     self.set_model_transform(
                         ctx,
-                        gluon_wire::GluonConvertable::read(data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
                 13u32 => {
                     self.set_local_transform(
                         ctx,
-                        gluon_wire::GluonConvertable::read(data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
                 14u32 => {
                     self.set_relative_transform(
                         ctx,
-                        gluon_wire::GluonConvertable::read(data)?,
-                        gluon_wire::GluonConvertable::read(data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
                 16u32 => {

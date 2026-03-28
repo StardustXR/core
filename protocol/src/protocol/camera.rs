@@ -20,17 +20,17 @@ pub struct View {
 impl gluon_wire::GluonConvertable for View {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.projection_matrix.write(data)?;
-        self.camera_relative_transform.write(data)?;
+        self.projection_matrix.write(gluon_data)?;
+        self.camera_relative_transform.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let projection_matrix = gluon_wire::GluonConvertable::read(data)?;
-        let camera_relative_transform = gluon_wire::GluonConvertable::read(data)?;
+        let projection_matrix = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let camera_relative_transform = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(View {
             projection_matrix,
             camera_relative_transform,
@@ -38,10 +38,10 @@ impl gluon_wire::GluonConvertable for View {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.projection_matrix.write_owned(data)?;
-        self.camera_relative_transform.write_owned(data)?;
+        self.projection_matrix.write_owned(gluon_data)?;
+        self.camera_relative_transform.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -57,21 +57,21 @@ pub struct CameraInterface {
 impl gluon_wire::GluonConvertable for CameraInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write(data)
+        self.obj.write(gluon_data)
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(CameraInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write_owned(data)
+        self.obj.write_owned(gluon_data)
     }
 }
 impl CameraInterface {
@@ -92,13 +92,13 @@ impl CameraInterface {
         parent: super::spatial::SpatialRef,
         transform: super::spatial::Transform,
     ) -> Result<Camera, gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        parent.write(&mut builder)?;
-        transform.write(&mut builder)?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        parent.write(&mut gluon_builder)?;
+        transform.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 8u32, builder.to_payload())?
+            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -119,9 +119,9 @@ impl CameraInterface {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         CameraInterface {
             obj,
             drop_notification,
@@ -168,7 +168,7 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<
         Output = Result<
@@ -183,8 +183,8 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                     let (camera) = self
                         .create_camera(
                             ctx,
-                            gluon_wire::GluonConvertable::read(data)?,
-                            gluon_wire::GluonConvertable::read(data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;
                     camera.write_owned(&mut out)?;
@@ -197,13 +197,13 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = data.read_binder() else {
+                    let Ok(obj) = gluon_data.read_binder() else {
                         return Ok(());
                     };
                     self.drop_notification_requested(
@@ -229,21 +229,21 @@ pub struct Camera {
 impl gluon_wire::GluonConvertable for Camera {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write(data)
+        self.obj.write(gluon_data)
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(data)?;
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(Camera::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write_owned(data)
+        self.obj.write_owned(gluon_data)
     }
 }
 impl Camera {
@@ -255,12 +255,12 @@ impl Camera {
         release_point: u64,
         views: Vec<View>,
     ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        render_target.write(&mut builder)?;
-        acquire_point.write(&mut builder)?;
-        release_point.write(&mut builder)?;
-        views.write(&mut builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, builder.to_payload())?;
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        render_target.write(&mut gluon_builder)?;
+        acquire_point.write(&mut gluon_builder)?;
+        release_point.write(&mut gluon_builder)?;
+        views.write(&mut gluon_builder)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: CameraHandler>(
@@ -279,9 +279,9 @@ impl Camera {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
-        let mut builder = gluon_wire::GluonDataBuilder::new();
-        builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, builder.to_payload());
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         Camera { obj, drop_notification }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -328,7 +328,7 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync 
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<
         Output = Result<
@@ -347,13 +347,13 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync 
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = data.read_binder() else {
+                    let Ok(obj) = gluon_data.read_binder() else {
                         return Ok(());
                     };
                     self.drop_notification_requested(
@@ -364,10 +364,10 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync 
                 8u32 => {
                     self.request_draw(
                         ctx,
-                        gluon_wire::GluonConvertable::read(data)?,
-                        gluon_wire::GluonConvertable::read(data)?,
-                        gluon_wire::GluonConvertable::read(data)?,
-                        gluon_wire::GluonConvertable::read(data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
+                        gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
                 _ => {}

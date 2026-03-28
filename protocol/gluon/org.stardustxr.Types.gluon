@@ -72,3 +72,9 @@ enum Resource {
 		path: String,
 	}
 }
+
+/// Timestamp on the monotonic clock
+struct Timestamp {
+    seconds: i64,
+    nanoseconds: i64,
+}

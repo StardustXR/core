@@ -36,6 +36,10 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
+            name: "Timestamp",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
+        },
+        gluon_wire::ExternalGluonType {
             name: "Resource",
             supported_derives: gluon_wire::Derives::from_bits_truncate(30u32),
         },
@@ -50,25 +54,25 @@ pub struct Size2 {
 impl gluon_wire::GluonConvertable for Size2 {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Size2 { x, y })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -82,28 +86,28 @@ pub struct Size3 {
 impl gluon_wire::GluonConvertable for Size3 {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
-        self.z.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
+        self.z.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
-        let z = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Size3 { x, y, z })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
-        self.z.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
+        self.z.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -116,25 +120,25 @@ pub struct Vec2F {
 impl gluon_wire::GluonConvertable for Vec2F {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Vec2F { x, y })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -148,28 +152,28 @@ pub struct Vec3F {
 impl gluon_wire::GluonConvertable for Vec3F {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
-        self.z.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
+        self.z.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
-        let z = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Vec3F { x, y, z })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
-        self.z.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
+        self.z.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -184,31 +188,31 @@ pub struct Vec4F {
 impl gluon_wire::GluonConvertable for Vec4F {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
-        self.z.write(data)?;
-        self.w.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
+        self.z.write(gluon_data)?;
+        self.w.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
-        let z = gluon_wire::GluonConvertable::read(data)?;
-        let w = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let w = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Vec4F { x, y, z, w })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
-        self.z.write_owned(data)?;
-        self.w.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
+        self.z.write_owned(gluon_data)?;
+        self.w.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -223,31 +227,31 @@ pub struct Mat4F {
 impl gluon_wire::GluonConvertable for Mat4F {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
-        self.z.write(data)?;
-        self.w.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
+        self.z.write(gluon_data)?;
+        self.w.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
-        let z = gluon_wire::GluonConvertable::read(data)?;
-        let w = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let w = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Mat4F { x, y, z, w })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
-        self.z.write_owned(data)?;
-        self.w.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
+        self.z.write_owned(gluon_data)?;
+        self.w.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -262,31 +266,31 @@ pub struct Quatf {
 impl gluon_wire::GluonConvertable for Quatf {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(data)?;
-        self.y.write(data)?;
-        self.z.write(data)?;
-        self.w.write(data)?;
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
+        self.z.write(gluon_data)?;
+        self.w.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(data)?;
-        let y = gluon_wire::GluonConvertable::read(data)?;
-        let z = gluon_wire::GluonConvertable::read(data)?;
-        let w = gluon_wire::GluonConvertable::read(data)?;
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let w = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Quatf { x, y, z, w })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(data)?;
-        self.y.write_owned(data)?;
-        self.z.write_owned(data)?;
-        self.w.write_owned(data)?;
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
+        self.z.write_owned(gluon_data)?;
+        self.w.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -301,31 +305,62 @@ pub struct Color {
 impl gluon_wire::GluonConvertable for Color {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.r.write(data)?;
-        self.g.write(data)?;
-        self.b.write(data)?;
-        self.a.write(data)?;
+        self.r.write(gluon_data)?;
+        self.g.write(gluon_data)?;
+        self.b.write(gluon_data)?;
+        self.a.write(gluon_data)?;
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let r = gluon_wire::GluonConvertable::read(data)?;
-        let g = gluon_wire::GluonConvertable::read(data)?;
-        let b = gluon_wire::GluonConvertable::read(data)?;
-        let a = gluon_wire::GluonConvertable::read(data)?;
+        let r = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let g = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let b = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let a = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Color { r, g, b, a })
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.r.write_owned(data)?;
-        self.g.write_owned(data)?;
-        self.b.write_owned(data)?;
-        self.a.write_owned(data)?;
+        self.r.write_owned(gluon_data)?;
+        self.g.write_owned(gluon_data)?;
+        self.b.write_owned(gluon_data)?;
+        self.a.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Timestamp on the monotonic clock
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct Timestamp {
+    pub seconds: i64,
+    pub nanoseconds: i64,
+}
+impl gluon_wire::GluonConvertable for Timestamp {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.seconds.write(gluon_data)?;
+        self.nanoseconds.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(
+        gluon_data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let seconds = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let nanoseconds = gluon_wire::GluonConvertable::read(gluon_data)?;
+        Ok(Timestamp { seconds, nanoseconds })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.seconds.write_owned(gluon_data)?;
+        self.nanoseconds.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -347,33 +382,33 @@ Allows switching of prefix by the server as well to theme clients.*/
 impl gluon_wire::GluonConvertable for Resource {
     fn write<'a, 'b: 'a>(
         &'b self,
-        data: &mut gluon_wire::GluonDataBuilder<'a>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             Resource::Direct { path } => {
-                data.write_u16(0u16)?;
-                path.write(data)?;
+                gluon_data.write_u16(0u16)?;
+                path.write(gluon_data)?;
             }
             Resource::Namespaced { namespace, path } => {
-                data.write_u16(1u16)?;
-                namespace.write(data)?;
-                path.write(data)?;
+                gluon_data.write_u16(1u16)?;
+                namespace.write(gluon_data)?;
+                path.write(gluon_data)?;
             }
         };
         Ok(())
     }
     fn read(
-        data: &mut gluon_wire::GluonDataReader,
+        gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         Ok(
-            match data.read_u16()? {
+            match gluon_data.read_u16()? {
                 0u16 => {
-                    let path = gluon_wire::GluonConvertable::read(data)?;
+                    let path = gluon_wire::GluonConvertable::read(gluon_data)?;
                     Resource::Direct { path }
                 }
                 1u16 => {
-                    let namespace = gluon_wire::GluonConvertable::read(data)?;
-                    let path = gluon_wire::GluonConvertable::read(data)?;
+                    let namespace = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let path = gluon_wire::GluonConvertable::read(gluon_data)?;
                     Resource::Namespaced {
                         namespace,
                         path,
@@ -385,17 +420,17 @@ impl gluon_wire::GluonConvertable for Resource {
     }
     fn write_owned(
         self,
-        data: &mut gluon_wire::GluonDataBuilder<'_>,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
             Resource::Direct { path } => {
-                data.write_u16(0u16)?;
-                path.write_owned(data)?;
+                gluon_data.write_u16(0u16)?;
+                path.write_owned(gluon_data)?;
             }
             Resource::Namespaced { namespace, path } => {
-                data.write_u16(1u16)?;
-                namespace.write_owned(data)?;
-                path.write_owned(data)?;
+                gluon_data.write_u16(1u16)?;
+                namespace.write_owned(gluon_data)?;
+                path.write_owned(gluon_data)?;
             }
         };
         Ok(())

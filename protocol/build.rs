@@ -13,7 +13,8 @@ fn main() {
 			("model", Path::new("./gluon/org.stardustxr.Model.gluon")),
 			("text", Path::new("./gluon/org.stardustxr.Text.gluon")),
 			("sky", Path::new("./gluon/org.stardustxr.Sky.gluon")),
-			("camera",Path::new("./gluon/org.stardustxr.Camera.gluon"))
+			("camera",Path::new("./gluon/org.stardustxr.Camera.gluon")),
+			("client",Path::new("./gluon/org.stardustxr.Client.gluon")),
 		],
 		&[],
 		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
