@@ -16,6 +16,7 @@ fn main() {
 			("camera", Path::new("./gluon/org.stardustxr.Camera.gluon")),
 			("client", Path::new("./gluon/org.stardustxr.Client.gluon")),
 			("audio", Path::new("./gluon/org.stardustxr.Audio.gluon")),
+			("input", Path::new("./gluon/org.stardustxr.Input.gluon")),
 		],
 		&[],
 		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
