@@ -174,6 +174,26 @@ impl Server {
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
+    pub async fn audio_interface(
+        &self,
+    ) -> Result<super::audio::AudioInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.audio_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn audio_interface_blocking(
+        &self,
+    ) -> Result<super::audio::AudioInterface, gluon_wire::GluonSendError> {
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 15u32, gluon_builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
     /**Generate a client state token and return it back.
 
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
@@ -196,7 +216,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 15u32, gluon_builder.to_payload())?
+            .transact_blocking(&self.obj, 16u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -280,6 +300,10 @@ pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync 
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = super::sky::SkyInterface> + Send + Sync;
+    fn audio_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::audio::AudioInterface> + Send + Sync;
     /**Generate a client state token and return it back.
 
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
@@ -336,6 +360,10 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     spatial.write_owned(&mut out)?;
                 }
                 15u32 => {
+                    let (spatial) = self.audio_interface(ctx).await;
+                    spatial.write_owned(&mut out)?;
+                }
+                16u32 => {
                     let (token) = self
                         .generate_state_token(
                             ctx,

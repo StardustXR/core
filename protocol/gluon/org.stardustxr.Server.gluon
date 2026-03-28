@@ -6,6 +6,7 @@ import "org.stardustxr.Model" as model
 import "org.stardustxr.Lines" as lines
 import "org.stardustxr.Sky" as sky
 import "org.stardustxr.Client" as client
+import "org.stardustxr.Audio" as audio
 
 
 /// Proxy to your own client
@@ -19,6 +20,7 @@ interface Server {
 	model_interface() -> (spatial: Ref<model::ModelInterface>)
 	lines_interface() -> (spatial: Ref<lines::LinesInterface>)
 	sky_interface() -> (spatial: Ref<sky::SkyInterface>)
+	audio_interface() -> (spatial: Ref<audio::AudioInterface>)
 
 	/// Generate a client state token and return it back.
 	///

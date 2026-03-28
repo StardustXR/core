@@ -1,0 +1,15 @@
+import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Types" as types
+
+/// Simple spatial point audio source
+interface Sound {
+	/// Play sound effect
+	play()
+	/// Stop sound effect
+	stop()
+}
+
+/// Entry point for creating Sounds
+interface AudioInterface {
+	create_sound(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, sound: types::Resource)
+}

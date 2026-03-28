@@ -9,3 +9,4 @@ pub mod text;
 pub mod sky;
 pub mod camera;
 pub mod client;
+pub mod audio;
