@@ -72,7 +72,7 @@ struct InputData {
 	input: InputDataType,
 	/// Closest distance from the input method to the field.
 	distance: f32, 
-	/// Non-spatial data in a map.
+	/// Non-spatial data in a map. Keys will be a superset of the keys returned by InputHandler::suggested_bindings
 	datamap: Map<String, DatamapData>,
 	/// There are [order] objects that got this input data before this one.
 	order: u32,
@@ -85,6 +85,14 @@ interface InputHandler {
 	/// All input coordinates will be relative to this
 	get_spatial() -> (spatial: Ref<spatial::SpatialRef>)
 	get_field() -> (field: Ref<field::FieldRef>)
+
+	/// Returns suggested bindings. The map key will equal a key in the datamap.
+	/// This is considered static and should not change after handler creation.
+	suggested_bindings() -> (suggested_bindings: Map<String, Vec<String>>)
+
+	/// Returns a list of groups, for example the client name and "grabbable".
+	/// This is considered static and should not change after handler creation.
+	handler_groups() -> (groups: Vec<String>)
 
 	/// An input method just started sending input to this handler.
 	input_gained(method: Ref<InputMethod>, data: InputData)

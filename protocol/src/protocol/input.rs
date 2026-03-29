@@ -325,7 +325,7 @@ pub struct InputData {
     pub input: InputDataType,
     ///Closest distance from the input method to the field.
     pub distance: f32,
-    ///Non-spatial data in a map.
+    ///Non-spatial data in a map. Keys will be a superset of the keys returned by InputHandler::suggested_bindings
     pub datamap: std::collections::HashMap<String, DatamapData>,
     ///There are [order] objects that got this input data before this one.
     pub order: u32,
@@ -605,6 +605,56 @@ impl InputHandler {
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
+    /**Returns suggested bindings. The map key will equal a key in the datamap.
+This is considered static and should not change after handler creation.*/
+    pub async fn suggested_bindings(
+        &self,
+    ) -> Result<
+        std::collections::HashMap<String, Vec<String>>,
+        gluon_wire::GluonSendError,
+    > {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.suggested_bindings_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn suggested_bindings_blocking(
+        &self,
+    ) -> Result<
+        std::collections::HashMap<String, Vec<String>>,
+        gluon_wire::GluonSendError,
+    > {
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    /**Returns a list of groups, for example the client name and "grabbable".
+This is considered static and should not change after handler creation.*/
+    pub async fn handler_groups(
+        &self,
+    ) -> Result<Vec<String>, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.handler_groups_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn handler_groups_blocking(
+        &self,
+    ) -> Result<Vec<String>, gluon_wire::GluonSendError> {
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 11u32, gluon_builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
     ///An input method just started sending input to this handler.
     pub fn input_gained(
         &self,
@@ -616,7 +666,7 @@ impl InputHandler {
         data.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///An input method's data has been updated.
@@ -630,7 +680,7 @@ impl InputHandler {
         data.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///An input method just stopped sending input to this handler.
@@ -642,7 +692,7 @@ impl InputHandler {
         method.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: InputHandlerHandler>(
@@ -706,6 +756,20 @@ pub trait InputHandlerHandler: binderbinder::device::TransactionHandler + Send +
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = super::field::FieldRef> + Send + Sync;
+    /**Returns suggested bindings. The map key will equal a key in the datamap.
+This is considered static and should not change after handler creation.*/
+    fn suggested_bindings(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<
+        Output = std::collections::HashMap<String, Vec<String>>,
+    > + Send + Sync;
+    /**Returns a list of groups, for example the client name and "grabbable".
+This is considered static and should not change after handler creation.*/
+    fn handler_groups(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = Vec<String>> + Send + Sync;
     ///An input method just started sending input to this handler.
     fn input_gained(
         &self,
@@ -748,6 +812,14 @@ pub trait InputHandlerHandler: binderbinder::device::TransactionHandler + Send +
                     let (field) = self.get_field(ctx).await;
                     field.write_owned(&mut out)?;
                 }
+                10u32 => {
+                    let (suggested_bindings) = self.suggested_bindings(ctx).await;
+                    suggested_bindings.write_owned(&mut out)?;
+                }
+                11u32 => {
+                    let (groups) = self.handler_groups(ctx).await;
+                    groups.write_owned(&mut out)?;
+                }
                 _ => {}
             }
             Ok(out)
@@ -770,21 +842,21 @@ pub trait InputHandlerHandler: binderbinder::device::TransactionHandler + Send +
                         )
                         .await;
                 }
-                10u32 => {
+                12u32 => {
                     self.input_gained(
                         ctx,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
-                11u32 => {
+                13u32 => {
                     self.input_updated(
                         ctx,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
-                12u32 => {
+                14u32 => {
                     self.input_left(
                         ctx,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
