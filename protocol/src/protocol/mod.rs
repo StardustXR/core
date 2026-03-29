@@ -11,3 +11,4 @@ pub mod camera;
 pub mod client;
 pub mod audio;
 pub mod input;
+pub mod spatial_query;

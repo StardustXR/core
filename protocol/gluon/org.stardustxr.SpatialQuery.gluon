@@ -1,0 +1,62 @@
+import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Field" as field
+import "org.stardustxr.Types" as types
+
+/// query interface
+/// could maybe make this a struct idk
+enum QueryInterface {
+  Required {
+    id: String
+  },
+  Optional {
+    id: String,
+  },
+}
+
+/// shoot a beam and return everything it hit
+struct BeamQuery {
+  handler: Ref<BeamQueryHandler>,
+  interfaces: Vec<QueryInterface>,
+
+  origin_spatial: Ref<spatial::SpatialRef>,
+  direction: types::Vec3f,
+  /// the closest <N> things to the beam
+  limit: u8,
+  /// Maximum length of the beam in meters, can be the max f32 value
+  max_length: f32,
+}
+
+/// handle the beam query
+interface BeamQueryHandler {
+  intersected(interface: Ref, interface_id: String, field: Ref<field::FieldRef>, deepest_point_distance: f32, distance: f32)
+  moved(interface: Ref, deepest_point_distance: f32, distance: f32)
+  left(interface: Ref)
+}
+
+/// Get interfaces inside this field
+struct ZoneQuery {
+  handler: Ref<ZoneQueryHandler>,
+  interfaces: Vec<QueryInterface>,
+
+  zone_field: Ref<field::FieldRef>,
+  /// how far from the surface of the field to include spatials
+  offset_distance: f32,
+}
+
+/// handle the beacon query
+interface ZoneQueryHandler {
+  entered(interface: Ref, interface_id: String, field: Ref<field::FieldRef>, relative_position: types::Vec3f, distance: f32)
+  moved(interface: Ref, relative_position: types::Vec3f, distance: f32)
+  left(interface: Ref)
+}
+
+/// interface that handles removing objects from the service
+interface SpatialQueryGuard {}
+
+/// main spatial query service
+interface SpatialQueryInterface {
+  register_interface(field: Ref<field::FieldRef>, interface: Ref, interface_id: String) -> (guard: Ref<SpatialQueryGuard>)
+
+  beam_query(query: BeamQuery) -> ()
+  zone_query(query: ZoneQuery) -> ()
+}
