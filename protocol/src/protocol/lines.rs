@@ -189,6 +189,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Lines {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Lines {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Lines {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Lines {}
 pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn get_spatial(
         &self,
@@ -360,6 +371,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for LinesInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for LinesInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for LinesInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for LinesInterface {}
 pub trait LinesInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_lines(
         &self,

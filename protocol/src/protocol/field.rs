@@ -339,6 +339,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for FieldRef {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for FieldRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for FieldRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for FieldRef {}
 pub trait FieldRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn spatial_ref(
         &self,
@@ -621,6 +632,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Field {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Field {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Field {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Field {}
 pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn get_ref(
         &self,
@@ -989,6 +1011,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for FieldInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for FieldInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for FieldInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for FieldInterface {}
 pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn distance(
         &self,

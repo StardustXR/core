@@ -295,6 +295,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Server {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Server {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Server {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Server {}
 pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Get the spatial interface node.
     fn spatial_interface(
@@ -546,6 +557,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for ServerInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for ServerInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for ServerInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for ServerInterface {}
 pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn connect(
         &self,

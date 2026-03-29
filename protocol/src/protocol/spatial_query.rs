@@ -298,6 +298,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for BeamQueryHandler {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for BeamQueryHandler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for BeamQueryHandler {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for BeamQueryHandler {}
 pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn intersected(
         &self,
@@ -509,6 +520,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for ZoneQueryHandler {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for ZoneQueryHandler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for ZoneQueryHandler {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for ZoneQueryHandler {}
 pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn entered(
         &self,
@@ -679,6 +701,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialQueryGuard {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for SpatialQueryGuard {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for SpatialQueryGuard {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for SpatialQueryGuard {}
 pub trait SpatialQueryGuardHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn drop_notification_requested(
         &self,
@@ -884,6 +917,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialQueryInterface 
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for SpatialQueryInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for SpatialQueryInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for SpatialQueryInterface {}
 pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn register_interface(
         &self,

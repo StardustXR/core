@@ -256,6 +256,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexRef {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for DmatexRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for DmatexRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for DmatexRef {}
 pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn drop_notification_requested(
         &self,
@@ -471,6 +482,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for DmatexInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for DmatexInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for DmatexInterface {}
 pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn import_dmatex(
         &self,

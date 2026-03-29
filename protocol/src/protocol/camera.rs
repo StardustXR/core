@@ -154,6 +154,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for CameraInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for CameraInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for CameraInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for CameraInterface {}
 pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_camera(
         &self,
@@ -311,6 +322,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Camera {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Camera {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Camera {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Camera {}
 pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
     fn request_draw(

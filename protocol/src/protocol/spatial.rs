@@ -207,6 +207,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialRef {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for SpatialRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for SpatialRef {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for SpatialRef {}
 pub trait SpatialRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn drop_notification_requested(
         &self,
@@ -472,6 +483,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Spatial {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Spatial {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Spatial {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Spatial {}
 pub trait SpatialHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Get the spatial ref for this spatial object.
     fn get_ref(
@@ -779,6 +801,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for SpatialInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for SpatialInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for SpatialInterface {}
 pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Create a new spatial object.
     fn create_spatial(

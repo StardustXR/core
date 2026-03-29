@@ -416,6 +416,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for TextInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for TextInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for TextInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for TextInterface {}
 pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_text(
         &self,
@@ -598,6 +609,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Text {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Text {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Text {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Text {}
 pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn get_spatial(
         &self,

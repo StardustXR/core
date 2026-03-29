@@ -746,6 +746,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for InputHandler {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for InputHandler {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for InputHandler {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for InputHandler {}
 pub trait InputHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///All input coordinates will be relative to this
     fn get_spatial(
@@ -969,6 +980,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for InputMethod {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for InputMethod {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for InputMethod {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for InputMethod {}
 pub trait InputMethodHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Request to capture the input method with the given handler.
     fn request_capture(&self, _ctx: gluon_wire::GluonCtx, handler: InputHandler);

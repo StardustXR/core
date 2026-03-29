@@ -203,6 +203,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Client {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Client {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Client {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Client {}
 pub trait ClientHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn ping(&self, _ctx: gluon_wire::GluonCtx) -> impl Future<Output = ()> + Send + Sync;
     fn frame(&self, _ctx: gluon_wire::GluonCtx, info: FrameInfo);

@@ -94,6 +94,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Sound {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Sound {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Sound {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Sound {}
 pub trait SoundHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Play sound effect
     fn play(&self, _ctx: gluon_wire::GluonCtx);
@@ -245,6 +256,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for AudioInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for AudioInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for AudioInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for AudioInterface {}
 pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_sound(
         &self,

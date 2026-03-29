@@ -483,6 +483,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for ModelInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for ModelInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for ModelInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for ModelInterface {}
 pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Load a GLTF model into a Model
     fn load_model(
@@ -699,6 +710,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for Model {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for Model {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for Model {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for Model {}
 pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn get_spatial(
         &self,
@@ -1017,6 +1039,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for ModelPart {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for ModelPart {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for ModelPart {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for ModelPart {}
 pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn get_part_path(
         &self,

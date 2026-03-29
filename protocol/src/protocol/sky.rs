@@ -82,6 +82,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for SkyGuard {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for SkyGuard {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for SkyGuard {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for SkyGuard {}
 pub trait SkyGuardHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn drop_notification_requested(
         &self,
@@ -258,6 +269,17 @@ impl binderbinder::binder_object::ToBinderObjectOrRef for SkyInterface {
         self.obj.to_binder_object_or_ref()
     }
 }
+impl std::hash::Hash for SkyInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for SkyInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for SkyInterface {}
 pub trait SkyInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Set the sky texture to a given equirectagular texture.
     fn set_sky_tex(
