@@ -14,7 +14,7 @@ struct ClientState {
 	/// Where the client's root should be positioned on reload.
 	root: Ref<spatial::SpatialRef>,
 	/// Spatials that will be in the same place you left them.
-	spatial_anchors: Map<u64, Ref<spatial::SpatialRef>>,
+	spatial_anchors: Map<String, Ref<spatial::SpatialRef>>,
 }
 
 // The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
