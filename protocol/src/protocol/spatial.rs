@@ -20,7 +20,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 ///Transform
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Transform {
-    pub position: super::types::Vec3F,
+    pub translation: super::types::Vec3F,
     pub rotation: super::types::Quatf,
     pub scale: f32,
 }
@@ -29,7 +29,7 @@ impl gluon_wire::GluonConvertable for Transform {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(gluon_data)?;
+        self.translation.write(gluon_data)?;
         self.rotation.write(gluon_data)?;
         self.scale.write(gluon_data)?;
         Ok(())
@@ -37,11 +37,11 @@ impl gluon_wire::GluonConvertable for Transform {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Transform {
-            position,
+            translation,
             rotation,
             scale,
         })
@@ -50,7 +50,7 @@ impl gluon_wire::GluonConvertable for Transform {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(gluon_data)?;
+        self.translation.write_owned(gluon_data)?;
         self.rotation.write_owned(gluon_data)?;
         self.scale.write_owned(gluon_data)?;
         Ok(())
@@ -59,7 +59,7 @@ impl gluon_wire::GluonConvertable for Transform {
 ///Transform
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PartialTransform {
-    pub position: Option<super::types::Vec3F>,
+    pub translation: Option<super::types::Vec3F>,
     pub rotation: Option<super::types::Quatf>,
     pub scale: Option<f32>,
 }
@@ -68,7 +68,7 @@ impl gluon_wire::GluonConvertable for PartialTransform {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(gluon_data)?;
+        self.translation.write(gluon_data)?;
         self.rotation.write(gluon_data)?;
         self.scale.write(gluon_data)?;
         Ok(())
@@ -76,11 +76,11 @@ impl gluon_wire::GluonConvertable for PartialTransform {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(PartialTransform {
-            position,
+            translation,
             rotation,
             scale,
         })
@@ -89,7 +89,7 @@ impl gluon_wire::GluonConvertable for PartialTransform {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(gluon_data)?;
+        self.translation.write_owned(gluon_data)?;
         self.rotation.write_owned(gluon_data)?;
         self.scale.write_owned(gluon_data)?;
         Ok(())

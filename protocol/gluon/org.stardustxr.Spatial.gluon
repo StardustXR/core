@@ -2,14 +2,14 @@ import "org.stardustxr.Types" as types
 
 /// Transform
 struct Transform {
-    position: types::Vec3f,
+    translation: types::Vec3f,
     rotation: types::Quatf,
     scale: f32,
 }
 
 /// Transform
 struct PartialTransform {
-    position: Option<types::Vec3f>,
+    translation: Option<types::Vec3f>,
     rotation: Option<types::Quatf>,
     scale: Option<f32>,
 }
