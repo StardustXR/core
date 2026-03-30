@@ -469,21 +469,23 @@ impl Field {
     }
     pub async fn distance(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> Result<Option<f32>, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.distance_blocking(space, point))
+        tokio::task::spawn_blocking(move || {
+                this.distance_blocking(reference_space, point)
+            })
             .await
             .unwrap()
     }
     pub fn distance_blocking(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> Result<Option<f32>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        space.write(&mut gluon_builder)?;
+        reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
         let reader = self
             .obj
@@ -495,21 +497,21 @@ impl Field {
     }
     pub async fn normal(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> Result<Option<super::types::Vec3F>, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.normal_blocking(space, point))
+        tokio::task::spawn_blocking(move || this.normal_blocking(reference_space, point))
             .await
             .unwrap()
     }
     pub fn normal_blocking(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> Result<Option<super::types::Vec3F>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        space.write(&mut gluon_builder)?;
+        reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
         let reader = self
             .obj
@@ -521,21 +523,23 @@ impl Field {
     }
     pub async fn closest_point(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> Result<Option<super::types::Vec3F>, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.closest_point_blocking(space, point))
+        tokio::task::spawn_blocking(move || {
+                this.closest_point_blocking(reference_space, point)
+            })
             .await
             .unwrap()
     }
     pub fn closest_point_blocking(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> Result<Option<super::types::Vec3F>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        space.write(&mut gluon_builder)?;
+        reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
         let reader = self
             .obj
@@ -547,25 +551,25 @@ impl Field {
     }
     pub async fn ray_march(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         ray_origin: super::types::Vec3F,
         ray_direction: super::types::Vec3F,
     ) -> Result<Option<RayMarchResult>, gluon_wire::GluonSendError> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || {
-                this.ray_march_blocking(space, ray_origin, ray_direction)
+                this.ray_march_blocking(reference_space, ray_origin, ray_direction)
             })
             .await
             .unwrap()
     }
     pub fn ray_march_blocking(
         &self,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         ray_origin: super::types::Vec3F,
         ray_direction: super::types::Vec3F,
     ) -> Result<Option<RayMarchResult>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        space.write(&mut gluon_builder)?;
+        reference_space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
         let reader = self
@@ -655,25 +659,25 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn distance(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> impl Future<Output = Option<f32>> + Send + Sync;
     fn normal(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> impl Future<Output = Option<super::types::Vec3F>> + Send + Sync;
     fn closest_point(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         point: super::types::Vec3F,
     ) -> impl Future<Output = Option<super::types::Vec3F>> + Send + Sync;
     fn ray_march(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        space: super::spatial::SpatialRef,
+        reference_space: super::spatial::SpatialRef,
         ray_origin: super::types::Vec3F,
         ray_direction: super::types::Vec3F,
     ) -> impl Future<Output = Option<RayMarchResult>> + Send + Sync;
@@ -931,26 +935,21 @@ impl FieldInterface {
     }
     pub async fn create_field(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         shape: Shape,
     ) -> Result<Field, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.create_field_blocking(parent, transform, shape)
-            })
+        tokio::task::spawn_blocking(move || this.create_field_blocking(spatial, shape))
             .await
             .unwrap()
     }
     pub fn create_field_blocking(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         shape: Shape,
     ) -> Result<Field, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        parent.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
         shape.write(&mut gluon_builder)?;
         let reader = self
             .obj
@@ -1055,8 +1054,7 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn create_field(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         shape: Shape,
     ) -> impl Future<Output = Field> + Send + Sync;
     fn drop_notification_requested(
@@ -1126,7 +1124,6 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let (field) = self
                         .create_field(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                         )

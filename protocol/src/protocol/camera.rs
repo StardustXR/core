@@ -77,24 +77,19 @@ impl gluon_wire::GluonConvertable for CameraInterface {
 impl CameraInterface {
     pub async fn create_camera(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
     ) -> Result<Camera, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.create_camera_blocking(parent, transform)
-            })
+        tokio::task::spawn_blocking(move || this.create_camera_blocking(spatial))
             .await
             .unwrap()
     }
     pub fn create_camera_blocking(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
     ) -> Result<Camera, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        parent.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
@@ -169,8 +164,7 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
     fn create_camera(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
     ) -> impl Future<Output = Camera> + Send + Sync;
     fn drop_notification_requested(
         &self,
@@ -194,7 +188,6 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                     let (camera) = self
                         .create_camera(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;

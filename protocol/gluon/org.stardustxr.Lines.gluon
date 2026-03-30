@@ -3,7 +3,6 @@ import "org.stardustxr.Spatial" as spatial
 
 /// A collection of polylines drawn by the server. Meant for debug, so the spatial transform affects point positions but the thickness is in world space. Any mesh made to represent these lines cannot be distorted.
 interface Lines {
-	get_spatial() -> (spatial: Ref<spatial::Spatial>)
 	set_lines(lines: Vec<Line>)
 }
 
@@ -26,5 +25,5 @@ struct LinePoint {
 
 /// Entry point for creating Lines
 interface LinesInterface {
-	create_lines(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, lines: Vec<Line>) -> (lines: Ref<Lines>)
+	create_lines(spatial: Ref<spatial::Spatial>, lines: Vec<Line>) -> (lines: Ref<Lines>)
 }

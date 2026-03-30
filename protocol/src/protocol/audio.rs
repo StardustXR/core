@@ -194,13 +194,11 @@ impl gluon_wire::GluonConvertable for AudioInterface {
 impl AudioInterface {
     pub fn create_sound(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         sound: super::types::Resource,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        parent.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
         sound.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -271,8 +269,7 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn create_sound(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         sound: super::types::Resource,
     );
     fn drop_notification_requested(
@@ -318,7 +315,6 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 8u32 => {
                     self.create_sound(
                         ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                     );

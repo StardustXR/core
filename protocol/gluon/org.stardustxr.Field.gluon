@@ -6,16 +6,16 @@ interface FieldRef {
 	spatial_ref() -> (spatial_ref: Ref<spatial::SpatialRef>)
 }
 
-/// A signed distance field with adjustable shape. 
+/// A signed distance field with adjustable shape.
 interface Field {
 	get_ref() -> (field: Ref<FieldRef>)
 	spatial() -> (spatial: Ref<spatial::Spatial>)
 
-	distance(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)
-	normal(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (normal: Option<types::Vec3f>)
-	closest_point(space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (point: Option<types::Vec3f>)
-	ray_march(space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
-	
+	distance(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)
+	normal(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (normal: Option<types::Vec3f>)
+	closest_point(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (point: Option<types::Vec3f>)
+	ray_march(reference_space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
+
 	set_shape(shape: Shape)
 }
 
@@ -26,7 +26,7 @@ interface FieldInterface {
 	closest_point(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (point: Option<types::Vec3f>)
 	ray_march(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
 
-	create_field(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, shape: Shape) -> (field: Ref<Field>)
+	create_field(spatial: Ref<spatial::Spatial>, shape: Shape) -> (field: Ref<Field>)
 }
 
 /// Shape for a signed distance field

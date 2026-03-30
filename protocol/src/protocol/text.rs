@@ -333,28 +333,25 @@ impl gluon_wire::GluonConvertable for TextInterface {
 impl TextInterface {
     pub async fn create_text(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         text: String,
         style: TextStyle,
     ) -> Result<Text, gluon_wire::GluonSendError> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || {
-                this.create_text_blocking(parent, transform, text, style)
+                this.create_text_blocking(spatial, text, style)
             })
             .await
             .unwrap()
     }
     pub fn create_text_blocking(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         text: String,
         style: TextStyle,
     ) -> Result<Text, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        parent.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
         text.write(&mut gluon_builder)?;
         style.write(&mut gluon_builder)?;
         let reader = self
@@ -431,8 +428,7 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
     fn create_text(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         text: String,
         style: TextStyle,
     ) -> impl Future<Output = Text> + Send + Sync;
@@ -458,7 +454,6 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
                     let (text) = self
                         .create_text(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
@@ -524,24 +519,6 @@ impl gluon_wire::GluonConvertable for Text {
     }
 }
 impl Text {
-    pub async fn get_spatial(
-        &self,
-    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_spatial_blocking()).await.unwrap()
-    }
-    pub fn get_spatial_blocking(
-        &self,
-    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
     ///Set the character height in meters
     pub fn set_character_height(
         &self,
@@ -549,16 +526,14 @@ impl Text {
     ) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         height.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Set the text content
     pub fn set_text(&self, text: String) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         text.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: TextHandler>(
@@ -621,10 +596,6 @@ impl PartialEq for Text {
 }
 impl Eq for Text {}
 pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn get_spatial(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
     ///Set the character height in meters
     fn set_character_height(&self, _ctx: gluon_wire::GluonCtx, height: f32);
     ///Set the text content
@@ -647,10 +618,6 @@ pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                8u32 => {
-                    let (spatial) = self.get_spatial(ctx).await;
-                    spatial.write_owned(&mut out)?;
-                }
                 _ => {}
             }
             Ok(out)
@@ -673,13 +640,13 @@ pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 
                         )
                         .await;
                 }
-                9u32 => {
+                8u32 => {
                     self.set_character_height(
                         ctx,
                         gluon_wire::GluonConvertable::read(gluon_data)?,
                     );
                 }
-                10u32 => {
+                9u32 => {
                     self.set_text(ctx, gluon_wire::GluonConvertable::read(gluon_data)?);
                 }
                 _ => {}

@@ -5,7 +5,7 @@ import "org.stardustxr.Dmatex" as dmatex
 // TODO: document pion file path
 /// Entry point for creating cameras. This is exposed through pion directly, for access control.
 interface CameraInterface {
-	create_camera(parent: Ref<spatial::SpatialRef>, transform: spatial::Transform) -> (camera: Ref<Camera>)
+	create_camera(spatial: Ref<spatial::Spatial>) -> (camera: Ref<Camera>)
 }
 
 /// Used to render additional views from the server

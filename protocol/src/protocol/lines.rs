@@ -117,28 +117,10 @@ impl gluon_wire::GluonConvertable for Lines {
     }
 }
 impl Lines {
-    pub async fn get_spatial(
-        &self,
-    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_spatial_blocking()).await.unwrap()
-    }
-    pub fn get_spatial_blocking(
-        &self,
-    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
     pub fn set_lines(&self, lines: Vec<Line>) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         lines.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: LinesHandler>(
@@ -201,10 +183,6 @@ impl PartialEq for Lines {
 }
 impl Eq for Lines {}
 pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn get_spatial(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
     fn set_lines(&self, _ctx: gluon_wire::GluonCtx, lines: Vec<Line>);
     fn drop_notification_requested(
         &self,
@@ -224,10 +202,6 @@ pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync +
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                8u32 => {
-                    let (spatial) = self.get_spatial(ctx).await;
-                    spatial.write_owned(&mut out)?;
-                }
                 _ => {}
             }
             Ok(out)
@@ -250,7 +224,7 @@ pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync +
                         )
                         .await;
                 }
-                9u32 => {
+                8u32 => {
                     self.set_lines(ctx, gluon_wire::GluonConvertable::read(gluon_data)?);
                 }
                 _ => {}
@@ -291,26 +265,21 @@ impl gluon_wire::GluonConvertable for LinesInterface {
 impl LinesInterface {
     pub async fn create_lines(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         lines: Vec<Line>,
     ) -> Result<Lines, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.create_lines_blocking(parent, transform, lines)
-            })
+        tokio::task::spawn_blocking(move || this.create_lines_blocking(spatial, lines))
             .await
             .unwrap()
     }
     pub fn create_lines_blocking(
         &self,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         lines: Vec<Line>,
     ) -> Result<Lines, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        parent.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
         lines.write(&mut gluon_builder)?;
         let reader = self
             .obj
@@ -386,8 +355,7 @@ pub trait LinesInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn create_lines(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
+        spatial: super::spatial::Spatial,
         lines: Vec<Line>,
     ) -> impl Future<Output = Lines> + Send + Sync;
     fn drop_notification_requested(
@@ -412,7 +380,6 @@ pub trait LinesInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let (lines) = self
                         .create_lines(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
