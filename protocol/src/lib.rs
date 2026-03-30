@@ -1,1 +1,1 @@
-mod protocol;
+pub mod protocol;
