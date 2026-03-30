@@ -5,7 +5,7 @@ import "org.stardustxr.Dmatex" as dmatex
 /// Entry point for loading Models
 interface ModelInterface {
 	/// Load a GLTF model into a Model
-	load_model(model: types::Resource, parent: Ref<spatial::SpatialRef>, transform: spatial::Transform, model_scale: types::Vec3f) -> (model: Ref<Model>)
+	load_model(spatial: Ref<spatial::Spatial>, model: types::Resource, model_scale: types::Vec3f) -> (model: Ref<Model>)
 }
 
 /// A GLTF model loaded by the server.
@@ -78,7 +78,7 @@ enum MaterialParameter {
 	Vec2 { value: types::Vec2f },
 	Vec3 { value: types::Vec3f },
 	Texture { value: types::Resource },
-	Dmatex { 
+	Dmatex {
 		dmatex: Ref<dmatex::DmatexRef>,
 		/// After this point is reached the Server may access the texture
 		acquire_point: u64,

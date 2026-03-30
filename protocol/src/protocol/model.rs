@@ -400,29 +400,26 @@ impl ModelInterface {
     ///Load a GLTF model into a Model
     pub async fn load_model(
         &self,
+        spatial: super::spatial::Spatial,
         model: super::types::Resource,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
         model_scale: super::types::Vec3F,
     ) -> Result<Model, gluon_wire::GluonSendError> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || {
-                this.load_model_blocking(model, parent, transform, model_scale)
+                this.load_model_blocking(spatial, model, model_scale)
             })
             .await
             .unwrap()
     }
     pub fn load_model_blocking(
         &self,
+        spatial: super::spatial::Spatial,
         model: super::types::Resource,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
         model_scale: super::types::Vec3F,
     ) -> Result<Model, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        spatial.write(&mut gluon_builder)?;
         model.write(&mut gluon_builder)?;
-        parent.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
         model_scale.write(&mut gluon_builder)?;
         let reader = self
             .obj
@@ -499,9 +496,8 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn load_model(
         &self,
         _ctx: gluon_wire::GluonCtx,
+        spatial: super::spatial::Spatial,
         model: super::types::Resource,
-        parent: super::spatial::SpatialRef,
-        transform: super::spatial::Transform,
         model_scale: super::types::Vec3F,
     ) -> impl Future<Output = Model> + Send + Sync;
     fn drop_notification_requested(
@@ -526,7 +522,6 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let (model) = self
                         .load_model(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
