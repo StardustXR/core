@@ -42,7 +42,7 @@ enum Shape {
 	/// Cylinder aligned to the XZ plane
 	Cylinder {
 		/// Length of the cylinder along the Y axis
-		lenght: f32,
+		length: f32,
 		/// Radius of the cylinder along the XZ plane
 		radius: f32,
 	},

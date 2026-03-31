@@ -124,7 +124,7 @@ pub enum Shape {
     ///Cylinder aligned to the XZ plane
     Cylinder {
         ///Length of the cylinder along the Y axis
-        lenght: f32,
+        length: f32,
         ///Radius of the cylinder along the XZ plane
         radius: f32,
     },
@@ -155,9 +155,9 @@ impl gluon_wire::GluonConvertable for Shape {
                 gluon_data.write_u16(1u16)?;
                 radius.write(gluon_data)?;
             }
-            Shape::Cylinder { lenght, radius } => {
+            Shape::Cylinder { length, radius } => {
                 gluon_data.write_u16(2u16)?;
-                lenght.write(gluon_data)?;
+                length.write(gluon_data)?;
                 radius.write(gluon_data)?;
             }
             Shape::Torus { major_radius, minor_radius } => {
@@ -187,9 +187,9 @@ impl gluon_wire::GluonConvertable for Shape {
                     Shape::Sphere { radius }
                 }
                 2u16 => {
-                    let lenght = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let length = gluon_wire::GluonConvertable::read(gluon_data)?;
                     let radius = gluon_wire::GluonConvertable::read(gluon_data)?;
-                    Shape::Cylinder { lenght, radius }
+                    Shape::Cylinder { length, radius }
                 }
                 3u16 => {
                     let major_radius = gluon_wire::GluonConvertable::read(gluon_data)?;
@@ -224,9 +224,9 @@ impl gluon_wire::GluonConvertable for Shape {
                 gluon_data.write_u16(1u16)?;
                 radius.write_owned(gluon_data)?;
             }
-            Shape::Cylinder { lenght, radius } => {
+            Shape::Cylinder { length, radius } => {
                 gluon_data.write_u16(2u16)?;
-                lenght.write_owned(gluon_data)?;
+                length.write_owned(gluon_data)?;
                 radius.write_owned(gluon_data)?;
             }
             Shape::Torus { major_radius, minor_radius } => {
