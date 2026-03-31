@@ -70,7 +70,7 @@ pub struct RayMarchResult {
     ///The distance to the point on the ray that has the least distance to the field/most distance inside it. Useful for finding a "near miss" point or how close to the core of the field you're pointing.
     pub deepest_point_distance: f32,
     ///Maximum length of the ray
-    pub ray_lenght: f32,
+    pub ray_length: f32,
     ///Number of steps taken
     pub ray_steps: u32,
 }
@@ -81,7 +81,7 @@ impl gluon_wire::GluonConvertable for RayMarchResult {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.min_distance.write(gluon_data)?;
         self.deepest_point_distance.write(gluon_data)?;
-        self.ray_lenght.write(gluon_data)?;
+        self.ray_length.write(gluon_data)?;
         self.ray_steps.write(gluon_data)?;
         Ok(())
     }
@@ -90,12 +90,12 @@ impl gluon_wire::GluonConvertable for RayMarchResult {
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let min_distance = gluon_wire::GluonConvertable::read(gluon_data)?;
         let deepest_point_distance = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let ray_lenght = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let ray_length = gluon_wire::GluonConvertable::read(gluon_data)?;
         let ray_steps = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(RayMarchResult {
             min_distance,
             deepest_point_distance,
-            ray_lenght,
+            ray_length,
             ray_steps,
         })
     }
@@ -105,7 +105,7 @@ impl gluon_wire::GluonConvertable for RayMarchResult {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.min_distance.write_owned(gluon_data)?;
         self.deepest_point_distance.write_owned(gluon_data)?;
-        self.ray_lenght.write_owned(gluon_data)?;
+        self.ray_length.write_owned(gluon_data)?;
         self.ray_steps.write_owned(gluon_data)?;
         Ok(())
     }

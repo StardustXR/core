@@ -76,7 +76,7 @@ struct RayMarchResult {
 	/// The distance to the point on the ray that has the least distance to the field/most distance inside it. Useful for finding a "near miss" point or how close to the core of the field you're pointing.
 	deepest_point_distance: f32,
 	/// Maximum length of the ray
-	ray_lenght: f32,
+	ray_length: f32,
 	/// Number of steps taken
 	ray_steps: u32,
 }

@@ -55,7 +55,7 @@ pub struct ClientState {
     ///Where the client's root should be positioned on reload.
     pub root: super::spatial::SpatialRef,
     ///Spatials that will be in the same place you left them.
-    pub spatial_anchors: std::collections::HashMap<u64, super::spatial::SpatialRef>,
+    pub spatial_anchors: std::collections::HashMap<String, super::spatial::SpatialRef>,
 }
 impl gluon_wire::GluonConvertable for ClientState {
     fn write<'a, 'b: 'a>(
