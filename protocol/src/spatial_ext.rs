@@ -3,7 +3,7 @@ use crate::protocol::types::{Quatf, Vec3F};
 
 impl Transform {
     pub const IDENTITY: Transform = Transform {
-        position: Vec3F {
+        translation: Vec3F {
             x: 0.0,
             y: 0.0,
             z: 0.0,
@@ -19,7 +19,7 @@ impl Transform {
 
     pub fn from_position(position: impl Into<Vec3F>) -> Self {
         Transform {
-            position: position.into(),
+            translation: position.into(),
             ..Self::IDENTITY
         }
     }
@@ -40,14 +40,14 @@ impl Transform {
         rotation: impl Into<Quatf>,
     ) -> Self {
         Transform {
-            position: position.into(),
+            translation: position.into(),
             rotation: rotation.into(),
             ..Self::IDENTITY
         }
     }
     pub fn from_position_scale(position: impl Into<Vec3F>, scale: f32) -> Self {
         Transform {
-            position: position.into(),
+            translation: position.into(),
             scale,
             ..Self::IDENTITY
         }
@@ -65,7 +65,7 @@ impl Transform {
         scale: f32,
     ) -> Self {
         Transform {
-            position: position.into(),
+            translation: position.into(),
             rotation: rotation.into(),
             scale,
         }
@@ -74,14 +74,14 @@ impl Transform {
 
 impl PartialTransform {
     pub const NONE: PartialTransform = PartialTransform {
-        position: None,
+        translation: None,
         rotation: None,
         scale: None,
     };
 
     pub fn from_position(position: impl Into<Vec3F>) -> Self {
         PartialTransform {
-            position: Some(position.into()),
+            translation: Some(position.into()),
             ..Self::NONE
         }
     }
@@ -102,14 +102,14 @@ impl PartialTransform {
         rotation: impl Into<Quatf>,
     ) -> Self {
         PartialTransform {
-            position: Some(position.into()),
+            translation: Some(position.into()),
             rotation: Some(rotation.into()),
             ..Self::NONE
         }
     }
     pub fn from_position_scale(position: impl Into<Vec3F>, scale: f32) -> Self {
         PartialTransform {
-            position: Some(position.into()),
+            translation: Some(position.into()),
             scale: Some(scale),
             ..Self::NONE
         }
@@ -127,7 +127,7 @@ impl PartialTransform {
         scale: f32,
     ) -> Self {
         PartialTransform {
-            position: Some(position.into()),
+            translation: Some(position.into()),
             rotation: Some(rotation.into()),
             scale: Some(scale),
         }
@@ -137,7 +137,7 @@ impl PartialTransform {
 impl From<Transform> for PartialTransform {
     fn from(t: Transform) -> Self {
         PartialTransform {
-            position: Some(t.position),
+            translation: Some(t.translation),
             rotation: Some(t.rotation),
             scale: Some(t.scale),
         }
