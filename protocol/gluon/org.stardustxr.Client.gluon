@@ -21,8 +21,8 @@ struct ClientState {
 /// Client
 interface Client {
 	ping() -> ()
-	
+
 	frame(info: FrameInfo)
 
-	safe_state() -> (state: ClientState)
+	get_state() -> (state: ClientState)
 }

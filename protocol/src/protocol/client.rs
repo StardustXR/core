@@ -139,13 +139,11 @@ impl Client {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub async fn safe_state(&self) -> Result<ClientState, gluon_wire::GluonSendError> {
+    pub async fn get_state(&self) -> Result<ClientState, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.safe_state_blocking()).await.unwrap()
+        tokio::task::spawn_blocking(move || this.get_state_blocking()).await.unwrap()
     }
-    pub fn safe_state_blocking(
-        &self,
-    ) -> Result<ClientState, gluon_wire::GluonSendError> {
+    pub fn get_state_blocking(&self) -> Result<ClientState, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
@@ -217,7 +215,7 @@ impl Eq for Client {}
 pub trait ClientHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn ping(&self, _ctx: gluon_wire::GluonCtx) -> impl Future<Output = ()> + Send + Sync;
     fn frame(&self, _ctx: gluon_wire::GluonCtx, info: FrameInfo);
-    fn safe_state(
+    fn get_state(
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = ClientState> + Send + Sync;
@@ -243,7 +241,7 @@ pub trait ClientHandler: binderbinder::device::TransactionHandler + Send + Sync 
                     let () = self.ping(ctx).await;
                 }
                 10u32 => {
-                    let (state) = self.safe_state(ctx).await;
+                    let (state) = self.get_state(ctx).await;
                     state.write_owned(&mut out)?;
                 }
                 _ => {}
