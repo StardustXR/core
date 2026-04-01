@@ -296,11 +296,13 @@ impl gluon_wire::GluonConvertable for Spatial {
 }
 impl Spatial {
     ///Get the spatial ref for this spatial object.
-    pub async fn get_ref(&self) -> Result<SpatialRef, gluon_wire::GluonSendError> {
+    pub async fn spatial_ref(&self) -> Result<SpatialRef, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_ref_blocking()).await.unwrap()
+        tokio::task::spawn_blocking(move || this.spatial_ref_blocking()).await.unwrap()
     }
-    pub fn get_ref_blocking(&self) -> Result<SpatialRef, gluon_wire::GluonSendError> {
+    pub fn spatial_ref_blocking(
+        &self,
+    ) -> Result<SpatialRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
@@ -496,7 +498,7 @@ impl PartialEq for Spatial {
 impl Eq for Spatial {}
 pub trait SpatialHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Get the spatial ref for this spatial object.
-    fn get_ref(
+    fn spatial_ref(
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = SpatialRef> + Send + Sync;
@@ -555,7 +557,7 @@ It will silently error and not set the spatial parent if it is to a child of its
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
                 8u32 => {
-                    let (spatial) = self.get_ref(ctx).await;
+                    let (spatial) = self.spatial_ref(ctx).await;
                     spatial.write_owned(&mut out)?;
                 }
                 9u32 => {

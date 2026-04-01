@@ -8,7 +8,7 @@ interface FieldRef {
 
 /// A signed distance field with adjustable shape.
 interface Field {
-	get_ref() -> (field: Ref<FieldRef>)
+	field_ref() -> (field: Ref<FieldRef>)
 	spatial() -> (spatial: Ref<spatial::Spatial>)
 
 	distance(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (distance: Option<f32>)

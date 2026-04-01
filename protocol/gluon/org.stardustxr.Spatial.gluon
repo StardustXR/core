@@ -27,7 +27,7 @@ interface SpatialRef {}
 /// Spatial object
 interface Spatial {
 	/// Get the spatial ref for this spatial object.
-	get_ref() -> (spatial: Ref<SpatialRef>)
+	spatial_ref() -> (spatial: Ref<SpatialRef>)
 
 	/// Get the bounding box of this spatial and its children relative to itself
 	get_local_bounding_box() -> (bounding_box: BoundingBox)

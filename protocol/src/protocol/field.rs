@@ -435,11 +435,11 @@ impl gluon_wire::GluonConvertable for Field {
     }
 }
 impl Field {
-    pub async fn get_ref(&self) -> Result<FieldRef, gluon_wire::GluonSendError> {
+    pub async fn field_ref(&self) -> Result<FieldRef, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_ref_blocking()).await.unwrap()
+        tokio::task::spawn_blocking(move || this.field_ref_blocking()).await.unwrap()
     }
-    pub fn get_ref_blocking(&self) -> Result<FieldRef, gluon_wire::GluonSendError> {
+    pub fn field_ref_blocking(&self) -> Result<FieldRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let reader = self
             .obj
@@ -648,7 +648,7 @@ impl PartialEq for Field {
 }
 impl Eq for Field {}
 pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn get_ref(
+    fn field_ref(
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = FieldRef> + Send + Sync;
@@ -701,7 +701,7 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
                 8u32 => {
-                    let (field) = self.get_ref(ctx).await;
+                    let (field) = self.field_ref(ctx).await;
                     field.write_owned(&mut out)?;
                 }
                 9u32 => {
