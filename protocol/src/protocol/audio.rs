@@ -192,16 +192,31 @@ impl gluon_wire::GluonConvertable for AudioInterface {
     }
 }
 impl AudioInterface {
-    pub fn create_sound(
+    pub async fn create_sound(
         &self,
         spatial: super::spatial::Spatial,
         sound: super::types::Resource,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<Sound, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.create_sound_blocking(spatial, sound))
+            .await
+            .unwrap()
+    }
+    pub fn create_sound_blocking(
+        &self,
+        spatial: super::spatial::Spatial,
+        sound: super::types::Resource,
+    ) -> Result<Sound, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         spatial.write(&mut gluon_builder)?;
         sound.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        Ok(())
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: AudioInterfaceHandler>(
         obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
@@ -271,7 +286,7 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
         _ctx: gluon_wire::GluonCtx,
         spatial: super::spatial::Spatial,
         sound: super::types::Resource,
-    );
+    ) -> impl Future<Output = Sound> + Send + Sync;
     fn drop_notification_requested(
         &self,
         notifier: gluon_wire::drop_tracking::DropNotifier,
@@ -290,6 +305,16 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                8u32 => {
+                    let (sound) = self
+                        .create_sound(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    sound.write_owned(&mut out)?;
+                }
                 _ => {}
             }
             Ok(out)
@@ -311,13 +336,6 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
                             gluon_wire::drop_tracking::DropNotifier::new(&obj),
                         )
                         .await;
-                }
-                8u32 => {
-                    self.create_sound(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
                 }
                 _ => {}
             }
