@@ -12,6 +12,7 @@ homepage.workspace = true
 gluon-wire = { git = "https://github.com/technobaboo/gluon" }
 binderbinder = { git = "https://github.com/technobaboo/binderbinder" }
 fnv = "1.0.7"
+glam = { version = "0.30.0", features = ["mint"] }
 thiserror = "2.0.16"
 tokio = "1.49.0"
 
