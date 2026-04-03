@@ -215,12 +215,13 @@ impl gluon_wire::GluonConvertable for MaterialParamError {
 ///Material parameter values
 #[derive(Debug, Clone)]
 pub enum MaterialParameter {
-    Boolean { value: bool },
+    Bool { value: bool },
     Int { value: i32 },
     Uint { value: u32 },
     Float { value: f32 },
     Vec2 { value: super::types::Vec2F },
     Vec3 { value: super::types::Vec3F },
+    Color { value: super::types::Color },
     Texture { value: super::types::Resource },
     Dmatex {
         dmatex: super::dmatex::DmatexRef,
@@ -236,7 +237,7 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
-            MaterialParameter::Boolean { value } => {
+            MaterialParameter::Bool { value } => {
                 gluon_data.write_u16(0u16)?;
                 value.write(gluon_data)?;
             }
@@ -260,12 +261,16 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                 gluon_data.write_u16(5u16)?;
                 value.write(gluon_data)?;
             }
-            MaterialParameter::Texture { value } => {
+            MaterialParameter::Color { value } => {
                 gluon_data.write_u16(6u16)?;
                 value.write(gluon_data)?;
             }
-            MaterialParameter::Dmatex { dmatex, acquire_point, release_point } => {
+            MaterialParameter::Texture { value } => {
                 gluon_data.write_u16(7u16)?;
+                value.write(gluon_data)?;
+            }
+            MaterialParameter::Dmatex { dmatex, acquire_point, release_point } => {
+                gluon_data.write_u16(8u16)?;
                 dmatex.write(gluon_data)?;
                 acquire_point.write(gluon_data)?;
                 release_point.write(gluon_data)?;
@@ -280,9 +285,7 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
             match gluon_data.read_u16()? {
                 0u16 => {
                     let value = gluon_wire::GluonConvertable::read(gluon_data)?;
-                    MaterialParameter::Boolean {
-                        value,
-                    }
+                    MaterialParameter::Bool { value }
                 }
                 1u16 => {
                     let value = gluon_wire::GluonConvertable::read(gluon_data)?;
@@ -306,11 +309,15 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                 }
                 6u16 => {
                     let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    MaterialParameter::Color { value }
+                }
+                7u16 => {
+                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
                     MaterialParameter::Texture {
                         value,
                     }
                 }
-                7u16 => {
+                8u16 => {
                     let dmatex = gluon_wire::GluonConvertable::read(gluon_data)?;
                     let acquire_point = gluon_wire::GluonConvertable::read(gluon_data)?;
                     let release_point = gluon_wire::GluonConvertable::read(gluon_data)?;
@@ -329,7 +336,7 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         match self {
-            MaterialParameter::Boolean { value } => {
+            MaterialParameter::Bool { value } => {
                 gluon_data.write_u16(0u16)?;
                 value.write_owned(gluon_data)?;
             }
@@ -353,12 +360,16 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                 gluon_data.write_u16(5u16)?;
                 value.write_owned(gluon_data)?;
             }
-            MaterialParameter::Texture { value } => {
+            MaterialParameter::Color { value } => {
                 gluon_data.write_u16(6u16)?;
                 value.write_owned(gluon_data)?;
             }
-            MaterialParameter::Dmatex { dmatex, acquire_point, release_point } => {
+            MaterialParameter::Texture { value } => {
                 gluon_data.write_u16(7u16)?;
+                value.write_owned(gluon_data)?;
+            }
+            MaterialParameter::Dmatex { dmatex, acquire_point, release_point } => {
+                gluon_data.write_u16(8u16)?;
                 dmatex.write_owned(gluon_data)?;
                 acquire_point.write_owned(gluon_data)?;
                 release_point.write_owned(gluon_data)?;

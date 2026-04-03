@@ -71,12 +71,13 @@ enum MaterialParamError {
 
 /// Material parameter values
 enum MaterialParameter {
-	Boolean { value: bool },
+	Bool { value: bool },
 	Int { value: i32 },
 	Uint { value: u32 },
 	Float { value: f32 },
 	Vec2 { value: types::Vec2f },
 	Vec3 { value: types::Vec3f },
+	Color { value: types::Color },
 	Texture { value: types::Resource },
 	Dmatex {
 		dmatex: Ref<dmatex::DmatexRef>,
