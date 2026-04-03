@@ -170,11 +170,12 @@ impl gluon_wire::GluonConvertable for SkyInterface {
     }
 }
 impl SkyInterface {
-    ///Set the sky texture to a given equirectagular texture.
+    /**Set the sky texture to a given equirectagular texture.
+Returns None if the sky texture is already set.*/
     pub async fn set_sky_tex(
         &self,
         tex: super::types::Resource,
-    ) -> Result<SkyGuard, gluon_wire::GluonSendError> {
+    ) -> Result<Option<SkyGuard>, gluon_wire::GluonSendError> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || this.set_sky_tex_blocking(tex))
             .await
@@ -183,7 +184,7 @@ impl SkyInterface {
     pub fn set_sky_tex_blocking(
         &self,
         tex: super::types::Resource,
-    ) -> Result<SkyGuard, gluon_wire::GluonSendError> {
+    ) -> Result<Option<SkyGuard>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         tex.write(&mut gluon_builder)?;
         let reader = self
@@ -194,11 +195,12 @@ impl SkyInterface {
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
-    ///Set the sky lighting to a given equirectagular texture, supports HDRI images.
+    /**Set the sky lighting to a given equirectagular texture, supports HDRI images.
+Returns None if the sky lighting is already set.*/
     pub async fn set_sky_light(
         &self,
         tex: super::types::Resource,
-    ) -> Result<SkyGuard, gluon_wire::GluonSendError> {
+    ) -> Result<Option<SkyGuard>, gluon_wire::GluonSendError> {
         let this = self.clone();
         tokio::task::spawn_blocking(move || this.set_sky_light_blocking(tex))
             .await
@@ -207,7 +209,7 @@ impl SkyInterface {
     pub fn set_sky_light_blocking(
         &self,
         tex: super::types::Resource,
-    ) -> Result<SkyGuard, gluon_wire::GluonSendError> {
+    ) -> Result<Option<SkyGuard>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         tex.write(&mut gluon_builder)?;
         let reader = self
@@ -281,18 +283,20 @@ impl PartialEq for SkyInterface {
 }
 impl Eq for SkyInterface {}
 pub trait SkyInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    ///Set the sky texture to a given equirectagular texture.
+    /**Set the sky texture to a given equirectagular texture.
+Returns None if the sky texture is already set.*/
     fn set_sky_tex(
         &self,
         _ctx: gluon_wire::GluonCtx,
         tex: super::types::Resource,
-    ) -> impl Future<Output = SkyGuard> + Send + Sync;
-    ///Set the sky lighting to a given equirectagular texture, supports HDRI images.
+    ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
+    /**Set the sky lighting to a given equirectagular texture, supports HDRI images.
+Returns None if the sky lighting is already set.*/
     fn set_sky_light(
         &self,
         _ctx: gluon_wire::GluonCtx,
         tex: super::types::Resource,
-    ) -> impl Future<Output = SkyGuard> + Send + Sync;
+    ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
     fn drop_notification_requested(
         &self,
         notifier: gluon_wire::drop_tracking::DropNotifier,
