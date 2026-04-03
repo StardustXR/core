@@ -16,6 +16,7 @@ glam = { version = "0.32.0", features = ["mint"] }
 thiserror = "2.0.16"
 tokio = "1.49.0"
 mint = "0.5.9"
+xdg = "3.0.0"
 
 [build-dependencies]
 syn = "2"

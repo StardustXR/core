@@ -1,7 +1,5 @@
 use glam::Quat;
-use stardust_xr_wire::values::{ResourceID, color::rgba_linear};
 use stardust_xr_fusion::{
-	Client,
 	drawable::{MaterialParameter, Model, ModelPartAspect},
 	project_local_resources,
 	root::{ClientState, RootAspect, RootEvent},

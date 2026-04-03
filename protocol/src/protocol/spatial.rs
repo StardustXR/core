@@ -1,4 +1,9 @@
-#![allow(unused, clippy::single_match, clippy::match_single_binding)]
+#![allow(
+    unused,
+    clippy::single_match,
+    clippy::match_single_binding,
+    clippy::large_enum_variant
+)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Spatial",
