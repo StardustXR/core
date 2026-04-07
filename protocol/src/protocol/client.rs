@@ -51,7 +51,7 @@ impl gluon_wire::GluonConvertable for FrameInfo {
 #[derive(Debug)]
 pub struct ClientState {
     ///Data specific to your client, put anything you like here and it'll be saved/restored intact.
-    pub data: Vec<u8>,
+    pub data: Option<Vec<u8>>,
     ///Where the client's root should be positioned on reload.
     pub root: super::spatial::SpatialRef,
     ///Spatials that will be in the same place you left them.
