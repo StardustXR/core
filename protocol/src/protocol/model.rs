@@ -28,7 +28,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 ///Transform with non-uniform scale
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct NonUniformTransform {
-    pub position: super::types::Vec3F,
+    pub translation: super::types::Vec3F,
     pub rotation: super::types::Quatf,
     pub scale: super::types::Vec3F,
 }
@@ -37,7 +37,7 @@ impl gluon_wire::GluonConvertable for NonUniformTransform {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(gluon_data)?;
+        self.translation.write(gluon_data)?;
         self.rotation.write(gluon_data)?;
         self.scale.write(gluon_data)?;
         Ok(())
@@ -45,11 +45,11 @@ impl gluon_wire::GluonConvertable for NonUniformTransform {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(NonUniformTransform {
-            position,
+            translation,
             rotation,
             scale,
         })
@@ -58,7 +58,7 @@ impl gluon_wire::GluonConvertable for NonUniformTransform {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(gluon_data)?;
+        self.translation.write_owned(gluon_data)?;
         self.rotation.write_owned(gluon_data)?;
         self.scale.write_owned(gluon_data)?;
         Ok(())
@@ -67,7 +67,7 @@ impl gluon_wire::GluonConvertable for NonUniformTransform {
 ///Partial version of NonUniformTransform
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PartialNonUniformTransform {
-    pub position: Option<super::types::Vec3F>,
+    pub translation: Option<super::types::Vec3F>,
     pub rotation: Option<super::types::Quatf>,
     pub scale: Option<super::types::Vec3F>,
 }
@@ -76,7 +76,7 @@ impl gluon_wire::GluonConvertable for PartialNonUniformTransform {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(gluon_data)?;
+        self.translation.write(gluon_data)?;
         self.rotation.write(gluon_data)?;
         self.scale.write(gluon_data)?;
         Ok(())
@@ -84,11 +84,11 @@ impl gluon_wire::GluonConvertable for PartialNonUniformTransform {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
         let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(PartialNonUniformTransform {
-            position,
+            translation,
             rotation,
             scale,
         })
@@ -97,7 +97,7 @@ impl gluon_wire::GluonConvertable for PartialNonUniformTransform {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(gluon_data)?;
+        self.translation.write_owned(gluon_data)?;
         self.rotation.write_owned(gluon_data)?;
         self.scale.write_owned(gluon_data)?;
         Ok(())

@@ -40,14 +40,14 @@ interface ModelPart {
 
 /// Transform with non-uniform scale
 struct NonUniformTransform {
-    position: types::Vec3f,
+    translation: types::Vec3f,
     rotation: types::Quatf,
     scale: types::Vec3f,
 }
 
 /// Partial version of NonUniformTransform
 struct PartialNonUniformTransform {
-    position: Option<types::Vec3f>,
+    translation: Option<types::Vec3f>,
     rotation: Option<types::Quatf>,
     scale: Option<types::Vec3f>,
 }

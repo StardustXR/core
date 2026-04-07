@@ -19,10 +19,17 @@ use stardust_xr_protocol::{
 	spatial_query::SpatialQueryInterface,
 	text::TextInterface,
 };
-use std::{fs, sync::Arc};
+use std::{fs, path::Path, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast;
 use tracing::error;
+
+#[macro_export]
+macro_rules! project_local_resources {
+	($relative_path:expr) => {
+		std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join($relative_path)
+	};
+}
 
 #[derive(Error, Debug)]
 pub enum ClientError {
@@ -55,16 +62,27 @@ pub struct Client {
 
 impl Client {
 	pub async fn connect(
-		resource_prefixes: Vec<String>,
+		resource_prefixes: &[&Path],
 	) -> Result<(Self, ClientState), ClientError> {
 		let dev = PionBinderDevice::default();
 		Self::connect_with_device(&dev, resource_prefixes).await
 	}
 	pub async fn connect_with_device(
 		pion_device: &PionBinderDevice,
-		resource_prefixes: Vec<String>,
+		resource_prefixes: &[&Path],
 	) -> Result<(Self, ClientState), ClientError> {
 		let stardust_instance = find_runtime_dir().ok_or(ClientError::NoInstanceDir)?;
+
+		let paths = resource_prefixes.iter().map(|p| p.to_string_lossy().to_string());
+		let runtime_prefixes = std::env::var("STARDUST_RES_PREFIXES").ok();
+		let env_prefixes = runtime_prefixes
+			.as_deref()
+			.or(option_env!("STARDUST_RES_PREFIXES"))
+			.into_iter()
+			.flat_map(|f| f.split(':'))
+			.map(|p| p.to_string());
+
+		let prefixes = env_prefixes.chain(paths).collect::<Vec<String>>();
 
 		let server_path = stardust_instance.join("server");
 		let file = fs::OpenOptions::new()
@@ -85,7 +103,7 @@ impl Client {
 		});
 		let client = ProtocolClient::from_handler(&client_handler);
 		let (server, initial_state) = server_interface
-			.connect(client, resource_prefixes)
+			.connect(client, prefixes)
 			.await
 			.map_err(ClientError::GluonError)?;
 		let root = initial_state.root.clone();

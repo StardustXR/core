@@ -1,86 +1,90 @@
-use glam::Quat;
+use glam::{Quat, Vec3};
 use stardust_xr_fusion::{
-	drawable::{MaterialParameter, Model, ModelPartAspect},
+	client::Client,
+	drawable::ModelExt,
 	project_local_resources,
-	root::{ClientState, RootAspect, RootEvent},
-	spatial::{SpatialAspect, Transform},
+	spatial::{Spatial, SpatialExt, Transform},
 };
+use stardust_xr_protocol::{
+	model::{MaterialParameter, Model},
+	types::{Color, Resource},
+};
+use tokio::sync::broadcast::error::RecvError;
+use tracing::warn;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let mut client = Client::connect().await.unwrap();
-	client
-		.setup_resources(&[&project_local_resources!("res")])
+	let (client, state) = Client::connect(&[&project_local_resources!("res")])
+		.await
 		.unwrap();
 
-	let gyro = Model::create(
-		client.get_root(),
-		Transform::none(),
-		&ResourceID::new_namespaced("fusion", "gyro"),
+	let gyro_spatial = Spatial::new(&client, &state.root, Transform::IDENTITY)
+		.await
+		.unwrap();
+	let gyro = Model::new(
+		&client,
+		&gyro_spatial,
+		Resource::Namespaced {
+			namespace: "fusion".into(),
+			path: "gyro".into(),
+		},
+		Vec3::ZERO,
 	)
+	.await
 	.unwrap();
 
-	let client_handle = client.handle();
-	let mut elapsed: f32 = client
-		.await_method(client_handle.get_root().get_state())
+	let gem = gyro.get_part("Gem".into()).await.unwrap().unwrap();
+	let ring_inner = gyro
+		.get_part("OuterRing/MiddleRing/InnerRing".into())
 		.await
 		.unwrap()
+		.unwrap();
+	let ring_middle = gyro
+		.get_part("OuterRing/MiddleRing".into())
+		.await
 		.unwrap()
-		.data()
-		.unwrap_or_default();
-	let gem = gyro.part("Gem").unwrap();
-	let ring_inner = gyro.part("OuterRing/MiddleRing/InnerRing").unwrap();
-	let ring_middle = gyro.part("OuterRing/MiddleRing").unwrap();
-	let ring_outer = gyro.part("OuterRing").unwrap();
-	let _gyro = gyro;
+		.unwrap();
+	let ring_outer = gyro.get_part("OuterRing".into()).await.unwrap().unwrap();
 
-	client
-		.sync_event_loop(|client, _stop| {
-			while let Some(root_event) = client.get_root().recv_root_event() {
-				match root_event {
-					RootEvent::Ping { response } => {
-						response.send_ok(());
-					}
-					RootEvent::Frame { info } => {
-						elapsed += info.delta;
-
-						gem.set_material_parameter(
-							"color",
-							MaterialParameter::Color(rgba_linear!(
-								0.0,
-								0.25,
-								1.0,
-								elapsed.sin().abs()
-							)),
-						)
-						.unwrap();
-						gem.set_local_transform(Transform::from_rotation(Quat::from_rotation_y(
-							elapsed,
-						)))
-						.unwrap();
-						ring_inner
-							.set_local_transform(Transform::from_rotation(Quat::from_rotation_x(
-								elapsed,
-							)))
-							.unwrap();
-						ring_middle
-							.set_local_transform(Transform::from_rotation(Quat::from_rotation_z(
-								elapsed,
-							)))
-							.unwrap();
-						ring_outer
-							.set_local_transform(Transform::from_rotation(Quat::from_rotation_x(
-								elapsed,
-							)))
-							.unwrap();
-					}
-					RootEvent::SaveState { response } => response.send(
-						ClientState::from_data_root(Some(elapsed), client.get_root()),
-					),
-				}
+	let mut elapsed = state
+		.data
+		.try_into()
+		.map(|v| f32::from_le_bytes(v))
+		.unwrap_or(0f32);
+	let mut frame_recv = client.frame_receiver();
+	loop {
+		let info = match frame_recv.recv().await {
+			Ok(v) => v,
+			Err(RecvError::Lagged(n)) => {
+				warn!("lost {n} frame events");
+				continue;
 			}
-		})
+			Err(RecvError::Closed) => {
+				break;
+			}
+		};
+		elapsed += info.delta;
+
+		gem.set_material_parameter(
+			"color".into(),
+			MaterialParameter::Color {
+				value: Color::rgba(0.0, 0.25, 1.0, elapsed.sin().abs()),
+			},
+		)
 		.await
 		.unwrap();
+		use stardust_xr_fusion::drawable::PartialNonUniformTransform as PartTransform;
+		gem.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_y(elapsed)))
+			.unwrap();
+		ring_inner
+			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_x(elapsed)))
+			.unwrap();
+		ring_middle
+			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_z(elapsed)))
+			.unwrap();
+		ring_outer
+			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_x(elapsed)))
+			.unwrap();
+	}
 }

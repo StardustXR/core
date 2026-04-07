@@ -1,6 +1,8 @@
+use crate::model::PartialNonUniformTransform;
 use crate::protocol::lines::LinePoint;
 use crate::protocol::model::{MaterialParamError, ModelLoadError};
 use crate::protocol::types::{Color, Vec3F};
+use crate::types::Quatf;
 use std::error::Error;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -67,4 +69,65 @@ impl Display for MaterialParamError {
 			MaterialParamError::Holdout => f.write_str("Holdout material was applied previously"),
 		}
 	}
+}
+impl PartialNonUniformTransform {
+    pub const NONE: PartialNonUniformTransform = PartialNonUniformTransform {
+        translation: None,
+        rotation: None,
+        scale: None,
+    };
+
+    pub fn from_position(position: impl Into<Vec3F>) -> Self {
+        PartialNonUniformTransform {
+            translation: Some(position.into()),
+            ..Self::NONE
+        }
+    }
+    pub fn from_rotation(rotation: impl Into<Quatf>) -> Self {
+        PartialNonUniformTransform {
+            rotation: Some(rotation.into()),
+            ..Self::NONE
+        }
+    }
+    pub fn from_scale(scale: impl Into<Vec3F>) -> Self {
+        PartialNonUniformTransform {
+            scale: Some(scale.into()),
+            ..Self::NONE
+        }
+    }
+    pub fn from_position_rotation(
+        position: impl Into<Vec3F>,
+        rotation: impl Into<Quatf>,
+    ) -> Self {
+        PartialNonUniformTransform {
+            translation: Some(position.into()),
+            rotation: Some(rotation.into()),
+            ..Self::NONE
+        }
+    }
+    pub fn from_position_scale(position: impl Into<Vec3F>, scale: impl Into<Vec3F>) -> Self {
+        PartialNonUniformTransform {
+            translation: Some(position.into()),
+            scale: Some(scale.into()),
+            ..Self::NONE
+        }
+    }
+    pub fn from_rotation_scale(rotation: impl Into<Quatf>, scale: impl Into<Vec3F>) -> Self {
+        PartialNonUniformTransform {
+            rotation: Some(rotation.into()),
+            scale: Some(scale.into()),
+            ..Self::NONE
+        }
+    }
+    pub fn from_position_rotation_scale(
+        position: impl Into<Vec3F>,
+        rotation: impl Into<Quatf>,
+        scale: impl Into<Vec3F>,
+    ) -> Self {
+        PartialNonUniformTransform {
+            translation: Some(position.into()),
+            rotation: Some(rotation.into()),
+            scale: Some(scale.into()),
+        }
+    }
 }

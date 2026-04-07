@@ -38,7 +38,7 @@ pub trait ModelExt {
 		client: &Client,
 		spatial: &Spatial,
 		model: Resource,
-		model_scale: Vec3F,
+		model_scale: impl Into<Vec3F> + Send,
 	) -> impl std::future::Future<Output = Result<Model, ServerError>> + Send;
 }
 impl ModelExt for Model {
@@ -46,12 +46,12 @@ impl ModelExt for Model {
 		client: &Client,
 		spatial: &Spatial,
 		model: Resource,
-		model_scale: Vec3F,
+		model_scale: impl Into<Vec3F> + Send,
 	) -> Result<Model, ServerError> {
 		// TODO: actually handle invalid handles at the protocol level
 		Ok(client
 			.model_interface()
-			.load_model(spatial.clone(), model, model_scale)
+			.load_model(spatial.clone(), model, model_scale.into())
 			.await?)
 	}
 }
