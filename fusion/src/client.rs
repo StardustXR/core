@@ -6,18 +6,7 @@ use gluon_wire::{
 };
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
-	audio::AudioInterface,
-	client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo},
-	dir::find_runtime_dir,
-	dmatex::DmatexInterface,
-	field::FieldInterface,
-	lines::LinesInterface,
-	model::ModelInterface,
-	server::{Server, ServerInterface},
-	sky::SkyInterface,
-	spatial::{SpatialInterface, SpatialRef},
-	spatial_query::SpatialQueryInterface,
-	text::TextInterface,
+	audio::AudioInterface, client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo}, dir::find_pion_file, dmatex::DmatexInterface, field::FieldInterface, lines::LinesInterface, model::ModelInterface, server::{Server, ServerInterface}, sky::SkyInterface, spatial::{SpatialInterface, SpatialRef}, spatial_query::SpatialQueryInterface, text::TextInterface
 };
 use std::{fs, path::Path, sync::Arc};
 use thiserror::Error;
@@ -35,8 +24,8 @@ macro_rules! project_local_resources {
 pub enum ClientError {
 	#[error("Unable to open servers pion file: {0}")]
 	PionFileError(std::io::Error),
-	#[error("Could not find stardust instance dir")]
-	NoInstanceDir,
+	#[error("Could not find the stardust server instance")]
+	NoServerFile,
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
 	#[error("Gluon error: {0}")]
@@ -71,7 +60,7 @@ impl Client {
 		pion_device: &PionBinderDevice,
 		resource_prefixes: &[&Path],
 	) -> Result<(Self, ClientState), ClientError> {
-		let stardust_instance = find_runtime_dir().ok_or(ClientError::NoInstanceDir)?;
+		let server_path = find_pion_file("stardust-server").ok_or(ClientError::NoServerFile)?;
 
 		let paths = resource_prefixes.iter().map(|p| p.to_string_lossy().to_string());
 		let runtime_prefixes = std::env::var("STARDUST_RES_PREFIXES").ok();
@@ -84,7 +73,6 @@ impl Client {
 
 		let prefixes = env_prefixes.chain(paths).collect::<Vec<String>>();
 
-		let server_path = stardust_instance.join("server");
 		let file = fs::OpenOptions::new()
 			.read(true)
 			.write(true)

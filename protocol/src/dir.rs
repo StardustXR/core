@@ -13,7 +13,7 @@ fn is_locked(dir: &Path) -> bool {
 	let Ok(file) = File::open(&lock) else {
 		return false;
 	};
-	// If we can't get the lock, someone else holds it — the server is alive.
+	// If we can't get the lock, someone else holds it — the service is alive.
 	file.try_lock().is_err()
 }
 
@@ -26,62 +26,63 @@ fn acquire_lock(dir: &Path) -> Option<File> {
 	Some(file)
 }
 
-/// Find the runtime directory for Stardust XR.
-/// First check if a directory at $XDG_RUNTIME_DIR/$STARDUST_INSTANCE exists
-/// if not, find the first `stardust-*` directory in $XDG_RUNTIME_DIR with a `stardust-*.lock` file next to it that isn't lockable.
-pub fn find_runtime_dir() -> Option<PathBuf> {
-	let runtime_dir = xdg::BaseDirectories::new().runtime_dir?;
+/// Find the pion path for Stardust XR related services.
+/// First check if a file at $XDG_RUNTIME_DIR/{service}/$STARDUST_INSTANCE exists and isn't lockable
+/// else try $XDG_RUNTIME_DIR/{service}/stardust-0
+pub fn find_pion_file(service: &str) -> Option<PathBuf> {
+	let service_dir = xdg::BaseDirectories::new().runtime_dir?.join(service);
 
 	if let Ok(instance) = std::env::var("STARDUST_INSTANCE") {
-		let dir = runtime_dir.join(&instance);
-		if dir.is_dir() && is_locked(&dir) {
-			return Some(dir);
+		let file = service_dir.join(&instance);
+		if file.is_file() && is_locked(&file) {
+			return Some(file);
 		}
 	}
 
-	let entries = fs::read_dir(&runtime_dir).ok()?;
-	for entry in entries.flatten() {
-		let path = entry.path();
-		if path.is_dir()
-			&& entry
-				.file_name()
-				.to_str()
-				.is_some_and(|n| n.starts_with("stardust-"))
-			&& is_locked(&path)
-		{
-			return Some(path);
-		}
+	let file = service_dir.join("stardust-0");
+	if file.is_file() && is_locked(&file) {
+		return Some(file);
 	}
 
 	None
 }
 
 /// Make a runtime directory for Stardust XR and hold its lockfile.
-/// First check if a directory at $XDG_RUNTIME_DIR/$STARDUST_INSTANCE exists that has an inert lockfile next to it
+/// First check if a file at $XDG_RUNTIME_DIR/{service}/$STARDUST_INSTANCE exists that has an inert lockfile next to it
 /// then try to make it if it doesn't exist, if it does increment up to $XDG_RUNTIME_DIR/stardust-0 and try again over and over until you find a free one and make the directory.
 ///
 /// Returns the path and the held lockfile. Drop the `File` to release the lock.
-pub fn make_runtime_dir(instance: &str) -> Option<(PathBuf, File)> {
-	let runtime_dir = xdg::BaseDirectories::new().runtime_dir?;
-
-	let dir = runtime_dir.join(instance);
-	if !dir.is_dir() {
-		fs::create_dir_all(&dir).ok()?;
-	}
-	if let Some(lock) = acquire_lock(&dir) {
-		return Some((dir, lock));
+pub fn create_pion_file(service: &str, instance: &str) -> Option<(PathBuf, File)> {
+	let service_dir = xdg::BaseDirectories::new().runtime_dir?.join(service);
+	if !service_dir.is_dir() {
+		fs::create_dir_all(&service_dir).ok()?;
 	}
 
-	// The requested instance name is taken, try stardust-0, stardust-1, ...
+	let file = service_dir.join(instance);
+	if let Some(lock) = acquire_lock(&file) {
+		return Some((file, lock));
+	}
+
+	None
+}
+
+/// Find a free STARDUST_INSTANCE
+/// This is done by searching for the first file at $XDG_RUNTIME_DIR/stardust-server/stardust-{n}
+/// that either doesn't exist or doesn't have a valid lock
+pub fn find_free_instace() -> Option<String> {
+	let service_dir = xdg::BaseDirectories::new()
+		.runtime_dir?
+		.join("stardust-server");
+	// try stardust-0, stardust-1, ...
 	for i in 0u32.. {
-		let dir = runtime_dir.join(format!("stardust-{i}"));
-		if !dir.is_dir() {
-			fs::create_dir_all(&dir).ok()?;
+		let instance = format!("stardust-{i}");
+		let file = service_dir.join(&instance);
+		if !file.is_dir() {
+			fs::create_dir_all(&file).ok()?;
 		}
-		if let Some(lock) = acquire_lock(&dir) {
-			return Some((dir, lock));
+		if !is_locked(&file) {
+			return Some(instance);
 		}
 	}
-
 	None
 }
