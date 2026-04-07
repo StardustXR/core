@@ -1,10 +1,14 @@
 //! Your connection to the Stardust server and other essentials.
 
-use binderbinder::binder_object::BinderObject;
-use gluon_wire::GluonSendError;
-use stardust_xr_protocol::protocol::{
+use binderbinder::{TransactionHandler, binder_object::BinderObject, payload::PayloadBuilder};
+use gluon_wire::{
+	GluonCtx, GluonDataBuilder, GluonDataReader, GluonSendError, drop_tracking::DropNotifier,
+};
+use pion_binder::PionBinderDevice;
+use stardust_xr_protocol::{
 	audio::AudioInterface,
-	client::{Client as ProtocolClient, ClientHandler, ClientState},
+	client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo},
+	dir::find_runtime_dir,
 	dmatex::DmatexInterface,
 	field::FieldInterface,
 	lines::LinesInterface,
@@ -15,12 +19,17 @@ use stardust_xr_protocol::protocol::{
 	spatial_query::SpatialQueryInterface,
 	text::TextInterface,
 };
-use std::sync::Arc;
+use std::{fs, sync::Arc};
 use thiserror::Error;
-use tokio::sync::OnceCell;
+use tokio::sync::broadcast;
+use tracing::error;
 
 #[derive(Error, Debug)]
 pub enum ClientError {
+	#[error("Unable to open servers pion file: {0}")]
+	PionFileError(std::io::Error),
+	#[error("Could not find stardust instance dir")]
+	NoInstanceDir,
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
 	#[error("Gluon error: {0}")]
@@ -28,76 +37,76 @@ pub enum ClientError {
 }
 
 /// Your connection to the Stardust server.
-pub struct StardustConnection {
+pub struct Client {
+	pion_dev: PionBinderDevice,
 	server: Server,
 	root: SpatialRef,
-	initial_state: ClientState,
-	spatial_interface: OnceCell<SpatialInterface>,
-	field_interface: OnceCell<FieldInterface>,
-	dmatex_interface: OnceCell<DmatexInterface>,
-	text_interface: OnceCell<TextInterface>,
-	model_interface: OnceCell<ModelInterface>,
-	lines_interface: OnceCell<LinesInterface>,
-	sky_interface: OnceCell<SkyInterface>,
-	audio_interface: OnceCell<AudioInterface>,
-	spatial_query_interface: OnceCell<SpatialQueryInterface>,
+	client_handler: Arc<BinderObject<ClientImpl>>,
+	spatial_interface: SpatialInterface,
+	field_interface: FieldInterface,
+	dmatex_interface: DmatexInterface,
+	text_interface: TextInterface,
+	model_interface: ModelInterface,
+	lines_interface: LinesInterface,
+	sky_interface: SkyInterface,
+	audio_interface: AudioInterface,
+	spatial_query_interface: SpatialQueryInterface,
 }
 
-impl StardustConnection {
-	pub async fn connect<H: ClientHandler>(
-		handler: Arc<BinderObject<H>>,
+impl Client {
+	pub async fn connect(
 		resource_prefixes: Vec<String>,
-	) -> Result<Self, ClientError> {
-		let stardust_instance = std::env::var_os("STARDUST_INSTANCE")
-			.map(|instance| {
-				xdg::BaseDirectories::new()
-					.runtime_dir
-					.unwrap()
-					.join(instance)
-			})
-			.unwrap_or_else(|| {
-				let runtime_dir = xdg::BaseDirectories::new().runtime_dir.unwrap();
-				for entry in runtime_dir.read_dir().unwrap() {
-					let Ok(entry) = entry else { continue };
-					if entry.file_name().starts_with("stardust-") {
-						return entry.path();
-					}
-
-					return runtime_dir.join();
-				}
-			});
-
-		Self::from_parts(server_interface, handler, resource_prefixes)
+	) -> Result<(Self, ClientState), ClientError> {
+		let dev = PionBinderDevice::default();
+		Self::connect_with_device(&dev, resource_prefixes).await
 	}
-
-	/// Create a client from an already-connected ServerInterface and handler.
-	///
-	/// The handler implements `ClientHandler` to receive frame, ping, and save_state events.
-	pub async fn from_parts<H: ClientHandler>(
-		server_interface: &ServerInterface,
-		handler: Arc<BinderObject<H>>,
+	pub async fn connect_with_device(
+		pion_device: &PionBinderDevice,
 		resource_prefixes: Vec<String>,
-	) -> Result<Self, ClientError> {
-		let client = ProtocolClient::from_handler(&handler);
+	) -> Result<(Self, ClientState), ClientError> {
+		let stardust_instance = find_runtime_dir().ok_or(ClientError::NoInstanceDir)?;
+
+		let server_path = stardust_instance.join("server");
+		let file = fs::OpenOptions::new()
+			.read(true)
+			.write(true)
+			.create(false)
+			.open(&server_path)
+			.map_err(ClientError::PionFileError)?;
+		let interface = pion_device
+			.get_binder_ref_from_file(file)
+			.await
+			.map_err(|_| ClientError::ConnectionFailure)?;
+		// TODO: do proper checks to make sure this is actually a server interface
+		let server_interface = ServerInterface::from_object_or_ref(interface);
+		let client_handler = pion_device.register_object(ClientImpl {
+			frame_sender: broadcast::channel(8).0,
+			drop_notifs: Default::default(),
+		});
+		let client = ProtocolClient::from_handler(&client_handler);
 		let (server, initial_state) = server_interface
 			.connect(client, resource_prefixes)
 			.await
 			.map_err(ClientError::GluonError)?;
 		let root = initial_state.root.clone();
-		Ok(StardustConnection {
-			server,
-			root,
+		Ok((
+			Client {
+				pion_dev: pion_device.clone(),
+				root,
+				client_handler,
+				spatial_interface: server.spatial_interface().await?,
+				field_interface: server.field_interface().await?,
+				dmatex_interface: server.dmatex_interface().await?,
+				text_interface: server.text_interface().await?,
+				model_interface: server.model_interface().await?,
+				lines_interface: server.lines_interface().await?,
+				sky_interface: server.sky_interface().await?,
+				audio_interface: server.audio_interface().await?,
+				spatial_query_interface: server.spatial_query_interface().await?,
+				server,
+			},
 			initial_state,
-			spatial_interface: OnceCell::new(),
-			field_interface: OnceCell::new(),
-			dmatex_interface: OnceCell::new(),
-			text_interface: OnceCell::new(),
-			model_interface: OnceCell::new(),
-			lines_interface: OnceCell::new(),
-			sky_interface: OnceCell::new(),
-			audio_interface: OnceCell::new(),
-			spatial_query_interface: OnceCell::new(),
-		})
+		))
 	}
 
 	/// The root spatial reference, positioned where the client was spawned.
@@ -110,64 +119,103 @@ impl StardustConnection {
 		&self.server
 	}
 
-	/// The initial client state returned on connection.
-	pub fn initial_state(&self) -> &ClientState {
-		&self.initial_state
+	/// Get a receiverr for frame events, only events generated after this call will be returned
+	pub fn frame_receiver(&self) -> broadcast::Receiver<FrameInfo> {
+		self.client_handler.frame_sender.subscribe()
 	}
 
-	// --- Interface accessors (lazily cached) ---
+	// --- Interface accessors (cached) ---
 
-	pub async fn spatial_interface(&self) -> Result<&SpatialInterface, GluonSendError> {
-		self.spatial_interface
-			.get_or_try_init(|| self.server.spatial_interface())
-			.await
+	pub fn spatial_interface(&self) -> &SpatialInterface {
+		&self.spatial_interface
 	}
 
-	pub async fn field_interface(&self) -> Result<&FieldInterface, GluonSendError> {
-		self.field_interface
-			.get_or_try_init(|| self.server.field_interface())
-			.await
+	pub fn field_interface(&self) -> &FieldInterface {
+		&self.field_interface
 	}
 
-	pub async fn dmatex_interface(&self) -> Result<&DmatexInterface, GluonSendError> {
-		self.dmatex_interface
-			.get_or_try_init(|| self.server.dmatex_interface())
-			.await
+	pub fn dmatex_interface(&self) -> &DmatexInterface {
+		&self.dmatex_interface
 	}
 
-	pub async fn text_interface(&self) -> Result<&TextInterface, GluonSendError> {
-		self.text_interface
-			.get_or_try_init(|| self.server.text_interface())
-			.await
+	pub fn text_interface(&self) -> &TextInterface {
+		&self.text_interface
 	}
 
-	pub async fn model_interface(&self) -> Result<&ModelInterface, GluonSendError> {
-		self.model_interface
-			.get_or_try_init(|| self.server.model_interface())
-			.await
+	pub fn model_interface(&self) -> &ModelInterface {
+		&self.model_interface
 	}
 
-	pub async fn lines_interface(&self) -> Result<&LinesInterface, GluonSendError> {
-		self.lines_interface
-			.get_or_try_init(|| self.server.lines_interface())
-			.await
+	pub fn lines_interface(&self) -> &LinesInterface {
+		&self.lines_interface
 	}
 
-	pub async fn sky_interface(&self) -> Result<&SkyInterface, GluonSendError> {
-		self.sky_interface
-			.get_or_try_init(|| self.server.sky_interface())
-			.await
+	pub fn sky_interface(&self) -> &SkyInterface {
+		&self.sky_interface
 	}
 
-	pub async fn audio_interface(&self) -> Result<&AudioInterface, GluonSendError> {
-		self.audio_interface
-			.get_or_try_init(|| self.server.audio_interface())
-			.await
+	pub fn audio_interface(&self) -> &AudioInterface {
+		&self.audio_interface
 	}
 
-	pub async fn spatial_query_interface(&self) -> Result<&SpatialQueryInterface, GluonSendError> {
-		self.spatial_query_interface
-			.get_or_try_init(|| self.server.spatial_query_interface())
+	pub fn spatial_query_interface(&self) -> &SpatialQueryInterface {
+		&self.spatial_query_interface
+	}
+}
+
+#[derive(Debug)]
+struct ClientImpl {
+	frame_sender: broadcast::Sender<FrameInfo>,
+	drop_notifs: tokio::sync::RwLock<Vec<DropNotifier>>,
+}
+
+impl ClientHandler for ClientImpl {
+	// do we maybe want to wait for something in the main code paths?
+	async fn ping(&self, _ctx: GluonCtx) {}
+
+	fn frame(&self, _ctx: GluonCtx, info: FrameInfo) {
+		_ = self.frame_sender.send(info);
+	}
+
+	// TODO: figure out how to enforce a response somehow, if thats possible
+	async fn get_state(&self, _ctx: GluonCtx) -> ClientState {
+		todo!()
+	}
+
+	async fn drop_notification_requested(&self, notifier: DropNotifier) {
+		self.drop_notifs.write().await.push(notifier);
+	}
+}
+
+impl TransactionHandler for ClientImpl {
+	async fn handle(&self, transaction: binderbinder::device::Transaction) -> PayloadBuilder<'_> {
+		let mut gluon_data = GluonDataReader::from_payload(transaction.payload);
+		self.dispatch_two_way(
+			transaction.code,
+			&mut gluon_data,
+			GluonCtx {
+				sender_pid: transaction.sender_pid,
+				sender_euid: transaction.sender_euid,
+			},
+		)
+		.await
+		.inspect_err(|err| error!("failed to dispatch client transaction: {err}"))
+		.unwrap_or(GluonDataBuilder::new())
+		.to_payload()
+	}
+
+	async fn handle_one_way(&self, transaction: binderbinder::device::Transaction) {
+		let mut gluon_data = GluonDataReader::from_payload(transaction.payload);
+		_ = self
+			.dispatch_one_way(
+				transaction.code,
+				&mut gluon_data,
+				GluonCtx {
+					sender_pid: transaction.sender_pid,
+					sender_euid: transaction.sender_euid,
+				},
+			)
 			.await
+			.inspect_err(|err| error!("failed to dispatch client transaction: {err}"));
 	}
 }
