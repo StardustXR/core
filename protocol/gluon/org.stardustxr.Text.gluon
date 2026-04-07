@@ -53,5 +53,6 @@ struct TextStyle {
 	color: types::Color,
 	text_align_x: XAlign,
 	text_align_y: YAlign,
+	font: Option<types::Resource>,
 	bounds: Option<TextBounds>,
 }

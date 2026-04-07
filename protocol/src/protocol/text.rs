@@ -9,7 +9,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
         gluon_wire::ExternalGluonType {
             name: "TextStyle",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(10u32),
         },
         gluon_wire::ExternalGluonType {
             name: "XAlign",
@@ -71,13 +71,14 @@ impl gluon_wire::GluonConvertable for TextBounds {
     }
 }
 ///Styling info for text
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TextStyle {
     ///Height of a character in meters
     pub character_height: f32,
     pub color: super::types::Color,
     pub text_align_x: XAlign,
     pub text_align_y: YAlign,
+    pub font: Option<super::types::Resource>,
     pub bounds: Option<TextBounds>,
 }
 impl gluon_wire::GluonConvertable for TextStyle {
@@ -89,6 +90,7 @@ impl gluon_wire::GluonConvertable for TextStyle {
         self.color.write(gluon_data)?;
         self.text_align_x.write(gluon_data)?;
         self.text_align_y.write(gluon_data)?;
+        self.font.write(gluon_data)?;
         self.bounds.write(gluon_data)?;
         Ok(())
     }
@@ -99,12 +101,14 @@ impl gluon_wire::GluonConvertable for TextStyle {
         let color = gluon_wire::GluonConvertable::read(gluon_data)?;
         let text_align_x = gluon_wire::GluonConvertable::read(gluon_data)?;
         let text_align_y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let font = gluon_wire::GluonConvertable::read(gluon_data)?;
         let bounds = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(TextStyle {
             character_height,
             color,
             text_align_x,
             text_align_y,
+            font,
             bounds,
         })
     }
@@ -116,6 +120,7 @@ impl gluon_wire::GluonConvertable for TextStyle {
         self.color.write_owned(gluon_data)?;
         self.text_align_x.write_owned(gluon_data)?;
         self.text_align_y.write_owned(gluon_data)?;
+        self.font.write_owned(gluon_data)?;
         self.bounds.write_owned(gluon_data)?;
         Ok(())
     }
