@@ -49,7 +49,7 @@ async fn main() {
 
 	let mut elapsed = state
 		.data
-		.try_into()
+		.and_then(|v| v.try_into().ok())
 		.map(|v| f32::from_le_bytes(v))
 		.unwrap_or(0f32);
 	let mut frame_recv = client.frame_receiver();
