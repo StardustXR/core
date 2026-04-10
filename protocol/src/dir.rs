@@ -77,9 +77,6 @@ pub fn find_free_instace() -> Option<String> {
 	for i in 0u32.. {
 		let instance = format!("stardust-{i}");
 		let file = service_dir.join(&instance);
-		if !file.is_dir() {
-			fs::create_dir_all(&file).ok()?;
-		}
 		if !is_locked(&file) {
 			return Some(instance);
 		}
