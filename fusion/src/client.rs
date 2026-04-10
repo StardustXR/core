@@ -1,17 +1,25 @@
 //! Your connection to the Stardust server and other essentials.
 
-use binderbinder::{TransactionHandler, binder_object::BinderObject, payload::PayloadBuilder};
-use gluon_wire::{
-	GluonCtx, GluonDataBuilder, GluonDataReader, GluonSendError, drop_tracking::DropNotifier,
-};
+use binderbinder::binder_object::BinderObject;
+use gluon_wire::{GluonCtx, GluonSendError};
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
-	audio::AudioInterface, client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo}, dir::find_pion_file, dmatex::DmatexInterface, field::FieldInterface, lines::LinesInterface, model::ModelInterface, server::{Server, ServerInterface}, sky::SkyInterface, spatial::{SpatialInterface, SpatialRef}, spatial_query::SpatialQueryInterface, text::TextInterface
+	audio::AudioInterface,
+	client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo},
+	dir::find_pion_file,
+	dmatex::DmatexInterface,
+	field::FieldInterface,
+	lines::LinesInterface,
+	model::ModelInterface,
+	server::{Server, ServerInterface},
+	sky::SkyInterface,
+	spatial::{SpatialInterface, SpatialRef},
+	spatial_query::SpatialQueryInterface,
+	text::TextInterface,
 };
 use std::{fs, path::Path, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast;
-use tracing::error;
 
 #[macro_export]
 macro_rules! project_local_resources {
@@ -50,9 +58,7 @@ pub struct Client {
 }
 
 impl Client {
-	pub async fn connect(
-		resource_prefixes: &[&Path],
-	) -> Result<(Self, ClientState), ClientError> {
+	pub async fn connect(resource_prefixes: &[&Path]) -> Result<(Self, ClientState), ClientError> {
 		let dev = PionBinderDevice::default();
 		Self::connect_with_device(&dev, resource_prefixes).await
 	}
@@ -62,7 +68,9 @@ impl Client {
 	) -> Result<(Self, ClientState), ClientError> {
 		let server_path = find_pion_file("stardust-server").ok_or(ClientError::NoServerFile)?;
 
-		let paths = resource_prefixes.iter().map(|p| p.to_string_lossy().to_string());
+		let paths = resource_prefixes
+			.iter()
+			.map(|p| p.to_string_lossy().to_string());
 		let runtime_prefixes = std::env::var("STARDUST_RES_PREFIXES").ok();
 		let env_prefixes = runtime_prefixes
 			.as_deref()
@@ -87,7 +95,6 @@ impl Client {
 		let server_interface = ServerInterface::from_object_or_ref(interface);
 		let client_handler = pion_device.register_object(ClientImpl {
 			frame_sender: broadcast::channel(8).0,
-			drop_notifs: Default::default(),
 		});
 		let client = ProtocolClient::from_handler(&client_handler);
 		let (server, initial_state) = server_interface
@@ -172,7 +179,6 @@ impl Client {
 #[derive(Debug)]
 struct ClientImpl {
 	frame_sender: broadcast::Sender<FrameInfo>,
-	drop_notifs: tokio::sync::RwLock<Vec<DropNotifier>>,
 }
 
 impl ClientHandler for ClientImpl {
@@ -187,41 +193,12 @@ impl ClientHandler for ClientImpl {
 	async fn get_state(&self, _ctx: GluonCtx) -> ClientState {
 		todo!()
 	}
-
-	async fn drop_notification_requested(&self, notifier: DropNotifier) {
-		self.drop_notifs.write().await.push(notifier);
-	}
 }
 
-impl TransactionHandler for ClientImpl {
-	async fn handle(&self, transaction: binderbinder::device::Transaction) -> PayloadBuilder<'_> {
-		let mut gluon_data = GluonDataReader::from_payload(transaction.payload);
-		self.dispatch_two_way(
-			transaction.code,
-			&mut gluon_data,
-			GluonCtx {
-				sender_pid: transaction.sender_pid,
-				sender_euid: transaction.sender_euid,
-			},
-		)
-		.await
-		.inspect_err(|err| error!("failed to dispatch client transaction: {err}"))
-		.unwrap_or(GluonDataBuilder::new())
-		.to_payload()
-	}
+mod transaction_impl {
+	use gluon_wire::impl_transaction_handler;
 
-	async fn handle_one_way(&self, transaction: binderbinder::device::Transaction) {
-		let mut gluon_data = GluonDataReader::from_payload(transaction.payload);
-		_ = self
-			.dispatch_one_way(
-				transaction.code,
-				&mut gluon_data,
-				GluonCtx {
-					sender_pid: transaction.sender_pid,
-					sender_euid: transaction.sender_euid,
-				},
-			)
-			.await
-			.inspect_err(|err| error!("failed to dispatch client transaction: {err}"));
-	}
+	use super::ClientImpl as Client;
+	use stardust_xr_protocol::client::ClientHandler;
+	impl_transaction_handler!(Client);
 }

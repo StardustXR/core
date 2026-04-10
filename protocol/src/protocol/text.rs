@@ -1,4 +1,9 @@
-#![allow(unused, clippy::single_match, clippy::match_single_binding)]
+#![allow(
+    unused,
+    clippy::single_match,
+    clippy::match_single_binding,
+    clippy::large_enum_variant
+)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Text",
@@ -382,7 +387,7 @@ impl TextInterface {
     ) -> TextInterface {
         let drop_notification = obj
             .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
@@ -429,7 +434,11 @@ impl PartialEq for TextInterface {
     }
 }
 impl Eq for TextInterface {}
-pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
     fn create_text(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -437,15 +446,12 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
         text: String,
         style: TextStyle,
     ) -> impl Future<Output = Text> + Send + Sync;
-    fn drop_notification_requested(
-        &self,
-        notifier: gluon_wire::drop_tracking::DropNotifier,
-    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -455,6 +461,23 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
                 8u32 => {
                     let (text) = self
                         .create_text(
@@ -476,17 +499,17 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = gluon_data.read_binder() else {
+                    let Ok(id) = gluon_data.read_u64() else {
                         return Ok(());
                     };
-                    self.drop_notification_requested(
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        )
-                        .await;
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
                 }
                 _ => {}
             }
@@ -556,7 +579,7 @@ impl Text {
     ) -> Text {
         let drop_notification = obj
             .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
@@ -600,20 +623,21 @@ impl PartialEq for Text {
     }
 }
 impl Eq for Text {}
-pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TextHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
     ///Set the character height in meters
     fn set_character_height(&self, _ctx: gluon_wire::GluonCtx, height: f32);
     ///Set the text content
     fn set_text(&self, _ctx: gluon_wire::GluonCtx, text: String);
-    fn drop_notification_requested(
-        &self,
-        notifier: gluon_wire::drop_tracking::DropNotifier,
-    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -623,6 +647,23 @@ pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
                 _ => {}
             }
             Ok(out)
@@ -633,17 +674,17 @@ pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = gluon_data.read_binder() else {
+                    let Ok(id) = gluon_data.read_u64() else {
                         return Ok(());
                     };
-                    self.drop_notification_requested(
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        )
-                        .await;
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
                 }
                 8u32 => {
                     self.set_character_height(

@@ -1,4 +1,9 @@
-#![allow(unused, clippy::single_match, clippy::match_single_binding)]
+#![allow(
+    unused,
+    clippy::single_match,
+    clippy::match_single_binding,
+    clippy::large_enum_variant
+)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Model",
@@ -455,7 +460,7 @@ impl ModelInterface {
     ) -> ModelInterface {
         let drop_notification = obj
             .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
@@ -502,7 +507,11 @@ impl PartialEq for ModelInterface {
     }
 }
 impl Eq for ModelInterface {}
-pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
     ///Load a GLTF model into a Model
     fn load_model(
         &self,
@@ -511,15 +520,12 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
         model: super::types::Resource,
         model_scale: super::types::Vec3F,
     ) -> impl Future<Output = Model> + Send + Sync;
-    fn drop_notification_requested(
-        &self,
-        notifier: gluon_wire::drop_tracking::DropNotifier,
-    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -529,6 +535,23 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
                 8u32 => {
                     let (model) = self
                         .load_model(
@@ -550,17 +573,17 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = gluon_data.read_binder() else {
+                    let Ok(id) = gluon_data.read_u64() else {
                         return Ok(());
                     };
-                    self.drop_notification_requested(
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        )
-                        .await;
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
                 }
                 _ => {}
             }
@@ -683,7 +706,7 @@ impl Model {
     ) -> Model {
         let drop_notification = obj
             .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
@@ -727,7 +750,11 @@ impl PartialEq for Model {
     }
 }
 impl Eq for Model {}
-pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ModelHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
     fn get_spatial(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -742,15 +769,12 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Vec<ModelPart>> + Send + Sync;
     fn set_model_scale(&self, _ctx: gluon_wire::GluonCtx, scale: super::types::Vec3F);
-    fn drop_notification_requested(
-        &self,
-        notifier: gluon_wire::drop_tracking::DropNotifier,
-    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -760,6 +784,23 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
                 8u32 => {
                     let (spatial) = self.get_spatial(ctx).await;
                     spatial.write_owned(&mut out)?;
@@ -784,17 +825,17 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = gluon_data.read_binder() else {
+                    let Ok(id) = gluon_data.read_u64() else {
                         return Ok(());
                     };
-                    self.drop_notification_requested(
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        )
-                        .await;
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
                 }
                 11u32 => {
                     self.set_model_scale(
@@ -1009,7 +1050,7 @@ impl ModelPart {
     ) -> ModelPart {
         let drop_notification = obj
             .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new());
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
@@ -1056,7 +1097,11 @@ impl PartialEq for ModelPart {
     }
 }
 impl Eq for ModelPart {}
-pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ModelPartHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
     fn get_part_path(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -1104,15 +1149,12 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
     ) -> impl Future<Output = Option<MaterialParamError>> + Send + Sync;
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
     fn apply_holdout_material(&self, _ctx: gluon_wire::GluonCtx);
-    fn drop_notification_requested(
-        &self,
-        notifier: gluon_wire::drop_tracking::DropNotifier,
-    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -1122,6 +1164,23 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
                 8u32 => {
                     let (path) = self.get_part_path(ctx).await;
                     path.write_owned(&mut out)?;
@@ -1163,17 +1222,17 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 4 => {
-                    let Ok(obj) = gluon_data.read_binder() else {
+                    let Ok(id) = gluon_data.read_u64() else {
                         return Ok(());
                     };
-                    self.drop_notification_requested(
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        )
-                        .await;
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
                 }
                 12u32 => {
                     self.set_model_transform(
