@@ -55,7 +55,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 [[package]]
 name = "binderbinder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/binderbinder#3187cdd5c8ada89bf37bdb8f1f9c1b785e766f7a"
+source = "git+https://github.com/technobaboo/binderbinder#7e7afca04063608a30c85b8128096731c675a3be"
 dependencies = [
  "async-trait",
  "bitflags",
