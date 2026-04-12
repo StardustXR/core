@@ -1,22 +1,13 @@
 import "org.stardustxr.Spatial" as spatial
 import "org.stardustxr.Field" as field
 import "org.stardustxr.Types" as types
+import "org.stardustxr.Query" as query
 
-/// query interface
-/// could maybe make this a struct idk
-enum QueryInterface {
-  Required {
-    id: String
-  },
-  Optional {
-    id: String,
-  },
-}
 
 /// shoot a beam and return everything it hit
 struct BeamQuery {
   handler: Ref<BeamQueryHandler>,
-  interfaces: Vec<QueryInterface>,
+  interfaces: Vec<query::InterfaceDependency>,
 
   origin_spatial: Ref<spatial::SpatialRef>,
   direction: types::Vec3f,
@@ -28,35 +19,31 @@ struct BeamQuery {
 
 /// handle the beam query
 interface BeamQueryHandler {
-  intersected(interface: Ref, interface_id: String, field: Ref<field::FieldRef>, deepest_point_distance: f32, distance: f32)
-  moved(interface: Ref, deepest_point_distance: f32, distance: f32)
-  left(interface: Ref)
+  intersected(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, interfaces: Vec<query::QueriedInterface>, deepest_point_distance: f32, distance: f32)
+  interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
+  moved(obj: Ref<query::QueryableObjectRef>, deepest_point_distance: f32, distance: f32)
+  left(obj: Ref<query::QueryableObjectRef>)
 }
 
-/// Get interfaces inside this field
+/// Get interfaces intersecting this field
 struct ZoneQuery {
   handler: Ref<ZoneQueryHandler>,
-  interfaces: Vec<QueryInterface>,
+  interfaces: Vec<query::InterfaceDependency>,
 
   zone_field: Ref<field::FieldRef>,
-  /// how far from the surface of the field to include spatials
-  offset_distance: f32,
+  margin: f32,
 }
 
-/// handle the beacon query
+/// handle the zone query
 interface ZoneQueryHandler {
-  entered(interface: Ref, interface_id: String, field: Ref<field::FieldRef>, relative_position: types::Vec3f, distance: f32)
-  moved(interface: Ref, relative_position: types::Vec3f, distance: f32)
-  left(interface: Ref)
+  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, interfaces: Vec<query::QueriedInterface>, relative_position: types::Vec3f, distance: f32)
+  interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
+  moved(obj: Ref<query::QueryableObjectRef>, relative_position: types::Vec3f, distance: f32)
+  left(obj: Ref<query::QueryableObjectRef>)
 }
-
-/// interface that handles removing objects from the service
-interface SpatialQueryGuard {}
 
 /// main spatial query service
 interface SpatialQueryInterface {
-  register_interface(field: Ref<field::FieldRef>, interface: Ref, interface_id: String) -> (guard: Ref<SpatialQueryGuard>)
-
   beam_query(query: BeamQuery) -> ()
   zone_query(query: ZoneQuery) -> ()
 }

@@ -6,120 +6,139 @@
 )]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
-    protocol_name: "org.stardustxr.SpatialQuery",
+    protocol_name: "org.stardustxr.Query",
     types: &[
         gluon_wire::ExternalGluonType {
-            name: "BeamQuery",
+            name: "InterfaceDependency",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(30u32),
+        },
+        gluon_wire::ExternalGluonType {
+            name: "QueriedInterface",
             supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
         },
         gluon_wire::ExternalGluonType {
-            name: "ZoneQuery",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
+            name: "QueryableError",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
         },
     ],
 };
-///shoot a beam and return everything it hit
-#[derive(Debug, Clone)]
-pub struct BeamQuery {
-    pub handler: BeamQueryHandler,
-    pub interfaces: Vec<super::query::InterfaceDependency>,
-    pub origin_spatial: super::spatial::SpatialRef,
-    pub direction: super::types::Vec3F,
-    ///the closest <N> things to the beam
-    pub limit: u8,
-    ///Maximum length of the beam in meters, can be the max f32 value
-    pub max_length: f32,
+///Dependency on an interface in query
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct InterfaceDependency {
+    pub id: String,
+    pub optional: bool,
 }
-impl gluon_wire::GluonConvertable for BeamQuery {
+impl gluon_wire::GluonConvertable for InterfaceDependency {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.handler.write(gluon_data)?;
-        self.interfaces.write(gluon_data)?;
-        self.origin_spatial.write(gluon_data)?;
-        self.direction.write(gluon_data)?;
-        self.limit.write(gluon_data)?;
-        self.max_length.write(gluon_data)?;
+        self.id.write(gluon_data)?;
+        self.optional.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let origin_spatial = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let direction = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let limit = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let max_length = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(BeamQuery {
-            handler,
-            interfaces,
-            origin_spatial,
-            direction,
-            limit,
-            max_length,
+        let id = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let optional = gluon_wire::GluonConvertable::read(gluon_data)?;
+        Ok(InterfaceDependency {
+            id,
+            optional,
         })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.handler.write_owned(gluon_data)?;
-        self.interfaces.write_owned(gluon_data)?;
-        self.origin_spatial.write_owned(gluon_data)?;
-        self.direction.write_owned(gluon_data)?;
-        self.limit.write_owned(gluon_data)?;
-        self.max_length.write_owned(gluon_data)?;
+        self.id.write_owned(gluon_data)?;
+        self.optional.write_owned(gluon_data)?;
         Ok(())
     }
 }
-///Get interfaces intersecting this field
+///A successfully queried interface
 #[derive(Debug, Clone)]
-pub struct ZoneQuery {
-    pub handler: ZoneQueryHandler,
-    pub interfaces: Vec<super::query::InterfaceDependency>,
-    pub zone_field: super::field::FieldRef,
-    pub margin: f32,
+pub struct QueriedInterface {
+    pub interface_id: String,
+    pub interface: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for ZoneQuery {
+impl gluon_wire::GluonConvertable for QueriedInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.handler.write(gluon_data)?;
-        self.interfaces.write(gluon_data)?;
-        self.zone_field.write(gluon_data)?;
-        self.margin.write(gluon_data)?;
+        self.interface_id.write(gluon_data)?;
+        self.interface.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let zone_field = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let margin = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(ZoneQuery {
-            handler,
-            interfaces,
-            zone_field,
-            margin,
+        let interface_id = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let interface = gluon_wire::GluonConvertable::read(gluon_data)?;
+        Ok(QueriedInterface {
+            interface_id,
+            interface,
         })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.handler.write_owned(gluon_data)?;
-        self.interfaces.write_owned(gluon_data)?;
-        self.zone_field.write_owned(gluon_data)?;
-        self.margin.write_owned(gluon_data)?;
+        self.interface_id.write_owned(gluon_data)?;
+        self.interface.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///error returned from QueryInterface::register_queryable
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum QueryableError {
+    InvalidField,
+    InvalidPath,
+}
+impl gluon_wire::GluonConvertable for QueryableError {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        match self {
+            QueryableError::InvalidField => {
+                gluon_data.write_u16(0u16)?;
+            }
+            QueryableError::InvalidPath => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(
+        gluon_data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => QueryableError::InvalidField,
+                1u16 => QueryableError::InvalidPath,
+                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        match self {
+            QueryableError::InvalidField => {
+                gluon_data.write_u16(0u16)?;
+            }
+            QueryableError::InvalidPath => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
         Ok(())
     }
 }
 #[derive(Debug, Clone)]
-pub struct BeamQueryHandler {
+pub struct QueryableObjectRef {
     obj: binderbinder::binder_object::BinderObjectOrRef,
     drop_notification: std::sync::Arc<
         binderbinder::binder_object::BinderObject<
@@ -127,7 +146,7 @@ pub struct BeamQueryHandler {
         >,
     >,
 }
-impl gluon_wire::GluonConvertable for BeamQueryHandler {
+impl gluon_wire::GluonConvertable for QueryableObjectRef {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
@@ -138,7 +157,7 @@ impl gluon_wire::GluonConvertable for BeamQueryHandler {
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
-        Ok(BeamQueryHandler::from_object_or_ref(obj))
+        Ok(QueryableObjectRef::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
@@ -147,65 +166,11 @@ impl gluon_wire::GluonConvertable for BeamQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
-impl BeamQueryHandler {
-    pub fn intersected(
-        &self,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        deepest_point_distance: f32,
-        distance: f32,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        field.write(&mut gluon_builder)?;
-        interfaces.write(&mut gluon_builder)?;
-        deepest_point_distance.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn interfaces_changed(
-        &self,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        interfaces.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn moved(
-        &self,
-        obj: super::query::QueryableObjectRef,
-        deepest_point_distance: f32,
-        distance: f32,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        deepest_point_distance.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn left(
-        &self,
-        obj: super::query::QueryableObjectRef,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn from_handler<H: BeamQueryHandlerHandler>(
+impl QueryableObjectRef {
+    pub fn from_handler<H: QueryableObjectRefHandler>(
         obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
-    ) -> BeamQueryHandler {
-        BeamQueryHandler::from_object_or_ref(
+    ) -> QueryableObjectRef {
+        QueryableObjectRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
                 obj,
             ),
@@ -214,14 +179,14 @@ impl BeamQueryHandler {
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> BeamQueryHandler {
+    ) -> QueryableObjectRef {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        BeamQueryHandler {
+        QueryableObjectRef {
             obj,
             drop_notification,
         }
@@ -248,50 +213,27 @@ impl BeamQueryHandler {
         }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for BeamQueryHandler {
+impl binderbinder::binder_object::ToBinderObjectOrRef for QueryableObjectRef {
     fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
         self.obj.to_binder_object_or_ref()
     }
 }
-impl std::hash::Hash for BeamQueryHandler {
+impl std::hash::Hash for QueryableObjectRef {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
     }
 }
-impl PartialEq for BeamQueryHandler {
+impl PartialEq for QueryableObjectRef {
     fn eq(&self, other: &Self) -> bool {
         self.obj == other.obj
     }
 }
-impl Eq for BeamQueryHandler {}
-pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
+impl Eq for QueryableObjectRef {}
+pub trait QueryableObjectRefHandler: binderbinder::device::TransactionHandler<
         ObjectResource = tokio::sync::RwLock<
             std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
         >,
     > + Send + Sync + 'static {
-    fn intersected(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        deepest_point_distance: f32,
-        distance: f32,
-    );
-    fn interfaces_changed(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-    );
-    fn moved(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        obj: super::query::QueryableObjectRef,
-        deepest_point_distance: f32,
-        distance: f32,
-    );
-    fn left(&self, _ctx: gluon_wire::GluonCtx, obj: super::query::QueryableObjectRef);
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
@@ -346,34 +288,6 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
                         obj.abort();
                     }
                 }
-                8u32 => {
-                    self.intersected(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
-                }
-                9u32 => {
-                    self.interfaces_changed(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
-                }
-                10u32 => {
-                    self.moved(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
-                }
-                11u32 => {
-                    self.left(ctx, gluon_wire::GluonConvertable::read(gluon_data)?);
-                }
                 _ => {}
             }
             Ok(())
@@ -381,7 +295,7 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
     }
 }
 #[derive(Debug, Clone)]
-pub struct ZoneQueryHandler {
+pub struct QueryableObject {
     obj: binderbinder::binder_object::BinderObjectOrRef,
     drop_notification: std::sync::Arc<
         binderbinder::binder_object::BinderObject<
@@ -389,7 +303,7 @@ pub struct ZoneQueryHandler {
         >,
     >,
 }
-impl gluon_wire::GluonConvertable for ZoneQueryHandler {
+impl gluon_wire::GluonConvertable for QueryableObject {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
@@ -400,7 +314,7 @@ impl gluon_wire::GluonConvertable for ZoneQueryHandler {
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
-        Ok(ZoneQueryHandler::from_object_or_ref(obj))
+        Ok(QueryableObject::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
@@ -409,319 +323,57 @@ impl gluon_wire::GluonConvertable for ZoneQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
-impl ZoneQueryHandler {
-    pub fn entered(
+impl QueryableObject {
+    pub async fn queryable_ref(
         &self,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        relative_position: super::types::Vec3F,
-        distance: f32,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        field.write(&mut gluon_builder)?;
-        interfaces.write(&mut gluon_builder)?;
-        relative_position.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn interfaces_changed(
-        &self,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        interfaces.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn moved(
-        &self,
-        obj: super::query::QueryableObjectRef,
-        relative_position: super::types::Vec3F,
-        distance: f32,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        relative_position.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn left(
-        &self,
-        obj: super::query::QueryableObjectRef,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        obj.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    pub fn from_handler<H: ZoneQueryHandlerHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
-    ) -> ZoneQueryHandler {
-        ZoneQueryHandler::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> ZoneQueryHandler {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        ZoneQueryHandler {
-            obj,
-            drop_notification,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_notification = self.drop_notification.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
-                }
-            } else {
-                drop_notification.wait().await;
-            }
-        }
-    }
-}
-impl binderbinder::binder_object::ToBinderObjectOrRef for ZoneQueryHandler {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
-    }
-}
-impl std::hash::Hash for ZoneQueryHandler {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.obj.hash(state);
-    }
-}
-impl PartialEq for ZoneQueryHandler {
-    fn eq(&self, other: &Self) -> bool {
-        self.obj == other.obj
-    }
-}
-impl Eq for ZoneQueryHandler {}
-pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
-    fn entered(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        relative_position: super::types::Vec3F,
-        distance: f32,
-    );
-    fn interfaces_changed(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-    );
-    fn moved(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        obj: super::query::QueryableObjectRef,
-        relative_position: super::types::Vec3F,
-        distance: f32,
-    );
-    fn left(&self, _ctx: gluon_wire::GluonCtx, obj: super::query::QueryableObjectRef);
-    fn dispatch_two_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
-    fn dispatch_one_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
-        async move {
-            match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
-                8u32 => {
-                    self.entered(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
-                }
-                9u32 => {
-                    self.interfaces_changed(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
-                }
-                10u32 => {
-                    self.moved(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
-                }
-                11u32 => {
-                    self.left(ctx, gluon_wire::GluonConvertable::read(gluon_data)?);
-                }
-                _ => {}
-            }
-            Ok(())
-        }
-    }
-}
-#[derive(Debug, Clone)]
-pub struct SpatialQueryInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
-    >,
-}
-impl gluon_wire::GluonConvertable for SpatialQueryInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write(gluon_data)
-    }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
-        Ok(SpatialQueryInterface::from_object_or_ref(obj))
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.obj.write_owned(gluon_data)
-    }
-}
-impl SpatialQueryInterface {
-    pub async fn beam_query(
-        &self,
-        query: BeamQuery,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<QueryableObjectRef, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.beam_query_blocking(query))
-            .await
-            .unwrap()
+        tokio::task::spawn_blocking(move || this.queryable_ref_blocking()).await.unwrap()
     }
-    pub fn beam_query_blocking(
+    pub fn queryable_ref_blocking(
         &self,
-        query: BeamQuery,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<QueryableObjectRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        query.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
             .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
-        Ok(())
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
-    pub async fn zone_query(
+    pub async fn add_interface(
         &self,
-        query: ZoneQuery,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+        interface: binderbinder::binder_object::BinderObjectOrRef,
+        interface_id: String,
+    ) -> Result<QueryableInterfaceGuard, gluon_wire::GluonSendError> {
         let this = self.clone();
-        tokio::task::spawn_blocking(move || this.zone_query_blocking(query))
+        tokio::task::spawn_blocking(move || {
+                this.add_interface_blocking(interface, interface_id)
+            })
             .await
             .unwrap()
     }
-    pub fn zone_query_blocking(
+    pub fn add_interface_blocking(
         &self,
-        query: ZoneQuery,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+        interface: binderbinder::binder_object::BinderObjectOrRef,
+        interface_id: String,
+    ) -> Result<QueryableInterfaceGuard, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        query.write(&mut gluon_builder)?;
+        interface.write(&mut gluon_builder)?;
+        interface_id.write(&mut gluon_builder)?;
         let reader = self
             .obj
             .device()
             .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
-        Ok(())
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: SpatialQueryInterfaceHandler>(
+    pub fn from_handler<H: QueryableObjectHandler>(
         obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
-    ) -> SpatialQueryInterface {
-        SpatialQueryInterface::from_object_or_ref(
+    ) -> QueryableObject {
+        QueryableObject::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
                 obj,
             ),
@@ -730,14 +382,14 @@ impl SpatialQueryInterface {
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SpatialQueryInterface {
+    ) -> QueryableObject {
         let drop_notification = obj
             .device()
             .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        SpatialQueryInterface {
+        QueryableObject {
             obj,
             drop_notification,
         }
@@ -764,37 +416,37 @@ impl SpatialQueryInterface {
         }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialQueryInterface {
+impl binderbinder::binder_object::ToBinderObjectOrRef for QueryableObject {
     fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
         self.obj.to_binder_object_or_ref()
     }
 }
-impl std::hash::Hash for SpatialQueryInterface {
+impl std::hash::Hash for QueryableObject {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
     }
 }
-impl PartialEq for SpatialQueryInterface {
+impl PartialEq for QueryableObject {
     fn eq(&self, other: &Self) -> bool {
         self.obj == other.obj
     }
 }
-impl Eq for SpatialQueryInterface {}
-pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler<
+impl Eq for QueryableObject {}
+pub trait QueryableObjectHandler: binderbinder::device::TransactionHandler<
         ObjectResource = tokio::sync::RwLock<
             std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
         >,
     > + Send + Sync + 'static {
-    fn beam_query(
+    fn queryable_ref(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        query: BeamQuery,
-    ) -> impl Future<Output = ()> + Send + Sync;
-    fn zone_query(
+    ) -> impl Future<Output = QueryableObjectRef> + Send + Sync;
+    fn add_interface(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        query: ZoneQuery,
-    ) -> impl Future<Output = ()> + Send + Sync;
+        interface: binderbinder::binder_object::BinderObjectOrRef,
+        interface_id: String,
+    ) -> impl Future<Output = QueryableInterfaceGuard> + Send + Sync;
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
@@ -828,14 +480,376 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
                         );
                 }
                 8u32 => {
-                    let () = self
-                        .beam_query(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
-                        .await;
+                    let (queryable) = self.queryable_ref(ctx).await;
+                    queryable.write_owned(&mut out)?;
                 }
                 9u32 => {
-                    let () = self
-                        .zone_query(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
+                    let (guard) = self
+                        .add_interface(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
                         .await;
+                    guard.write_owned(&mut out)?;
+                }
+                _ => {}
+            }
+            Ok(out)
+        }
+    }
+    fn dispatch_one_way(
+        &self,
+        transaction_code: u32,
+        gluon_data: &mut gluon_wire::GluonDataReader,
+        ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
+    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        async move {
+            match transaction_code {
+                4 => {
+                    let Ok(id) = gluon_data.read_u64() else {
+                        return Ok(());
+                    };
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
+                }
+                _ => {}
+            }
+            Ok(())
+        }
+    }
+}
+#[derive(Debug, Clone)]
+pub struct QueryableInterfaceGuard {
+    obj: binderbinder::binder_object::BinderObjectOrRef,
+    drop_notification: std::sync::Arc<
+        binderbinder::binder_object::BinderObject<
+            gluon_wire::drop_tracking::DropNotifiedHandler,
+        >,
+    >,
+}
+impl gluon_wire::GluonConvertable for QueryableInterfaceGuard {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.obj.write(gluon_data)
+    }
+    fn read(
+        gluon_data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        Ok(QueryableInterfaceGuard::from_object_or_ref(obj))
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.obj.write_owned(gluon_data)
+    }
+}
+impl QueryableInterfaceGuard {
+    pub fn from_handler<H: QueryableInterfaceGuardHandler>(
+        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+    ) -> QueryableInterfaceGuard {
+        QueryableInterfaceGuard::from_object_or_ref(
+            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
+                obj,
+            ),
+        )
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(
+        obj: binderbinder::binder_object::BinderObjectOrRef,
+    ) -> QueryableInterfaceGuard {
+        let drop_notification = obj
+            .device()
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
+        QueryableInterfaceGuard {
+            obj,
+            drop_notification,
+        }
+    }
+    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
+        let death_notification_future = match &self.obj {
+            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
+                Some(r.death_notification())
+            }
+            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
+                Some(r.death_notification())
+            }
+            _ => None,
+        };
+        let drop_notification = self.drop_notification.clone();
+        async move {
+            if let Some(death) = death_notification_future {
+                tokio::select! {
+                    _ = death => {} _ = drop_notification.wait() => {}
+                }
+            } else {
+                drop_notification.wait().await;
+            }
+        }
+    }
+}
+impl binderbinder::binder_object::ToBinderObjectOrRef for QueryableInterfaceGuard {
+    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
+        self.obj.to_binder_object_or_ref()
+    }
+}
+impl std::hash::Hash for QueryableInterfaceGuard {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for QueryableInterfaceGuard {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for QueryableInterfaceGuard {}
+pub trait QueryableInterfaceGuardHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
+    fn dispatch_two_way(
+        &self,
+        transaction_code: u32,
+        gluon_data: &mut gluon_wire::GluonDataReader,
+        ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
+    ) -> impl Future<
+        Output = Result<
+            gluon_wire::GluonDataBuilder<'static>,
+            gluon_wire::GluonSendError,
+        >,
+    > + Send + Sync {
+        async move {
+            let mut out = gluon_wire::GluonDataBuilder::new();
+            match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
+                _ => {}
+            }
+            Ok(out)
+        }
+    }
+    fn dispatch_one_way(
+        &self,
+        transaction_code: u32,
+        gluon_data: &mut gluon_wire::GluonDataReader,
+        ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
+    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        async move {
+            match transaction_code {
+                4 => {
+                    let Ok(id) = gluon_data.read_u64() else {
+                        return Ok(());
+                    };
+                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
+                        obj.abort();
+                    }
+                }
+                _ => {}
+            }
+            Ok(())
+        }
+    }
+}
+#[derive(Debug, Clone)]
+pub struct QueryInterface {
+    obj: binderbinder::binder_object::BinderObjectOrRef,
+    drop_notification: std::sync::Arc<
+        binderbinder::binder_object::BinderObject<
+            gluon_wire::drop_tracking::DropNotifiedHandler,
+        >,
+    >,
+}
+impl gluon_wire::GluonConvertable for QueryInterface {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.obj.write(gluon_data)
+    }
+    fn read(
+        gluon_data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        Ok(QueryInterface::from_object_or_ref(obj))
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.obj.write_owned(gluon_data)
+    }
+}
+impl QueryInterface {
+    pub async fn register_queryable(
+        &self,
+        field: super::field::FieldRef,
+        path: String,
+    ) -> Result<Result<QueryableObject, QueryableError>, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || {
+                this.register_queryable_blocking(field, path)
+            })
+            .await
+            .unwrap()
+    }
+    pub fn register_queryable_blocking(
+        &self,
+        field: super::field::FieldRef,
+        path: String,
+    ) -> Result<Result<QueryableObject, QueryableError>, gluon_wire::GluonSendError> {
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        field.write(&mut gluon_builder)?;
+        path.write(&mut gluon_builder)?;
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
+    pub fn from_handler<H: QueryInterfaceHandler>(
+        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+    ) -> QueryInterface {
+        QueryInterface::from_object_or_ref(
+            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
+                obj,
+            ),
+        )
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(
+        obj: binderbinder::binder_object::BinderObjectOrRef,
+    ) -> QueryInterface {
+        let drop_notification = obj
+            .device()
+            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        gluon_builder.write_binder(&drop_notification);
+        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
+        QueryInterface {
+            obj,
+            drop_notification,
+        }
+    }
+    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
+        let death_notification_future = match &self.obj {
+            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
+                Some(r.death_notification())
+            }
+            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
+                Some(r.death_notification())
+            }
+            _ => None,
+        };
+        let drop_notification = self.drop_notification.clone();
+        async move {
+            if let Some(death) = death_notification_future {
+                tokio::select! {
+                    _ = death => {} _ = drop_notification.wait() => {}
+                }
+            } else {
+                drop_notification.wait().await;
+            }
+        }
+    }
+}
+impl binderbinder::binder_object::ToBinderObjectOrRef for QueryInterface {
+    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
+        self.obj.to_binder_object_or_ref()
+    }
+}
+impl std::hash::Hash for QueryInterface {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for QueryInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for QueryInterface {}
+pub trait QueryInterfaceHandler: binderbinder::device::TransactionHandler<
+        ObjectResource = tokio::sync::RwLock<
+            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
+        >,
+    > + Send + Sync + 'static {
+    fn register_queryable(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+        field: super::field::FieldRef,
+        path: String,
+    ) -> impl Future<Output = Result<QueryableObject, QueryableError>> + Send + Sync;
+    fn dispatch_two_way(
+        &self,
+        transaction_code: u32,
+        gluon_data: &mut gluon_wire::GluonDataReader,
+        ctx: gluon_wire::GluonCtx,
+        obj_res: &Self::ObjectResource,
+    ) -> impl Future<
+        Output = Result<
+            gluon_wire::GluonDataBuilder<'static>,
+            gluon_wire::GluonSendError,
+        >,
+    > + Send + Sync {
+        async move {
+            let mut out = gluon_wire::GluonDataBuilder::new();
+            match transaction_code {
+                4 => {
+                    use std::hash::BuildHasher as _;
+                    let Ok(obj) = gluon_data.read_binder() else {
+                        return Ok(out);
+                    };
+                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
+                    if out.write_u64(hash).is_err() {
+                        return Ok(out);
+                    }
+                    obj_res
+                        .write()
+                        .await
+                        .insert(
+                            hash,
+                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
+                        );
+                }
+                8u32 => {
+                    let (queryable) = self
+                        .register_queryable(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    queryable.write_owned(&mut out)?;
                 }
                 _ => {}
             }

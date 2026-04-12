@@ -1,0 +1,37 @@
+import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Field" as field
+import "org.stardustxr.Types" as types
+
+/// shareable ref used to give querying clients a static object id
+interface QueryableObjectRef {}
+/// Object used to expose interfaces to the query system
+interface QueryableObject {
+  queryable_ref() -> (queryable: Ref<QueryableObjectRef>)
+  add_interface(interface: Ref, interface_id: String) -> (guard: Ref<QueryableInterfaceGuard>)
+}
+
+/// interface that handles removing interfaces from the object
+interface QueryableInterfaceGuard {}
+
+/// interface to register queryable objects
+interface QueryInterface {
+  register_queryable(field: Ref<field::FieldRef>, path: String) -> (queryable: Result<Ref<QueryableObject>, QueryableError>)
+}
+
+/// error returned from QueryInterface::register_queryable
+enum QueryableError {
+  InvalidField,
+  InvalidPath,
+}
+
+/// Dependency on an interface in query
+struct InterfaceDependency {
+  id: String,
+  optional: bool,
+}
+
+/// A successfully queried interface
+struct QueriedInterface {
+  interface_id: String,
+  interface: Ref,
+}
