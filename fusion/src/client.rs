@@ -4,18 +4,7 @@ use binderbinder::binder_object::BinderObject;
 use gluon_wire::{GluonCtx, GluonSendError};
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
-	audio::AudioInterface,
-	client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo},
-	dir::find_pion_file,
-	dmatex::DmatexInterface,
-	field::FieldInterface,
-	lines::LinesInterface,
-	model::ModelInterface,
-	server::{Server, ServerInterface},
-	sky::SkyInterface,
-	spatial::{SpatialInterface, SpatialRef},
-	spatial_query::SpatialQueryInterface,
-	text::TextInterface,
+	audio::AudioInterface, client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo}, dir::find_pion_file, dmatex::DmatexInterface, field::FieldInterface, lines::LinesInterface, model::ModelInterface, query::QueryInterface, server::{Server, ServerInterface}, sky::SkyInterface, spatial::{SpatialInterface, SpatialRef}, spatial_query::SpatialQueryInterface, text::TextInterface
 };
 use std::{fs, path::Path, sync::Arc};
 use thiserror::Error;
@@ -54,6 +43,7 @@ pub struct Client {
 	lines_interface: LinesInterface,
 	sky_interface: SkyInterface,
 	audio_interface: AudioInterface,
+	query_interface: QueryInterface,
 	spatial_query_interface: SpatialQueryInterface,
 }
 
@@ -115,6 +105,7 @@ impl Client {
 				lines_interface: server.lines_interface().await?,
 				sky_interface: server.sky_interface().await?,
 				audio_interface: server.audio_interface().await?,
+				query_interface: server.query_interface().await?,
 				spatial_query_interface: server.spatial_query_interface().await?,
 				server,
 			},

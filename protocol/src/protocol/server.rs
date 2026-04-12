@@ -199,6 +199,26 @@ impl Server {
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
+    pub async fn query_interface(
+        &self,
+    ) -> Result<super::query::QueryInterface, gluon_wire::GluonSendError> {
+        let this = self.clone();
+        tokio::task::spawn_blocking(move || this.query_interface_blocking())
+            .await
+            .unwrap()
+    }
+    pub fn query_interface_blocking(
+        &self,
+    ) -> Result<super::query::QueryInterface, gluon_wire::GluonSendError> {
+        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let reader = self
+            .obj
+            .device()
+            .transact_blocking(&self.obj, 16u32, gluon_builder.to_payload())?
+            .1;
+        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+    }
     pub async fn spatial_query_interface(
         &self,
     ) -> Result<
@@ -220,7 +240,7 @@ impl Server {
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 16u32, gluon_builder.to_payload())?
+            .transact_blocking(&self.obj, 17u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -247,7 +267,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
         let reader = self
             .obj
             .device()
-            .transact_blocking(&self.obj, 17u32, gluon_builder.to_payload())?
+            .transact_blocking(&self.obj, 18u32, gluon_builder.to_payload())?
             .1;
         let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -350,6 +370,10 @@ pub trait ServerHandler: binderbinder::device::TransactionHandler<
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = super::audio::AudioInterface> + Send + Sync;
+    fn query_interface(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+    ) -> impl Future<Output = super::query::QueryInterface> + Send + Sync;
     fn spatial_query_interface(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -428,10 +452,14 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     spatial.write_owned(&mut out)?;
                 }
                 16u32 => {
-                    let (interface) = self.spatial_query_interface(ctx).await;
+                    let (interface) = self.query_interface(ctx).await;
                     interface.write_owned(&mut out)?;
                 }
                 17u32 => {
+                    let (interface) = self.spatial_query_interface(ctx).await;
+                    interface.write_owned(&mut out)?;
+                }
+                18u32 => {
                     let (token) = self
                         .generate_state_token(
                             ctx,

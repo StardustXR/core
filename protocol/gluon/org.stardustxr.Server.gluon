@@ -7,6 +7,7 @@ import "org.stardustxr.Lines" as lines
 import "org.stardustxr.Sky" as sky
 import "org.stardustxr.Client" as client
 import "org.stardustxr.Audio" as audio
+import "org.stardustxr.Query" as query
 import "org.stardustxr.SpatialQuery" as spatial_query
 
 
@@ -22,6 +23,7 @@ interface Server {
 	lines_interface() -> (spatial: Ref<lines::LinesInterface>)
 	sky_interface() -> (spatial: Ref<sky::SkyInterface>)
 	audio_interface() -> (spatial: Ref<audio::AudioInterface>)
+	query_interface() -> (interface: Ref<query::QueryInterface>)
 	spatial_query_interface() -> (interface: Ref<spatial_query::SpatialQueryInterface>)
 
 	/// Generate a client state token and return it back.
