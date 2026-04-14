@@ -27,6 +27,7 @@ impl Default for Finger {
         Finger {
             tip: Default::default(),
             distal: Default::default(),
+            intermediate: Default::default(),
             proximal: Default::default(),
             metacarpal: Default::default(),
         }

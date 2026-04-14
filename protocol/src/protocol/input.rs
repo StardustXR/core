@@ -99,6 +99,7 @@ impl gluon_wire::GluonConvertable for Joint {
 pub struct Finger {
     pub tip: Joint,
     pub distal: Joint,
+    pub intermediate: Joint,
     pub proximal: Joint,
     pub metacarpal: Joint,
 }
@@ -109,6 +110,7 @@ impl gluon_wire::GluonConvertable for Finger {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.tip.write(gluon_data)?;
         self.distal.write(gluon_data)?;
+        self.intermediate.write(gluon_data)?;
         self.proximal.write(gluon_data)?;
         self.metacarpal.write(gluon_data)?;
         Ok(())
@@ -118,11 +120,13 @@ impl gluon_wire::GluonConvertable for Finger {
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let tip = gluon_wire::GluonConvertable::read(gluon_data)?;
         let distal = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let intermediate = gluon_wire::GluonConvertable::read(gluon_data)?;
         let proximal = gluon_wire::GluonConvertable::read(gluon_data)?;
         let metacarpal = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Finger {
             tip,
             distal,
+            intermediate,
             proximal,
             metacarpal,
         })
@@ -133,6 +137,7 @@ impl gluon_wire::GluonConvertable for Finger {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.tip.write_owned(gluon_data)?;
         self.distal.write_owned(gluon_data)?;
+        self.intermediate.write_owned(gluon_data)?;
         self.proximal.write_owned(gluon_data)?;
         self.metacarpal.write_owned(gluon_data)?;
         Ok(())

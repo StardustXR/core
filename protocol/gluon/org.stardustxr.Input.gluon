@@ -18,6 +18,7 @@ struct Joint {
 struct Finger {
 	tip: Joint,
 	distal: Joint,
+	intermediate: Joint,
 	proximal: Joint,
 	metacarpal: Joint,
 }
