@@ -9,14 +9,18 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
     protocol_name: "org.stardustxr.Server",
     types: &[],
 };
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Server {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for Server {
+    fn clone(&self) -> Self {
+        Server::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for Server {
     fn write<'a, 'b: 'a>(
@@ -273,7 +277,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: ServerHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> Server {
         Server::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -285,13 +289,18 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> Server {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        Server { obj, drop_notification }
+        Server {
+            obj,
+            drop_notification,
+            drop_handler,
+        }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
         let death_notification_future = match &self.obj {
@@ -303,14 +312,14 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -331,11 +340,7 @@ impl PartialEq for Server {
     }
 }
 impl Eq for Server {}
-pub trait ServerHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Get the spatial interface node.
     fn spatial_interface(
         &self,
@@ -392,7 +397,6 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -402,23 +406,6 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 8u32 => {
                     let (spatial) = self.spatial_interface(ctx).await;
                     spatial.write_owned(&mut out)?;
@@ -478,32 +465,27 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 _ => {}
             }
             Ok(())
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ServerInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for ServerInterface {
+    fn clone(&self) -> Self {
+        ServerInterface::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for ServerInterface {
     fn write<'a, 'b: 'a>(
@@ -558,7 +540,7 @@ impl ServerInterface {
         ))
     }
     pub fn from_handler<H: ServerInterfaceHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> ServerInterface {
         ServerInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -570,15 +552,17 @@ impl ServerInterface {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> ServerInterface {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         ServerInterface {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -591,14 +575,14 @@ impl ServerInterface {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -619,11 +603,7 @@ impl PartialEq for ServerInterface {
     }
 }
 impl Eq for ServerInterface {}
-pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn connect(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -635,7 +615,6 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -645,23 +624,6 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 8u32 => {
                     let (server, state) = self
                         .connect(
@@ -683,18 +645,9 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 _ => {}
             }
             Ok(())

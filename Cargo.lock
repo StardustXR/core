@@ -55,9 +55,8 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 [[package]]
 name = "binderbinder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/binderbinder#7e7afca04063608a30c85b8128096731c675a3be"
+source = "git+https://github.com/technobaboo/binderbinder#4cab13029a0e560f948c48c81c79378b3717f0c5"
 dependencies = [
- "async-trait",
  "bitflags",
  "byteorder",
  "dashmap",
@@ -158,7 +157,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -200,7 +199,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen-rust"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#80ad971aa8bb304c6e8a3160ac3e182a5408c31a"
+source = "git+https://github.com/technobaboo/gluon#d9c99d3d8369a984067f6292197b5d94039c03ec"
 dependencies = [
  "convert_case",
  "gluon-parser",
@@ -214,7 +213,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#80ad971aa8bb304c6e8a3160ac3e182a5408c31a"
+source = "git+https://github.com/technobaboo/gluon#d9c99d3d8369a984067f6292197b5d94039c03ec"
 dependencies = [
  "ansi_term",
  "binderbinder",
@@ -225,8 +224,9 @@ dependencies = [
 [[package]]
 name = "gluon-wire"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#80ad971aa8bb304c6e8a3160ac3e182a5408c31a"
+source = "git+https://github.com/technobaboo/gluon#d9c99d3d8369a984067f6292197b5d94039c03ec"
 dependencies = [
+ "async-trait",
  "binderbinder",
  "bitflags",
  "rustix",
@@ -323,7 +323,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -474,7 +474,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

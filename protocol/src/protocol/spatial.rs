@@ -131,14 +131,18 @@ impl gluon_wire::GluonConvertable for BoundingBox {
         Ok(())
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SpatialRef {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for SpatialRef {
+    fn clone(&self) -> Self {
+        SpatialRef::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for SpatialRef {
     fn write<'a, 'b: 'a>(
@@ -162,7 +166,7 @@ impl gluon_wire::GluonConvertable for SpatialRef {
 }
 impl SpatialRef {
     pub fn from_handler<H: SpatialRefHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> SpatialRef {
         SpatialRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -174,15 +178,17 @@ impl SpatialRef {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> SpatialRef {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         SpatialRef {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -195,14 +201,14 @@ impl SpatialRef {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -223,17 +229,12 @@ impl PartialEq for SpatialRef {
     }
 }
 impl Eq for SpatialRef {}
-pub trait SpatialRefHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait SpatialRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn dispatch_two_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -243,23 +244,6 @@ pub trait SpatialRefHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 _ => {}
             }
             Ok(out)
@@ -270,32 +254,27 @@ pub trait SpatialRefHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 _ => {}
             }
             Ok(())
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Spatial {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for Spatial {
+    fn clone(&self) -> Self {
+        Spatial::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for Spatial {
     fn write<'a, 'b: 'a>(
@@ -461,7 +440,7 @@ It will silently error and not set the spatial parent if it is to a child of its
         Ok(())
     }
     pub fn from_handler<H: SpatialHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> Spatial {
         Spatial::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -473,13 +452,18 @@ It will silently error and not set the spatial parent if it is to a child of its
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> Spatial {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        Spatial { obj, drop_notification }
+        Spatial {
+            obj,
+            drop_notification,
+            drop_handler,
+        }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
         let death_notification_future = match &self.obj {
@@ -491,14 +475,14 @@ It will silently error and not set the spatial parent if it is to a child of its
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -519,11 +503,7 @@ impl PartialEq for Spatial {
     }
 }
 impl Eq for Spatial {}
-pub trait SpatialHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait SpatialHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Get the spatial ref for this spatial object.
     fn spatial_ref(
         &self,
@@ -570,7 +550,6 @@ It will silently error and not set the spatial parent if it is to a child of its
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -580,23 +559,6 @@ It will silently error and not set the spatial parent if it is to a child of its
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 8u32 => {
                     let (spatial) = self.spatial_ref(ctx).await;
                     spatial.write_owned(&mut out)?;
@@ -633,18 +595,9 @@ It will silently error and not set the spatial parent if it is to a child of its
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 12u32 => {
                     self.set_parent(
                         ctx,
@@ -676,14 +629,18 @@ It will silently error and not set the spatial parent if it is to a child of its
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SpatialInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for SpatialInterface {
+    fn clone(&self) -> Self {
+        SpatialInterface::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for SpatialInterface {
     fn write<'a, 'b: 'a>(
@@ -794,7 +751,7 @@ impl SpatialInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: SpatialInterfaceHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> SpatialInterface {
         SpatialInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -806,15 +763,17 @@ impl SpatialInterface {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> SpatialInterface {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         SpatialInterface {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -827,14 +786,14 @@ impl SpatialInterface {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -855,11 +814,7 @@ impl PartialEq for SpatialInterface {
     }
 }
 impl Eq for SpatialInterface {}
-pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Create a new spatial object.
     fn create_spatial(
         &self,
@@ -886,7 +841,6 @@ pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -896,23 +850,6 @@ pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 8u32 => {
                     let (spatial) = self
                         .create_spatial(
@@ -953,18 +890,9 @@ pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 _ => {}
             }
             Ok(())

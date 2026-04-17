@@ -118,14 +118,18 @@ impl gluon_wire::GluonConvertable for ZoneQuery {
         Ok(())
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BeamQueryHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for BeamQueryHandler {
+    fn clone(&self) -> Self {
+        BeamQueryHandler::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for BeamQueryHandler {
     fn write<'a, 'b: 'a>(
@@ -203,7 +207,7 @@ impl BeamQueryHandler {
         Ok(())
     }
     pub fn from_handler<H: BeamQueryHandlerHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> BeamQueryHandler {
         BeamQueryHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -215,15 +219,17 @@ impl BeamQueryHandler {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> BeamQueryHandler {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         BeamQueryHandler {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -236,14 +242,14 @@ impl BeamQueryHandler {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -264,11 +270,7 @@ impl PartialEq for BeamQueryHandler {
     }
 }
 impl Eq for BeamQueryHandler {}
-pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn intersected(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -297,7 +299,6 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -307,23 +308,6 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 _ => {}
             }
             Ok(out)
@@ -334,18 +318,9 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 8u32 => {
                     self.intersected(
                         ctx,
@@ -380,14 +355,18 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler<
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ZoneQueryHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for ZoneQueryHandler {
+    fn clone(&self) -> Self {
+        ZoneQueryHandler::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for ZoneQueryHandler {
     fn write<'a, 'b: 'a>(
@@ -465,7 +444,7 @@ impl ZoneQueryHandler {
         Ok(())
     }
     pub fn from_handler<H: ZoneQueryHandlerHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> ZoneQueryHandler {
         ZoneQueryHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -477,15 +456,17 @@ impl ZoneQueryHandler {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> ZoneQueryHandler {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         ZoneQueryHandler {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -498,14 +479,14 @@ impl ZoneQueryHandler {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -526,11 +507,7 @@ impl PartialEq for ZoneQueryHandler {
     }
 }
 impl Eq for ZoneQueryHandler {}
-pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn entered(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -559,7 +536,6 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -569,23 +545,6 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 _ => {}
             }
             Ok(out)
@@ -596,18 +555,9 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 8u32 => {
                     self.entered(
                         ctx,
@@ -642,14 +592,18 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler<
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SpatialQueryInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for SpatialQueryInterface {
+    fn clone(&self) -> Self {
+        SpatialQueryInterface::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for SpatialQueryInterface {
     fn write<'a, 'b: 'a>(
@@ -719,7 +673,7 @@ impl SpatialQueryInterface {
         Ok(())
     }
     pub fn from_handler<H: SpatialQueryInterfaceHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> SpatialQueryInterface {
         SpatialQueryInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -731,15 +685,17 @@ impl SpatialQueryInterface {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> SpatialQueryInterface {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         SpatialQueryInterface {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -752,14 +708,14 @@ impl SpatialQueryInterface {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -780,11 +736,7 @@ impl PartialEq for SpatialQueryInterface {
     }
 }
 impl Eq for SpatialQueryInterface {}
-pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn beam_query(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -800,7 +752,6 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -810,23 +761,6 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 8u32 => {
                     let () = self
                         .beam_query(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
@@ -847,18 +781,9 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 _ => {}
             }
             Ok(())

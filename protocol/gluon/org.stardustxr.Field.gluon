@@ -2,9 +2,7 @@ import "org.stardustxr.Types" as types
 import "org.stardustxr.Spatial" as spatial
 
 /// A readonly reference to a Field, safe for sharing
-interface FieldRef {
-	spatial_ref() -> (spatial_ref: Ref<spatial::SpatialRef>)
-}
+interface FieldRef {}
 
 /// A signed distance field with adjustable shape.
 interface Field {

@@ -50,14 +50,18 @@ impl gluon_wire::GluonConvertable for View {
         Ok(())
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CameraInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for CameraInterface {
+    fn clone(&self) -> Self {
+        CameraInterface::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for CameraInterface {
     fn write<'a, 'b: 'a>(
@@ -104,7 +108,7 @@ impl CameraInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: CameraInterfaceHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> CameraInterface {
         CameraInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -116,15 +120,17 @@ impl CameraInterface {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> CameraInterface {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
         CameraInterface {
             obj,
             drop_notification,
+            drop_handler,
         }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
@@ -137,14 +143,14 @@ impl CameraInterface {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -165,11 +171,7 @@ impl PartialEq for CameraInterface {
     }
 }
 impl Eq for CameraInterface {}
-pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_camera(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -180,7 +182,6 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -190,23 +191,6 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 8u32 => {
                     let (camera) = self
                         .create_camera(
@@ -226,32 +210,27 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 _ => {}
             }
             Ok(())
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Camera {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: std::sync::Arc<
-        binderbinder::binder_object::BinderObject<
-            gluon_wire::drop_tracking::DropNotifiedHandler,
-        >,
+    drop_notification: binderbinder::binder_object::BinderObject<
+        gluon_wire::drop_tracking::DropNotifiedHandler,
     >,
+    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
+}
+impl Clone for Camera {
+    fn clone(&self) -> Self {
+        Camera::from_object_or_ref(self.obj.clone())
+    }
 }
 impl gluon_wire::GluonConvertable for Camera {
     fn write<'a, 'b: 'a>(
@@ -291,7 +270,7 @@ impl Camera {
         Ok(())
     }
     pub fn from_handler<H: CameraHandler>(
-        obj: &std::sync::Arc<binderbinder::binder_object::BinderObject<H>>,
+        obj: &binderbinder::binder_object::BinderObject<H>,
     ) -> Camera {
         Camera::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -303,13 +282,18 @@ impl Camera {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> Camera {
-        let drop_notification = obj
-            .device()
-            .register_object(gluon_wire::drop_tracking::DropNotifiedHandler::new(&obj));
+        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
+            obj.clone(),
+        );
+        let drop_notification = obj.device().register_object(drop_handler.clone());
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         gluon_builder.write_binder(&drop_notification);
         _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        Camera { obj, drop_notification }
+        Camera {
+            obj,
+            drop_notification,
+            drop_handler,
+        }
     }
     pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
         let death_notification_future = match &self.obj {
@@ -321,14 +305,14 @@ impl Camera {
             }
             _ => None,
         };
-        let drop_notification = self.drop_notification.clone();
+        let drop_handler = self.drop_handler.clone();
         async move {
             if let Some(death) = death_notification_future {
                 tokio::select! {
-                    _ = death => {} _ = drop_notification.wait() => {}
+                    _ = death => {} _ = drop_handler.wait() => {}
                 }
             } else {
-                drop_notification.wait().await;
+                drop_handler.wait().await;
             }
         }
     }
@@ -349,11 +333,7 @@ impl PartialEq for Camera {
     }
 }
 impl Eq for Camera {}
-pub trait CameraHandler: binderbinder::device::TransactionHandler<
-        ObjectResource = tokio::sync::RwLock<
-            std::collections::HashMap<u64, gluon_wire::drop_tracking::DropNotifier>,
-        >,
-    > + Send + Sync + 'static {
+pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
     fn request_draw(
         &self,
@@ -368,7 +348,6 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<
         Output = Result<
             gluon_wire::GluonDataBuilder<'static>,
@@ -378,23 +357,6 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler<
         async move {
             let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
-                4 => {
-                    use std::hash::BuildHasher as _;
-                    let Ok(obj) = gluon_data.read_binder() else {
-                        return Ok(out);
-                    };
-                    let hash = std::hash::RandomState::new().hash_one(obj.clone());
-                    if out.write_u64(hash).is_err() {
-                        return Ok(out);
-                    }
-                    obj_res
-                        .write()
-                        .await
-                        .insert(
-                            hash,
-                            gluon_wire::drop_tracking::DropNotifier::new(&obj),
-                        );
-                }
                 _ => {}
             }
             Ok(out)
@@ -405,18 +367,9 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler<
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-        obj_res: &Self::ObjectResource,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
-                4 => {
-                    let Ok(id) = gluon_data.read_u64() else {
-                        return Ok(());
-                    };
-                    if let Some(mut obj) = obj_res.write().await.remove(&id) {
-                        obj.abort();
-                    }
-                }
                 8u32 => {
                     self.request_draw(
                         ctx,

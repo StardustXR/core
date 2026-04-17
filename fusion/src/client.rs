@@ -4,9 +4,21 @@ use binderbinder::binder_object::BinderObject;
 use gluon_wire::{GluonCtx, GluonSendError};
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
-	audio::AudioInterface, client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo}, dir::find_pion_file, dmatex::DmatexInterface, field::FieldInterface, lines::LinesInterface, model::ModelInterface, query::QueryInterface, server::{Server, ServerInterface}, sky::SkyInterface, spatial::{SpatialInterface, SpatialRef}, spatial_query::SpatialQueryInterface, text::TextInterface
+	audio::AudioInterface,
+	client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo},
+	dir::find_pion_file,
+	dmatex::DmatexInterface,
+	field::FieldInterface,
+	lines::LinesInterface,
+	model::ModelInterface,
+	query::QueryInterface,
+	server::{Server, ServerInterface},
+	sky::SkyInterface,
+	spatial::{SpatialInterface, SpatialRef},
+	spatial_query::SpatialQueryInterface,
+	text::TextInterface,
 };
-use std::{fs, path::Path, sync::Arc};
+use std::{fs, path::Path};
 use thiserror::Error;
 use tokio::sync::broadcast;
 
@@ -34,7 +46,7 @@ pub struct Client {
 	pion_dev: PionBinderDevice,
 	server: Server,
 	root: SpatialRef,
-	client_handler: Arc<BinderObject<ClientImpl>>,
+	client_handler: BinderObject<ClientImpl>,
 	spatial_interface: SpatialInterface,
 	field_interface: FieldInterface,
 	dmatex_interface: DmatexInterface,
@@ -83,7 +95,7 @@ impl Client {
 			.map_err(|_| ClientError::ConnectionFailure)?;
 		// TODO: do proper checks to make sure this is actually a server interface
 		let server_interface = ServerInterface::from_object_or_ref(interface);
-		let client_handler = pion_device.register_object(ClientImpl {
+		let client_handler = pion_device.register_object_owned(ClientImpl {
 			frame_sender: broadcast::channel(8).0,
 		});
 		let client = ProtocolClient::from_handler(&client_handler);
