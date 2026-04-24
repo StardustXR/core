@@ -548,18 +548,9 @@ impl gluon_wire::GluonConvertable for DatamapData {
         Ok(())
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for InputHandler {
-    fn clone(&self) -> Self {
-        InputHandler::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for InputHandler {
     fn write<'a, 'b: 'a>(
@@ -586,37 +577,25 @@ impl InputHandler {
     pub async fn get_spatial(
         &self,
     ) -> Result<super::spatial::SpatialRef, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_spatial_blocking()).await.unwrap()
-    }
-    pub fn get_spatial_blocking(
-        &self,
-    ) -> Result<super::spatial::SpatialRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub async fn get_field(
         &self,
     ) -> Result<super::field::FieldRef, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_field_blocking()).await.unwrap()
-    }
-    pub fn get_field_blocking(
-        &self,
-    ) -> Result<super::field::FieldRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     /**Returns suggested bindings. The map key will equal a key in the datamap.
@@ -627,24 +606,15 @@ This is considered static and should not change after handler creation.*/
         std::collections::HashMap<String, Vec<String>>,
         gluon_wire::GluonSendError,
     > {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.suggested_bindings_blocking())
-            .await
-            .unwrap()
-    }
-    pub fn suggested_bindings_blocking(
-        &self,
-    ) -> Result<
-        std::collections::HashMap<String, Vec<String>>,
-        gluon_wire::GluonSendError,
-    > {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
             .device()
-            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     /**Returns a list of groups, for example the client name and "grabbable".
@@ -652,21 +622,15 @@ This is considered static and should not change after handler creation.*/
     pub async fn handler_groups(
         &self,
     ) -> Result<Vec<String>, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.handler_groups_blocking())
-            .await
-            .unwrap()
-    }
-    pub fn handler_groups_blocking(
-        &self,
-    ) -> Result<Vec<String>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
             .device()
-            .transact_blocking(&self.obj, 11u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///An input method just started sending input to this handler.
@@ -710,11 +674,11 @@ This is considered static and should not change after handler creation.*/
         Ok(())
     }
     pub fn from_handler<H: InputHandlerHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> InputHandler {
         InputHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -722,39 +686,7 @@ This is considered static and should not change after handler creation.*/
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> InputHandler {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        InputHandler {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        InputHandler { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for InputHandler {
@@ -803,51 +735,20 @@ This is considered static and should not change after handler creation.*/
         _ctx: gluon_wire::GluonCtx,
         method: InputMethod,
         data: InputData,
-    );
+    ) -> impl Future<Output = ()> + Send + Sync;
     ///An input method's data has been updated.
     fn input_updated(
         &self,
         _ctx: gluon_wire::GluonCtx,
         method: InputMethod,
         data: InputData,
-    );
+    ) -> impl Future<Output = ()> + Send + Sync;
     ///An input method just stopped sending input to this handler.
-    fn input_left(&self, _ctx: gluon_wire::GluonCtx, method: InputMethod);
-    fn dispatch_two_way(
+    fn input_left(
         &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                8u32 => {
-                    let (spatial) = self.get_spatial(ctx).await;
-                    spatial.write_owned(&mut out)?;
-                }
-                9u32 => {
-                    let (field) = self.get_field(ctx).await;
-                    field.write_owned(&mut out)?;
-                }
-                10u32 => {
-                    let (suggested_bindings) = self.suggested_bindings(ctx).await;
-                    suggested_bindings.write_owned(&mut out)?;
-                }
-                11u32 => {
-                    let (groups) = self.handler_groups(ctx).await;
-                    groups.write_owned(&mut out)?;
-                }
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
+        _ctx: gluon_wire::GluonCtx,
+        method: InputMethod,
+    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -856,25 +757,61 @@ This is considered static and should not change after handler creation.*/
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
+                8u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (spatial) = self.get_spatial(ctx).await;
+                    spatial.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                9u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (field) = self.get_field(ctx).await;
+                    field.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                10u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (suggested_bindings) = self.suggested_bindings(ctx).await;
+                    suggested_bindings.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                11u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (groups) = self.handler_groups(ctx).await;
+                    groups.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
                 12u32 => {
                     self.input_gained(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 13u32 => {
                     self.input_updated(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 14u32 => {
-                    self.input_left(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                    self.input_left(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
+                        .await;
                 }
                 _ => {}
             }
@@ -882,18 +819,9 @@ This is considered static and should not change after handler creation.*/
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputMethod {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for InputMethod {
-    fn clone(&self) -> Self {
-        InputMethod::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for InputMethod {
     fn write<'a, 'b: 'a>(
@@ -937,11 +865,11 @@ impl InputMethod {
         Ok(())
     }
     pub fn from_handler<H: InputMethodHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> InputMethod {
         InputMethod::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -949,39 +877,7 @@ impl InputMethod {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> InputMethod {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        InputMethod {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        InputMethod { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for InputMethod {
@@ -1002,28 +898,17 @@ impl PartialEq for InputMethod {
 impl Eq for InputMethod {}
 pub trait InputMethodHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     ///Request to capture the input method with the given handler.
-    fn request_capture(&self, _ctx: gluon_wire::GluonCtx, handler: InputHandler);
-    ///If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
-    fn release_capture(&self, _ctx: gluon_wire::GluonCtx, handler: InputHandler);
-    fn dispatch_two_way(
+    fn request_capture(
         &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
+        _ctx: gluon_wire::GluonCtx,
+        handler: InputHandler,
+    ) -> impl Future<Output = ()> + Send + Sync;
+    ///If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
+    fn release_capture(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+        handler: InputHandler,
+    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -1034,15 +919,17 @@ pub trait InputMethodHandler: binderbinder::device::TransactionHandler + Send + 
             match transaction_code {
                 8u32 => {
                     self.request_capture(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 9u32 => {
                     self.release_capture(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 _ => {}
             }

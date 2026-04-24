@@ -180,18 +180,9 @@ impl gluon_wire::GluonConvertable for DmatexSize {
         Ok(())
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DmatexRef {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for DmatexRef {
-    fn clone(&self) -> Self {
-        DmatexRef::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for DmatexRef {
     fn write<'a, 'b: 'a>(
@@ -215,11 +206,11 @@ impl gluon_wire::GluonConvertable for DmatexRef {
 }
 impl DmatexRef {
     pub fn from_handler<H: DmatexRefHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> DmatexRef {
         DmatexRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -227,39 +218,7 @@ impl DmatexRef {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> DmatexRef {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        DmatexRef {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        DmatexRef { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexRef {
@@ -279,25 +238,6 @@ impl PartialEq for DmatexRef {
 }
 impl Eq for DmatexRef {}
 pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn dispatch_two_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -312,18 +252,9 @@ pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sy
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DmatexInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for DmatexInterface {
-    fn clone(&self) -> Self {
-        DmatexInterface::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for DmatexInterface {
     fn write<'a, 'b: 'a>(
@@ -354,91 +285,54 @@ impl DmatexInterface {
         planes: Vec<DmatexPlane>,
         timeline_syncobj_fd: std::os::fd::OwnedFd,
     ) -> Result<DmatexRef, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this
-                    .import_dmatex_blocking(
-                        size,
-                        format,
-                        array_layers,
-                        planes,
-                        timeline_syncobj_fd,
-                    )
-            })
-            .await
-            .unwrap()
-    }
-    pub fn import_dmatex_blocking(
-        &self,
-        size: DmatexSize,
-        format: DmatexFormat,
-        array_layers: u32,
-        planes: Vec<DmatexPlane>,
-        timeline_syncobj_fd: std::os::fd::OwnedFd,
-    ) -> Result<DmatexRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         size.write(&mut gluon_builder)?;
         format.write(&mut gluon_builder)?;
         array_layers.write(&mut gluon_builder)?;
         planes.write(&mut gluon_builder)?;
         timeline_syncobj_fd.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub async fn enumerate_formats(
         &self,
         render_node: u64,
     ) -> Result<Vec<DmatexFormat>, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.enumerate_formats_blocking(render_node))
-            .await
-            .unwrap()
-    }
-    pub fn enumerate_formats_blocking(
-        &self,
-        render_node: u64,
-    ) -> Result<Vec<DmatexFormat>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         render_node.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub async fn primary_render_node_id(
         &self,
     ) -> Result<u64, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.primary_render_node_id_blocking())
-            .await
-            .unwrap()
-    }
-    pub fn primary_render_node_id_blocking(
-        &self,
-    ) -> Result<u64, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
             .device()
-            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: DmatexInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> DmatexInterface {
         DmatexInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -446,39 +340,7 @@ impl DmatexInterface {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> DmatexInterface {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        DmatexInterface {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        DmatexInterface { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexInterface {
@@ -516,21 +378,17 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = u64> + Send + Sync;
-    fn dispatch_two_way(
+    fn dispatch_one_way(
         &self,
         transaction_code: u32,
         gluon_data: &mut gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
+    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
             match transaction_code {
                 8u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (dmatex) = self
                         .import_dmatex(
                             ctx,
@@ -541,34 +399,34 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;
-                    dmatex.write_owned(&mut out)?;
+                    dmatex.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 9u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (formats) = self
                         .enumerate_formats(
                             ctx,
                             gluon_wire::GluonConvertable::read(gluon_data)?,
                         )
                         .await;
-                    formats.write_owned(&mut out)?;
+                    formats.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 10u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (drm_render_node_id) = self.primary_render_node_id(ctx).await;
-                    drm_render_node_id.write_owned(&mut out)?;
+                    drm_render_node_id.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
-    fn dispatch_one_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
-        async move {
-            match transaction_code {
                 _ => {}
             }
             Ok(())

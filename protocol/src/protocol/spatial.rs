@@ -131,18 +131,9 @@ impl gluon_wire::GluonConvertable for BoundingBox {
         Ok(())
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpatialRef {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for SpatialRef {
-    fn clone(&self) -> Self {
-        SpatialRef::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for SpatialRef {
     fn write<'a, 'b: 'a>(
@@ -166,11 +157,11 @@ impl gluon_wire::GluonConvertable for SpatialRef {
 }
 impl SpatialRef {
     pub fn from_handler<H: SpatialRefHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> SpatialRef {
         SpatialRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -178,39 +169,7 @@ impl SpatialRef {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> SpatialRef {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        SpatialRef {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        SpatialRef { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialRef {
@@ -230,25 +189,6 @@ impl PartialEq for SpatialRef {
 }
 impl Eq for SpatialRef {}
 pub trait SpatialRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn dispatch_two_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -263,18 +203,9 @@ pub trait SpatialRefHandler: binderbinder::device::TransactionHandler + Send + S
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Spatial {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for Spatial {
-    fn clone(&self) -> Self {
-        Spatial::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for Spatial {
     fn write<'a, 'b: 'a>(
@@ -299,40 +230,26 @@ impl gluon_wire::GluonConvertable for Spatial {
 impl Spatial {
     ///Get the spatial ref for this spatial object.
     pub async fn spatial_ref(&self) -> Result<SpatialRef, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.spatial_ref_blocking()).await.unwrap()
-    }
-    pub fn spatial_ref_blocking(
-        &self,
-    ) -> Result<SpatialRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///Get the bounding box of this spatial and its children relative to itself
     pub async fn get_local_bounding_box(
         &self,
     ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || this.get_local_bounding_box_blocking())
-            .await
-            .unwrap()
-    }
-    pub fn get_local_bounding_box_blocking(
-        &self,
-    ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///Get the bounding box of this spatial and its children relative to another spatial.
@@ -340,25 +257,16 @@ impl Spatial {
         &self,
         relative_to: SpatialRef,
     ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.get_relative_bounding_box_blocking(relative_to)
-            })
-            .await
-            .unwrap()
-    }
-    pub fn get_relative_bounding_box_blocking(
-        &self,
-        relative_to: SpatialRef,
-    ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
+        self.obj
             .device()
-            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///Get the transform of this spatial object.
@@ -366,25 +274,16 @@ impl Spatial {
         &self,
         relative_to: SpatialRef,
     ) -> Result<Transform, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.get_relative_transform_blocking(relative_to)
-            })
-            .await
-            .unwrap()
-    }
-    pub fn get_relative_transform_blocking(
-        &self,
-        relative_to: SpatialRef,
-    ) -> Result<Transform, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
+        self.obj
             .device()
-            .transact_blocking(&self.obj, 11u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     /**Sets the parent of this spatial object, keeping the local transform.
@@ -440,11 +339,11 @@ It will silently error and not set the spatial parent if it is to a child of its
         Ok(())
     }
     pub fn from_handler<H: SpatialHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> Spatial {
         Spatial::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -452,39 +351,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> Spatial {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        Spatial {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        Spatial { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for Spatial {
@@ -528,68 +395,31 @@ pub trait SpatialHandler: binderbinder::device::TransactionHandler + Send + Sync
     ) -> impl Future<Output = Transform> + Send + Sync;
     /**Sets the parent of this spatial object, keeping the local transform.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
-    fn set_parent(&self, _ctx: gluon_wire::GluonCtx, parent: SpatialRef);
+    fn set_parent(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+        parent: SpatialRef,
+    ) -> impl Future<Output = ()> + Send + Sync;
     /**Sets the parent of this spatial object, keeping its position in space.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
-    fn set_parent_in_place(&self, _ctx: gluon_wire::GluonCtx, parent: SpatialRef);
+    fn set_parent_in_place(
+        &self,
+        _ctx: gluon_wire::GluonCtx,
+        parent: SpatialRef,
+    ) -> impl Future<Output = ()> + Send + Sync;
     ///Set the transform of this spatial relative to its spatial parent.
     fn set_local_transform(
         &self,
         _ctx: gluon_wire::GluonCtx,
         transform: PartialTransform,
-    );
+    ) -> impl Future<Output = ()> + Send + Sync;
     ///Set the transform of this spatial relative to another spatial.
     fn set_relative_transform(
         &self,
         _ctx: gluon_wire::GluonCtx,
         relative_to: SpatialRef,
         transform: PartialTransform,
-    );
-    fn dispatch_two_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                8u32 => {
-                    let (spatial) = self.spatial_ref(ctx).await;
-                    spatial.write_owned(&mut out)?;
-                }
-                9u32 => {
-                    let (bounding_box) = self.get_local_bounding_box(ctx).await;
-                    bounding_box.write_owned(&mut out)?;
-                }
-                10u32 => {
-                    let (bounding_box) = self
-                        .get_relative_bounding_box(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
-                    bounding_box.write_owned(&mut out)?;
-                }
-                11u32 => {
-                    let (transform) = self
-                        .get_relative_transform(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
-                    transform.write_owned(&mut out)?;
-                }
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
+    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -598,30 +428,77 @@ It will silently error and not set the spatial parent if it is to a child of its
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
+                8u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (spatial) = self.spatial_ref(ctx).await;
+                    spatial.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                9u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (bounding_box) = self.get_local_bounding_box(ctx).await;
+                    bounding_box.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                10u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (bounding_box) = self
+                        .get_relative_bounding_box(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    bounding_box.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                11u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (transform) = self
+                        .get_relative_transform(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    transform.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
                 12u32 => {
-                    self.set_parent(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                    self.set_parent(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
+                        .await;
                 }
                 13u32 => {
                     self.set_parent_in_place(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 14u32 => {
                     self.set_local_transform(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 15u32 => {
                     self.set_relative_transform(
-                        ctx,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                        gluon_wire::GluonConvertable::read(gluon_data)?,
-                    );
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -629,18 +506,9 @@ It will silently error and not set the spatial parent if it is to a child of its
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpatialInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
-    drop_notification: binderbinder::binder_object::BinderObject<
-        gluon_wire::drop_tracking::DropNotifiedHandler,
-    >,
-    drop_handler: std::sync::Arc<gluon_wire::drop_tracking::DropNotifiedHandler>,
-}
-impl Clone for SpatialInterface {
-    fn clone(&self) -> Self {
-        SpatialInterface::from_object_or_ref(self.obj.clone())
-    }
 }
 impl gluon_wire::GluonConvertable for SpatialInterface {
     fn write<'a, 'b: 'a>(
@@ -669,27 +537,15 @@ impl SpatialInterface {
         parent: SpatialRef,
         transform: Transform,
     ) -> Result<Spatial, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.create_spatial_blocking(parent, transform)
-            })
-            .await
-            .unwrap()
-    }
-    pub fn create_spatial_blocking(
-        &self,
-        parent: SpatialRef,
-        transform: Transform,
-    ) -> Result<Spatial, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         parent.write(&mut gluon_builder)?;
         transform.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 8u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///Get the relative bounding box of a spatial object relative to another spatial.
@@ -698,27 +554,15 @@ impl SpatialInterface {
         relative_to: SpatialRef,
         spatial: SpatialRef,
     ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.get_relative_bounding_box_blocking(relative_to, spatial)
-            })
-            .await
-            .unwrap()
-    }
-    pub fn get_relative_bounding_box_blocking(
-        &self,
-        relative_to: SpatialRef,
-        spatial: SpatialRef,
-    ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
-            .device()
-            .transact_blocking(&self.obj, 9u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     ///Get the relative transform of a spatial object relative to another spatial.
@@ -727,35 +571,25 @@ impl SpatialInterface {
         relative_to: SpatialRef,
         spatial: SpatialRef,
     ) -> Result<Transform, gluon_wire::GluonSendError> {
-        let this = self.clone();
-        tokio::task::spawn_blocking(move || {
-                this.get_relative_transform_blocking(relative_to, spatial)
-            })
-            .await
-            .unwrap()
-    }
-    pub fn get_relative_transform_blocking(
-        &self,
-        relative_to: SpatialRef,
-        spatial: SpatialRef,
-    ) -> Result<Transform, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
-        let reader = self
-            .obj
+        self.obj
             .device()
-            .transact_blocking(&self.obj, 10u32, gluon_builder.to_payload())?
-            .1;
-        let mut reader = gluon_wire::GluonDataReader::from_payload(reader);
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: SpatialInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObject<H>,
+        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
     ) -> SpatialInterface {
         SpatialInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
+                obj.as_ref(),
             ),
         )
     }
@@ -763,39 +597,7 @@ impl SpatialInterface {
     pub fn from_object_or_ref(
         obj: binderbinder::binder_object::BinderObjectOrRef,
     ) -> SpatialInterface {
-        let drop_handler = gluon_wire::drop_tracking::DropNotifiedHandler::new(
-            obj.clone(),
-        );
-        let drop_notification = obj.device().register_object(drop_handler.clone());
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        gluon_builder.write_binder(&drop_notification);
-        _ = obj.device().transact_one_way(&obj, 4, gluon_builder.to_payload());
-        SpatialInterface {
-            obj,
-            drop_notification,
-            drop_handler,
-        }
-    }
-    pub fn death_or_drop(&self) -> impl Future<Output = ()> + Send + Sync + 'static {
-        let death_notification_future = match &self.obj {
-            binderbinder::binder_object::BinderObjectOrRef::Ref(r) => {
-                Some(r.death_notification())
-            }
-            binderbinder::binder_object::BinderObjectOrRef::WeakRef(r) => {
-                Some(r.death_notification())
-            }
-            _ => None,
-        };
-        let drop_handler = self.drop_handler.clone();
-        async move {
-            if let Some(death) = death_notification_future {
-                tokio::select! {
-                    _ = death => {} _ = drop_handler.wait() => {}
-                }
-            } else {
-                drop_handler.wait().await;
-            }
-        }
+        SpatialInterface { obj }
     }
 }
 impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialInterface {
@@ -836,55 +638,6 @@ pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler + Se
         relative_to: SpatialRef,
         spatial: SpatialRef,
     ) -> impl Future<Output = Transform> + Send + Sync;
-    fn dispatch_two_way(
-        &self,
-        transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<
-        Output = Result<
-            gluon_wire::GluonDataBuilder<'static>,
-            gluon_wire::GluonSendError,
-        >,
-    > + Send + Sync {
-        async move {
-            let mut out = gluon_wire::GluonDataBuilder::new();
-            match transaction_code {
-                8u32 => {
-                    let (spatial) = self
-                        .create_spatial(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
-                    spatial.write_owned(&mut out)?;
-                }
-                9u32 => {
-                    let (bounding_box) = self
-                        .get_relative_bounding_box(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
-                    bounding_box.write_owned(&mut out)?;
-                }
-                10u32 => {
-                    let (transform) = self
-                        .get_relative_transform(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
-                    transform.write_owned(&mut out)?;
-                }
-                _ => {}
-            }
-            Ok(out)
-        }
-    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -893,6 +646,51 @@ pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler + Se
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
+                8u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (spatial) = self
+                        .create_spatial(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    spatial.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                9u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (bounding_box) = self
+                        .get_relative_bounding_box(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    bounding_box.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                10u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let (transform) = self
+                        .get_relative_transform(
+                            ctx,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                        )
+                        .await;
+                    transform.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
                 _ => {}
             }
             Ok(())

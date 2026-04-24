@@ -55,7 +55,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 [[package]]
 name = "binderbinder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/binderbinder#4cab13029a0e560f948c48c81c79378b3717f0c5"
+source = "git+https://github.com/technobaboo/binderbinder#c23c765cceb62a82531c1bcbb9e73510110ba7a1"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -199,7 +199,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen-rust"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#d9c99d3d8369a984067f6292197b5d94039c03ec"
+source = "git+https://github.com/technobaboo/gluon#12cce68d893930b5d55048c448313d0d487f364d"
 dependencies = [
  "convert_case",
  "gluon-parser",
@@ -213,7 +213,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#d9c99d3d8369a984067f6292197b5d94039c03ec"
+source = "git+https://github.com/technobaboo/gluon#12cce68d893930b5d55048c448313d0d487f364d"
 dependencies = [
  "ansi_term",
  "binderbinder",
@@ -224,9 +224,8 @@ dependencies = [
 [[package]]
 name = "gluon-wire"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#d9c99d3d8369a984067f6292197b5d94039c03ec"
+source = "git+https://github.com/technobaboo/gluon#12cce68d893930b5d55048c448313d0d487f364d"
 dependencies = [
- "async-trait",
  "binderbinder",
  "bitflags",
  "rustix",

@@ -95,7 +95,7 @@ impl Client {
 			.map_err(|_| ClientError::ConnectionFailure)?;
 		// TODO: do proper checks to make sure this is actually a server interface
 		let server_interface = ServerInterface::from_object_or_ref(interface);
-		let client_handler = pion_device.register_object_owned(ClientImpl {
+		let client_handler = pion_device.register_object(ClientImpl {
 			frame_sender: broadcast::channel(8).0,
 		});
 		let client = ProtocolClient::from_handler(&client_handler);
@@ -188,7 +188,7 @@ impl ClientHandler for ClientImpl {
 	// do we maybe want to wait for something in the main code paths?
 	async fn ping(&self, _ctx: GluonCtx) {}
 
-	fn frame(&self, _ctx: GluonCtx, info: FrameInfo) {
+	async fn frame(&self, _ctx: GluonCtx, info: FrameInfo) {
 		_ = self.frame_sender.send(info);
 	}
 
