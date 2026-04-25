@@ -11,8 +11,6 @@ struct BeamQuery {
 
   origin_spatial: Ref<spatial::SpatialRef>,
   direction: types::Vec3f,
-  /// the closest <N> things to the beam
-  limit: u8,
   /// Maximum length of the beam in meters, can be the max f32 value
   max_length: f32,
 }
@@ -44,6 +42,9 @@ interface ZoneQueryHandler {
 
 /// main spatial query service
 interface SpatialQueryInterface {
-  beam_query(query: BeamQuery) -> ()
-  zone_query(query: ZoneQuery) -> ()
+  beam_query(query: BeamQuery) -> (guard: Ref<SpatialQueryGuard>)
+  zone_query(query: ZoneQuery) -> (guard: Ref<SpatialQueryGuard>)
 }
+
+/// guard for spatial queries
+interface SpatialQueryGuard {}
