@@ -274,11 +274,11 @@ impl gluon_wire::GluonConvertable for FieldRef {
 }
 impl FieldRef {
     pub fn from_handler<H: FieldRefHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> FieldRef {
         FieldRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -450,11 +450,11 @@ impl Field {
         Ok(())
     }
     pub fn from_handler<H: FieldHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> Field {
         Field::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -739,11 +739,11 @@ impl FieldInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: FieldInterfaceHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> FieldInterface {
         FieldInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }

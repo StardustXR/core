@@ -428,11 +428,11 @@ impl ModelInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: ModelInterfaceHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> ModelInterface {
         ModelInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -575,11 +575,11 @@ impl Model {
         Ok(())
     }
     pub fn from_handler<H: ModelHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> Model {
         Model::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -820,11 +820,11 @@ impl ModelPart {
         Ok(())
     }
     pub fn from_handler<H: ModelPartHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> ModelPart {
         ModelPart::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }

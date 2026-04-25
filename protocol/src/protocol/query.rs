@@ -163,11 +163,11 @@ impl gluon_wire::GluonConvertable for QueryableObjectRef {
 }
 impl QueryableObjectRef {
     pub fn from_handler<H: QueryableObjectRefHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> QueryableObjectRef {
         QueryableObjectRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -263,11 +263,11 @@ impl QueryableObject {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: QueryableObjectHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> QueryableObject {
         QueryableObject::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -369,11 +369,11 @@ impl gluon_wire::GluonConvertable for QueryableInterfaceGuard {
 }
 impl QueryableInterfaceGuard {
     pub fn from_handler<H: QueryableInterfaceGuardHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> QueryableInterfaceGuard {
         QueryableInterfaceGuard::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -457,11 +457,11 @@ impl QueryInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: QueryInterfaceHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> QueryInterface {
         QueryInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }

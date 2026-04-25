@@ -198,11 +198,11 @@ impl BeamQueryHandler {
         Ok(())
     }
     pub fn from_handler<H: BeamQueryHandlerHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> BeamQueryHandler {
         BeamQueryHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -383,11 +383,11 @@ impl ZoneQueryHandler {
         Ok(())
     }
     pub fn from_handler<H: ZoneQueryHandlerHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> ZoneQueryHandler {
         ZoneQueryHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -542,11 +542,11 @@ impl SpatialQueryInterface {
         Ok(())
     }
     pub fn from_handler<H: SpatialQueryInterfaceHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> SpatialQueryInterface {
         SpatialQueryInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }

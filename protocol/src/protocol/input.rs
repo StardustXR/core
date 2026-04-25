@@ -674,11 +674,11 @@ This is considered static and should not change after handler creation.*/
         Ok(())
     }
     pub fn from_handler<H: InputHandlerHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> InputHandler {
         InputHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
@@ -865,11 +865,11 @@ impl InputMethod {
         Ok(())
     }
     pub fn from_handler<H: InputMethodHandler>(
-        obj: impl AsRef<binderbinder::binder_object::BinderObjectRef<H>>,
+        obj: &binderbinder::binder_object::BinderObjectRef<H>,
     ) -> InputMethod {
         InputMethod::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj.as_ref(),
+                obj,
             ),
         )
     }
