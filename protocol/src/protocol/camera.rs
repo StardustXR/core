@@ -90,7 +90,7 @@ impl CameraInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: CameraInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> CameraInterface {
         CameraInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -197,7 +197,7 @@ impl Camera {
         Ok(())
     }
     pub fn from_handler<H: CameraHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> Camera {
         Camera::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(

@@ -355,7 +355,7 @@ impl TextInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: TextInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> TextInterface {
         TextInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -467,7 +467,7 @@ impl Text {
         Ok(())
     }
     pub fn from_handler<H: TextHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> Text {
         Text::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(

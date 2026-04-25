@@ -157,7 +157,7 @@ impl gluon_wire::GluonConvertable for SpatialRef {
 }
 impl SpatialRef {
     pub fn from_handler<H: SpatialRefHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> SpatialRef {
         SpatialRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -339,7 +339,7 @@ It will silently error and not set the spatial parent if it is to a child of its
         Ok(())
     }
     pub fn from_handler<H: SpatialHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> Spatial {
         Spatial::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -585,7 +585,7 @@ impl SpatialInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: SpatialInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> SpatialInterface {
         SpatialInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(

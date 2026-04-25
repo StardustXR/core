@@ -5,3 +5,6 @@ package.version = "0.51.1"
 package.repository = "https://github.com/StardustXR/core/"
 package.homepage = "https://stardustxr.org"
 package.license = "MIT"
+
+# [patch."https://github.com/technobaboo/binderbinder"]
+# binderbinder.path = "../binderbinder"

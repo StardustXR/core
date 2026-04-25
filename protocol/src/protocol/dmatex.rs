@@ -206,7 +206,7 @@ impl gluon_wire::GluonConvertable for DmatexRef {
 }
 impl DmatexRef {
     pub fn from_handler<H: DmatexRefHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> DmatexRef {
         DmatexRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -328,7 +328,7 @@ impl DmatexInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: DmatexInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> DmatexInterface {
         DmatexInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(

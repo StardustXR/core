@@ -192,7 +192,7 @@ impl BeamQueryHandler {
         Ok(())
     }
     pub fn from_handler<H: BeamQueryHandlerHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> BeamQueryHandler {
         BeamQueryHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -377,7 +377,7 @@ impl ZoneQueryHandler {
         Ok(())
     }
     pub fn from_handler<H: ZoneQueryHandlerHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> ZoneQueryHandler {
         ZoneQueryHandler::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -536,7 +536,7 @@ impl SpatialQueryInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: SpatialQueryInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> SpatialQueryInterface {
         SpatialQueryInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -640,7 +640,7 @@ impl gluon_wire::GluonConvertable for SpatialQueryGuard {
 }
 impl SpatialQueryGuard {
     pub fn from_handler<H: SpatialQueryGuardHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> SpatialQueryGuard {
         SpatialQueryGuard::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(

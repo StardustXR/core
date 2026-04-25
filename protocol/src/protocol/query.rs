@@ -163,7 +163,7 @@ impl gluon_wire::GluonConvertable for QueryableObjectRef {
 }
 impl QueryableObjectRef {
     pub fn from_handler<H: QueryableObjectRefHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> QueryableObjectRef {
         QueryableObjectRef::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -263,7 +263,7 @@ impl QueryableObject {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: QueryableObjectHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> QueryableObject {
         QueryableObject::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -369,7 +369,7 @@ impl gluon_wire::GluonConvertable for QueryableInterfaceGuard {
 }
 impl QueryableInterfaceGuard {
     pub fn from_handler<H: QueryableInterfaceGuardHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> QueryableInterfaceGuard {
         QueryableInterfaceGuard::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
@@ -457,7 +457,7 @@ impl QueryInterface {
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
     pub fn from_handler<H: QueryInterfaceHandler>(
-        obj: &binderbinder::binder_object::BinderObjectRef<H>,
+        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> QueryInterface {
         QueryInterface::from_object_or_ref(
             binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
