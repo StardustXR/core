@@ -22,7 +22,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct FrameInfo {
     pub delta: f32,
-    pub predicted_display_time: Option<super::types::Timestamp>,
+    pub predicted_display_time: super::types::Timestamp,
 }
 impl gluon_wire::GluonConvertable for FrameInfo {
     fn write<'a, 'b: 'a>(

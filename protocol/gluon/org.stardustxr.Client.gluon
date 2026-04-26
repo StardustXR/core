@@ -4,7 +4,7 @@ import "org.stardustxr.Types" as types
 /// Information for a specific frame
 struct FrameInfo {
 	delta: f32,
-	predicted_display_time: Option<types::Timestamp>,
+	predicted_display_time: types::Timestamp,
 }
 
 /// The persistent state of a Stardust client.
