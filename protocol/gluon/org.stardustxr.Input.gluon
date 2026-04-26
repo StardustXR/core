@@ -67,12 +67,8 @@ enum InputDataType {
 	Tip { data: Tip },
 }
 
-/// Information about a given input method's state. All coordinates are relative to the InputHandlers SpatialRef.
+/// Information about a given input method's state.
 struct InputData {
-	/// All vectors and quaternions are relative to the input handler if deserialized.
-	input: InputDataType,
-	/// Closest distance from the input method to the field.
-	distance: f32, 
 	/// Non-spatial data in a map. Keys will be a superset of the keys returned by InputHandler::suggested_bindings
 	datamap: Map<String, DatamapData>,
 	/// There are [order] objects that got this input data before this one.
@@ -81,17 +77,27 @@ struct InputData {
 	captured: bool,
 }
 
+/// Information about a given input method's spatial state. All coordinates are relative to the InputHandlers SpatialRef.
+struct SpatialInputData {
+	/// All vectors and quaternions are relative to the input handler spatial ref.
+	input: InputDataType,
+	/// Closest distance from the input method to the field.
+	distance: f32, 
+}
+
 /// Receives input from input methods.
 interface InputHandler {
 	/// All input coordinates will be relative to this
+	/// This is considered static and should not change after handler creation.
 	get_spatial() -> (spatial: Ref<spatial::SpatialRef>)
+	/// This is considered static and should not change after handler creation.
 	get_field() -> (field: Ref<field::FieldRef>)
 
 	/// Returns suggested bindings. The map key will equal a key in the datamap.
 	/// This is considered static and should not change after handler creation.
 	suggested_bindings() -> (suggested_bindings: Map<String, Vec<String>>)
 
-	/// Returns a list of groups, for example the client name and "grabbable".
+	/// Returns a list of groups, for example the client app id and "grabbable".
 	/// This is considered static and should not change after handler creation.
 	handler_groups() -> (groups: Vec<String>)
 
@@ -125,6 +131,9 @@ interface InputMethod {
 	request_capture(handler: Ref<InputHandler>)
 	/// If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
 	release_capture(handler: Ref<InputHandler>)
+	/// Get spatial data relative to the input handler at a specific point in time.
+	/// Should return None when the InputMethod is captured by another InputHandler.
+	get_spatial_data(handler: Ref<InputHandler>, time: types::Timestamp) -> (data: Option<SpatialInputData>)
 }
 
 /// Data types for datamap
