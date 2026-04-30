@@ -9,7 +9,8 @@ struct BeamQuery {
   handler: Ref<BeamQueryHandler>,
   interfaces: Vec<query::InterfaceDependency>,
 
-  origin_spatial: Ref<spatial::SpatialRef>,
+  reference_spatial: Ref<spatial::SpatialRef>,
+  origin: types::Vec3f,
   direction: types::Vec3f,
   /// Maximum length of the beam in meters, can be the max f32 value
   max_length: f32,
@@ -40,11 +41,38 @@ interface ZoneQueryHandler {
   left(obj: Ref<query::QueryableObjectRef>)
 }
 
+/// Get interfaces of fields containing any points
+struct PointsQuery {
+  handler: Ref<ZoneQueryHandler>,
+  interfaces: Vec<query::InterfaceDependency>,
+  reference_spatial: Ref<spatial::SpatialRef>,
+  points: Vec<Point>
+}
+
+/// handle the points query
+interface PointsQueryHandler {
+  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, interfaces: Vec<query::QueriedInterface>, distance: f32)
+  interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
+  moved(obj: Ref<query::QueryableObjectRef>, distance: f32)
+  left(obj: Ref<query::QueryableObjectRef>)
+}
+
 /// main spatial query service
 interface SpatialQueryInterface {
   beam_query(query: BeamQuery) -> (guard: Ref<SpatialQueryGuard>)
   zone_query(query: ZoneQuery) -> (guard: Ref<SpatialQueryGuard>)
+  points_query(query: ZoneQuery) -> (handle: Ref<PointsQueryHandle>)
 }
 
+/// Point for a PointsQuery
+struct Point {
+  point: types::Vec3f,
+  // the distance from a field to match in meters
+  margin: f32,
+}
+/// handle to a points query
+interface PointsQueryHandle {
+  update_points(points: Vec<Point>)
+}
 /// guard for spatial queries
 interface SpatialQueryGuard {}

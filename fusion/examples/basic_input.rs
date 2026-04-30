@@ -1,21 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
 use binderbinder::binder_object::ToBinderObjectOrRef;
-use glam::{Quat, Vec3};
 use gluon_wire::{GluonCtx, impl_transaction_handler};
 use stardust_xr_fusion::{
 	client::Client,
-	drawable::ModelExt,
 	fields::{Field, FieldExt, FieldRef, Shape},
 	input::{InputData, InputHandlerHandler, InputMethod},
 	project_local_resources,
 	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
 };
-use stardust_xr_protocol::{
-	input::InputHandler as InputHandlerProxy,
-	model::{MaterialParameter, Model},
-	types::{Color, Resource},
-};
+use stardust_xr_protocol::input::InputHandler as InputHandlerProxy;
 use tokio::sync::{RwLock, broadcast::error::RecvError};
 use tracing::{info, warn};
 
@@ -46,6 +40,7 @@ async fn main() {
 	)
 	.await
 	.unwrap();
+	let field_spatial_ref = field_spatial.spatial_ref().await.unwrap();
 	let field_ref = field.field_ref().await.unwrap();
 
 	let input_handler = client.pion_device().register_object(InputHandler {
@@ -55,7 +50,7 @@ async fn main() {
 	});
 	let queryable = client
 		.query_interface()
-		.register_queryable(field_ref, "/InputHandler".to_string())
+		.register_queryable(field_spatial_ref, field_ref)
 		.await
 		.unwrap()
 		.unwrap();
@@ -121,7 +116,7 @@ impl InputHandlerHandler for InputHandler {
 
 	async fn input_gained(&self, _ctx: GluonCtx, method: InputMethod, data: InputData) {
 		info!(?method, ?data, "input gained");
-        self.methods.write().await.insert(method);
+		self.methods.write().await.insert(method);
 	}
 
 	async fn input_updated(&self, _ctx: GluonCtx, method: InputMethod, data: InputData) {
@@ -129,7 +124,7 @@ impl InputHandlerHandler for InputHandler {
 	}
 
 	async fn input_left(&self, _ctx: GluonCtx, method: InputMethod) {
-        self.methods.write().await.remove(&method);
+		self.methods.write().await.remove(&method);
 		info!(?method, "input left");
 	}
 }

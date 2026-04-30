@@ -94,7 +94,6 @@ impl gluon_wire::GluonConvertable for QueriedInterface {
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum QueryableError {
     InvalidField,
-    InvalidPath,
 }
 impl gluon_wire::GluonConvertable for QueryableError {
     fn write<'a, 'b: 'a>(
@@ -105,9 +104,6 @@ impl gluon_wire::GluonConvertable for QueryableError {
             QueryableError::InvalidField => {
                 gluon_data.write_u16(0u16)?;
             }
-            QueryableError::InvalidPath => {
-                gluon_data.write_u16(1u16)?;
-            }
         };
         Ok(())
     }
@@ -117,7 +113,6 @@ impl gluon_wire::GluonConvertable for QueryableError {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => QueryableError::InvalidField,
-                1u16 => QueryableError::InvalidPath,
                 v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
             },
         )
@@ -129,9 +124,6 @@ impl gluon_wire::GluonConvertable for QueryableError {
         match self {
             QueryableError::InvalidField => {
                 gluon_data.write_u16(0u16)?;
-            }
-            QueryableError::InvalidPath => {
-                gluon_data.write_u16(1u16)?;
             }
         };
         Ok(())
@@ -442,15 +434,15 @@ impl gluon_wire::GluonConvertable for QueryInterface {
 impl QueryInterface {
     pub async fn register_queryable(
         &self,
+        spatial: super::spatial::SpatialRef,
         field: super::field::FieldRef,
-        path: String,
     ) -> Result<Result<QueryableObject, QueryableError>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
+        spatial.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
-        path.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
@@ -492,8 +484,8 @@ pub trait QueryInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn register_queryable(
         &self,
         _ctx: gluon_wire::GluonCtx,
+        spatial: super::spatial::SpatialRef,
         field: super::field::FieldRef,
-        path: String,
     ) -> impl Future<Output = Result<QueryableObject, QueryableError>> + Send + Sync;
     fn dispatch_one_way(
         &self,

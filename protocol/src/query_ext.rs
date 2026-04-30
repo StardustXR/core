@@ -7,7 +7,6 @@ impl Display for QueryableError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			QueryableError::InvalidField => f.write_str("Invalid FieldRef, not owned by server"),
-			QueryableError::InvalidPath => f.write_str("Invalid path"),
 		}
 	}
 }
