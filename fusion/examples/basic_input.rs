@@ -1,0 +1,136 @@
+use std::collections::{HashMap, HashSet};
+
+use binderbinder::binder_object::ToBinderObjectOrRef;
+use glam::{Quat, Vec3};
+use gluon_wire::{GluonCtx, impl_transaction_handler};
+use stardust_xr_fusion::{
+	client::Client,
+	drawable::ModelExt,
+	fields::{Field, FieldExt, FieldRef, Shape},
+	input::{InputData, InputHandlerHandler, InputMethod},
+	project_local_resources,
+	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
+};
+use stardust_xr_protocol::{
+	input::InputHandler as InputHandlerProxy,
+	model::{MaterialParameter, Model},
+	types::{Color, Resource},
+};
+use tokio::sync::{RwLock, broadcast::error::RecvError};
+use tracing::{info, warn};
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+	tracing_subscriber::fmt::init();
+	let (client, state) = Client::connect(&[&project_local_resources!("res")])
+		.await
+		.unwrap();
+
+	let handler_spatial = Spatial::new(&client, &state.root, Transform::IDENTITY)
+		.await
+		.unwrap();
+	let field_spatial = Spatial::new(
+		&client,
+		&handler_spatial.spatial_ref().await.unwrap(),
+		Transform::IDENTITY,
+	)
+	.await
+	.unwrap();
+	let field = Field::new(
+		&client,
+		&field_spatial,
+		Shape::Torus {
+			major_radius: 0.02,
+			minor_radius: 0.01,
+		},
+	)
+	.await
+	.unwrap();
+	let field_ref = field.field_ref().await.unwrap();
+
+	let input_handler = client.pion_device().register_object(InputHandler {
+		field,
+		spatial: handler_spatial,
+		methods: RwLock::default(),
+	});
+	let queryable = client
+		.query_interface()
+		.register_queryable(field_ref, "/InputHandler".to_string())
+		.await
+		.unwrap()
+		.unwrap();
+	let _guard = queryable
+		.add_interface(
+			input_handler.to_binder_object_or_ref(),
+			"org.stardustxr.SUIS.Handler".to_string(),
+		)
+		.await
+		.unwrap();
+	let handler_proxy = InputHandlerProxy::from_handler(&input_handler);
+	let mut frame_recv = client.frame_receiver();
+	loop {
+		let info = match frame_recv.recv().await {
+			Ok(v) => v,
+			Err(RecvError::Lagged(n)) => {
+				warn!("lost {n} frame events");
+				continue;
+			}
+			Err(RecvError::Closed) => {
+				break;
+			}
+		};
+		for method in input_handler.methods.read().await.iter() {
+			let spatial_data = method
+				.get_spatial_data(handler_proxy.clone(), info.predicted_display_time)
+				.await
+				.unwrap();
+			info!(?method, ?spatial_data, "spatial data");
+		}
+	}
+}
+
+#[derive(Debug)]
+struct InputHandler {
+	field: Field,
+	spatial: Spatial,
+	methods: RwLock<HashSet<InputMethod>>,
+}
+impl InputHandlerHandler for InputHandler {
+	async fn get_spatial(&self, _ctx: GluonCtx) -> SpatialRef {
+		self.spatial.spatial_ref().await.unwrap()
+	}
+
+	async fn get_field(&self, _ctx: GluonCtx) -> FieldRef {
+		self.field.field_ref().await.unwrap()
+	}
+
+	async fn suggested_bindings(&self, _ctx: GluonCtx) -> HashMap<String, Vec<String>> {
+		let mut bindings = HashMap::new();
+		bindings.insert("a".to_string(), vec!["pinch_strength".to_string()]);
+		bindings.insert("b".to_string(), vec!["grab_strength".to_string()]);
+		bindings.insert(
+			"c".to_string(),
+			vec!["pinch_strength".to_string(), "grab_strength".to_string()],
+		);
+		bindings
+	}
+
+	async fn handler_groups(&self, _ctx: GluonCtx) -> Vec<String> {
+		vec!["org.stardustxr.fusion.InputExample".to_string()]
+	}
+
+	async fn input_gained(&self, _ctx: GluonCtx, method: InputMethod, data: InputData) {
+		info!(?method, ?data, "input gained");
+        self.methods.write().await.insert(method);
+	}
+
+	async fn input_updated(&self, _ctx: GluonCtx, method: InputMethod, data: InputData) {
+		info!(?method, ?data, "input updated");
+	}
+
+	async fn input_left(&self, _ctx: GluonCtx, method: InputMethod) {
+        self.methods.write().await.remove(&method);
+		info!(?method, "input left");
+	}
+}
+impl_transaction_handler!(InputHandler);

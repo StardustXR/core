@@ -135,6 +135,10 @@ impl Client {
 		&self.server
 	}
 
+	pub fn pion_device(&self) -> &PionBinderDevice {
+		&self.pion_dev
+	}
+
 	/// Get a receiverr for frame events, only events generated after this call will be returned
 	pub fn frame_receiver(&self) -> broadcast::Receiver<FrameInfo> {
 		self.client_handler.frame_sender.subscribe()
@@ -172,6 +176,10 @@ impl Client {
 
 	pub fn audio_interface(&self) -> &AudioInterface {
 		&self.audio_interface
+	}
+
+	pub fn query_interface(&self) -> &QueryInterface {
+		&self.query_interface
 	}
 
 	pub fn spatial_query_interface(&self) -> &SpatialQueryInterface {
