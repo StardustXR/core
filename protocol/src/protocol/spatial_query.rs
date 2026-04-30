@@ -802,7 +802,7 @@ impl SpatialQueryInterface {
     }
     pub async fn points_query(
         &self,
-        query: ZoneQuery,
+        query: PointsQuery,
     ) -> Result<PointsQueryHandle, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
@@ -862,7 +862,7 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
     fn points_query(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        query: ZoneQuery,
+        query: PointsQuery,
     ) -> impl Future<Output = PointsQueryHandle> + Send + Sync;
     fn dispatch_one_way(
         &self,
