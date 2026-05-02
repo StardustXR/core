@@ -41,6 +41,10 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
+            name: "Chirality",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
+        },
+        gluon_wire::ExternalGluonType {
             name: "InputDataType",
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
@@ -53,10 +57,8 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 ///A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Joint {
-    ///Position of the joint relative to the input handler.
-    pub position: super::types::Vec3F,
-    ///Orientation of the joint relative to the input handler.
-    pub rotation: super::types::Quatf,
+    ///Pose of the joint relative to the input handler.
+    pub pose: super::types::Posef,
     ///Radius of the joint in meters.
     pub radius: f32,
     ///Distance from the center of the joint to the input handler's field.
@@ -67,8 +69,7 @@ impl gluon_wire::GluonConvertable for Joint {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(gluon_data)?;
-        self.rotation.write(gluon_data)?;
+        self.pose.write(gluon_data)?;
         self.radius.write(gluon_data)?;
         self.distance.write(gluon_data)?;
         Ok(())
@@ -76,23 +77,16 @@ impl gluon_wire::GluonConvertable for Joint {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let pose = gluon_wire::GluonConvertable::read(gluon_data)?;
         let radius = gluon_wire::GluonConvertable::read(gluon_data)?;
         let distance = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(Joint {
-            position,
-            rotation,
-            radius,
-            distance,
-        })
+        Ok(Joint { pose, radius, distance })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(gluon_data)?;
-        self.rotation.write_owned(gluon_data)?;
+        self.pose.write_owned(gluon_data)?;
         self.radius.write_owned(gluon_data)?;
         self.distance.write_owned(gluon_data)?;
         Ok(())
@@ -191,10 +185,10 @@ impl gluon_wire::GluonConvertable for Thumb {
         Ok(())
     }
 }
-///A fully articulated and tracked hand according to OpenXR spec for its coordinate system and joints.
+///A fully articulated and tracked hand (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#convention-of-hand-joints).
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Hand {
-    pub right: bool,
+    pub chirality: Chirality,
     pub thumb: Thumb,
     pub index: Finger,
     pub middle: Finger,
@@ -209,7 +203,7 @@ impl gluon_wire::GluonConvertable for Hand {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.right.write(gluon_data)?;
+        self.chirality.write(gluon_data)?;
         self.thumb.write(gluon_data)?;
         self.index.write(gluon_data)?;
         self.middle.write(gluon_data)?;
@@ -223,7 +217,7 @@ impl gluon_wire::GluonConvertable for Hand {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let right = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let chirality = gluon_wire::GluonConvertable::read(gluon_data)?;
         let thumb = gluon_wire::GluonConvertable::read(gluon_data)?;
         let index = gluon_wire::GluonConvertable::read(gluon_data)?;
         let middle = gluon_wire::GluonConvertable::read(gluon_data)?;
@@ -233,7 +227,7 @@ impl gluon_wire::GluonConvertable for Hand {
         let wrist = gluon_wire::GluonConvertable::read(gluon_data)?;
         let elbow = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Hand {
-            right,
+            chirality,
             thumb,
             index,
             middle,
@@ -248,7 +242,7 @@ impl gluon_wire::GluonConvertable for Hand {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.right.write_owned(gluon_data)?;
+        self.chirality.write_owned(gluon_data)?;
         self.thumb.write_owned(gluon_data)?;
         self.index.write_owned(gluon_data)?;
         self.middle.write_owned(gluon_data)?;
@@ -263,8 +257,8 @@ impl gluon_wire::GluonConvertable for Hand {
 ///A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Pointer {
-    pub origin: super::types::Vec3F,
-    pub orientation: super::types::Quatf,
+    ///Often corresponds to the aim pose (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
+    pub pose: super::types::Posef,
     /**The point that is the most inside the input handler's field.
 Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.*/
     pub deepest_point: f32,
@@ -274,29 +268,22 @@ impl gluon_wire::GluonConvertable for Pointer {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.origin.write(gluon_data)?;
-        self.orientation.write(gluon_data)?;
+        self.pose.write(gluon_data)?;
         self.deepest_point.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let origin = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let orientation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let pose = gluon_wire::GluonConvertable::read(gluon_data)?;
         let deepest_point = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(Pointer {
-            origin,
-            orientation,
-            deepest_point,
-        })
+        Ok(Pointer { pose, deepest_point })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.origin.write_owned(gluon_data)?;
-        self.orientation.write_owned(gluon_data)?;
+        self.pose.write_owned(gluon_data)?;
         self.deepest_point.write_owned(gluon_data)?;
         Ok(())
     }
@@ -304,31 +291,54 @@ impl gluon_wire::GluonConvertable for Pointer {
 ///Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Tip {
-    pub origin: super::types::Vec3F,
-    pub orientation: super::types::Vec3F,
+    ///Pose you can use to tap/poke elements (in front of the face of a controller, or on a pen tip).
+    pub pose: super::types::Posef,
+    ///Is this tip in the left or right hand? This may change at any time.
+    pub chirality: Option<Chirality>,
+    ///Center of the controller treated as a gripped rod (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
+    pub grip_pose: Option<super::types::Posef>,
+    ///Center of the palm contacting the controller (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
+    pub grip_surface_pose: Option<super::types::Posef>,
+    ///Non-articulated hand data (for index or similar)
+    pub simulated_hand: Option<Hand>,
 }
 impl gluon_wire::GluonConvertable for Tip {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.origin.write(gluon_data)?;
-        self.orientation.write(gluon_data)?;
+        self.pose.write(gluon_data)?;
+        self.chirality.write(gluon_data)?;
+        self.grip_pose.write(gluon_data)?;
+        self.grip_surface_pose.write(gluon_data)?;
+        self.simulated_hand.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let origin = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let orientation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(Tip { origin, orientation })
+        let pose = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let chirality = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let grip_pose = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let grip_surface_pose = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let simulated_hand = gluon_wire::GluonConvertable::read(gluon_data)?;
+        Ok(Tip {
+            pose,
+            chirality,
+            grip_pose,
+            grip_surface_pose,
+            simulated_hand,
+        })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.origin.write_owned(gluon_data)?;
-        self.orientation.write_owned(gluon_data)?;
+        self.pose.write_owned(gluon_data)?;
+        self.chirality.write_owned(gluon_data)?;
+        self.grip_pose.write_owned(gluon_data)?;
+        self.grip_surface_pose.write_owned(gluon_data)?;
+        self.simulated_hand.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -404,6 +414,53 @@ impl gluon_wire::GluonConvertable for SpatialData {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.input.write_owned(gluon_data)?;
         self.distance.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Chirality
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum Chirality {
+    Left,
+    Right,
+}
+impl gluon_wire::GluonConvertable for Chirality {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        match self {
+            Chirality::Left => {
+                gluon_data.write_u16(0u16)?;
+            }
+            Chirality::Right => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(
+        gluon_data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => Chirality::Left,
+                1u16 => Chirality::Right,
+                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        match self {
+            Chirality::Left => {
+                gluon_data.write_u16(0u16)?;
+            }
+            Chirality::Right => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
         Ok(())
     }
 }

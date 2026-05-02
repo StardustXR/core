@@ -32,6 +32,14 @@ struct Vec4f {
     w: f32,
 }
 
+/// Quaternion
+struct Quatf {
+    x: f32,
+    y: f32,
+    z: f32,
+    w: f32,
+}
+
 /// Colum major matrix
 struct Mat4f {
 	x: Vec4f,
@@ -40,12 +48,10 @@ struct Mat4f {
 	w: Vec4f,
 }
 
-/// Quaternion
-struct Quatf {
-    x: f32,
-    y: f32,
-    z: f32,
-    w: f32,
+/// Pose
+struct Posef {
+	translation: Vec3f,
+	orientation: Quatf,
 }
 
 /// A color in linear rgb, premultiplied alpha

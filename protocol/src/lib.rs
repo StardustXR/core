@@ -9,5 +9,6 @@ mod field_ext;
 mod query_ext;
 mod spatial_ext;
 mod suis_ext;
+mod types_ext;
 
 pub mod dir;

@@ -1,21 +1,13 @@
 use crate::protocol::suis::{Finger, Hand, Joint, Pointer, Thumb, Tip};
-use crate::protocol::types::{Quatf, Vec3F};
+use crate::protocol::types::Vec3F;
+use crate::suis::Chirality;
+use crate::types::Posef;
 use glam::{FloatExt, Quat, Vec3A, vec3a};
 
 impl Default for Joint {
 	fn default() -> Self {
 		Joint {
-			position: Vec3F {
-				x: 0.0,
-				y: 0.0,
-				z: 0.0,
-			},
-			rotation: Quatf {
-				x: 0.0,
-				y: 0.0,
-				z: 0.0,
-				w: 1.0,
-			},
+			pose: Posef::default(),
 			radius: 0.0,
 			distance: 0.0,
 		}
@@ -48,7 +40,7 @@ impl Default for Thumb {
 impl Default for Hand {
 	fn default() -> Self {
 		Hand {
-			right: Default::default(),
+			chirality: Chirality::Left,
 			thumb: Default::default(),
 			index: Default::default(),
 			middle: Default::default(),
@@ -64,17 +56,7 @@ impl Default for Hand {
 impl Default for Pointer {
 	fn default() -> Self {
 		Pointer {
-			origin: Vec3F {
-				x: 0.0,
-				y: 0.0,
-				z: 0.0,
-			},
-			orientation: Quatf {
-				x: 0.0,
-				y: 0.0,
-				z: 0.0,
-				w: 1.0,
-			},
+			pose: Posef::default(),
 			deepest_point: 0.0,
 		}
 	}
@@ -83,16 +65,11 @@ impl Default for Pointer {
 impl Default for Tip {
 	fn default() -> Self {
 		Tip {
-			origin: Vec3F {
-				x: 0.0,
-				y: 0.0,
-				z: 0.0,
-			},
-			orientation: Vec3F {
-				x: 0.0,
-				y: 0.0,
-				z: -1.0,
-			},
+			pose: Posef::default(),
+			chirality: None,
+			grip_pose: None,
+			grip_surface_pose: None,
+			simulated_hand: None,
 		}
 	}
 }
@@ -103,16 +80,16 @@ impl Default for Tip {
 impl Finger {
 	/// Length of finger from knuckle to tip.
 	pub fn length(&self) -> f32 {
-		let proximal_position: Vec3A = self.proximal.position.mint();
-		let distal_position: Vec3A = self.distal.position.mint();
-		let tip_position: Vec3A = self.tip.position.mint();
+		let proximal_position: Vec3A = self.proximal.pose.translation.mint();
+		let distal_position: Vec3A = self.distal.pose.translation.mint();
+		let tip_position: Vec3A = self.tip.pose.translation.mint();
 
 		proximal_position.distance(distal_position) + distal_position.distance(tip_position)
 	}
 
 	pub fn direction(&self) -> Vec3F {
-		let proximal_position: Vec3A = self.proximal.position.mint();
-		let tip_position: Vec3A = self.tip.position.mint();
+		let proximal_position: Vec3A = self.proximal.pose.translation.mint();
+		let tip_position: Vec3A = self.tip.pose.translation.mint();
 
 		(tip_position - proximal_position).normalize().into()
 	}
@@ -121,16 +98,16 @@ impl Finger {
 impl Thumb {
 	/// Length of thumb from knuckle to tip.
 	pub fn length(&self) -> f32 {
-		let proximal_position: Vec3A = self.proximal.position.mint();
-		let distal_position: Vec3A = self.distal.position.mint();
-		let tip_position: Vec3A = self.tip.position.mint();
+		let proximal_position: Vec3A = self.proximal.pose.translation.mint();
+		let distal_position: Vec3A = self.distal.pose.translation.mint();
+		let tip_position: Vec3A = self.tip.pose.translation.mint();
 
 		proximal_position.distance(distal_position) + distal_position.distance(tip_position)
 	}
 
 	pub fn direction(&self) -> Vec3F {
-		let proximal_position: Vec3A = self.proximal.position.mint();
-		let tip_position: Vec3A = self.tip.position.mint();
+		let proximal_position: Vec3A = self.proximal.pose.translation.mint();
+		let tip_position: Vec3A = self.tip.pose.translation.mint();
 
 		(tip_position - proximal_position).normalize().into()
 	}
@@ -139,13 +116,13 @@ impl Thumb {
 impl Hand {
 	/// The direction vector pointing out of the palm.
 	pub fn palm_normal(&self) -> Vec3F {
-		(self.palm.rotation.mint::<Quat>() * vec3a(0.0, -1.0, 0.0)).into()
+		(self.palm.pose.orientation.mint::<Quat>() * vec3a(0.0, -1.0, 0.0)).into()
 	}
 
 	/// The direction vector pointing from the palm to thumb.
 	pub fn radial_axis(&self) -> Vec3F {
-		(self.palm.rotation.mint::<Quat>()
-			* if self.right {
+		(self.palm.pose.orientation.mint::<Quat>()
+			* if self.chirality == Chirality::Right {
 				vec3a(-1.0, 0.0, 0.0)
 			} else {
 				vec3a(1.0, 0.0, 0.0)
@@ -155,7 +132,7 @@ impl Hand {
 
 	/// The direction vector pointing from the palm towards fingers.
 	pub fn distal_axis(&self) -> Vec3F {
-		(self.palm.rotation.mint::<Quat>() * vec3a(0.0, 0.0, -1.0)).into()
+		(self.palm.pose.orientation.mint::<Quat>() * vec3a(0.0, 0.0, -1.0)).into()
 	}
 
 	pub fn finger_curl(&self, finger: &Finger) -> f32 {
@@ -171,15 +148,15 @@ impl Hand {
 	}
 
 	pub fn pinch_distance(&self, finger: &Finger) -> f32 {
-		let thumb_tip: Vec3A = self.thumb.tip.position.mint();
-		let finger_tip: Vec3A = finger.tip.position.mint();
+		let thumb_tip: Vec3A = self.thumb.tip.pose.translation.mint();
+		let finger_tip: Vec3A = finger.tip.pose.translation.mint();
 		thumb_tip.distance(finger_tip)
 	}
 
 	/// Unstabilized pinch position.
 	pub fn pinch_position(&self) -> Vec3F {
-		let thumb_tip: Vec3A = self.thumb.tip.position.mint();
-		let index_tip: Vec3A = self.index.tip.position.mint();
+		let thumb_tip: Vec3A = self.thumb.tip.pose.translation.mint();
+		let index_tip: Vec3A = self.index.tip.pose.translation.mint();
 
 		((2.0 * thumb_tip + index_tip) * 0.3333333).into()
 	}
@@ -187,7 +164,7 @@ impl Hand {
 	/// Predicted pinch position without influence from thumb or index tip.
 	/// Useful for extremely stable pinch calculations.
 	pub fn stable_pinch_position(&self) -> Vec3F {
-		let index_knuckle: Vec3A = self.index.proximal.position.mint();
+		let index_knuckle: Vec3A = self.index.proximal.pose.translation.mint();
 		let index_length = self.index.length();
 
 		let radial_axis: Vec3A = self.radial_axis().mint();
@@ -204,9 +181,9 @@ impl Hand {
 
 	/// A decent approximation of where the hand will pinch even if index and thumb are far apart.
 	pub fn predicted_pinch_position(&self) -> Vec3F {
-		let thumb_tip: Vec3A = self.thumb.tip.position.mint();
-		let index_tip: Vec3A = self.index.tip.position.mint();
-		let index_knuckle: Vec3A = self.index.proximal.position.mint();
+		let thumb_tip: Vec3A = self.thumb.tip.pose.translation.mint();
+		let index_tip: Vec3A = self.index.tip.pose.translation.mint();
+		let index_knuckle: Vec3A = self.index.proximal.pose.translation.mint();
 		let index_length = self.index.length();
 
 		let radial_axis: Vec3A = self.radial_axis().mint();
@@ -230,17 +207,17 @@ impl Hand {
 	}
 
 	fn hand_scale(&self) -> f32 {
-		let index_metacarpal: Vec3A = self.index.metacarpal.position.mint();
-		let index_proximal: Vec3A = self.index.proximal.position.mint();
+		let index_metacarpal: Vec3A = self.index.metacarpal.pose.translation.mint();
+		let index_proximal: Vec3A = self.index.proximal.pose.translation.mint();
 
-		let middle_metacarpal: Vec3A = self.middle.metacarpal.position.mint();
-		let middle_proximal: Vec3A = self.middle.proximal.position.mint();
+		let middle_metacarpal: Vec3A = self.middle.metacarpal.pose.translation.mint();
+		let middle_proximal: Vec3A = self.middle.proximal.pose.translation.mint();
 
-		let ring_metacarpal: Vec3A = self.ring.metacarpal.position.mint();
-		let ring_proximal: Vec3A = self.ring.proximal.position.mint();
+		let ring_metacarpal: Vec3A = self.ring.metacarpal.pose.translation.mint();
+		let ring_proximal: Vec3A = self.ring.proximal.pose.translation.mint();
 
-		let little_metacarpal: Vec3A = self.little.metacarpal.position.mint();
-		let little_proximal: Vec3A = self.little.proximal.position.mint();
+		let little_metacarpal: Vec3A = self.little.metacarpal.pose.translation.mint();
+		let little_proximal: Vec3A = self.little.proximal.pose.translation.mint();
 
 		let mut scale = 0.0;
 		scale += index_metacarpal.distance(index_proximal) / 0.06812;
@@ -253,11 +230,11 @@ impl Hand {
 
 	/// Confidence value from 0-1 of how strong this hand is pinching.
 	pub fn pinch_strength(&self) -> f32 {
-		let thumb_tip: Vec3A = self.thumb.tip.position.mint();
-		let index_tip: Vec3A = self.index.tip.position.mint();
-		let middle_tip: Vec3A = self.middle.tip.position.mint();
-		let ring_tip: Vec3A = self.ring.tip.position.mint();
-		let little_tip: Vec3A = self.little.tip.position.mint();
+		let thumb_tip: Vec3A = self.thumb.tip.pose.translation.mint();
+		let index_tip: Vec3A = self.index.tip.pose.translation.mint();
+		let middle_tip: Vec3A = self.middle.tip.pose.translation.mint();
+		let ring_tip: Vec3A = self.ring.tip.pose.translation.mint();
+		let little_tip: Vec3A = self.little.tip.pose.translation.mint();
 
 		let min_distance = index_tip
 			.distance_squared(thumb_tip)
@@ -295,6 +272,6 @@ impl Hand {
 
 impl Pointer {
 	pub fn direction(&self) -> Vec3F {
-		(self.orientation.mint::<Quat>() * vec3a(0.0, 0.0, -1.0)).into()
+		(self.pose.orientation.mint::<Quat>() * vec3a(0.0, 0.0, -1.0)).into()
 	}
 }

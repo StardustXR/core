@@ -29,11 +29,15 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
+            name: "Quatf",
+            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+        },
+        gluon_wire::ExternalGluonType {
             name: "Mat4f",
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
-            name: "Quatf",
+            name: "Posef",
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
@@ -221,6 +225,45 @@ impl gluon_wire::GluonConvertable for Vec4F {
         Ok(())
     }
 }
+///Quaternion
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Quatf {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+}
+impl gluon_wire::GluonConvertable for Quatf {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.x.write(gluon_data)?;
+        self.y.write(gluon_data)?;
+        self.z.write(gluon_data)?;
+        self.w.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(
+        gluon_data: &mut gluon_wire::GluonDataReader,
+    ) -> Result<Self, gluon_wire::GluonReadError> {
+        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let w = gluon_wire::GluonConvertable::read(gluon_data)?;
+        Ok(Quatf { x, y, z, w })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
+    ) -> Result<(), gluon_wire::GluonWriteError> {
+        self.x.write_owned(gluon_data)?;
+        self.y.write_owned(gluon_data)?;
+        self.z.write_owned(gluon_data)?;
+        self.w.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
 ///Colum major matrix
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Mat4F {
@@ -260,42 +303,34 @@ impl gluon_wire::GluonConvertable for Mat4F {
         Ok(())
     }
 }
-///Quaternion
+///Pose
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Quatf {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
+pub struct Posef {
+    pub translation: Vec3F,
+    pub orientation: Quatf,
 }
-impl gluon_wire::GluonConvertable for Quatf {
+impl gluon_wire::GluonConvertable for Posef {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write(gluon_data)?;
-        self.y.write(gluon_data)?;
-        self.z.write(gluon_data)?;
-        self.w.write(gluon_data)?;
+        self.translation.write(gluon_data)?;
+        self.orientation.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let x = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let y = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let z = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let w = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(Quatf { x, y, z, w })
+        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let orientation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        Ok(Posef { translation, orientation })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.x.write_owned(gluon_data)?;
-        self.y.write_owned(gluon_data)?;
-        self.z.write_owned(gluon_data)?;
-        self.w.write_owned(gluon_data)?;
+        self.translation.write_owned(gluon_data)?;
+        self.orientation.write_owned(gluon_data)?;
         Ok(())
     }
 }

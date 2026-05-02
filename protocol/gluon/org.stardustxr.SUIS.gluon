@@ -2,12 +2,16 @@ import "org.stardustxr.Spatial" as spatial
 import "org.stardustxr.Field" as field
 import "org.stardustxr.Types" as types
 
+/// Chirality
+enum Chirality {
+	Left,
+	Right,
+}
+
 /// A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
 struct Joint {
-	/// Position of the joint relative to the input handler.
-	position: types::Vec3f,
-	/// Orientation of the joint relative to the input handler.
-	rotation: types::Quatf,
+	/// Pose of the joint relative to the input handler.
+	pose: types::Posef,
 	/// Radius of the joint in meters.
 	radius: f32,
 	/// Distance from the center of the joint to the input handler's field.
@@ -31,9 +35,10 @@ struct Thumb {
 	metacarpal: Joint,
 }
 
-/// A fully articulated and tracked hand according to OpenXR spec for its coordinate system and joints.
+/// A fully articulated and tracked hand (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#convention-of-hand-joints).
 struct Hand {
-	right: bool,
+	chirality: Chirality,
+
 	thumb: Thumb,
 	index: Finger,
 	middle: Finger,
@@ -46,9 +51,8 @@ struct Hand {
 
 /// A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
 struct Pointer {
-	origin: types::Vec3f,
-	// should this be a Vec3 direction?
-	orientation: types::Quatf,
+	/// Often corresponds to the aim pose (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
+	pose: types::Posef,
 	/// The point that is the most inside the input handler's field.
 	/// Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.
 	deepest_point: f32,
@@ -56,8 +60,16 @@ struct Pointer {
 
 /// Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
 struct Tip {
-	origin: types::Vec3f,
-	orientation: types::Vec3f,
+	/// Pose you can use to tap/poke elements (in front of the face of a controller, or on a pen tip).
+	pose: types::Posef,
+	/// Is this tip in the left or right hand? This may change at any time.
+	chirality: Option<Chirality>,
+	/// Center of the controller treated as a gripped rod (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
+	grip_pose: Option<types::Posef>,
+	/// Center of the palm contacting the controller (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
+	grip_surface_pose: Option<types::Posef>,
+	/// Non-articulated hand data (for index or similar)
+	simulated_hand: Option<Hand>,
 }
 
 /// The special type of an InputMethod.
