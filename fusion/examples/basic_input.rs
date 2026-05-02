@@ -5,11 +5,11 @@ use gluon_wire::{GluonCtx, impl_transaction_handler};
 use stardust_xr_fusion::{
 	client::Client,
 	fields::{Field, FieldExt, FieldRef, Shape},
-	input::{InputData, InputHandlerHandler, InputMethod},
 	project_local_resources,
 	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
+	suis::{InputData, InputHandlerHandler, InputMethod},
 };
-use stardust_xr_protocol::input::InputHandler as InputHandlerProxy;
+use stardust_xr_protocol::suis::InputHandler as InputHandlerProxy;
 use tokio::sync::{RwLock, broadcast::error::RecvError};
 use tracing::{info, warn};
 

@@ -16,7 +16,7 @@ fn main() {
 			("camera", Path::new("./gluon/org.stardustxr.Camera.gluon")),
 			("client", Path::new("./gluon/org.stardustxr.Client.gluon")),
 			("audio", Path::new("./gluon/org.stardustxr.Audio.gluon")),
-			("input", Path::new("./gluon/org.stardustxr.Input.gluon")),
+			("suis", Path::new("./gluon/org.stardustxr.SUIS.gluon")),
 			("query", Path::new("./gluon/org.stardustxr.Query.gluon")),
 			("spatial_query", Path::new("./gluon/org.stardustxr.SpatialQuery.gluon")),
 		],
