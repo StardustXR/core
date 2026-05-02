@@ -784,7 +784,7 @@ This is considered static and should not change after handler creation.*/
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -793,6 +793,7 @@ This is considered static and should not change after handler creation.*/
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.get_spatial(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -802,6 +803,7 @@ This is considered static and should not change after handler creation.*/
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (field) = self.get_field(ctx).await;
+                    drop(gluon_data);
                     field.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -811,6 +813,7 @@ This is considered static and should not change after handler creation.*/
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (suggested_bindings) = self.suggested_bindings(ctx).await;
+                    drop(gluon_data);
                     suggested_bindings.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -820,30 +823,38 @@ This is considered static and should not change after handler creation.*/
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (groups) = self.handler_groups(ctx).await;
+                    drop(gluon_data);
                     groups.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 12u32 => {
-                    self.input_gained(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_method = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_data = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.input_gained(ctx, param_method, param_data).await;
                 }
                 13u32 => {
-                    self.input_updated(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_method = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_data = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.input_updated(ctx, param_method, param_data).await;
                 }
                 14u32 => {
-                    self.input_left(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
-                        .await;
+                    let param_method = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.input_left(ctx, param_method).await;
                 }
                 _ => {}
             }
@@ -972,35 +983,38 @@ Should return None when the InputMethod is captured by another InputHandler.*/
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    self.request_capture(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_handler = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.request_capture(ctx, param_handler).await;
                 }
                 9u32 => {
-                    self.release_capture(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_handler = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.release_capture(ctx, param_handler).await;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_handler = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_time = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (data) = self
-                        .get_spatial_data(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .get_spatial_data(ctx, param_handler, param_time)
                         .await;
+                    drop(gluon_data);
                     data.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

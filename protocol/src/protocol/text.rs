@@ -397,7 +397,7 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -405,14 +405,19 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_spatial = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_text = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_style = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (text) = self
-                        .create_text(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .create_text(ctx, param_spatial, param_text, param_style)
                         .await;
+                    drop(gluon_data);
                     text.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -514,21 +519,24 @@ pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    self.set_character_height(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_height = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_character_height(ctx, param_height).await;
                 }
                 9u32 => {
-                    self.set_text(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
-                        .await;
+                    let param_text = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_text(ctx, param_text).await;
                 }
                 _ => {}
             }

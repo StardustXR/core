@@ -282,7 +282,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -291,6 +291,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.spatial_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -300,6 +301,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.field_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -309,6 +311,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.dmatex_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -318,6 +321,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.text_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -327,6 +331,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.model_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -336,6 +341,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.lines_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -345,6 +351,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.sky_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -354,6 +361,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.audio_interface(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -363,6 +371,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (interface) = self.query_interface(ctx).await;
+                    drop(gluon_data);
                     interface.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -372,6 +381,7 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (interface) = self.spatial_query_interface(ctx).await;
+                    drop(gluon_data);
                     interface.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -380,12 +390,11 @@ Make sure the environment variable shows in `/proc/{pid}/environ` as that's the 
                 18u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (token) = self
-                        .generate_state_token(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_state = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let (token) = self.generate_state_token(ctx, param_state).await;
+                    drop(gluon_data);
                     token.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -483,7 +492,7 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Sen
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -491,13 +500,16 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_client = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_resource_prefixes = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (server, state) = self
-                        .connect(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .connect(ctx, param_client, param_resource_prefixes)
                         .await;
+                    drop(gluon_data);
                     server.write_owned(&mut gluon_out)?;
                     state.write_owned(&mut gluon_out)?;
                     return_callback

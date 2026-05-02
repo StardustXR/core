@@ -309,7 +309,7 @@ pub trait FieldRefHandler: binderbinder::device::TransactionHandler + Send + Syn
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -523,7 +523,7 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -532,6 +532,7 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (field) = self.field_ref(ctx).await;
+                    drop(gluon_data);
                     field.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -541,6 +542,7 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.spatial(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -549,13 +551,16 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_reference_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_point = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (distance) = self
-                        .distance(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .distance(ctx, param_reference_space, param_point)
                         .await;
+                    drop(gluon_data);
                     distance.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -564,13 +569,16 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_reference_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_point = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (normal) = self
-                        .normal(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .normal(ctx, param_reference_space, param_point)
                         .await;
+                    drop(gluon_data);
                     normal.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -579,13 +587,16 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 12u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_reference_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_point = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (point) = self
-                        .closest_point(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .closest_point(ctx, param_reference_space, param_point)
                         .await;
+                    drop(gluon_data);
                     point.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -594,22 +605,35 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 13u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_reference_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_ray_origin = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_ray_direction = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (result) = self
                         .ray_march(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            param_reference_space,
+                            param_ray_origin,
+                            param_ray_direction,
                         )
                         .await;
+                    drop(gluon_data);
                     result.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 14u32 => {
-                    self.set_shape(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
-                        .await;
+                    let param_shape = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_shape(ctx, param_shape).await;
                 }
                 _ => {}
             }
@@ -809,7 +833,7 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -817,14 +841,19 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_field = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_point = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (distance) = self
-                        .distance(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .distance(ctx, param_field, param_space, param_point)
                         .await;
+                    drop(gluon_data);
                     distance.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -833,14 +862,19 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_field = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_point = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (normal) = self
-                        .normal(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .normal(ctx, param_field, param_space, param_point)
                         .await;
+                    drop(gluon_data);
                     normal.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -849,14 +883,19 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_field = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_point = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (point) = self
-                        .closest_point(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .closest_point(ctx, param_field, param_space, param_point)
                         .await;
+                    drop(gluon_data);
                     point.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -865,15 +904,28 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_field = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_space = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_ray_origin = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_ray_direction = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (result) = self
                         .ray_march(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            param_field,
+                            param_space,
+                            param_ray_origin,
+                            param_ray_direction,
                         )
                         .await;
+                    drop(gluon_data);
                     result.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -882,13 +934,16 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 12u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_spatial = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_shape = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (field) = self
-                        .create_field(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .create_field(ctx, param_spatial, param_shape)
                         .await;
+                    drop(gluon_data);
                     field.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

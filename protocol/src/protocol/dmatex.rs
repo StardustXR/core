@@ -241,7 +241,7 @@ pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sy
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -381,7 +381,7 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -389,16 +389,32 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_size = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_format = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_array_layers = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_planes = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_timeline_syncobj_fd = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (dmatex) = self
                         .import_dmatex(
                             ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
+                            param_size,
+                            param_format,
+                            param_array_layers,
+                            param_planes,
+                            param_timeline_syncobj_fd,
                         )
                         .await;
+                    drop(gluon_data);
                     dmatex.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -407,12 +423,11 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (formats) = self
-                        .enumerate_formats(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_render_node = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let (formats) = self.enumerate_formats(ctx, param_render_node).await;
+                    drop(gluon_data);
                     formats.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -422,6 +437,7 @@ pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (drm_render_node_id) = self.primary_render_node_id(ctx).await;
+                    drop(gluon_data);
                     drm_render_node_id.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

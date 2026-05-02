@@ -86,15 +86,17 @@ pub trait SoundHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
+                    drop(gluon_data);
                     self.play(ctx).await;
                 }
                 9u32 => {
+                    drop(gluon_data);
                     self.stop(ctx).await;
                 }
                 _ => {}
@@ -186,7 +188,7 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -194,13 +196,16 @@ pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_spatial = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_sound = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (sound) = self
-                        .create_sound(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .create_sound(ctx, param_spatial, param_sound)
                         .await;
+                    drop(gluon_data);
                     sound.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

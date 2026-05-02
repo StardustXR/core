@@ -471,7 +471,7 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -479,14 +479,19 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_spatial = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_model = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_model_scale = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (model) = self
-                        .load_model(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .load_model(ctx, param_spatial, param_model, param_model_scale)
                         .await;
+                    drop(gluon_data);
                     model.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -628,7 +633,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -637,6 +642,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (spatial) = self.get_spatial(ctx).await;
+                    drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -645,9 +651,11 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (part) = self
-                        .get_part(ctx, gluon_wire::GluonConvertable::read(gluon_data)?)
-                        .await;
+                    let param_path = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let (part) = self.get_part(ctx, param_path).await;
+                    drop(gluon_data);
                     part.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -657,17 +665,18 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (parts) = self.enumerate_parts(ctx).await;
+                    drop(gluon_data);
                     parts.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 11u32 => {
-                    self.set_model_scale(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_scale = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_model_scale(ctx, param_scale).await;
                 }
                 _ => {}
             }
@@ -905,7 +914,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -914,6 +923,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (path) = self.get_part_path(ctx).await;
+                    drop(gluon_data);
                     path.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -923,6 +933,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (transform) = self.get_model_transform(ctx).await;
+                    drop(gluon_data);
                     transform.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -932,6 +943,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (transform) = self.get_local_transform(ctx).await;
+                    drop(gluon_data);
                     transform.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -940,55 +952,63 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_relative_to = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (transform) = self
-                        .get_relative_transform(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .get_relative_transform(ctx, param_relative_to)
                         .await;
+                    drop(gluon_data);
                     transform.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 12u32 => {
-                    self.set_model_transform(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_transform = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_model_transform(ctx, param_transform).await;
                 }
                 13u32 => {
-                    self.set_local_transform(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_transform = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_local_transform(ctx, param_transform).await;
                 }
                 14u32 => {
-                    self.set_relative_transform(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                    let param_relative_to = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_transform = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    drop(gluon_data);
+                    self.set_relative_transform(ctx, param_relative_to, param_transform)
                         .await;
                 }
                 15u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let param_parameter_name = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_value = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     let (error) = self
-                        .set_material_parameter(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
+                        .set_material_parameter(ctx, param_parameter_name, param_value)
                         .await;
+                    drop(gluon_data);
                     error.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 16u32 => {
+                    drop(gluon_data);
                     self.apply_holdout_material(ctx).await;
                 }
                 _ => {}

@@ -70,7 +70,7 @@ pub trait SkyGuardHandler: binderbinder::device::TransactionHandler + Send + Syn
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -188,7 +188,7 @@ Returns None if the sky lighting is already set.*/
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        gluon_data: &mut gluon_wire::GluonDataReader,
+        mut gluon_data: gluon_wire::GluonDataReader,
         ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
         async move {
@@ -196,12 +196,9 @@ Returns None if the sky lighting is already set.*/
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (guard) = self
-                        .set_sky_tex(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_tex = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
+                    let (guard) = self.set_sky_tex(ctx, param_tex).await;
+                    drop(gluon_data);
                     guard.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -210,12 +207,9 @@ Returns None if the sky lighting is already set.*/
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (guard) = self
-                        .set_sky_light(
-                            ctx,
-                            gluon_wire::GluonConvertable::read(gluon_data)?,
-                        )
-                        .await;
+                    let param_tex = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
+                    let (guard) = self.set_sky_light(ctx, param_tex).await;
+                    drop(gluon_data);
                     guard.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
