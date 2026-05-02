@@ -33,11 +33,11 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
-            name: "InputData",
+            name: "SemanticData",
             supported_derives: gluon_wire::Derives::from_bits_truncate(0u32),
         },
         gluon_wire::ExternalGluonType {
-            name: "SpatialInputData",
+            name: "SpatialData",
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
         gluon_wire::ExternalGluonType {
@@ -334,7 +334,7 @@ impl gluon_wire::GluonConvertable for Tip {
 }
 ///Information about a given input method's state.
 #[derive(Debug)]
-pub struct InputData {
+pub struct SemanticData {
     ///Non-spatial data in a map. Keys will be a superset of the keys returned by InputHandler::suggested_bindings
     pub datamap: std::collections::HashMap<String, DatamapData>,
     ///There are [order] objects that got this input data before this one.
@@ -342,7 +342,7 @@ pub struct InputData {
     ///Is this input handler capturing this input method?
     pub captured: bool,
 }
-impl gluon_wire::GluonConvertable for InputData {
+impl gluon_wire::GluonConvertable for SemanticData {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
@@ -358,7 +358,7 @@ impl gluon_wire::GluonConvertable for InputData {
         let datamap = gluon_wire::GluonConvertable::read(gluon_data)?;
         let order = gluon_wire::GluonConvertable::read(gluon_data)?;
         let captured = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(InputData {
+        Ok(SemanticData {
             datamap,
             order,
             captured,
@@ -376,13 +376,13 @@ impl gluon_wire::GluonConvertable for InputData {
 }
 ///Information about a given input method's spatial state. All coordinates are relative to the InputHandlers SpatialRef.
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct SpatialInputData {
+pub struct SpatialData {
     ///All vectors and quaternions are relative to the input handler spatial ref.
     pub input: InputDataType,
     ///Closest distance from the input method to the field.
     pub distance: f32,
 }
-impl gluon_wire::GluonConvertable for SpatialInputData {
+impl gluon_wire::GluonConvertable for SpatialData {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
@@ -396,10 +396,7 @@ impl gluon_wire::GluonConvertable for SpatialInputData {
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let input = gluon_wire::GluonConvertable::read(gluon_data)?;
         let distance = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(SpatialInputData {
-            input,
-            distance,
-        })
+        Ok(SpatialData { input, distance })
     }
     fn write_owned(
         self,
@@ -667,11 +664,15 @@ This is considered static and should not change after handler creation.*/
     pub fn input_gained(
         &self,
         method: InputMethod,
-        data: InputData,
+        time: super::types::Timestamp,
+        spatial: SpatialData,
+        semantic: SemanticData,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         method.write(&mut gluon_builder)?;
-        data.write(&mut gluon_builder)?;
+        time.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
+        semantic.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
@@ -681,11 +682,15 @@ This is considered static and should not change after handler creation.*/
     pub fn input_updated(
         &self,
         method: InputMethod,
-        data: InputData,
+        time: super::types::Timestamp,
+        spatial: SpatialData,
+        semantic: SemanticData,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         method.write(&mut gluon_builder)?;
-        data.write(&mut gluon_builder)?;
+        time.write(&mut gluon_builder)?;
+        spatial.write(&mut gluon_builder)?;
+        semantic.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
@@ -695,9 +700,11 @@ This is considered static and should not change after handler creation.*/
     pub fn input_left(
         &self,
         method: InputMethod,
+        time: super::types::Timestamp,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         method.write(&mut gluon_builder)?;
+        time.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
@@ -766,20 +773,25 @@ This is considered static and should not change after handler creation.*/
         &self,
         _ctx: gluon_wire::GluonCtx,
         method: InputMethod,
-        data: InputData,
+        time: super::types::Timestamp,
+        spatial: SpatialData,
+        semantic: SemanticData,
     ) -> impl Future<Output = ()> + Send + Sync;
     ///An input method's data has been updated.
     fn input_updated(
         &self,
         _ctx: gluon_wire::GluonCtx,
         method: InputMethod,
-        data: InputData,
+        time: super::types::Timestamp,
+        spatial: SpatialData,
+        semantic: SemanticData,
     ) -> impl Future<Output = ()> + Send + Sync;
     ///An input method just stopped sending input to this handler.
     fn input_left(
         &self,
         _ctx: gluon_wire::GluonCtx,
         method: InputMethod,
+        time: super::types::Timestamp,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
@@ -833,28 +845,57 @@ This is considered static and should not change after handler creation.*/
                     let param_method = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_data = gluon_wire::GluonConvertable::read(
+                    let param_time = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_spatial = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_semantic = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
                     drop(gluon_data);
-                    self.input_gained(ctx, param_method, param_data).await;
+                    self.input_gained(
+                            ctx,
+                            param_method,
+                            param_time,
+                            param_spatial,
+                            param_semantic,
+                        )
+                        .await;
                 }
                 13u32 => {
                     let param_method = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_data = gluon_wire::GluonConvertable::read(
+                    let param_time = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_spatial = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_semantic = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
                     drop(gluon_data);
-                    self.input_updated(ctx, param_method, param_data).await;
+                    self.input_updated(
+                            ctx,
+                            param_method,
+                            param_time,
+                            param_spatial,
+                            param_semantic,
+                        )
+                        .await;
                 }
                 14u32 => {
                     let param_method = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
+                    let param_time = gluon_wire::GluonConvertable::read(
+                        &mut gluon_data,
+                    )?;
                     drop(gluon_data);
-                    self.input_left(ctx, param_method).await;
+                    self.input_left(ctx, param_method, param_time).await;
                 }
                 _ => {}
             }
@@ -913,7 +954,7 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         &self,
         handler: InputHandler,
         time: super::types::Timestamp,
-    ) -> Result<Option<SpatialInputData>, gluon_wire::GluonSendError> {
+    ) -> Result<Option<SpatialData>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -979,7 +1020,7 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         _ctx: gluon_wire::GluonCtx,
         handler: InputHandler,
         time: super::types::Timestamp,
-    ) -> impl Future<Output = Option<SpatialInputData>> + Send + Sync;
+    ) -> impl Future<Output = Option<SpatialData>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

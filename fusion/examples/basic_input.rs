@@ -7,9 +7,9 @@ use stardust_xr_fusion::{
 	fields::{Field, FieldExt, FieldRef, Shape},
 	project_local_resources,
 	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
-	suis::{InputData, InputHandlerHandler, InputMethod},
+	suis::{InputHandlerHandler, InputMethod, SemanticData, SpatialData},
 };
-use stardust_xr_protocol::suis::InputHandler as InputHandlerProxy;
+use stardust_xr_protocol::{suis::InputHandler as InputHandlerProxy, types::Timestamp};
 use tokio::sync::{RwLock, broadcast::error::RecvError};
 use tracing::{info, warn};
 
@@ -114,16 +114,30 @@ impl InputHandlerHandler for InputHandler {
 		vec!["org.stardustxr.fusion.InputExample".to_string()]
 	}
 
-	async fn input_gained(&self, _ctx: GluonCtx, method: InputMethod, data: InputData) {
-		info!(?method, ?data, "input gained");
+	async fn input_gained(
+		&self,
+		_ctx: GluonCtx,
+		method: InputMethod,
+		time: Timestamp,
+		spatial: SpatialData,
+		semantic: SemanticData,
+	) {
+		info!(?method, ?time, ?spatial, ?semantic, "input gained");
 		self.methods.write().await.insert(method);
 	}
 
-	async fn input_updated(&self, _ctx: GluonCtx, method: InputMethod, data: InputData) {
-		info!(?method, ?data, "input updated");
+	async fn input_updated(
+		&self,
+		_ctx: GluonCtx,
+		method: InputMethod,
+		time: Timestamp,
+		spatial: SpatialData,
+		semantic: SemanticData,
+	) {
+		info!(?method, ?time, ?spatial, ?semantic, "input updated");
 	}
 
-	async fn input_left(&self, _ctx: GluonCtx, method: InputMethod) {
+	async fn input_left(&self, _ctx: GluonCtx, method: InputMethod, _time: Timestamp) {
 		self.methods.write().await.remove(&method);
 		info!(?method, "input left");
 	}
