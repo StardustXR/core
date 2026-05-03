@@ -306,7 +306,7 @@ impl gluon_wire::GluonConvertable for Mat4F {
 ///Pose
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Posef {
-    pub translation: Vec3F,
+    pub position: Vec3F,
     pub orientation: Quatf,
 }
 impl gluon_wire::GluonConvertable for Posef {
@@ -314,22 +314,22 @@ impl gluon_wire::GluonConvertable for Posef {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write(gluon_data)?;
+        self.position.write(gluon_data)?;
         self.orientation.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
         let orientation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(Posef { translation, orientation })
+        Ok(Posef { position, orientation })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write_owned(gluon_data)?;
+        self.position.write_owned(gluon_data)?;
         self.orientation.write_owned(gluon_data)?;
         Ok(())
     }

@@ -50,7 +50,7 @@ struct Mat4f {
 
 /// Pose
 struct Posef {
-	translation: Vec3f,
+	position: Vec3f,
 	orientation: Quatf,
 }
 
