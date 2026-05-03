@@ -1,8 +1,12 @@
 use crate::protocol::suis::{Finger, Hand, Joint, Pointer, Thumb, Tip};
 use crate::protocol::types::Vec3F;
-use crate::suis::Chirality;
+use crate::suis::{Chirality, InputHandler};
 use crate::types::Posef;
 use glam::{FloatExt, Quat, Vec3A, vec3a};
+
+impl InputHandler {
+	pub const QUERY_INTERFACE: &str = "org.stardustxr.SUIS.Handler";
+}
 
 impl Default for Joint {
 	fn default() -> Self {
