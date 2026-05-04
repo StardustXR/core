@@ -37,7 +37,7 @@ impl Default for Quatf {
 impl Default for Posef {
 	fn default() -> Self {
 		Self {
-			translation: Vec3F::default(),
+			position: Vec3F::default(),
 			orientation: Quatf::default(),
 		}
 	}
