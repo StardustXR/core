@@ -1,4 +1,6 @@
-use crate::types::{Posef, Quatf, Vec2F, Vec3F, Vec4F};
+use rustix::time::ClockId;
+
+use crate::types::{Posef, Quatf, Timestamp, Vec2F, Vec3F, Vec4F};
 
 impl Default for Vec2F {
 	fn default() -> Self {
@@ -39,6 +41,19 @@ impl Default for Posef {
 		Self {
 			position: Vec3F::default(),
 			orientation: Quatf::default(),
+		}
+	}
+}
+
+pub trait TimestampExt {
+	fn now() -> Self;
+}
+impl TimestampExt for Timestamp {
+	fn now() -> Self {
+		let time = rustix::time::clock_gettime(ClockId::Monotonic);
+		Timestamp {
+			seconds: time.tv_sec,
+			nanoseconds: time.tv_nsec,
 		}
 	}
 }

@@ -17,6 +17,7 @@ thiserror = "2.0.16"
 tokio = "1.49.0"
 mint = "0.5.9"
 xdg = "3.0.0"
+rustix = { version = "1.0.8", features = ["time"] }
 
 [build-dependencies]
 syn = "2"
