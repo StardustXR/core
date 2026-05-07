@@ -45,11 +45,8 @@ impl Default for Posef {
 	}
 }
 
-pub trait TimestampExt {
-	fn now() -> Self;
-}
-impl TimestampExt for Timestamp {
-	fn now() -> Self {
+impl Timestamp {
+	pub fn now() -> Self {
 		let time = rustix::time::clock_gettime(ClockId::Monotonic);
 		Timestamp {
 			seconds: time.tv_sec,
