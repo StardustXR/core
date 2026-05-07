@@ -1,22 +1,22 @@
 //! Audio types and interfaces.
 
 pub use stardust_xr_protocol::audio::*;
-use stardust_xr_protocol::{spatial::Spatial, types::Resource};
+use stardust_xr_protocol::{client::ClientHandler, spatial::Spatial, types::Resource};
 
 use crate::{client::Client, error::ServerError};
 
 pub trait SoundExt {
-	fn new(
-		client: &Client,
-        spatial: &Spatial,
-        sound: Resource,
+	fn new<H: ClientHandler>(
+		client: &Client<H>,
+		spatial: &Spatial,
+		sound: Resource,
 	) -> impl std::future::Future<Output = Result<Sound, ServerError>> + Send;
 }
 impl SoundExt for Sound {
-	async fn new(
-		client: &Client,
-        spatial: &Spatial,
-        sound: Resource,
+	async fn new<H: ClientHandler>(
+		client: &Client<H>,
+		spatial: &Spatial,
+		sound: Resource,
 	) -> Result<Sound, ServerError> {
 		// TODO: actually handle invalid handles at the protocol level
 		Ok(client

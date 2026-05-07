@@ -2,6 +2,7 @@
 
 #![allow(ambiguous_glob_reexports)]
 
+use stardust_xr_protocol::client::ClientHandler;
 pub use stardust_xr_protocol::lines::*;
 pub use stardust_xr_protocol::model::*;
 pub use stardust_xr_protocol::sky::*;
@@ -14,15 +15,15 @@ use stardust_xr_protocol::types::Vec3F;
 use crate::{client::Client, error::ServerError};
 
 pub trait LinesExt {
-	fn new(
-		client: &Client,
+	fn new<H: ClientHandler>(
+		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
 	) -> impl std::future::Future<Output = Result<Lines, ServerError>> + Send;
 }
 impl LinesExt for Lines {
-	async fn new(
-		client: &Client,
+	async fn new<H: ClientHandler>(
+		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
 	) -> Result<Lines, ServerError> {
@@ -34,16 +35,16 @@ impl LinesExt for Lines {
 }
 
 pub trait ModelExt {
-	fn new(
-		client: &Client,
+	fn new<H: ClientHandler>(
+		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
 		model_scale: impl Into<Vec3F> + Send,
 	) -> impl std::future::Future<Output = Result<Model, ServerError>> + Send;
 }
 impl ModelExt for Model {
-	async fn new(
-		client: &Client,
+	async fn new<H: ClientHandler>(
+		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
 		model_scale: impl Into<Vec3F> + Send,
@@ -57,16 +58,16 @@ impl ModelExt for Model {
 }
 
 pub trait TextExt {
-	fn new(
-		client: &Client,
+	fn new<H: ClientHandler>(
+		client: &Client<H>,
 		spatial: &Spatial,
 		text: String,
 		style: TextStyle,
 	) -> impl std::future::Future<Output = Result<Text, ServerError>> + Send;
 }
 impl TextExt for Text {
-	async fn new(
-		client: &Client,
+	async fn new<H: ClientHandler>(
+		client: &Client<H>,
 		spatial: &Spatial,
 		text: String,
 		style: TextStyle,

@@ -1,7 +1,7 @@
 //! Your connection to the Stardust server and other essentials.
 
 use binderbinder::binder_object::BinderObject;
-use gluon_wire::{GluonCtx, GluonSendError};
+use gluon_wire::{GluonCtx, GluonSendError, Handler};
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
@@ -18,7 +18,7 @@ use stardust_xr_protocol::{
 	spatial_query::SpatialQueryInterface,
 	text::TextInterface,
 };
-use std::{fs, path::Path};
+use std::{fs, path::Path, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast;
 
@@ -42,11 +42,11 @@ pub enum ClientError {
 }
 
 /// Your connection to the Stardust server.
-pub struct Client {
+pub struct Client<H: ClientHandler> {
 	pion_dev: PionBinderDevice,
+	handler: BinderObject<H>,
 	server: Server,
 	root: SpatialRef,
-	client_handler: BinderObject<ClientImpl>,
 	spatial_interface: SpatialInterface,
 	field_interface: FieldInterface,
 	dmatex_interface: DmatexInterface,
@@ -59,15 +59,42 @@ pub struct Client {
 	spatial_query_interface: SpatialQueryInterface,
 }
 
-impl Client {
-	pub async fn connect(resource_prefixes: &[&Path]) -> Result<(Self, ClientState), ClientError> {
+impl Client<DefaultHandler> {
+	pub async fn auto_connect(
+		resource_prefixes: &[&Path],
+	) -> Result<(Self, ClientState), ClientError> {
 		let dev = PionBinderDevice::default();
-		Self::connect_with_device(&dev, resource_prefixes).await
+		Self::manual_connect(&dev, resource_prefixes).await
 	}
-	pub async fn connect_with_device(
+	pub async fn manual_connect(
 		pion_device: &PionBinderDevice,
 		resource_prefixes: &[&Path],
 	) -> Result<(Self, ClientState), ClientError> {
+		// TODO: do proper checks to make sure this is actually a server interface
+		let handler = pion_device.register_object(DefaultHandler {
+			frame_sender: broadcast::channel(8).0,
+		});
+		Self::manual_connect_with_handler(pion_device, handler, resource_prefixes).await
+	}
+	pub fn frame_receiver(&self) -> broadcast::Receiver<FrameInfo> {
+		self.handler().frame_sender.subscribe()
+	}
+}
+
+impl<H: ClientHandler> Client<H> {
+	pub async fn auto_connect_with_handler(
+		handler: BinderObject<H>,
+		resource_prefixes: &[&Path],
+	) -> Result<(Self, ClientState), ClientError> {
+		let dev = PionBinderDevice::default();
+		Self::manual_connect_with_handler(&dev, handler, resource_prefixes).await
+	}
+
+	pub async fn manual_connect_with_handler(
+		pion_device: &PionBinderDevice,
+		handler: BinderObject<H>,
+		resource_prefixes: &[&Path],
+	) -> Result<(Client<H>, ClientState), ClientError> {
 		let server_path = find_pion_file("stardust-server").ok_or(ClientError::NoServerFile)?;
 
 		let paths = resource_prefixes
@@ -95,10 +122,7 @@ impl Client {
 			.map_err(|_| ClientError::ConnectionFailure)?;
 		// TODO: do proper checks to make sure this is actually a server interface
 		let server_interface = ServerInterface::from_object_or_ref(interface);
-		let client_handler = pion_device.register_object(ClientImpl {
-			frame_sender: broadcast::channel(8).0,
-		});
-		let client = ProtocolClient::from_handler(&client_handler);
+		let client = ProtocolClient::from_handler(&handler);
 		let (server, initial_state) = server_interface
 			.connect(client, prefixes)
 			.await
@@ -108,7 +132,7 @@ impl Client {
 			Client {
 				pion_dev: pion_device.clone(),
 				root,
-				client_handler,
+				handler,
 				spatial_interface: server.spatial_interface().await?,
 				field_interface: server.field_interface().await?,
 				dmatex_interface: server.dmatex_interface().await?,
@@ -139,9 +163,8 @@ impl Client {
 		&self.pion_dev
 	}
 
-	/// Get a receiverr for frame events, only events generated after this call will be returned
-	pub fn frame_receiver(&self) -> broadcast::Receiver<FrameInfo> {
-		self.client_handler.frame_sender.subscribe()
+	pub fn handler(&self) -> &Arc<H> {
+		self.handler.handler_arc()
 	}
 
 	// --- Interface accessors (cached) ---
@@ -187,12 +210,11 @@ impl Client {
 	}
 }
 
-#[derive(Debug)]
-struct ClientImpl {
+#[derive(Debug, Handler)]
+pub struct DefaultHandler {
 	frame_sender: broadcast::Sender<FrameInfo>,
 }
-
-impl ClientHandler for ClientImpl {
+impl ClientHandler for DefaultHandler {
 	// do we maybe want to wait for something in the main code paths?
 	async fn ping(&self, _ctx: GluonCtx) {}
 
@@ -204,12 +226,4 @@ impl ClientHandler for ClientImpl {
 	async fn get_state(&self, _ctx: GluonCtx) -> ClientState {
 		todo!()
 	}
-}
-
-mod transaction_impl {
-	use gluon_wire::impl_transaction_handler;
-
-	use super::ClientImpl as Client;
-	use stardust_xr_protocol::client::ClientHandler;
-	impl_transaction_handler!(Client);
 }

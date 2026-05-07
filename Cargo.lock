@@ -199,7 +199,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen-rust"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#d138359219ab46b39cf4045241014fde30ac72c6"
+source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
 dependencies = [
  "convert_case",
  "gluon-parser",
@@ -213,7 +213,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#d138359219ab46b39cf4045241014fde30ac72c6"
+source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
 dependencies = [
  "ansi_term",
  "binderbinder",
@@ -224,13 +224,24 @@ dependencies = [
 [[package]]
 name = "gluon-wire"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#d138359219ab46b39cf4045241014fde30ac72c6"
+source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
 dependencies = [
  "binderbinder",
  "bitflags",
+ "gluon-wire-derive",
  "rustix",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "gluon-wire-derive"
+version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -585,6 +596,7 @@ dependencies = [
  "gluon-wire",
  "mint",
  "prettyplease",
+ "rustix",
  "syn",
  "thiserror",
  "tokio",

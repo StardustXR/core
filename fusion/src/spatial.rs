@@ -1,19 +1,20 @@
 //! Spatial types and interfaces for positioning objects in 3D space.
 
+use stardust_xr_protocol::client::ClientHandler;
 pub use stardust_xr_protocol::spatial::*;
 
 use crate::{client::Client, error::ServerError};
 
 pub trait SpatialExt {
-	fn new(
-		client: &Client,
+	fn new<H: ClientHandler>(
+		client: &Client<H>,
 		parent: &SpatialRef,
 		transform: Transform,
 	) -> impl std::future::Future<Output = Result<Spatial, ServerError>> + Send;
 }
 impl SpatialExt for Spatial {
-	async fn new(
-		client: &Client,
+	async fn new<H: ClientHandler>(
+		client: &Client<H>,
 		parent: &SpatialRef,
 		transform: Transform,
 	) -> Result<Spatial, ServerError> {

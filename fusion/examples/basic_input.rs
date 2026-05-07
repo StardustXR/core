@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use binderbinder::binder_object::ToBinderObjectOrRef;
-use gluon_wire::{GluonCtx, impl_transaction_handler};
+use gluon_wire::{GluonCtx, Handler};
 use stardust_xr_fusion::{
 	client::Client,
 	fields::{Field, FieldExt, FieldRef, Shape},
@@ -16,7 +16,7 @@ use tracing::{info, warn};
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, state) = Client::connect(&[&project_local_resources!("res")])
+	let (client, state) = Client::auto_connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 
@@ -84,7 +84,7 @@ async fn main() {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Handler)]
 struct InputHandler {
 	field: Field,
 	spatial: Spatial,
@@ -142,4 +142,3 @@ impl InputHandlerHandler for InputHandler {
 		info!(?method, "input left");
 	}
 }
-impl_transaction_handler!(InputHandler);

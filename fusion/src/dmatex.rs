@@ -1,9 +1,10 @@
+use stardust_xr_protocol::client::ClientHandler;
 pub use stardust_xr_protocol::dmatex::*;
 
 use crate::{client::Client, error::ServerError};
 pub trait DmatexExt {
-	fn import(
-		client: &Client,
+	fn import<H: ClientHandler>(
+		client: &Client<H>,
 		size: DmatexSize,
 		format: DmatexFormat,
 		array_layers: u32,
@@ -12,8 +13,8 @@ pub trait DmatexExt {
 	) -> impl std::future::Future<Output = Result<DmatexRef, ServerError>> + Send;
 }
 impl DmatexExt for DmatexRef {
-	async fn import(
-		client: &Client,
+	async fn import<H: ClientHandler>(
+		client: &Client<H>,
 		size: DmatexSize,
 		format: DmatexFormat,
 		array_layers: u32,
