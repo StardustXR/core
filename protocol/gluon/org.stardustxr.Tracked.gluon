@@ -1,0 +1,16 @@
+import "org.stardustxr.Spatial" as spatial
+import "org.stardustxr.Types" as types
+
+/// a tracked object
+interface Tracked {
+	get(handler: Ref<TrackedStateReceiver>) -> (spatial: Ref<spatial::SpatialRef>, guard: Ref<TrackedGuard>, tracked: bool)	
+	get_pose(at: types::Timestamp, relative_to: Ref<spatial::SpatialRef>) -> (pose: Option<types::Posef>, tracked: bool)
+}
+
+/// a guard for Tracked
+interface TrackedGuard {}
+
+/// an interface to receive tracked state changes
+interface TrackedStateReceiver {
+    tracked(tracked: bool)
+}

@@ -19,6 +19,7 @@ fn main() {
 			("suis", Path::new("./gluon/org.stardustxr.SUIS.gluon")),
 			("query", Path::new("./gluon/org.stardustxr.Query.gluon")),
 			("spatial_query", Path::new("./gluon/org.stardustxr.SpatialQuery.gluon")),
+			("tracked", Path::new("./gluon/org.stardustxr.Tracked.gluon")),
 		],
 		&[],
 		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
