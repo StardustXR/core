@@ -18,7 +18,7 @@ use stardust_xr_protocol::{
 	spatial_query::SpatialQueryInterface,
 	text::TextInterface,
 };
-use std::{fs, path::Path, sync::Arc};
+use std::{env, fs, path::Path, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast;
 
@@ -123,8 +123,9 @@ impl<H: ClientHandler> Client<H> {
 		// TODO: do proper checks to make sure this is actually a server interface
 		let server_interface = ServerInterface::from_object_or_ref(interface);
 		let client = ProtocolClient::from_handler(&handler);
+		let state_token = env::var("STARDUST_STARTUP_TOKEN").ok();
 		let (server, initial_state) = server_interface
-			.connect(client, prefixes)
+			.connect(client, state_token, prefixes)
 			.await
 			.map_err(ClientError::GluonError)?;
 		let root = initial_state.root.clone();
