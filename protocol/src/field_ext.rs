@@ -123,7 +123,7 @@ pub fn cubic_bezier_to_line(
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 impl FieldSample {
-	fn infinite() -> Self {
+	pub fn infinite() -> Self {
 		Self {
 			closest_point: Vec3A::ZERO.into(),
 			distance: f32::INFINITY,
