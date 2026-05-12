@@ -2,9 +2,14 @@ import "org.stardustxr.Types" as types
 import "org.stardustxr.Spatial" as spatial
 
 /// Information about the field at a sample point in space.
-struct FieldSampleResult {
+struct FieldSample {
+	/// Closest point on the shape boundary, in the same space as the query.
 	distance: f32,
+	/// Signed Euclidean distance: negative inside, positive outside.
 	normal: types::Vec3f,
+	/// Unit outward surface normal at the closest point.
+	/// Always points away from the shape interior, regardless of whether the
+	/// query point is inside or outside.
 	closest_point: types::Vec3f,
 }
 
