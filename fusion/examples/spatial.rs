@@ -15,11 +15,11 @@ use tracing::warn;
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, state) = Client::auto_connect(&[&project_local_resources!("res")])
+	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 
-	let gyro_spatial = Spatial::new(&client, &state.root, Transform::IDENTITY)
+	let gyro_spatial = Spatial::new(&client, &root, Transform::IDENTITY)
 		.await
 		.unwrap();
 	let gyro = Model::new(
@@ -47,11 +47,7 @@ async fn main() {
 		.unwrap();
 	let ring_outer = gyro.get_part("OuterRing".into()).await.unwrap().unwrap();
 
-	let mut elapsed = state
-		.data
-		.and_then(|v| v.try_into().ok())
-		.map(f32::from_le_bytes)
-		.unwrap_or(0f32);
+	let mut elapsed = 0f32;
 	let mut frame_recv = client.frame_receiver();
 	loop {
 		let info = match frame_recv.recv().await {

@@ -16,11 +16,11 @@ use tracing::{info, warn};
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, state) = Client::auto_connect(&[&project_local_resources!("res")])
+	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 
-	let handler_spatial = Spatial::new(&client, &state.root, Transform::IDENTITY)
+	let handler_spatial = Spatial::new(&client, &root, Transform::IDENTITY)
 		.await
 		.unwrap();
 	let field_spatial = Spatial::new(

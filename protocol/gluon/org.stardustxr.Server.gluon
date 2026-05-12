@@ -29,12 +29,12 @@ interface Server {
 	/// Generate a client state token and return it back.
 	///
 	/// When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
-	generate_state_token(state: client::ClientState) -> (token: String)
+	generate_startup_token(root: Ref<spatial::SpatialRef>) -> (token: String)
 }
 
 /// The entry point for the stardust server
 interface ServerInterface {
-	/// The state_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
-	connect(client: Ref<client::Client>, state_token: Option<String>, resource_prefixes: Vec<String>) -> (server: Ref<Server>, state: client::ClientState)
-	state_spatial(state_token: String) -> (spatial_ref: Ref<spatial::SpatialRef>)
+	/// The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
+	connect(client: Ref<client::Client>, startup_token: Option<String>, resource_prefixes: Vec<String>) -> (server: Ref<Server>, root: Ref<spatial::SpatialRef>)
+	startup_spatial(startup_token: String) -> (spatial_ref: Ref<spatial::SpatialRef>)
 }

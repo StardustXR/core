@@ -178,15 +178,15 @@ impl Server {
     /**Generate a client state token and return it back.
 
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.*/
-    pub async fn generate_state_token(
+    pub async fn generate_startup_token(
         &self,
-        state: super::client::ClientState,
+        root: super::spatial::SpatialRef,
     ) -> Result<String, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
-        state.write(&mut gluon_builder)?;
+        root.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 18u32, gluon_builder.to_payload())?;
@@ -272,10 +272,10 @@ pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync 
     /**Generate a client state token and return it back.
 
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.*/
-    fn generate_state_token(
+    fn generate_startup_token(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        state: super::client::ClientState,
+        root: super::spatial::SpatialRef,
     ) -> impl Future<Output = String> + Send + Sync;
     fn dispatch_one_way(
         &self,
@@ -388,10 +388,10 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 18u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_state = gluon_wire::GluonConvertable::read(
+                    let param_root = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let (token) = self.generate_state_token(ctx, param_state).await;
+                    let (token) = self.generate_startup_token(ctx, param_root).await;
                     drop(gluon_data);
                     token.write_owned(&mut gluon_out)?;
                     return_callback
@@ -429,19 +429,19 @@ impl gluon_wire::GluonConvertable for ServerInterface {
     }
 }
 impl ServerInterface {
-    ///The state_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
+    ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
     pub async fn connect(
         &self,
         client: super::client::Client,
-        state_token: Option<String>,
+        startup_token: Option<String>,
         resource_prefixes: Vec<String>,
-    ) -> Result<(Server, super::client::ClientState), gluon_wire::GluonSendError> {
+    ) -> Result<(Server, super::spatial::SpatialRef), gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         client.write(&mut gluon_builder)?;
-        state_token.write(&mut gluon_builder)?;
+        startup_token.write(&mut gluon_builder)?;
         resource_prefixes.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
@@ -451,15 +451,15 @@ impl ServerInterface {
             gluon_wire::GluonConvertable::read(&mut reader)?,
         ))
     }
-    pub async fn state_spatial(
+    pub async fn startup_spatial(
         &self,
-        state_token: String,
+        startup_token: String,
     ) -> Result<super::spatial::SpatialRef, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
-        state_token.write(&mut gluon_builder)?;
+        startup_token.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
@@ -498,18 +498,18 @@ impl PartialEq for ServerInterface {
 }
 impl Eq for ServerInterface {}
 pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    ///The state_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
+    ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
     fn connect(
         &self,
         _ctx: gluon_wire::GluonCtx,
         client: super::client::Client,
-        state_token: Option<String>,
+        startup_token: Option<String>,
         resource_prefixes: Vec<String>,
-    ) -> impl Future<Output = (Server, super::client::ClientState)> + Send + Sync;
-    fn state_spatial(
+    ) -> impl Future<Output = (Server, super::spatial::SpatialRef)> + Send + Sync;
+    fn startup_spatial(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        state_token: String,
+        startup_token: String,
     ) -> impl Future<Output = super::spatial::SpatialRef> + Send + Sync;
     fn dispatch_one_way(
         &self,
@@ -525,23 +525,23 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                     let param_client = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_state_token = gluon_wire::GluonConvertable::read(
+                    let param_startup_token = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
                     let param_resource_prefixes = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let (server, state) = self
+                    let (server, root) = self
                         .connect(
                             ctx,
                             param_client,
-                            param_state_token,
+                            param_startup_token,
                             param_resource_prefixes,
                         )
                         .await;
                     drop(gluon_data);
                     server.write_owned(&mut gluon_out)?;
-                    state.write_owned(&mut gluon_out)?;
+                    root.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
@@ -549,10 +549,12 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Sen
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_state_token = gluon_wire::GluonConvertable::read(
+                    let param_startup_token = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let (spatial_ref) = self.state_spatial(ctx, param_state_token).await;
+                    let (spatial_ref) = self
+                        .startup_spatial(ctx, param_startup_token)
+                        .await;
                     drop(gluon_data);
                     spatial_ref.write_owned(&mut gluon_out)?;
                     return_callback

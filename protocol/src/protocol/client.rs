@@ -12,10 +12,6 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             name: "FrameInfo",
             supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
         },
-        gluon_wire::ExternalGluonType {
-            name: "ClientState",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(0u32),
-        },
     ],
 };
 ///Information for a specific frame
@@ -49,48 +45,6 @@ impl gluon_wire::GluonConvertable for FrameInfo {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.delta.write_owned(gluon_data)?;
         self.predicted_display_time.write_owned(gluon_data)?;
-        Ok(())
-    }
-}
-///The persistent state of a Stardust client.
-#[derive(Debug)]
-pub struct ClientState {
-    ///Data specific to your client, put anything you like here and it'll be saved/restored intact.
-    pub data: Option<Vec<u8>>,
-    ///Where the client's root should be positioned on reload.
-    pub root: super::spatial::SpatialRef,
-    ///Spatials that will be in the same place you left them.
-    pub spatial_anchors: std::collections::HashMap<String, super::spatial::SpatialRef>,
-}
-impl gluon_wire::GluonConvertable for ClientState {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.data.write(gluon_data)?;
-        self.root.write(gluon_data)?;
-        self.spatial_anchors.write(gluon_data)?;
-        Ok(())
-    }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let data = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let root = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let spatial_anchors = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(ClientState {
-            data,
-            root,
-            spatial_anchors,
-        })
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.data.write_owned(gluon_data)?;
-        self.root.write_owned(gluon_data)?;
-        self.spatial_anchors.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -135,18 +89,6 @@ impl Client {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub async fn get_state(&self) -> Result<ClientState, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
     pub fn from_handler<H: ClientHandler>(
         obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
     ) -> Client {
@@ -186,10 +128,6 @@ pub trait ClientHandler: binderbinder::device::TransactionHandler + Send + Sync 
         _ctx: gluon_wire::GluonCtx,
         info: FrameInfo,
     ) -> impl Future<Output = ()> + Send + Sync;
-    fn get_state(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = ClientState> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -213,16 +151,6 @@ pub trait ClientHandler: binderbinder::device::TransactionHandler + Send + Sync 
                     )?;
                     drop(gluon_data);
                     self.frame(ctx, param_info).await;
-                }
-                10u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (state) = self.get_state(ctx).await;
-                    drop(gluon_data);
-                    state.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 _ => {}
             }

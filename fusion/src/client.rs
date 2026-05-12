@@ -5,7 +5,7 @@ use gluon_wire::{GluonCtx, GluonSendError, Handler};
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
-	client::{Client as ProtocolClient, ClientHandler, ClientState, FrameInfo},
+	client::{Client as ProtocolClient, ClientHandler, FrameInfo},
 	dir::find_pion_file,
 	dmatex::DmatexInterface,
 	field::FieldInterface,
@@ -62,14 +62,14 @@ pub struct Client<H: ClientHandler> {
 impl Client<DefaultHandler> {
 	pub async fn auto_connect(
 		resource_prefixes: &[&Path],
-	) -> Result<(Self, ClientState), ClientError> {
+	) -> Result<(Self, SpatialRef), ClientError> {
 		let dev = PionBinderDevice::default();
 		Self::manual_connect(&dev, resource_prefixes).await
 	}
 	pub async fn manual_connect(
 		pion_device: &PionBinderDevice,
 		resource_prefixes: &[&Path],
-	) -> Result<(Self, ClientState), ClientError> {
+	) -> Result<(Self, SpatialRef), ClientError> {
 		// TODO: do proper checks to make sure this is actually a server interface
 		let handler = pion_device.register_object(DefaultHandler {
 			frame_sender: broadcast::channel(8).0,
@@ -85,7 +85,7 @@ impl<H: ClientHandler> Client<H> {
 	pub async fn auto_connect_with_handler(
 		handler: BinderObject<H>,
 		resource_prefixes: &[&Path],
-	) -> Result<(Self, ClientState), ClientError> {
+	) -> Result<(Self, SpatialRef), ClientError> {
 		let dev = PionBinderDevice::default();
 		Self::manual_connect_with_handler(&dev, handler, resource_prefixes).await
 	}
@@ -94,7 +94,7 @@ impl<H: ClientHandler> Client<H> {
 		pion_device: &PionBinderDevice,
 		handler: BinderObject<H>,
 		resource_prefixes: &[&Path],
-	) -> Result<(Client<H>, ClientState), ClientError> {
+	) -> Result<(Client<H>, SpatialRef), ClientError> {
 		let server_path = find_pion_file("stardust-server").ok_or(ClientError::NoServerFile)?;
 
 		let paths = resource_prefixes
@@ -124,15 +124,14 @@ impl<H: ClientHandler> Client<H> {
 		let server_interface = ServerInterface::from_object_or_ref(interface);
 		let client = ProtocolClient::from_handler(&handler);
 		let state_token = env::var("STARDUST_STARTUP_TOKEN").ok();
-		let (server, initial_state) = server_interface
+		let (server, root) = server_interface
 			.connect(client, state_token, prefixes)
 			.await
 			.map_err(ClientError::GluonError)?;
-		let root = initial_state.root.clone();
 		Ok((
 			Client {
 				pion_dev: pion_device.clone(),
-				root,
+				root: root.clone(),
 				handler,
 				spatial_interface: server.spatial_interface().await?,
 				field_interface: server.field_interface().await?,
@@ -146,7 +145,7 @@ impl<H: ClientHandler> Client<H> {
 				spatial_query_interface: server.spatial_query_interface().await?,
 				server,
 			},
-			initial_state,
+			root,
 		))
 	}
 
@@ -221,10 +220,5 @@ impl ClientHandler for DefaultHandler {
 
 	async fn frame(&self, _ctx: GluonCtx, info: FrameInfo) {
 		_ = self.frame_sender.send(info);
-	}
-
-	// TODO: figure out how to enforce a response somehow, if thats possible
-	async fn get_state(&self, _ctx: GluonCtx) -> ClientState {
-		todo!()
 	}
 }
