@@ -12,9 +12,9 @@
 //! five-step plan:
 //!
 //!   1. p_local  = M⁻¹ · p_world           [one matrix mul]
-//!   2+3. q_local = shape.query(p_local)    [exact in undeformed local space]
-//!   4. q_world  = M · q_local             [one matrix mul]
-//!   5. dist     = sign(d_local)·|p_world−q_world|  [true world distance]
+//!   2. q_local = shape.query(p_local)    [exact in undeformed local space]
+//!   3. q_world  = M · q_local             [one matrix mul]
+//!   4. dist     = sign(d_local)·|p_world−q_world|  [true world distance]
 //!
 //! Under non-uniform scale the returned distance is a conservative
 //! **overestimate** of the true minimum world-distance by at most (κ−1)·d
@@ -132,15 +132,12 @@ impl FieldSample {
 	}
 }
 
-pub trait ShapeExt {
-	fn query(&self, point: Vec3) -> FieldSample;
-}
-impl ShapeExt for Shape {
+impl Shape {
 	/// Query the closest surface point and signed distance from `point`.
 	///
 	/// Pass world-space coordinates; [`Shape::Transform`] nodes handle the
 	/// world→local→world conversion internally.
-	fn query(&self, point: Vec3) -> FieldSample {
+	pub fn query(&self, point: Vec3) -> FieldSample {
 		match self {
 			Shape::Box { size } => box_sample(point, vec3(size.x, size.y, size.z) * 0.5),
 			Shape::Sphere { radius } => sphere_sample(point, *radius),
