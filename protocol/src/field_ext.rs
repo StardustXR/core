@@ -38,7 +38,7 @@ use crate::field::FieldSample;
 use crate::protocol::field::{CubicBezierControlPoint, Shape};
 use crate::protocol::lines::{Line, LinePoint};
 use crate::protocol::types::Color;
-use glam::{Mat4, Vec3, vec3};
+use glam::{Mat4, Vec3, Vec3A, vec3, vec3a};
 
 impl Shape {
 	/// Convert a CubicBezierSpline shape to a Line for visualization.
@@ -125,9 +125,9 @@ pub fn cubic_bezier_to_line(
 impl FieldSample {
 	fn infinite() -> Self {
 		Self {
-			closest_point: Vec3::ZERO.into(),
+			closest_point: Vec3A::ZERO.into(),
 			distance: f32::INFINITY,
-			gradient: Vec3::Y.into(),
+			gradient: Vec3A::Y.into(),
 		}
 	}
 }
@@ -137,9 +137,9 @@ impl Shape {
 	///
 	/// Pass world-space coordinates; [`Shape::Transform`] nodes handle the
 	/// world→local→world conversion internally.
-	pub fn sample(&self, point: Vec3) -> FieldSample {
+	pub fn sample(&self, point: Vec3A) -> FieldSample {
 		match self {
-			Shape::Box { size } => box_sample(point, vec3(size.x, size.y, size.z) * 0.5),
+			Shape::Box { size } => box_sample(point, vec3a(size.x, size.y, size.z) * 0.5),
 			Shape::Sphere { radius } => sphere_sample(point, *radius),
 			Shape::Capsule { length, radius } => capsule_sample(point, length * 0.5, *radius),
 			Shape::Cylinder { length, radius } => cylinder_sample(point, length * 0.5, *radius),
@@ -163,21 +163,21 @@ impl Shape {
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /// Any unit vector orthogonal to `v`.
-fn orthogonal(v: Vec3) -> Vec3 {
+fn orthogonal(v: Vec3A) -> Vec3A {
 	let v = v.normalize();
 	if v.x.abs() <= v.y.abs() && v.x.abs() <= v.z.abs() {
-		Vec3::new(0.0, -v.z, v.y).normalize()
+		vec3a(0.0, -v.z, v.y).normalize()
 	} else if v.y.abs() <= v.z.abs() {
-		Vec3::new(-v.z, 0.0, v.x).normalize()
+		vec3a(-v.z, 0.0, v.x).normalize()
 	} else {
-		Vec3::new(-v.y, v.x, 0.0).normalize()
+		vec3a(-v.y, v.x, 0.0).normalize()
 	}
 }
 
 // ─── Primitives (centred at origin, canonical orientation) ────────────────────
 
 /// Axis-aligned box with given half-extents.
-fn box_sample(p: Vec3, half: Vec3) -> FieldSample {
+fn box_sample(p: Vec3A, half: Vec3A) -> FieldSample {
 	let q = p.clamp(-half, half); // closest point on/in box
 	let outside = p - q; // zero vector when p is inside
 	let ext_len = outside.length();
@@ -193,11 +193,11 @@ fn box_sample(p: Vec3, half: Vec3) -> FieldSample {
 		// Interior: nearest face = axis with smallest clearance.
 		let dtf = half - p.abs(); // clearance to each face pair
 		let (min_d, n) = if dtf.x <= dtf.y && dtf.x <= dtf.z {
-			(dtf.x, Vec3::new(p.x.signum(), 0.0, 0.0))
+			(dtf.x, vec3a(p.x.signum(), 0.0, 0.0))
 		} else if dtf.y <= dtf.z {
-			(dtf.y, Vec3::new(0.0, p.y.signum(), 0.0))
+			(dtf.y, vec3a(0.0, p.y.signum(), 0.0))
 		} else {
-			(dtf.z, Vec3::new(0.0, 0.0, p.z.signum()))
+			(dtf.z, vec3a(0.0, 0.0, p.z.signum()))
 		};
 
 		FieldSample {
@@ -209,10 +209,10 @@ fn box_sample(p: Vec3, half: Vec3) -> FieldSample {
 }
 
 /// Sphere of given radius, centred at origin.
-fn sphere_sample(p: Vec3, r: f32) -> FieldSample {
+fn sphere_sample(p: Vec3A, r: f32) -> FieldSample {
 	let len = p.length();
 	// dir = radially outward direction; stable even at the origin.
-	let dir = if len > 1e-7 { p / len } else { Vec3::Y };
+	let dir = if len > 1e-7 { p / len } else { Vec3A::Y };
 	FieldSample {
 		closest_point: (dir * r).into(),
 		distance: len - r,
@@ -224,16 +224,16 @@ fn sphere_sample(p: Vec3, r: f32) -> FieldSample {
 }
 
 /// Capsule: cylinder of `half_len` along Y with hemispherical caps, radius `r`.
-fn capsule_sample(p: Vec3, half_len: f32, r: f32) -> FieldSample {
+fn capsule_sample(p: Vec3A, half_len: f32, r: f32) -> FieldSample {
 	// Project onto the Y segment [−half_len, half_len].
-	let axis_pt = Vec3::new(0.0, p.y.clamp(-half_len, half_len), 0.0);
+	let axis_pt = vec3a(0.0, p.y.clamp(-half_len, half_len), 0.0);
 	let off = p - axis_pt;
 	let len = off.length();
 	// Radially outward direction from the capsule axis; correct for interior too.
 	let dir = if len > 1e-7 {
 		off / len
 	} else {
-		orthogonal(Vec3::Y)
+		orthogonal(Vec3A::Y)
 	};
 	FieldSample {
 		closest_point: (axis_pt + dir * r).into(),
@@ -243,13 +243,13 @@ fn capsule_sample(p: Vec3, half_len: f32, r: f32) -> FieldSample {
 }
 
 /// Flat-capped cylinder: `half_len` along Y, radius `r` in XZ.
-fn cylinder_sample(p: Vec3, half_len: f32, r: f32) -> FieldSample {
+fn cylinder_sample(p: Vec3A, half_len: f32, r: f32) -> FieldSample {
 	let xz_len = (p.x * p.x + p.z * p.z).sqrt();
 	// Radially outward in XZ; fallback to +X when on the Y axis.
 	let xz_dir = if xz_len > 1e-7 {
-		Vec3::new(p.x / xz_len, 0.0, p.z / xz_len)
+		vec3a(p.x / xz_len, 0.0, p.z / xz_len)
 	} else {
-		Vec3::X
+		Vec3A::X
 	};
 
 	let d_side = xz_len - r; // signed dist to barrel (neg = inside)
@@ -265,20 +265,20 @@ fn cylinder_sample(p: Vec3, half_len: f32, r: f32) -> FieldSample {
 	// Closest point and outward normal:
 	let (closest, gradient) = if d_side > 0.0 && d_cap > 0.0 {
 		// Exterior corner: nearest point is on the rim circle.
-		let c = xz_dir * r + Vec3::new(0.0, p.y.signum() * half_len, 0.0);
+		let c = xz_dir * r + vec3a(0.0, p.y.signum() * half_len, 0.0);
 		let off = p - c;
 		let ol = off.length();
 		(c, if ol > 1e-7 { off / ol } else { xz_dir })
 	} else if d_side >= d_cap {
 		// Closest to the barrel surface (interior or exterior).
 		// Outward normal is radially outward in XZ — no sign flip for interior.
-		let c = xz_dir * r + Vec3::new(0.0, p.y.clamp(-half_len, half_len), 0.0);
+		let c = xz_dir * r + vec3a(0.0, p.y.clamp(-half_len, half_len), 0.0);
 		(c, xz_dir)
 	} else {
 		// Closest to a cap face (interior or exterior).
 		// Outward normal is ±Y — no sign flip for interior.
-		let c = Vec3::new(p.x, p.y.signum() * half_len, p.z);
-		(c, Vec3::new(0.0, p.y.signum(), 0.0))
+		let c = vec3a(p.x, p.y.signum() * half_len, p.z);
+		(c, vec3a(0.0, p.y.signum(), 0.0))
 	};
 
 	FieldSample {
@@ -289,13 +289,13 @@ fn cylinder_sample(p: Vec3, half_len: f32, r: f32) -> FieldSample {
 }
 
 /// Torus: ring of `major_r` in the XZ plane, tube of `minor_r`.
-fn torus_sample(p: Vec3, major_r: f32, minor_r: f32) -> FieldSample {
+fn torus_sample(p: Vec3A, major_r: f32, minor_r: f32) -> FieldSample {
 	let xz_len = (p.x * p.x + p.z * p.z).sqrt();
 	// Closest point on the major ring circle.
 	let ring = if xz_len > 1e-7 {
-		Vec3::new(p.x / xz_len * major_r, 0.0, p.z / xz_len * major_r)
+		vec3a(p.x / xz_len * major_r, 0.0, p.z / xz_len * major_r)
 	} else {
-		Vec3::new(major_r, 0.0, 0.0) // degenerate: on the torus axis
+		vec3a(major_r, 0.0, 0.0) // degenerate: on the torus axis
 	};
 
 	let to_p = p - ring;
@@ -304,7 +304,7 @@ fn torus_sample(p: Vec3, major_r: f32, minor_r: f32) -> FieldSample {
 	let dir = if to_len > 1e-7 {
 		to_p / to_len
 	} else {
-		Vec3::Y
+		Vec3A::Y
 	};
 
 	FieldSample {
@@ -316,13 +316,13 @@ fn torus_sample(p: Vec3, major_r: f32, minor_r: f32) -> FieldSample {
 
 // ─── Cubic Bézier spline ──────────────────────────────────────────────────────
 
-fn cubic_bezier(b0: Vec3, b1: Vec3, b2: Vec3, b3: Vec3, t: f32) -> Vec3 {
+fn cubic_bezier(b0: Vec3A, b1: Vec3A, b2: Vec3A, b3: Vec3A, t: f32) -> Vec3A {
 	let u = 1.0 - t;
 	b0 * (u * u * u) + b1 * (3.0 * u * u * t) + b2 * (3.0 * u * t * t) + b3 * (t * t * t)
 }
 
 /// Tapered capsule segment from `(a, ra)` to `(b, rb)`: a varying-radius tube.
-fn tapered_segment_sample(p: Vec3, a: Vec3, ra: f32, b: Vec3, rb: f32) -> FieldSample {
+fn tapered_segment_sample(p: Vec3A, a: Vec3A, ra: f32, b: Vec3A, rb: f32) -> FieldSample {
 	let seg = b - a;
 	let seg_sq = seg.length_squared();
 
@@ -342,7 +342,7 @@ fn tapered_segment_sample(p: Vec3, a: Vec3, ra: f32, b: Vec3, rb: f32) -> FieldS
 	} else if seg_sq > 1e-10 {
 		orthogonal(seg.normalize())
 	} else {
-		Vec3::X
+		Vec3A::X
 	};
 
 	FieldSample {
@@ -352,7 +352,7 @@ fn tapered_segment_sample(p: Vec3, a: Vec3, ra: f32, b: Vec3, rb: f32) -> FieldS
 	}
 }
 
-fn spline_sample(p: Vec3, cps: &[CubicBezierControlPoint], cyclic: bool) -> FieldSample {
+fn spline_sample(p: Vec3A, cps: &[CubicBezierControlPoint], cyclic: bool) -> FieldSample {
 	const SUBS: usize = 10; // linear subdivisions per cubic segment
 
 	if cps.is_empty() {
@@ -376,7 +376,7 @@ fn spline_sample(p: Vec3, cps: &[CubicBezierControlPoint], cyclic: bool) -> Fiel
 			c1.anchor.mint(),
 		);
 
-		let mut prev: Option<(Vec3, f32)> = None;
+		let mut prev: Option<(Vec3A, f32)> = None;
 		for j in 0..=SUBS {
 			let t = j as f32 / SUBS as f32;
 			let pt = cubic_bezier(b0, b1, b2, b3, t);
@@ -399,15 +399,15 @@ fn spline_sample(p: Vec3, cps: &[CubicBezierControlPoint], cyclic: bool) -> Fiel
 
 // ─── Transform (five-step world↔local) ───────────────────────────────────────
 
-fn transform_sample(p: Vec3, shape: &Shape, m: &Mat4) -> FieldSample {
+fn transform_sample(p: Vec3A, shape: &Shape, m: &Mat4) -> FieldSample {
 	// 1. Transform sample point to local (undeformed) space.
-	let p_local = m.inverse().transform_point3(p);
+	let p_local = m.inverse().transform_point3a(p);
 
 	// 2+3. Closest point in local space — no scale distortion here.
 	let local = shape.sample(p_local);
 
 	// 4. Transform closest point back to world space (exact surface point).
-	let q_world = m.transform_point3(local.closest_point.mint());
+	let q_world = m.transform_point3a(local.closest_point.mint());
 
 	// 5. True world-space distance to that surface point.
 	//    Under non-uniform scale this may not be the *minimum* world distance,
@@ -449,7 +449,7 @@ fn transform_sample(p: Vec3, shape: &Shape, m: &Mat4) -> FieldSample {
 /// fall back to hard `min`.  Interior seam artefacts can appear here, but the
 /// zone is geometrically small (it requires both shapes' closest surface points
 /// to be mutually occluded).
-fn union_sample(p: Vec3, shapes: &[Shape]) -> FieldSample {
+fn union_sample(p: Vec3A, shapes: &[Shape]) -> FieldSample {
 	if shapes.is_empty() {
 		return FieldSample::infinite();
 	}
@@ -501,7 +501,7 @@ fn union_sample(p: Vec3, shapes: &[Shape]) -> FieldSample {
 
 // ─── Smooth union ─────────────────────────────────────────────────────────────
 
-fn smooth_union_sample(p: Vec3, shapes: &[Shape], k: f32) -> FieldSample {
+fn smooth_union_sample(p: Vec3A, shapes: &[Shape], k: f32) -> FieldSample {
 	if shapes.is_empty() {
 		return FieldSample::infinite();
 	}
@@ -514,8 +514,8 @@ fn smooth_union_sample(p: Vec3, shapes: &[Shape], k: f32) -> FieldSample {
 		let h = (0.5 + 0.5 * (b.distance - acc.distance) / k).clamp(0.0, 1.0);
 		let d = acc.distance * h + b.distance * (1.0 - h) - k * h * (1.0 - h);
 		// Blend closest points and gradients proportionally.
-		let closest = Vec3::lerp(b.closest_point.mint(), acc.closest_point.mint(), h).into();
-		let gradient = Vec3::lerp(b.gradient.mint(), acc.gradient.mint(), h)
+		let closest = Vec3A::lerp(b.closest_point.mint(), acc.closest_point.mint(), h).into();
+		let gradient = Vec3A::lerp(b.gradient.mint(), acc.gradient.mint(), h)
 			.normalize_or_zero()
 			.into();
 		acc = FieldSample {
@@ -534,12 +534,12 @@ fn smooth_union_sample(p: Vec3, shapes: &[Shape], k: f32) -> FieldSample {
 ///
 /// Transforms correctly under any linear map A via `h_{AK}(d) = h_K(Aᵀd)`,
 /// so this naturally handles child transforms (see the `Transform` match arm).
-fn support_fn(shape: &Shape, d: Vec3) -> f32 {
+fn support_fn(shape: &Shape, d: Vec3A) -> f32 {
 	match shape {
 		Shape::Sphere { radius } => *radius,
 
 		Shape::Box { size } => {
-			let hs = (*size).mint::<Vec3>() * 0.5;
+			let hs = (*size).mint::<Vec3A>() * 0.5;
 			hs.x * d.x.abs() + hs.y * d.y.abs() + hs.z * d.z.abs()
 		}
 
@@ -563,7 +563,7 @@ fn support_fn(shape: &Shape, d: Vec3) -> f32 {
 
 		// Transform: h_{AK}(d) = h_K(Aᵀd).  Magnitude of Aᵀd scales the result.
 		Shape::Transform { shape, transform } => {
-			let d_local = transform.mint::<Mat4>().transpose().transform_vector3(d);
+			let d_local = transform.mint::<Mat4>().transpose().transform_vector3a(d);
 			let scale = d_local.length();
 			if scale > 1e-10 {
 				support_fn(shape, d_local / scale) * scale
@@ -591,13 +591,13 @@ fn support_fn(shape: &Shape, d: Vec3) -> f32 {
 ///
 /// Common use: `Sweep { surface: Box, sweeper: Sphere { radius: 0.05 } }`
 /// produces a rounded box at zero extra sample cost.
-fn sweep_sample(p: Vec3, surface: &Shape, sweeper: &Shape) -> FieldSample {
+fn sweep_sample(p: Vec3A, surface: &Shape, sweeper: &Shape) -> FieldSample {
 	let mut res = surface.sample(p);
 	let s = support_fn(sweeper, res.gradient.mint());
 	res.distance -= s;
 	// Shift the closest point outward by the sweep extent along the gradient.
 	res.closest_point =
-		(res.closest_point.mint::<Vec3>() - (res.gradient.mint::<Vec3>() * s)).into();
+		(res.closest_point.mint::<Vec3A>() - (res.gradient.mint::<Vec3A>() * s)).into();
 	res
 }
 
@@ -609,41 +609,41 @@ fn near(a: f32, b: f32, eps: f32, msg: &str) {
 
 #[test]
 fn field_shape_sphere_exterior_distance_and_gradient() {
-	let r = sphere_sample(Vec3::new(3.0, 0.0, 0.0), 1.0);
+	let r = sphere_sample(vec3a(3.0, 0.0, 0.0), 1.0);
 	near(r.distance, 2.0, 1e-5, "sphere exterior dist");
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.999,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
 		"gradient outward"
 	);
 }
 
 #[test]
 fn field_shape_sphere_interior_gradient_still_outward() {
-	let r = sphere_sample(Vec3::new(0.5, 0.0, 0.0), 1.0);
+	let r = sphere_sample(vec3a(0.5, 0.0, 0.0), 1.0);
 	near(r.distance, -0.5, 1e-5, "sphere interior dist");
 	// Gradient must point *outward* (same direction as the position) even inside.
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.999,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
 		"interior gradient outward"
 	);
 }
 
 #[test]
 fn field_shape_box_exterior() {
-	let r = box_sample(Vec3::new(1.0, 0.0, 0.0), Vec3::splat(0.5));
+	let r = box_sample(vec3a(1.0, 0.0, 0.0), Vec3A::splat(0.5));
 	near(r.distance, 0.5, 1e-5, "box exterior dist");
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.999,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
 		"box exterior gradient"
 	);
 }
 
 #[test]
 fn field_shape_box_interior_nearest_face() {
-	let r = box_sample(Vec3::new(0.4, 0.0, 0.0), Vec3::splat(0.5));
+	let r = box_sample(vec3a(0.4, 0.0, 0.0), Vec3A::splat(0.5));
 	near(r.distance, -0.1, 1e-5, "box interior dist");
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.999,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
 		"box interior gradient toward +X face"
 	);
 }
@@ -651,24 +651,24 @@ fn field_shape_box_interior_nearest_face() {
 #[test]
 fn field_shape_cylinder_interior_gradient_outward() {
 	// Interior point near the barrel, not the caps.
-	let r = cylinder_sample(Vec3::new(0.3, 0.0, 0.0), 1.0, 0.5);
+	let r = cylinder_sample(vec3a(0.3, 0.0, 0.0), 1.0, 0.5);
 	assert!(r.distance < 0.0, "inside cylinder");
 	// Gradient must point outward (+X direction for this point).
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.5,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.5,
 		"cylinder interior gradient outward"
 	);
 }
 
 #[test]
 fn field_shape_capsule_contains_point_on_axis() {
-	let r = capsule_sample(Vec3::ZERO, 1.0, 0.5);
+	let r = capsule_sample(Vec3A::ZERO, 1.0, 0.5);
 	near(r.distance, -0.5, 1e-5, "capsule centre dist");
 }
 
 #[test]
 fn field_shape_torus_exterior_equatorial() {
-	let r = torus_sample(Vec3::new(2.5, 0.0, 0.0), 2.0, 0.3);
+	let r = torus_sample(vec3a(2.5, 0.0, 0.0), 2.0, 0.3);
 	near(r.distance, 0.2, 1e-4, "torus exterior dist");
 }
 
@@ -676,10 +676,10 @@ fn field_shape_torus_exterior_equatorial() {
 fn field_shape_torus_interior_gradient_outward() {
 	// Point just inside the tube, displaced in Y from the ring plane.
 	// Ring point is at (2.0, 0.0, 0.0); to_p = (0, 0.1, 0) → gradient = +Y.
-	let r = torus_sample(Vec3::new(2.0, 0.1, 0.0), 2.0, 0.3);
+	let r = torus_sample(vec3a(2.0, 0.1, 0.0), 2.0, 0.3);
 	assert!(r.distance < 0.0, "inside torus tube");
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::Y) > 0.9,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::Y) > 0.9,
 		"torus interior gradient outward in Y"
 	);
 }
@@ -691,7 +691,7 @@ fn field_shape_transform_uniform_scale() {
 		shape: Box::new(Shape::Sphere { radius: 1.0 }),
 		transform: Mat4::from_scale(Vec3::splat(2.0)).into(),
 	};
-	let r = s.sample(Vec3::new(4.0, 0.0, 0.0));
+	let r = s.sample(vec3a(4.0, 0.0, 0.0));
 	near(r.distance, 2.0, 1e-4, "scaled sphere world dist");
 }
 
@@ -701,18 +701,18 @@ fn field_shape_union_exterior_exact() {
 	let shapes = vec![
 		Shape::Transform {
 			shape: Box::new(Shape::Sphere { radius: 1.0 }),
-			transform: Mat4::from_translation(Vec3::new(1.5, 0.0, 0.0)).into(),
+			transform: Mat4::from_translation(vec3(1.5, 0.0, 0.0)).into(),
 		},
 		Shape::Transform {
 			shape: Box::new(Shape::Sphere { radius: 1.0 }),
-			transform: Mat4::from_translation(Vec3::new(-1.5, 0.0, 0.0)).into(),
+			transform: Mat4::from_translation(vec3(-1.5, 0.0, 0.0)).into(),
 		},
 	];
 	let u = Shape::Union { shapes };
-	let r = u.sample(Vec3::new(3.0, 0.0, 0.0));
+	let r = u.sample(vec3a(3.0, 0.0, 0.0));
 	near(r.distance, 0.5, 1e-4, "union exterior dist");
 	assert!(
-		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.99,
+		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.99,
 		"union exterior gradient"
 	);
 }
@@ -722,10 +722,10 @@ fn field_shape_sweep_sphere_rounds_box() {
 	// Box(1×1×1) ⊕ Sphere(0.1): point at (0.6, 0, 0) → box dist = 0.1, rounded = 0.0.
 	let s = Shape::Sweep {
 		surface: Box::new(Shape::Box {
-			size: Vec3::splat(1.0).into(),
+			size: Vec3A::splat(1.0).into(),
 		}),
 		sweeper: Box::new(Shape::Sphere { radius: 0.1 }),
 	};
-	let r = s.sample(Vec3::new(0.6, 0.0, 0.0));
+	let r = s.sample(vec3a(0.6, 0.0, 0.0));
 	near(r.distance, 0.0, 1e-4, "rounded box surface");
 }
