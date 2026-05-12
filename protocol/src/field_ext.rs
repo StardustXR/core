@@ -2,7 +2,7 @@
 //!
 //! Design
 //! ──────
-//! Every [`Shape`] variant implements a `query(point) → FieldSample` that returns:
+//! Every [`Shape`] variant implements a `sample(point) → FieldSample` that returns:
 //!   • the closest surface point   (world-space)
 //!   • the signed Euclidean distance (negative = inside, positive = outside)
 //!   • the outward unit surface normal (gradient of the SDF, always outward)
@@ -12,7 +12,7 @@
 //! five-step plan:
 //!
 //!   1. p_local  = M⁻¹ · p_world           [one matrix mul]
-//!   2. q_local = shape.query(p_local)    [exact in undeformed local space]
+//!   2. q_local = shape.sample(p_local)    [exact in undeformed local space]
 //!   3. q_world  = M · q_local             [one matrix mul]
 //!   4. dist     = sign(d_local)·|p_world−q_world|  [true world distance]
 //!
@@ -133,11 +133,11 @@ impl FieldSample {
 }
 
 impl Shape {
-	/// Query the closest surface point and signed distance from `point`.
+	/// sample the closest surface point and signed distance from `point`.
 	///
 	/// Pass world-space coordinates; [`Shape::Transform`] nodes handle the
 	/// world→local→world conversion internally.
-	pub fn query(&self, point: Vec3) -> FieldSample {
+	pub fn sample(&self, point: Vec3) -> FieldSample {
 		match self {
 			Shape::Box { size } => box_sample(point, vec3(size.x, size.y, size.z) * 0.5),
 			Shape::Sphere { radius } => sphere_sample(point, *radius),
@@ -400,11 +400,11 @@ fn spline_sample(p: Vec3, cps: &[CubicBezierControlPoint], cyclic: bool) -> Fiel
 // ─── Transform (five-step world↔local) ───────────────────────────────────────
 
 fn transform_sample(p: Vec3, shape: &Shape, m: &Mat4) -> FieldSample {
-	// 1. Transform query point to local (undeformed) space.
+	// 1. Transform sample point to local (undeformed) space.
 	let p_local = m.inverse().transform_point3(p);
 
 	// 2+3. Closest point in local space — no scale distortion here.
-	let local = shape.query(p_local);
+	let local = shape.sample(p_local);
 
 	// 4. Transform closest point back to world space (exact surface point).
 	let q_world = m.transform_point3(local.closest_point.mint());
@@ -438,7 +438,7 @@ fn transform_sample(p: Vec3, shape: &Shape, m: &Mat4) -> FieldSample {
 ///
 /// **Exterior** (min distance ≥ 0): `min(d_i)` — exact Euclidean distance.
 ///
-/// **Interior**: for each shape whose surface contains the query point, test
+/// **Interior**: for each shape whose surface contains the sample point, test
 /// whether its closest surface point is *outside* every sibling shape.  If so,
 /// that surface point is on the actual union boundary — return it immediately.
 /// This gives the correct gradient and an underestimate of the true interior
@@ -454,7 +454,7 @@ fn union_sample(p: Vec3, shapes: &[Shape]) -> FieldSample {
 		return FieldSample::infinite();
 	}
 
-	let results: Vec<FieldSample> = shapes.iter().map(|s| s.query(p)).collect();
+	let results: Vec<FieldSample> = shapes.iter().map(|s| s.sample(p)).collect();
 
 	// Hard min — exact for exterior, fallback for interior.
 	let min_result = results
@@ -487,7 +487,7 @@ fn union_sample(p: Vec3, shapes: &[Shape]) -> FieldSample {
 			}
 			// A small negative tolerance avoids numerical rejection at
 			// near-tangent intersections.
-			shapes[j].query(cp.mint()).distance >= -1e-3
+			shapes[j].sample(cp.mint()).distance >= -1e-3
 		});
 
 		if on_boundary {
@@ -506,10 +506,10 @@ fn smooth_union_sample(p: Vec3, shapes: &[Shape], k: f32) -> FieldSample {
 		return FieldSample::infinite();
 	}
 
-	let mut acc = shapes[0].query(p);
+	let mut acc = shapes[0].sample(p);
 
 	for shape in &shapes[1..] {
-		let b = shape.query(p);
+		let b = shape.sample(p);
 		// h = 1 → prefer acc, h = 0 → prefer b
 		let h = (0.5 + 0.5 * (b.distance - acc.distance) / k).clamp(0.0, 1.0);
 		let d = acc.distance * h + b.distance * (1.0 - h) - k * h * (1.0 - h);
@@ -590,9 +590,9 @@ fn support_fn(shape: &Shape, d: Vec3) -> f32 {
 /// Minkowski sum with a convex body (it only shifts the surface outward).
 ///
 /// Common use: `Sweep { surface: Box, sweeper: Sphere { radius: 0.05 } }`
-/// produces a rounded box at zero extra query cost.
+/// produces a rounded box at zero extra sample cost.
 fn sweep_sample(p: Vec3, surface: &Shape, sweeper: &Shape) -> FieldSample {
-	let mut res = surface.query(p);
+	let mut res = surface.sample(p);
 	let s = support_fn(sweeper, res.gradient.mint());
 	res.distance -= s;
 	// Shift the closest point outward by the sweep extent along the gradient.
@@ -691,13 +691,13 @@ fn field_shape_transform_uniform_scale() {
 		shape: Box::new(Shape::Sphere { radius: 1.0 }),
 		transform: Mat4::from_scale(Vec3::splat(2.0)).into(),
 	};
-	let r = s.query(Vec3::new(4.0, 0.0, 0.0));
+	let r = s.sample(Vec3::new(4.0, 0.0, 0.0));
 	near(r.distance, 2.0, 1e-4, "scaled sphere world dist");
 }
 
 #[test]
 fn field_shape_union_exterior_exact() {
-	// Two spheres at (±1.5, 0, 0); query at (3, 0, 0) → dist to nearer sphere = 0.5.
+	// Two spheres at (±1.5, 0, 0); sample at (3, 0, 0) → dist to nearer sphere = 0.5.
 	let shapes = vec![
 		Shape::Transform {
 			shape: Box::new(Shape::Sphere { radius: 1.0 }),
@@ -709,7 +709,7 @@ fn field_shape_union_exterior_exact() {
 		},
 	];
 	let u = Shape::Union { shapes };
-	let r = u.query(Vec3::new(3.0, 0.0, 0.0));
+	let r = u.sample(Vec3::new(3.0, 0.0, 0.0));
 	near(r.distance, 0.5, 1e-4, "union exterior dist");
 	assert!(
 		r.gradient.mint::<Vec3>().dot(Vec3::X) > 0.99,
@@ -726,6 +726,6 @@ fn field_shape_sweep_sphere_rounds_box() {
 		}),
 		sweeper: Box::new(Shape::Sphere { radius: 0.1 }),
 	};
-	let r = s.query(Vec3::new(0.6, 0.0, 0.0));
+	let r = s.sample(Vec3::new(0.6, 0.0, 0.0));
 	near(r.distance, 0.0, 1e-4, "rounded box surface");
 }
