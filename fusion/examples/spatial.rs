@@ -1,4 +1,4 @@
-use glam::{Quat, Vec3};
+use glam::Quat;
 use stardust_xr_fusion::{
 	client::Client,
 	drawable::ModelExt,
@@ -29,23 +29,26 @@ async fn main() {
 			namespace: "fusion".into(),
 			path: "gyro".into(),
 		},
-		Vec3::ZERO,
 	)
 	.await
 	.unwrap();
 
 	let gem = gyro.get_part("Gem".into()).await.unwrap().unwrap();
+	let gem_spatial = gem.get_spatial().await.unwrap();
 	let ring_inner = gyro
 		.get_part("OuterRing/MiddleRing/InnerRing".into())
 		.await
 		.unwrap()
 		.unwrap();
+	let ring_inner_spatial = ring_inner.get_spatial().await.unwrap();
 	let ring_middle = gyro
 		.get_part("OuterRing/MiddleRing".into())
 		.await
 		.unwrap()
 		.unwrap();
+	let ring_middle_spatial = ring_middle.get_spatial().await.unwrap();
 	let ring_outer = gyro.get_part("OuterRing".into()).await.unwrap().unwrap();
+	let ring_outer_spatial = ring_outer.get_spatial().await.unwrap();
 
 	let mut elapsed = 0f32;
 	let mut frame_recv = client.frame_receiver();
@@ -70,16 +73,17 @@ async fn main() {
 		)
 		.await
 		.unwrap();
-		use stardust_xr_fusion::drawable::PartialNonUniformTransform as PartTransform;
-		gem.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_y(elapsed)))
+		use stardust_xr_fusion::spatial::PartialTransform as PartTransform;
+		gem_spatial
+			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_y(elapsed)))
 			.unwrap();
-		ring_inner
+		ring_inner_spatial
 			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_x(elapsed)))
 			.unwrap();
-		ring_middle
+		ring_middle_spatial
 			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_z(elapsed)))
 			.unwrap();
-		ring_outer
+		ring_outer_spatial
 			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_x(elapsed)))
 			.unwrap();
 	}

@@ -9,14 +9,6 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
     protocol_name: "org.stardustxr.Model",
     types: &[
         gluon_wire::ExternalGluonType {
-            name: "NonUniformTransform",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
-        },
-        gluon_wire::ExternalGluonType {
-            name: "PartialNonUniformTransform",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
-        },
-        gluon_wire::ExternalGluonType {
             name: "ModelLoadError",
             supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
         },
@@ -30,88 +22,11 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
     ],
 };
-///Transform with non-uniform scale
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct NonUniformTransform {
-    pub translation: super::types::Vec3F,
-    pub rotation: super::types::Quatf,
-    pub scale: super::types::Vec3F,
-}
-impl gluon_wire::GluonConvertable for NonUniformTransform {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write(gluon_data)?;
-        self.rotation.write(gluon_data)?;
-        self.scale.write(gluon_data)?;
-        Ok(())
-    }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(NonUniformTransform {
-            translation,
-            rotation,
-            scale,
-        })
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write_owned(gluon_data)?;
-        self.rotation.write_owned(gluon_data)?;
-        self.scale.write_owned(gluon_data)?;
-        Ok(())
-    }
-}
-///Partial version of NonUniformTransform
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct PartialNonUniformTransform {
-    pub translation: Option<super::types::Vec3F>,
-    pub rotation: Option<super::types::Quatf>,
-    pub scale: Option<super::types::Vec3F>,
-}
-impl gluon_wire::GluonConvertable for PartialNonUniformTransform {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write(gluon_data)?;
-        self.rotation.write(gluon_data)?;
-        self.scale.write(gluon_data)?;
-        Ok(())
-    }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
-        Ok(PartialNonUniformTransform {
-            translation,
-            rotation,
-            scale,
-        })
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write_owned(gluon_data)?;
-        self.rotation.write_owned(gluon_data)?;
-        self.scale.write_owned(gluon_data)?;
-        Ok(())
-    }
-}
 ///Error potentially produced when loading a model
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum ModelLoadError {
     NotFound,
+    InvalidSpatial,
 }
 impl gluon_wire::GluonConvertable for ModelLoadError {
     fn write<'a, 'b: 'a>(
@@ -122,6 +37,9 @@ impl gluon_wire::GluonConvertable for ModelLoadError {
             ModelLoadError::NotFound => {
                 gluon_data.write_u16(0u16)?;
             }
+            ModelLoadError::InvalidSpatial => {
+                gluon_data.write_u16(1u16)?;
+            }
         };
         Ok(())
     }
@@ -131,6 +49,7 @@ impl gluon_wire::GluonConvertable for ModelLoadError {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => ModelLoadError::NotFound,
+                1u16 => ModelLoadError::InvalidSpatial,
                 v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
             },
         )
@@ -142,6 +61,9 @@ impl gluon_wire::GluonConvertable for ModelLoadError {
         match self {
             ModelLoadError::NotFound => {
                 gluon_data.write_u16(0u16)?;
+            }
+            ModelLoadError::InvalidSpatial => {
+                gluon_data.write_u16(1u16)?;
             }
         };
         Ok(())
@@ -413,15 +335,13 @@ impl ModelInterface {
         &self,
         spatial: super::spatial::Spatial,
         model: super::types::Resource,
-        model_scale: super::types::Vec3F,
-    ) -> Result<Model, gluon_wire::GluonSendError> {
+    ) -> Result<Result<Model, ModelLoadError>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         model.write(&mut gluon_builder)?;
-        model_scale.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
@@ -466,8 +386,7 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
         _ctx: gluon_wire::GluonCtx,
         spatial: super::spatial::Spatial,
         model: super::types::Resource,
-        model_scale: super::types::Vec3F,
-    ) -> impl Future<Output = Model> + Send + Sync;
+    ) -> impl Future<Output = Result<Model, ModelLoadError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -485,12 +404,7 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let param_model = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_model_scale = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let (model) = self
-                        .load_model(ctx, param_spatial, param_model, param_model_scale)
-                        .await;
+                    let (model) = self.load_model(ctx, param_spatial, param_model).await;
                     drop(gluon_data);
                     model.write_owned(&mut gluon_out)?;
                     return_callback
@@ -528,18 +442,6 @@ impl gluon_wire::GluonConvertable for Model {
     }
 }
 impl Model {
-    pub async fn get_spatial(
-        &self,
-    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
     pub async fn get_part(
         &self,
         path: String,
@@ -549,7 +451,7 @@ impl Model {
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         path.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -561,9 +463,7 @@ impl Model {
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -576,7 +476,7 @@ impl Model {
         scale.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: ModelHandler>(
@@ -612,10 +512,6 @@ impl PartialEq for Model {
 }
 impl Eq for Model {}
 pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
-    fn get_spatial(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
     fn get_part(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -641,16 +537,6 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (spatial) = self.get_spatial(ctx).await;
-                    drop(gluon_data);
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let param_path = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
@@ -661,7 +547,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
-                10u32 => {
+                9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let (parts) = self.enumerate_parts(ctx).await;
@@ -671,7 +557,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
-                11u32 => {
+                10u32 => {
                     let param_scale = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
@@ -719,10 +605,9 @@ impl ModelPart {
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
     }
-    ///Get the transform relative to the Model
-    pub async fn get_model_transform(
+    pub async fn get_spatial(
         &self,
-    ) -> Result<NonUniformTransform, gluon_wire::GluonSendError> {
+    ) -> Result<super::spatial::Spatial, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -731,76 +616,6 @@ impl ModelPart {
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
-    ///Get the transform relative to the parent ModelPart or Model
-    pub async fn get_local_transform(
-        &self,
-    ) -> Result<NonUniformTransform, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
-    ///Get the transform relative to referenced ModelPart
-    pub async fn get_relative_transform(
-        &self,
-        relative_to: ModelPart,
-    ) -> Result<NonUniformTransform, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        relative_to.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
-    }
-    ///Set the transform relative to the Model
-    pub fn set_model_transform(
-        &self,
-        transform: PartialNonUniformTransform,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        transform.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    ///Set the transform relative to the parent ModelPart or Model
-    pub fn set_local_transform(
-        &self,
-        transform: PartialNonUniformTransform,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        transform.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    ///Set the transform relative to referenced ModelPart
-    pub fn set_relative_transform(
-        &self,
-        relative_to: ModelPart,
-        transform: PartialNonUniformTransform,
-    ) -> Result<(), gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        relative_to.write(&mut gluon_builder)?;
-        transform.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
-        Ok(())
     }
     pub async fn set_material_parameter(
         &self,
@@ -815,7 +630,7 @@ impl ModelPart {
         value.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 15u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
@@ -825,7 +640,7 @@ impl ModelPart {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         self.obj
             .device()
-            .transact_one_way(&self.obj, 16u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: ModelPartHandler>(
@@ -865,41 +680,10 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
         &self,
         _ctx: gluon_wire::GluonCtx,
     ) -> impl Future<Output = String> + Send + Sync;
-    ///Get the transform relative to the Model
-    fn get_model_transform(
+    fn get_spatial(
         &self,
         _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = NonUniformTransform> + Send + Sync;
-    ///Get the transform relative to the parent ModelPart or Model
-    fn get_local_transform(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = NonUniformTransform> + Send + Sync;
-    ///Get the transform relative to referenced ModelPart
-    fn get_relative_transform(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        relative_to: ModelPart,
-    ) -> impl Future<Output = NonUniformTransform> + Send + Sync;
-    ///Set the transform relative to the Model
-    fn set_model_transform(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        transform: PartialNonUniformTransform,
-    ) -> impl Future<Output = ()> + Send + Sync;
-    ///Set the transform relative to the parent ModelPart or Model
-    fn set_local_transform(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        transform: PartialNonUniformTransform,
-    ) -> impl Future<Output = ()> + Send + Sync;
-    ///Set the transform relative to referenced ModelPart
-    fn set_relative_transform(
-        &self,
-        _ctx: gluon_wire::GluonCtx,
-        relative_to: ModelPart,
-        transform: PartialNonUniformTransform,
-    ) -> impl Future<Output = ()> + Send + Sync;
+    ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
     fn set_material_parameter(
         &self,
         _ctx: gluon_wire::GluonCtx,
@@ -932,64 +716,14 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (transform) = self.get_model_transform(ctx).await;
+                    let (spatial) = self.get_spatial(ctx).await;
                     drop(gluon_data);
-                    transform.write_owned(&mut gluon_out)?;
+                    spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 10u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let (transform) = self.get_local_transform(ctx).await;
-                    drop(gluon_data);
-                    transform.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                11u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_relative_to = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let (transform) = self
-                        .get_relative_transform(ctx, param_relative_to)
-                        .await;
-                    drop(gluon_data);
-                    transform.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                12u32 => {
-                    let param_transform = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    drop(gluon_data);
-                    self.set_model_transform(ctx, param_transform).await;
-                }
-                13u32 => {
-                    let param_transform = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    drop(gluon_data);
-                    self.set_local_transform(ctx, param_transform).await;
-                }
-                14u32 => {
-                    let param_relative_to = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_transform = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    drop(gluon_data);
-                    self.set_relative_transform(ctx, param_relative_to, param_transform)
-                        .await;
-                }
-                15u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon_wire::GluonDataBuilder::new();
                     let param_parameter_name = gluon_wire::GluonConvertable::read(
@@ -1007,7 +741,7 @@ pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sy
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
-                16u32 => {
+                11u32 => {
                     drop(gluon_data);
                     self.apply_holdout_material(ctx).await;
                 }

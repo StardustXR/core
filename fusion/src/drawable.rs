@@ -2,17 +2,19 @@
 
 #![allow(ambiguous_glob_reexports)]
 
+use gluon_wire::GluonSendError;
 use stardust_xr_protocol::client::ClientHandler;
 pub use stardust_xr_protocol::lines::*;
+use stardust_xr_protocol::model;
 pub use stardust_xr_protocol::model::*;
 pub use stardust_xr_protocol::sky::*;
 pub use stardust_xr_protocol::text::*;
 
 use stardust_xr_protocol::spatial::Spatial;
 use stardust_xr_protocol::types::Resource;
-use stardust_xr_protocol::types::Vec3F;
 
 use crate::{client::Client, error::ServerError};
+use thiserror::Error;
 
 pub trait LinesExt {
 	fn new<H: ClientHandler>(
@@ -34,26 +36,37 @@ impl LinesExt for Lines {
 	}
 }
 
+#[derive(Error, Debug)]
+pub enum ModelLoadError {
+	#[error("Some verified handle wasn't owned by the server")]
+	NotFound,
+	#[error("Spatial wasn't owned by the server")]
+	InvalidSpatial,
+	#[error("Gluon error: {0}")]
+	GluonError(#[from] GluonSendError),
+}
+
 pub trait ModelExt {
 	fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
-		model_scale: impl Into<Vec3F> + Send,
-	) -> impl std::future::Future<Output = Result<Model, ServerError>> + Send;
+	) -> impl std::future::Future<Output = Result<Model, ModelLoadError>> + Send;
 }
 impl ModelExt for Model {
 	async fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
-		model_scale: impl Into<Vec3F> + Send,
-	) -> Result<Model, ServerError> {
-		// TODO: actually handle invalid handles at the protocol level
-		Ok(client
+	) -> Result<Model, ModelLoadError> {
+		client
 			.model_interface()
-			.load_model(spatial.clone(), model, model_scale.into())
-			.await?)
+			.load_model(spatial.clone(), model)
+			.await?
+			.map_err(|err| match err {
+				model::ModelLoadError::NotFound => ModelLoadError::NotFound,
+				model::ModelLoadError::InvalidSpatial => ModelLoadError::InvalidSpatial,
+			})
 	}
 }
 

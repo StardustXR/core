@@ -36,5 +36,5 @@ interface Server {
 interface ServerInterface {
 	/// The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
 	connect(client: Ref<client::Client>, startup_token: Option<String>, resource_prefixes: Vec<String>) -> (server: Ref<Server>, root: Ref<spatial::SpatialRef>)
-	startup_spatial(startup_token: String) -> (spatial_ref: Ref<spatial::SpatialRef>)
+	startup_spatial(startup_token: String) -> (spatial_ref: Option<Ref<spatial::SpatialRef>>)
 }

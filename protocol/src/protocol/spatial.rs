@@ -27,7 +27,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 pub struct Transform {
     pub translation: super::types::Vec3F,
     pub rotation: super::types::Quatf,
-    pub scale: f32,
+    pub scale: super::types::Vec3F,
 }
 impl gluon_wire::GluonConvertable for Transform {
     fn write<'a, 'b: 'a>(
@@ -66,7 +66,7 @@ impl gluon_wire::GluonConvertable for Transform {
 pub struct PartialTransform {
     pub translation: Option<super::types::Vec3F>,
     pub rotation: Option<super::types::Quatf>,
-    pub scale: Option<f32>,
+    pub scale: Option<super::types::Vec3F>,
 }
 impl gluon_wire::GluonConvertable for PartialTransform {
     fn write<'a, 'b: 'a>(
