@@ -454,7 +454,7 @@ impl ServerInterface {
     pub async fn startup_spatial(
         &self,
         startup_token: String,
-    ) -> Result<super::spatial::SpatialRef, gluon_wire::GluonSendError> {
+    ) -> Result<Option<super::spatial::SpatialRef>, gluon_wire::GluonSendError> {
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -510,7 +510,7 @@ pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Sen
         &self,
         _ctx: gluon_wire::GluonCtx,
         startup_token: String,
-    ) -> impl Future<Output = super::spatial::SpatialRef> + Send + Sync;
+    ) -> impl Future<Output = Option<super::spatial::SpatialRef>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
