@@ -27,35 +27,53 @@ interface FieldInterface {
 	create_field(spatial: Ref<spatial::Spatial>, shape: Shape) -> (field: Ref<Field>)
 }
 
-/// Shape for a signed distance field
+/// Shape for a signed distance field.
 enum Shape {
-	Box {
-		/// Box size in meters
-		size: types::Vec3f,
-	},
-	Sphere {
-		/// Sphere radius in meters
-		radius: f32
-	},
-	/// Cylinder aligned to the XZ plane
-	Cylinder {
-		/// Length of the cylinder along the Y axis
-		length: f32,
-		/// Radius of the cylinder along the XZ plane
-		radius: f32,
-	},
-	/// Torus aligned to the XZ plane
+	/// Axis-aligned box.  `size` = full extents in metres.
+	Box { size: types::Vec3f },
+
+	/// Sphere.
+	Sphere { radius: f32 },
+
+	/// Capsule aligned to the **Y** axis.
+	/// `length` = full length of the cylindrical section; hemispherical caps add `radius`.
+	Capsule { length: f32, radius: f32 },
+
+	/// Flat-capped cylinder aligned to the **Y** axis.
+	/// `length` = full length; `radius` in the XZ plane.
+	Cylinder { length: f32, radius: f32 },
+
+	/// Torus in the **XZ** plane.
 	Torus {
-		/// Radius of the ring along the XZ plane
 		major_radius: f32,
-		/// Radius of the tube
 		minor_radius: f32,
 	},
+
+	/// Variable-radius cubic Bézier tube.
 	CubicBezierSpline {
 		points: Vec<CubicBezierControlPoint>,
 		/// Whether the spline is a closed loop
 		cyclic: bool,
-	}
+	},
+
+	/// Affine transform wrapper: child is evaluated in local space.
+	Transform {
+		shape: Shape,
+		transform: types::Mat4f,
+	},
+
+	/// Hard union (min) with routed-VDF interior.
+	Union { shapes: Vec<Shape> },
+
+	/// Smooth union (smooth-min).  `smoothing` = blend radius k.
+	SmoothUnion { shapes: Vec<Shape>, smoothing: f32 },
+
+	/// Minkowski sum: `surface ⊕ sweeper`.
+	/// Typical use: `Sweep { surface: Box, sweeper: Sphere }` = rounded box.
+	Sweep {
+		surface: Shape,
+		sweeper: Shape,
+	},
 }
 
 /// Control point for cubic bezier spline

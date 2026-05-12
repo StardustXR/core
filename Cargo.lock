@@ -199,7 +199,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen-rust"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
+source = "git+https://github.com/technobaboo/gluon#91dfa63f3860010b6aae9070f9208e231b5a7627"
 dependencies = [
  "convert_case",
  "gluon-parser",
@@ -213,7 +213,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
+source = "git+https://github.com/technobaboo/gluon#91dfa63f3860010b6aae9070f9208e231b5a7627"
 dependencies = [
  "ansi_term",
  "binderbinder",
@@ -224,7 +224,7 @@ dependencies = [
 [[package]]
 name = "gluon-wire"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
+source = "git+https://github.com/technobaboo/gluon#91dfa63f3860010b6aae9070f9208e231b5a7627"
 dependencies = [
  "binderbinder",
  "bitflags",
@@ -237,7 +237,7 @@ dependencies = [
 [[package]]
 name = "gluon-wire-derive"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#981673fea01bd263705a2d97065265e4faa32acf"
+source = "git+https://github.com/technobaboo/gluon#91dfa63f3860010b6aae9070f9208e231b5a7627"
 dependencies = [
  "proc-macro2",
  "quote",

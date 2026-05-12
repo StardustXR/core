@@ -115,36 +115,36 @@ impl gluon_wire::GluonConvertable for RayMarchResult {
         Ok(())
     }
 }
-///Shape for a signed distance field
+///Shape for a signed distance field.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Shape {
-    Box {
-        ///Box size in meters
-        size: super::types::Vec3F,
-    },
-    Sphere {
-        ///Sphere radius in meters
-        radius: f32,
-    },
-    ///Cylinder aligned to the XZ plane
-    Cylinder {
-        ///Length of the cylinder along the Y axis
-        length: f32,
-        ///Radius of the cylinder along the XZ plane
-        radius: f32,
-    },
-    ///Torus aligned to the XZ plane
-    Torus {
-        ///Radius of the ring along the XZ plane
-        major_radius: f32,
-        ///Radius of the tube
-        minor_radius: f32,
-    },
+    ///Axis-aligned box.  `size` = full extents in metres.
+    Box { size: super::types::Vec3F },
+    ///Sphere.
+    Sphere { radius: f32 },
+    /**Capsule aligned to the **Y** axis.
+`length` = full length of the cylindrical section; hemispherical caps add `radius`.*/
+    Capsule { length: f32, radius: f32 },
+    /**Flat-capped cylinder aligned to the **Y** axis.
+`length` = full length; `radius` in the XZ plane.*/
+    Cylinder { length: f32, radius: f32 },
+    ///Torus in the **XZ** plane.
+    Torus { major_radius: f32, minor_radius: f32 },
+    ///Variable-radius cubic Bézier tube.
     CubicBezierSpline {
         points: Vec<CubicBezierControlPoint>,
         ///Whether the spline is a closed loop
         cyclic: bool,
     },
+    ///Affine transform wrapper: child is evaluated in local space.
+    Transform { shape: Box<Shape>, transform: super::types::Mat4F },
+    ///Hard union (min) with routed-VDF interior.
+    Union { shapes: Vec<Shape> },
+    ///Smooth union (smooth-min).  `smoothing` = blend radius k.
+    SmoothUnion { shapes: Vec<Shape>, smoothing: f32 },
+    /**Minkowski sum: `surface ⊕ sweeper`.
+Typical use: `Sweep { surface: Box, sweeper: Sphere }` = rounded box.*/
+    Sweep { surface: Box<Shape>, sweeper: Box<Shape> },
 }
 impl gluon_wire::GluonConvertable for Shape {
     fn write<'a, 'b: 'a>(
@@ -160,20 +160,44 @@ impl gluon_wire::GluonConvertable for Shape {
                 gluon_data.write_u16(1u16)?;
                 radius.write(gluon_data)?;
             }
-            Shape::Cylinder { length, radius } => {
+            Shape::Capsule { length, radius } => {
                 gluon_data.write_u16(2u16)?;
                 length.write(gluon_data)?;
                 radius.write(gluon_data)?;
             }
-            Shape::Torus { major_radius, minor_radius } => {
+            Shape::Cylinder { length, radius } => {
                 gluon_data.write_u16(3u16)?;
+                length.write(gluon_data)?;
+                radius.write(gluon_data)?;
+            }
+            Shape::Torus { major_radius, minor_radius } => {
+                gluon_data.write_u16(4u16)?;
                 major_radius.write(gluon_data)?;
                 minor_radius.write(gluon_data)?;
             }
             Shape::CubicBezierSpline { points, cyclic } => {
-                gluon_data.write_u16(4u16)?;
+                gluon_data.write_u16(5u16)?;
                 points.write(gluon_data)?;
                 cyclic.write(gluon_data)?;
+            }
+            Shape::Transform { shape, transform } => {
+                gluon_data.write_u16(6u16)?;
+                shape.write(gluon_data)?;
+                transform.write(gluon_data)?;
+            }
+            Shape::Union { shapes } => {
+                gluon_data.write_u16(7u16)?;
+                shapes.write(gluon_data)?;
+            }
+            Shape::SmoothUnion { shapes, smoothing } => {
+                gluon_data.write_u16(8u16)?;
+                shapes.write(gluon_data)?;
+                smoothing.write(gluon_data)?;
+            }
+            Shape::Sweep { surface, sweeper } => {
+                gluon_data.write_u16(9u16)?;
+                surface.write(gluon_data)?;
+                sweeper.write(gluon_data)?;
             }
         };
         Ok(())
@@ -194,9 +218,14 @@ impl gluon_wire::GluonConvertable for Shape {
                 2u16 => {
                     let length = gluon_wire::GluonConvertable::read(gluon_data)?;
                     let radius = gluon_wire::GluonConvertable::read(gluon_data)?;
-                    Shape::Cylinder { length, radius }
+                    Shape::Capsule { length, radius }
                 }
                 3u16 => {
+                    let length = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let radius = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    Shape::Cylinder { length, radius }
+                }
+                4u16 => {
                     let major_radius = gluon_wire::GluonConvertable::read(gluon_data)?;
                     let minor_radius = gluon_wire::GluonConvertable::read(gluon_data)?;
                     Shape::Torus {
@@ -204,13 +233,38 @@ impl gluon_wire::GluonConvertable for Shape {
                         minor_radius,
                     }
                 }
-                4u16 => {
+                5u16 => {
                     let points = gluon_wire::GluonConvertable::read(gluon_data)?;
                     let cyclic = gluon_wire::GluonConvertable::read(gluon_data)?;
                     Shape::CubicBezierSpline {
                         points,
                         cyclic,
                     }
+                }
+                6u16 => {
+                    let shape = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let transform = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    Shape::Transform {
+                        shape,
+                        transform,
+                    }
+                }
+                7u16 => {
+                    let shapes = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    Shape::Union { shapes }
+                }
+                8u16 => {
+                    let shapes = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let smoothing = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    Shape::SmoothUnion {
+                        shapes,
+                        smoothing,
+                    }
+                }
+                9u16 => {
+                    let surface = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let sweeper = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    Shape::Sweep { surface, sweeper }
                 }
                 v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
             },
@@ -229,20 +283,44 @@ impl gluon_wire::GluonConvertable for Shape {
                 gluon_data.write_u16(1u16)?;
                 radius.write_owned(gluon_data)?;
             }
-            Shape::Cylinder { length, radius } => {
+            Shape::Capsule { length, radius } => {
                 gluon_data.write_u16(2u16)?;
                 length.write_owned(gluon_data)?;
                 radius.write_owned(gluon_data)?;
             }
-            Shape::Torus { major_radius, minor_radius } => {
+            Shape::Cylinder { length, radius } => {
                 gluon_data.write_u16(3u16)?;
+                length.write_owned(gluon_data)?;
+                radius.write_owned(gluon_data)?;
+            }
+            Shape::Torus { major_radius, minor_radius } => {
+                gluon_data.write_u16(4u16)?;
                 major_radius.write_owned(gluon_data)?;
                 minor_radius.write_owned(gluon_data)?;
             }
             Shape::CubicBezierSpline { points, cyclic } => {
-                gluon_data.write_u16(4u16)?;
+                gluon_data.write_u16(5u16)?;
                 points.write_owned(gluon_data)?;
                 cyclic.write_owned(gluon_data)?;
+            }
+            Shape::Transform { shape, transform } => {
+                gluon_data.write_u16(6u16)?;
+                shape.write_owned(gluon_data)?;
+                transform.write_owned(gluon_data)?;
+            }
+            Shape::Union { shapes } => {
+                gluon_data.write_u16(7u16)?;
+                shapes.write_owned(gluon_data)?;
+            }
+            Shape::SmoothUnion { shapes, smoothing } => {
+                gluon_data.write_u16(8u16)?;
+                shapes.write_owned(gluon_data)?;
+                smoothing.write_owned(gluon_data)?;
+            }
+            Shape::Sweep { surface, sweeper } => {
+                gluon_data.write_u16(9u16)?;
+                surface.write_owned(gluon_data)?;
+                sweeper.write_owned(gluon_data)?;
             }
         };
         Ok(())
