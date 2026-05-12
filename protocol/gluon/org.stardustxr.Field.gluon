@@ -3,13 +3,13 @@ import "org.stardustxr.Spatial" as spatial
 
 /// Information about the field at a sample point in space.
 struct FieldSample {
-	/// Closest point on the shape boundary, in the same space as the query.
-	distance: f32,
 	/// Signed Euclidean distance: negative inside, positive outside.
-	normal: types::Vec3f,
+	distance: f32,
 	/// Unit outward surface normal at the closest point.
 	/// Always points away from the shape interior, regardless of whether the
 	/// query point is inside or outside.
+	gradient: types::Vec3f,
+	/// Closest point on the shape boundary, in the same space as the query.
 	closest_point: types::Vec3f,
 }
 
@@ -91,7 +91,7 @@ interface Field {
 	field_ref() -> (field: Ref<FieldRef>)
 	spatial() -> (spatial: Ref<spatial::Spatial>)
 
-	sample(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (result: FieldSampleResult)
+	sample(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (result: FieldSample)
 	ray_march(reference_space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
 
 	set_shape(shape: Shape)
@@ -99,7 +99,7 @@ interface Field {
 
 /// Root interface for field operations.
 interface FieldInterface {
-	sample(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (result: FieldSampleResult)
+	sample(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (result: FieldSample)
 	ray_march(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
 
 	create_field(spatial: Ref<spatial::Spatial>, shape: Shape) -> (field: Ref<Field>)
