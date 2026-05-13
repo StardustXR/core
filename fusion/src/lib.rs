@@ -11,3 +11,4 @@ pub mod error;
 pub mod fields;
 pub mod spatial;
 pub mod suis;
+pub mod types;
