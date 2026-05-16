@@ -1,6 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon_wire::GluonConvertable;
-pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
+use gluon::Convertable;
+pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Tracked",
     types: &[],
 };
@@ -8,23 +8,21 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 pub struct Tracked {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for Tracked {
+impl gluon::Convertable for Tracked {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(Tracked::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -32,44 +30,41 @@ impl Tracked {
     pub async fn get(
         &self,
         handler: impl Into<TrackedStateReceiver>,
-    ) -> Result<
-        (super::spatial::SpatialRef, TrackedGuard, bool),
-        gluon_wire::GluonSendError,
-    > {
+    ) -> Result<(super::spatial::SpatialRef, TrackedGuard, bool), gluon::SendError> {
         let handler: TrackedStateReceiver = handler.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok((
-            gluon_wire::GluonConvertable::read(&mut reader)?,
-            gluon_wire::GluonConvertable::read(&mut reader)?,
-            gluon_wire::GluonConvertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
         ))
     }
     pub async fn get_pose(
         &self,
         at: impl Into<super::types::Timestamp>,
         relative_to: impl Into<super::spatial::SpatialRef>,
-    ) -> Result<(Option<super::types::Posef>, bool), gluon_wire::GluonSendError> {
+    ) -> Result<(Option<super::types::Posef>, bool), gluon::SendError> {
         let at: super::types::Timestamp = at.into();
         let relative_to: super::spatial::SpatialRef = relative_to.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         at.write(&mut gluon_builder)?;
         relative_to.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok((
-            gluon_wire::GluonConvertable::read(&mut reader)?,
-            gluon_wire::GluonConvertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
         ))
     }
     pub fn from_handler<H: TrackedHandler>(
@@ -107,31 +102,29 @@ impl Eq for Tracked {}
 pub trait TrackedHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn get(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         handler: TrackedStateReceiver,
     ) -> impl Future<
         Output = (super::spatial::SpatialRef, TrackedGuard, bool),
     > + Send + Sync;
     fn get_pose(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         at: super::types::Timestamp,
         relative_to: super::spatial::SpatialRef,
     ) -> impl Future<Output = (Option<super::types::Posef>, bool)> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_handler = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     let (spatial, guard, tracked) = self.get(ctx, param_handler).await;
                     drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
@@ -143,11 +136,9 @@ pub trait TrackedHandler: binderbinder::device::TransactionHandler + Send + Sync
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_at = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_relative_to = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_at = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     let (pose, tracked) = self
                         .get_pose(ctx, param_at, param_relative_to)
                         .await;
@@ -168,23 +159,21 @@ pub trait TrackedHandler: binderbinder::device::TransactionHandler + Send + Sync
 pub struct TrackedGuard {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for TrackedGuard {
+impl gluon::Convertable for TrackedGuard {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(TrackedGuard::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -225,9 +214,9 @@ pub trait TrackedGuardHandler: binderbinder::device::TransactionHandler + Send +
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 _ => {}
@@ -240,33 +229,28 @@ pub trait TrackedGuardHandler: binderbinder::device::TransactionHandler + Send +
 pub struct TrackedStateReceiver {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for TrackedStateReceiver {
+impl gluon::Convertable for TrackedStateReceiver {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(TrackedStateReceiver::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl TrackedStateReceiver {
-    pub fn tracked(
-        &self,
-        tracked: impl Into<bool>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {
         let tracked: bool = tracked.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         tracked.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -306,21 +290,19 @@ impl Eq for TrackedStateReceiver {}
 pub trait TrackedStateReceiverHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn tracked(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         tracked: bool,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_tracked = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_tracked = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.tracked(ctx, param_tracked).await;
                 }

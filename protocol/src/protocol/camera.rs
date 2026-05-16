@@ -1,11 +1,11 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon_wire::GluonConvertable;
-pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
+use gluon::Convertable;
+pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Camera",
     types: &[
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "View",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
     ],
 };
@@ -17,11 +17,11 @@ pub struct View {
     ///Transform applied to the view, relative to the camera
     pub camera_relative_transform: super::spatial::Transform,
 }
-impl gluon_wire::GluonConvertable for View {
+impl gluon::Convertable for View {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::Mat4F = self.projection_matrix.clone().into();
             __w.write_owned(gluon_data)?;
@@ -29,16 +29,12 @@ impl gluon_wire::GluonConvertable for View {
         self.camera_relative_transform.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let projection_matrix: crate::types::Mat4F = {
-            let __w: super::types::Mat4F = gluon_wire::GluonConvertable::read(
-                gluon_data,
-            )?;
+            let __w: super::types::Mat4F = gluon::Convertable::read(gluon_data)?;
             __w.into()
         };
-        let camera_relative_transform = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let camera_relative_transform = gluon::Convertable::read(gluon_data)?;
         Ok(View {
             projection_matrix,
             camera_relative_transform,
@@ -46,8 +42,8 @@ impl gluon_wire::GluonConvertable for View {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::Mat4F = self.projection_matrix.into();
             __w.write_owned(gluon_data)?;
@@ -60,23 +56,21 @@ impl gluon_wire::GluonConvertable for View {
 pub struct CameraInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for CameraInterface {
+impl gluon::Convertable for CameraInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(CameraInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -84,17 +78,17 @@ impl CameraInterface {
     pub async fn create_camera(
         &self,
         spatial: impl Into<super::spatial::Spatial>,
-    ) -> Result<Camera, gluon_wire::GluonSendError> {
+    ) -> Result<Camera, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub fn from_handler<H: CameraInterfaceHandler>(
         obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
@@ -131,23 +125,21 @@ impl Eq for CameraInterface {}
 pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_camera(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
     ) -> impl Future<Output = Camera> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let (camera) = self.create_camera(ctx, param_spatial).await;
                     drop(gluon_data);
                     camera.write_owned(&mut gluon_out)?;
@@ -165,23 +157,21 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
 pub struct Camera {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for Camera {
+impl gluon::Convertable for Camera {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(Camera::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -193,12 +183,12 @@ impl Camera {
         acquire_point: impl Into<u64>,
         release_point: impl Into<u64>,
         views: impl Into<Vec<View>>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let render_target: super::dmatex::DmatexRef = render_target.into();
         let acquire_point: u64 = acquire_point.into();
         let release_point: u64 = release_point.into();
         let views: Vec<View> = views.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         render_target.write(&mut gluon_builder)?;
         acquire_point.write(&mut gluon_builder)?;
         release_point.write(&mut gluon_builder)?;
@@ -242,7 +232,7 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync 
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
     fn request_draw(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         render_target: super::dmatex::DmatexRef,
         acquire_point: u64,
         release_point: u64,
@@ -251,24 +241,16 @@ pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync 
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_render_target = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_acquire_point = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_release_point = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_views = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_render_target = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_acquire_point = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_release_point = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_views = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.request_draw(
                             ctx,

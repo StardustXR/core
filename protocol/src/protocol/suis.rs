@@ -1,51 +1,51 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon_wire::GluonConvertable;
-pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
+use gluon::Convertable;
+pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.SUIS",
     types: &[
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Joint",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Finger",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Thumb",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Hand",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Pointer",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Tip",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "SemanticData",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(0u32),
+            supported_derives: gluon::Derives::from_bits_truncate(0u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "SpatialData",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Chirality",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(31u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "InputDataType",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "DatamapData",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
         },
     ],
 };
@@ -59,28 +59,26 @@ pub struct Joint {
     ///Distance from the center of the joint to the input handler's field.
     pub distance: f32,
 }
-impl gluon_wire::GluonConvertable for Joint {
+impl gluon::Convertable for Joint {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.pose.write(gluon_data)?;
         self.radius.write(gluon_data)?;
         self.distance.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let pose = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let radius = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let distance = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let pose = gluon::Convertable::read(gluon_data)?;
+        let radius = gluon::Convertable::read(gluon_data)?;
+        let distance = gluon::Convertable::read(gluon_data)?;
         Ok(Joint { pose, radius, distance })
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.pose.write_owned(gluon_data)?;
         self.radius.write_owned(gluon_data)?;
         self.distance.write_owned(gluon_data)?;
@@ -96,11 +94,11 @@ pub struct Finger {
     pub proximal: Joint,
     pub metacarpal: Joint,
 }
-impl gluon_wire::GluonConvertable for Finger {
+impl gluon::Convertable for Finger {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.tip.write(gluon_data)?;
         self.distal.write(gluon_data)?;
         self.intermediate.write(gluon_data)?;
@@ -108,14 +106,12 @@ impl gluon_wire::GluonConvertable for Finger {
         self.metacarpal.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let tip = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let distal = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let intermediate = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let proximal = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let metacarpal = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let tip = gluon::Convertable::read(gluon_data)?;
+        let distal = gluon::Convertable::read(gluon_data)?;
+        let intermediate = gluon::Convertable::read(gluon_data)?;
+        let proximal = gluon::Convertable::read(gluon_data)?;
+        let metacarpal = gluon::Convertable::read(gluon_data)?;
         Ok(Finger {
             tip,
             distal,
@@ -126,8 +122,8 @@ impl gluon_wire::GluonConvertable for Finger {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.tip.write_owned(gluon_data)?;
         self.distal.write_owned(gluon_data)?;
         self.intermediate.write_owned(gluon_data)?;
@@ -144,24 +140,22 @@ pub struct Thumb {
     pub proximal: Joint,
     pub metacarpal: Joint,
 }
-impl gluon_wire::GluonConvertable for Thumb {
+impl gluon::Convertable for Thumb {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.tip.write(gluon_data)?;
         self.distal.write(gluon_data)?;
         self.proximal.write(gluon_data)?;
         self.metacarpal.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let tip = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let distal = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let proximal = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let metacarpal = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let tip = gluon::Convertable::read(gluon_data)?;
+        let distal = gluon::Convertable::read(gluon_data)?;
+        let proximal = gluon::Convertable::read(gluon_data)?;
+        let metacarpal = gluon::Convertable::read(gluon_data)?;
         Ok(Thumb {
             tip,
             distal,
@@ -171,8 +165,8 @@ impl gluon_wire::GluonConvertable for Thumb {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.tip.write_owned(gluon_data)?;
         self.distal.write_owned(gluon_data)?;
         self.proximal.write_owned(gluon_data)?;
@@ -193,11 +187,11 @@ pub struct Hand {
     pub wrist: Joint,
     pub elbow: Option<Joint>,
 }
-impl gluon_wire::GluonConvertable for Hand {
+impl gluon::Convertable for Hand {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.chirality.write(gluon_data)?;
         self.thumb.write(gluon_data)?;
         self.index.write(gluon_data)?;
@@ -209,18 +203,16 @@ impl gluon_wire::GluonConvertable for Hand {
         self.elbow.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let chirality = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let thumb = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let index = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let middle = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let ring = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let little = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let palm = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let wrist = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let elbow = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let chirality = gluon::Convertable::read(gluon_data)?;
+        let thumb = gluon::Convertable::read(gluon_data)?;
+        let index = gluon::Convertable::read(gluon_data)?;
+        let middle = gluon::Convertable::read(gluon_data)?;
+        let ring = gluon::Convertable::read(gluon_data)?;
+        let little = gluon::Convertable::read(gluon_data)?;
+        let palm = gluon::Convertable::read(gluon_data)?;
+        let wrist = gluon::Convertable::read(gluon_data)?;
+        let elbow = gluon::Convertable::read(gluon_data)?;
         Ok(Hand {
             chirality,
             thumb,
@@ -235,8 +227,8 @@ impl gluon_wire::GluonConvertable for Hand {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.chirality.write_owned(gluon_data)?;
         self.thumb.write_owned(gluon_data)?;
         self.index.write_owned(gluon_data)?;
@@ -258,26 +250,24 @@ pub struct Pointer {
 Useful for telling how close to the center it's pointing or for thin objects can take the place of a point of intersection.*/
     pub deepest_point: f32,
 }
-impl gluon_wire::GluonConvertable for Pointer {
+impl gluon::Convertable for Pointer {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.pose.write(gluon_data)?;
         self.deepest_point.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let pose = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let deepest_point = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let pose = gluon::Convertable::read(gluon_data)?;
+        let deepest_point = gluon::Convertable::read(gluon_data)?;
         Ok(Pointer { pose, deepest_point })
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.pose.write_owned(gluon_data)?;
         self.deepest_point.write_owned(gluon_data)?;
         Ok(())
@@ -297,11 +287,11 @@ pub struct Tip {
     ///Non-articulated hand data (for index or similar)
     pub simulated_hand: Option<Hand>,
 }
-impl gluon_wire::GluonConvertable for Tip {
+impl gluon::Convertable for Tip {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.pose.write(gluon_data)?;
         self.chirality.write(gluon_data)?;
         self.grip_pose.write(gluon_data)?;
@@ -309,14 +299,12 @@ impl gluon_wire::GluonConvertable for Tip {
         self.simulated_hand.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let pose = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let chirality = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let grip_pose = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let grip_surface_pose = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let simulated_hand = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let pose = gluon::Convertable::read(gluon_data)?;
+        let chirality = gluon::Convertable::read(gluon_data)?;
+        let grip_pose = gluon::Convertable::read(gluon_data)?;
+        let grip_surface_pose = gluon::Convertable::read(gluon_data)?;
+        let simulated_hand = gluon::Convertable::read(gluon_data)?;
         Ok(Tip {
             pose,
             chirality,
@@ -327,8 +315,8 @@ impl gluon_wire::GluonConvertable for Tip {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.pose.write_owned(gluon_data)?;
         self.chirality.write_owned(gluon_data)?;
         self.grip_pose.write_owned(gluon_data)?;
@@ -347,22 +335,20 @@ pub struct SemanticData {
     ///Is this input handler capturing this input method?
     pub captured: bool,
 }
-impl gluon_wire::GluonConvertable for SemanticData {
+impl gluon::Convertable for SemanticData {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.datamap.write(gluon_data)?;
         self.order.write(gluon_data)?;
         self.captured.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let datamap = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let order = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let captured = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let datamap = gluon::Convertable::read(gluon_data)?;
+        let order = gluon::Convertable::read(gluon_data)?;
+        let captured = gluon::Convertable::read(gluon_data)?;
         Ok(SemanticData {
             datamap,
             order,
@@ -371,8 +357,8 @@ impl gluon_wire::GluonConvertable for SemanticData {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.datamap.write_owned(gluon_data)?;
         self.order.write_owned(gluon_data)?;
         self.captured.write_owned(gluon_data)?;
@@ -387,26 +373,24 @@ pub struct SpatialData {
     ///Closest distance from the input method to the field.
     pub distance: f32,
 }
-impl gluon_wire::GluonConvertable for SpatialData {
+impl gluon::Convertable for SpatialData {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.input.write(gluon_data)?;
         self.distance.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let input = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let distance = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let input = gluon::Convertable::read(gluon_data)?;
+        let distance = gluon::Convertable::read(gluon_data)?;
         Ok(SpatialData { input, distance })
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.input.write_owned(gluon_data)?;
         self.distance.write_owned(gluon_data)?;
         Ok(())
@@ -418,11 +402,11 @@ pub enum Chirality {
     Left,
     Right,
 }
-impl gluon_wire::GluonConvertable for Chirality {
+impl gluon::Convertable for Chirality {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         match self {
             Chirality::Left => {
                 gluon_data.write_u16(0u16)?;
@@ -433,21 +417,19 @@ impl gluon_wire::GluonConvertable for Chirality {
         };
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => Chirality::Left,
                 1u16 => Chirality::Right,
-                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
             },
         )
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         match self {
             Chirality::Left => {
                 gluon_data.write_u16(0u16)?;
@@ -466,11 +448,11 @@ pub enum InputDataType {
     Hand { data: Hand },
     Tip { data: Tip },
 }
-impl gluon_wire::GluonConvertable for InputDataType {
+impl gluon::Convertable for InputDataType {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         match self {
             InputDataType::Pointer { data } => {
                 gluon_data.write_u16(0u16)?;
@@ -487,31 +469,29 @@ impl gluon_wire::GluonConvertable for InputDataType {
         };
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => {
-                    let data = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let data = gluon::Convertable::read(gluon_data)?;
                     InputDataType::Pointer { data }
                 }
                 1u16 => {
-                    let data = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let data = gluon::Convertable::read(gluon_data)?;
                     InputDataType::Hand { data }
                 }
                 2u16 => {
-                    let data = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let data = gluon::Convertable::read(gluon_data)?;
                     InputDataType::Tip { data }
                 }
-                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
             },
         )
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         match self {
             InputDataType::Pointer { data } => {
                 gluon_data.write_u16(0u16)?;
@@ -538,11 +518,11 @@ pub enum DatamapData {
     Vec3 { value: crate::types::Vec3F },
     String { value: String },
 }
-impl gluon_wire::GluonConvertable for DatamapData {
+impl gluon::Convertable for DatamapData {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         match self {
             DatamapData::Bool { value } => {
                 gluon_data.write_u16(0u16)?;
@@ -573,22 +553,20 @@ impl gluon_wire::GluonConvertable for DatamapData {
         };
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value = gluon::Convertable::read(gluon_data)?;
                     DatamapData::Bool { value }
                 }
                 1u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value = gluon::Convertable::read(gluon_data)?;
                     DatamapData::Float { value }
                 }
                 2u16 => {
                     let value: crate::types::Vec2F = {
-                        let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
+                        let __w: super::types::Vec2F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -597,7 +575,7 @@ impl gluon_wire::GluonConvertable for DatamapData {
                 }
                 3u16 => {
                     let value: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                        let __w: super::types::Vec3F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -605,17 +583,17 @@ impl gluon_wire::GluonConvertable for DatamapData {
                     DatamapData::Vec3 { value }
                 }
                 4u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value = gluon::Convertable::read(gluon_data)?;
                     DatamapData::String { value }
                 }
-                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
             },
         )
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         match self {
             DatamapData::Bool { value } => {
                 gluon_data.write_u16(0u16)?;
@@ -651,23 +629,21 @@ impl gluon_wire::GluonConvertable for DatamapData {
 pub struct InputHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for InputHandler {
+impl gluon::Convertable for InputHandler {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(InputHandler::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -676,63 +652,56 @@ impl InputHandler {
 This is considered static and should not change after handler creation.*/
     pub async fn get_spatial(
         &self,
-    ) -> Result<super::spatial::SpatialRef, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+    ) -> Result<super::spatial::SpatialRef, gluon::SendError> {
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     ///This is considered static and should not change after handler creation.
-    pub async fn get_field(
-        &self,
-    ) -> Result<super::field::FieldRef, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+    pub async fn get_field(&self) -> Result<super::field::FieldRef, gluon::SendError> {
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     /**Returns suggested bindings. The map key will equal a key in the datamap.
 This is considered static and should not change after handler creation.*/
     pub async fn suggested_bindings(
         &self,
-    ) -> Result<
-        std::collections::HashMap<String, Vec<String>>,
-        gluon_wire::GluonSendError,
-    > {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+    ) -> Result<std::collections::HashMap<String, Vec<String>>, gluon::SendError> {
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     /**Returns a list of groups, for example the client app id and "grabbable".
 This is considered static and should not change after handler creation.*/
-    pub async fn handler_groups(
-        &self,
-    ) -> Result<Vec<String>, gluon_wire::GluonSendError> {
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+    pub async fn handler_groups(&self) -> Result<Vec<String>, gluon::SendError> {
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     ///An input method just started sending input to this handler.
     pub fn input_gained(
@@ -741,12 +710,12 @@ This is considered static and should not change after handler creation.*/
         time: impl Into<super::types::Timestamp>,
         spatial: impl Into<SpatialData>,
         semantic: impl Into<SemanticData>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
         let spatial: SpatialData = spatial.into();
         let semantic: SemanticData = semantic.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -763,12 +732,12 @@ This is considered static and should not change after handler creation.*/
         time: impl Into<super::types::Timestamp>,
         spatial: impl Into<SpatialData>,
         semantic: impl Into<SemanticData>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
         let spatial: SpatialData = spatial.into();
         let semantic: SemanticData = semantic.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -783,10 +752,10 @@ This is considered static and should not change after handler creation.*/
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         self.obj
@@ -831,18 +800,18 @@ pub trait InputHandlerHandler: binderbinder::device::TransactionHandler + Send +
 This is considered static and should not change after handler creation.*/
     fn get_spatial(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
     ) -> impl Future<Output = super::spatial::SpatialRef> + Send + Sync;
     ///This is considered static and should not change after handler creation.
     fn get_field(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
     ) -> impl Future<Output = super::field::FieldRef> + Send + Sync;
     /**Returns suggested bindings. The map key will equal a key in the datamap.
 This is considered static and should not change after handler creation.*/
     fn suggested_bindings(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
     ) -> impl Future<
         Output = std::collections::HashMap<String, Vec<String>>,
     > + Send + Sync;
@@ -850,12 +819,12 @@ This is considered static and should not change after handler creation.*/
 This is considered static and should not change after handler creation.*/
     fn handler_groups(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
     ) -> impl Future<Output = Vec<String>> + Send + Sync;
     ///An input method just started sending input to this handler.
     fn input_gained(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         method: InputMethod,
         time: super::types::Timestamp,
         spatial: SpatialData,
@@ -864,7 +833,7 @@ This is considered static and should not change after handler creation.*/
     ///An input method's data has been updated.
     fn input_updated(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         method: InputMethod,
         time: super::types::Timestamp,
         spatial: SpatialData,
@@ -873,21 +842,21 @@ This is considered static and should not change after handler creation.*/
     ///An input method just stopped sending input to this handler.
     fn input_left(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         method: InputMethod,
         time: super::types::Timestamp,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let mut gluon_out = gluon::DataBuilder::new();
                     let (spatial) = self.get_spatial(ctx).await;
                     drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
@@ -897,7 +866,7 @@ This is considered static and should not change after handler creation.*/
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let mut gluon_out = gluon::DataBuilder::new();
                     let (field) = self.get_field(ctx).await;
                     drop(gluon_data);
                     field.write_owned(&mut gluon_out)?;
@@ -907,7 +876,7 @@ This is considered static and should not change after handler creation.*/
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let mut gluon_out = gluon::DataBuilder::new();
                     let (suggested_bindings) = self.suggested_bindings(ctx).await;
                     drop(gluon_data);
                     suggested_bindings.write_owned(&mut gluon_out)?;
@@ -917,7 +886,7 @@ This is considered static and should not change after handler creation.*/
                 }
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
+                    let mut gluon_out = gluon::DataBuilder::new();
                     let (groups) = self.handler_groups(ctx).await;
                     drop(gluon_data);
                     groups.write_owned(&mut gluon_out)?;
@@ -926,18 +895,10 @@ This is considered static and should not change after handler creation.*/
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 12u32 => {
-                    let param_method = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_time = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_semantic = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_method = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_time = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_semantic = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.input_gained(
                             ctx,
@@ -949,18 +910,10 @@ This is considered static and should not change after handler creation.*/
                         .await;
                 }
                 13u32 => {
-                    let param_method = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_time = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_semantic = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_method = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_time = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_semantic = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.input_updated(
                             ctx,
@@ -972,12 +925,8 @@ This is considered static and should not change after handler creation.*/
                         .await;
                 }
                 14u32 => {
-                    let param_method = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_time = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_method = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.input_left(ctx, param_method, param_time).await;
                 }
@@ -991,23 +940,21 @@ This is considered static and should not change after handler creation.*/
 pub struct InputMethod {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for InputMethod {
+impl gluon::Convertable for InputMethod {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(InputMethod::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -1016,9 +963,9 @@ impl InputMethod {
     pub fn request_capture(
         &self,
         handler: impl Into<InputHandler>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let handler: InputHandler = handler.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -1027,9 +974,9 @@ impl InputMethod {
     pub fn release_capture(
         &self,
         handler: impl Into<InputHandler>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let handler: InputHandler = handler.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
@@ -1040,11 +987,11 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         &self,
         handler: impl Into<InputHandler>,
         time: impl Into<super::types::Timestamp>,
-    ) -> Result<Option<SpatialData>, gluon_wire::GluonSendError> {
+    ) -> Result<Option<SpatialData>, gluon::SendError> {
         let handler: InputHandler = handler.into();
         let time: super::types::Timestamp = time.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
@@ -1053,8 +1000,8 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             .device()
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub fn from_handler<H: InputMethodHandler>(
         obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
@@ -1092,54 +1039,46 @@ pub trait InputMethodHandler: binderbinder::device::TransactionHandler + Send + 
     ///Request to capture the input method with the given handler.
     fn request_capture(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         handler: InputHandler,
     ) -> impl Future<Output = ()> + Send + Sync;
     ///If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
     fn release_capture(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         handler: InputHandler,
     ) -> impl Future<Output = ()> + Send + Sync;
     /**Get spatial data relative to the input handler at a specific point in time.
 Should return None when the InputMethod is captured by another InputHandler.*/
     fn get_spatial_data(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         handler: InputHandler,
         time: super::types::Timestamp,
     ) -> impl Future<Output = Option<SpatialData>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_handler = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.request_capture(ctx, param_handler).await;
                 }
                 9u32 => {
-                    let param_handler = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.release_capture(ctx, param_handler).await;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_handler = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_time = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_handler = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let (data) = self
                         .get_spatial_data(ctx, param_handler, param_time)
                         .await;

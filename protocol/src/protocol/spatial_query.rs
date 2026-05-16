@@ -1,23 +1,23 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon_wire::GluonConvertable;
-pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
+use gluon::Convertable;
+pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.SpatialQuery",
     types: &[
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "BeamQuery",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "ZoneQuery",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "PointsQuery",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Point",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
     ],
 };
@@ -32,11 +32,11 @@ pub struct BeamQuery {
     ///Maximum length of the beam in meters, can be the max f32 value
     pub max_length: f32,
 }
-impl gluon_wire::GluonConvertable for BeamQuery {
+impl gluon::Convertable for BeamQuery {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.handler.write(gluon_data)?;
         self.interfaces.write(gluon_data)?;
         self.reference_spatial.write(gluon_data)?;
@@ -51,25 +51,19 @@ impl gluon_wire::GluonConvertable for BeamQuery {
         self.max_length.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let reference_spatial = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let handler = gluon::Convertable::read(gluon_data)?;
+        let interfaces = gluon::Convertable::read(gluon_data)?;
+        let reference_spatial = gluon::Convertable::read(gluon_data)?;
         let origin: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
-                gluon_data,
-            )?;
+            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
             __w.into()
         };
         let direction: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
-                gluon_data,
-            )?;
+            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
             __w.into()
         };
-        let max_length = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let max_length = gluon::Convertable::read(gluon_data)?;
         Ok(BeamQuery {
             handler,
             interfaces,
@@ -81,8 +75,8 @@ impl gluon_wire::GluonConvertable for BeamQuery {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.handler.write_owned(gluon_data)?;
         self.interfaces.write_owned(gluon_data)?;
         self.reference_spatial.write_owned(gluon_data)?;
@@ -106,24 +100,22 @@ pub struct ZoneQuery {
     pub zone_field: super::field::FieldRef,
     pub margin: f32,
 }
-impl gluon_wire::GluonConvertable for ZoneQuery {
+impl gluon::Convertable for ZoneQuery {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.handler.write(gluon_data)?;
         self.interfaces.write(gluon_data)?;
         self.zone_field.write(gluon_data)?;
         self.margin.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let zone_field = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let margin = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let handler = gluon::Convertable::read(gluon_data)?;
+        let interfaces = gluon::Convertable::read(gluon_data)?;
+        let zone_field = gluon::Convertable::read(gluon_data)?;
+        let margin = gluon::Convertable::read(gluon_data)?;
         Ok(ZoneQuery {
             handler,
             interfaces,
@@ -133,8 +125,8 @@ impl gluon_wire::GluonConvertable for ZoneQuery {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.handler.write_owned(gluon_data)?;
         self.interfaces.write_owned(gluon_data)?;
         self.zone_field.write_owned(gluon_data)?;
@@ -150,24 +142,22 @@ pub struct PointsQuery {
     pub reference_spatial: super::spatial::SpatialRef,
     pub points: Vec<Point>,
 }
-impl gluon_wire::GluonConvertable for PointsQuery {
+impl gluon::Convertable for PointsQuery {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.handler.write(gluon_data)?;
         self.interfaces.write(gluon_data)?;
         self.reference_spatial.write(gluon_data)?;
         self.points.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let reference_spatial = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let points = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let handler = gluon::Convertable::read(gluon_data)?;
+        let interfaces = gluon::Convertable::read(gluon_data)?;
+        let reference_spatial = gluon::Convertable::read(gluon_data)?;
+        let points = gluon::Convertable::read(gluon_data)?;
         Ok(PointsQuery {
             handler,
             interfaces,
@@ -177,8 +167,8 @@ impl gluon_wire::GluonConvertable for PointsQuery {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.handler.write_owned(gluon_data)?;
         self.interfaces.write_owned(gluon_data)?;
         self.reference_spatial.write_owned(gluon_data)?;
@@ -192,11 +182,11 @@ pub struct Point {
     pub point: crate::types::Vec3F,
     pub margin: f32,
 }
-impl gluon_wire::GluonConvertable for Point {
+impl gluon::Convertable for Point {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::Vec3F = self.point.clone().into();
             __w.write_owned(gluon_data)?;
@@ -204,22 +194,18 @@ impl gluon_wire::GluonConvertable for Point {
         self.margin.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let point: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
-                gluon_data,
-            )?;
+            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
             __w.into()
         };
-        let margin = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let margin = gluon::Convertable::read(gluon_data)?;
         Ok(Point { point, margin })
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::Vec3F = self.point.into();
             __w.write_owned(gluon_data)?;
@@ -232,23 +218,21 @@ impl gluon_wire::GluonConvertable for Point {
 pub struct BeamQueryHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for BeamQueryHandler {
+impl gluon::Convertable for BeamQueryHandler {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(BeamQueryHandler::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -261,14 +245,14 @@ impl BeamQueryHandler {
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
         deepest_point_distance: impl Into<f32>,
         distance: impl Into<f32>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let deepest_point_distance: f32 = deepest_point_distance.into();
         let distance: f32 = distance.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -282,10 +266,10 @@ impl BeamQueryHandler {
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
@@ -296,11 +280,11 @@ impl BeamQueryHandler {
         obj: impl Into<super::query::QueryableObjectRef>,
         deepest_point_distance: impl Into<f32>,
         distance: impl Into<f32>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let deepest_point_distance: f32 = deepest_point_distance.into();
         let distance: f32 = distance.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         deepest_point_distance.write(&mut gluon_builder)?;
         distance.write(&mut gluon_builder)?;
@@ -312,9 +296,9 @@ impl BeamQueryHandler {
     pub fn left(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -356,7 +340,7 @@ impl Eq for BeamQueryHandler {}
 pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn intersected(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
@@ -366,47 +350,39 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         interfaces: Vec<super::query::QueriedInterface>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn moved(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         deepest_point_distance: f32,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_field = gluon_wire::GluonConvertable::read(
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_field = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_deepest_point_distance = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_interfaces = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_deepest_point_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.intersected(
                             ctx,
@@ -420,21 +396,17 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                         .await;
                 }
                 9u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_interfaces = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.interfaces_changed(ctx, param_obj, param_interfaces).await;
                 }
                 10u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_deepest_point_distance = gluon_wire::GluonConvertable::read(
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_deepest_point_distance = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.moved(
                             ctx,
@@ -445,7 +417,7 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                         .await;
                 }
                 11u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.left(ctx, param_obj).await;
                 }
@@ -459,23 +431,21 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
 pub struct ZoneQueryHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for ZoneQueryHandler {
+impl gluon::Convertable for ZoneQueryHandler {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(ZoneQueryHandler::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -488,14 +458,14 @@ impl ZoneQueryHandler {
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
         relative_position: crate::types::Vec3F,
         distance: impl Into<f32>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let relative_position: super::types::Vec3F = relative_position.into();
         let distance: f32 = distance.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -509,10 +479,10 @@ impl ZoneQueryHandler {
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
@@ -523,11 +493,11 @@ impl ZoneQueryHandler {
         obj: impl Into<super::query::QueryableObjectRef>,
         relative_position: crate::types::Vec3F,
         distance: impl Into<f32>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let relative_position: super::types::Vec3F = relative_position.into();
         let distance: f32 = distance.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         relative_position.write(&mut gluon_builder)?;
         distance.write(&mut gluon_builder)?;
@@ -539,9 +509,9 @@ impl ZoneQueryHandler {
     pub fn left(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -583,7 +553,7 @@ impl Eq for ZoneQueryHandler {}
 pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn entered(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
@@ -593,50 +563,42 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         interfaces: Vec<super::query::QueriedInterface>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn moved(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         relative_position: crate::types::Vec3F,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_field = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_interfaces = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_field = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_position: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                        let __w: super::types::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
                     };
-                    let param_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.entered(
                             ctx,
@@ -650,30 +612,26 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                         .await;
                 }
                 9u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_interfaces = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.interfaces_changed(ctx, param_obj, param_interfaces).await;
                 }
                 10u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_position: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                        let __w: super::types::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
                     };
-                    let param_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.moved(ctx, param_obj, param_relative_position, param_distance)
                         .await;
                 }
                 11u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.left(ctx, param_obj).await;
                 }
@@ -687,23 +645,21 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
 pub struct PointsQueryHandler {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for PointsQueryHandler {
+impl gluon::Convertable for PointsQueryHandler {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(PointsQueryHandler::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -715,13 +671,13 @@ impl PointsQueryHandler {
         spatial: impl Into<super::spatial::SpatialRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
         distance: impl Into<f32>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let distance: f32 = distance.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -734,10 +690,10 @@ impl PointsQueryHandler {
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
@@ -747,10 +703,10 @@ impl PointsQueryHandler {
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         distance: impl Into<f32>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let distance: f32 = distance.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         distance.write(&mut gluon_builder)?;
         self.obj
@@ -761,9 +717,9 @@ impl PointsQueryHandler {
     pub fn left(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -805,7 +761,7 @@ impl Eq for PointsQueryHandler {}
 pub trait PointsQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn entered(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
@@ -814,43 +770,35 @@ pub trait PointsQueryHandlerHandler: binderbinder::device::TransactionHandler + 
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         interfaces: Vec<super::query::QueriedInterface>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn moved(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_field = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_interfaces = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_field = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.entered(
                             ctx,
@@ -863,23 +811,19 @@ pub trait PointsQueryHandlerHandler: binderbinder::device::TransactionHandler + 
                         .await;
                 }
                 9u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_interfaces = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.interfaces_changed(ctx, param_obj, param_interfaces).await;
                 }
                 10u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_distance = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.moved(ctx, param_obj, param_distance).await;
                 }
                 11u32 => {
-                    let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
+                    let param_obj = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.left(ctx, param_obj).await;
                 }
@@ -893,23 +837,21 @@ pub trait PointsQueryHandlerHandler: binderbinder::device::TransactionHandler + 
 pub struct SpatialQueryInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for SpatialQueryInterface {
+impl gluon::Convertable for SpatialQueryInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(SpatialQueryInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -917,40 +859,40 @@ impl SpatialQueryInterface {
     pub async fn beam_query(
         &self,
         query: impl Into<BeamQuery>,
-    ) -> Result<SpatialQueryGuard, gluon_wire::GluonSendError> {
+    ) -> Result<SpatialQueryGuard, gluon::SendError> {
         let query: BeamQuery = query.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         query.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub async fn zone_query(
         &self,
         query: impl Into<ZoneQuery>,
-    ) -> Result<SpatialQueryGuard, gluon_wire::GluonSendError> {
+    ) -> Result<SpatialQueryGuard, gluon::SendError> {
         let query: ZoneQuery = query.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         query.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub async fn points_query(
         &self,
         query: impl Into<PointsQuery>,
-    ) -> Result<PointsQueryHandle, gluon_wire::GluonSendError> {
+    ) -> Result<PointsQueryHandle, gluon::SendError> {
         let query: PointsQuery = query.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         query.write(&mut gluon_builder)?;
@@ -958,8 +900,8 @@ impl SpatialQueryInterface {
             .device()
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub fn from_handler<H: SpatialQueryInterfaceHandler>(
         obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
@@ -996,33 +938,31 @@ impl Eq for SpatialQueryInterface {}
 pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn beam_query(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         query: BeamQuery,
     ) -> impl Future<Output = SpatialQueryGuard> + Send + Sync;
     fn zone_query(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         query: ZoneQuery,
     ) -> impl Future<Output = SpatialQueryGuard> + Send + Sync;
     fn points_query(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         query: PointsQuery,
     ) -> impl Future<Output = PointsQueryHandle> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_query = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_query = gluon::Convertable::read(&mut gluon_data)?;
                     let (guard) = self.beam_query(ctx, param_query).await;
                     drop(gluon_data);
                     guard.write_owned(&mut gluon_out)?;
@@ -1032,10 +972,8 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_query = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_query = gluon::Convertable::read(&mut gluon_data)?;
                     let (guard) = self.zone_query(ctx, param_query).await;
                     drop(gluon_data);
                     guard.write_owned(&mut gluon_out)?;
@@ -1045,10 +983,8 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_query = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_query = gluon::Convertable::read(&mut gluon_data)?;
                     let (handle) = self.points_query(ctx, param_query).await;
                     drop(gluon_data);
                     handle.write_owned(&mut gluon_out)?;
@@ -1066,23 +1002,21 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
 pub struct PointsQueryHandle {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for PointsQueryHandle {
+impl gluon::Convertable for PointsQueryHandle {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(PointsQueryHandle::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -1090,9 +1024,9 @@ impl PointsQueryHandle {
     pub fn update_points(
         &self,
         points: impl Into<Vec<Point>>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let points: Vec<Point> = points.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         points.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -1132,21 +1066,19 @@ impl Eq for PointsQueryHandle {}
 pub trait PointsQueryHandleHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn update_points(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         points: Vec<Point>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_points = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_points = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.update_points(ctx, param_points).await;
                 }
@@ -1160,23 +1092,21 @@ pub trait PointsQueryHandleHandler: binderbinder::device::TransactionHandler + S
 pub struct SpatialQueryGuard {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for SpatialQueryGuard {
+impl gluon::Convertable for SpatialQueryGuard {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(SpatialQueryGuard::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -1217,9 +1147,9 @@ pub trait SpatialQueryGuardHandler: binderbinder::device::TransactionHandler + S
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 _ => {}

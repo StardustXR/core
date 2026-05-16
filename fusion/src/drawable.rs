@@ -2,7 +2,6 @@
 
 #![allow(ambiguous_glob_reexports)]
 
-use gluon_wire::GluonSendError;
 use stardust_xr_protocol::client::ClientHandler;
 pub use stardust_xr_protocol::lines::*;
 use stardust_xr_protocol::model;
@@ -43,7 +42,7 @@ pub enum ModelLoadError {
 	#[error("Spatial wasn't owned by the server")]
 	InvalidSpatial,
 	#[error("Gluon error: {0}")]
-	GluonError(#[from] GluonSendError),
+	GluonError(#[from] gluon::SendError),
 }
 
 pub trait ModelExt {

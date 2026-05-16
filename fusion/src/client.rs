@@ -1,7 +1,6 @@
 //! Your connection to the Stardust server and other essentials.
 
 use binderbinder::binder_object::BinderObject;
-use gluon_wire::{GluonCtx, GluonSendError, Handler};
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
@@ -38,7 +37,7 @@ pub enum ClientError {
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
 	#[error("Gluon error: {0}")]
-	GluonError(#[from] GluonSendError),
+	GluonError(#[from] gluon::SendError),
 }
 
 /// Your connection to the Stardust server.
@@ -210,15 +209,15 @@ impl<H: ClientHandler> Client<H> {
 	}
 }
 
-#[derive(Debug, Handler)]
+#[derive(Debug, gluon::Handler)]
 pub struct DefaultHandler {
 	frame_sender: broadcast::Sender<FrameInfo>,
 }
 impl ClientHandler for DefaultHandler {
 	// do we maybe want to wait for something in the main code paths?
-	async fn ping(&self, _ctx: GluonCtx) {}
+	async fn ping(&self, _ctx: gluon::Context) {}
 
-	async fn frame(&self, _ctx: GluonCtx, info: FrameInfo) {
+	async fn frame(&self, _ctx: gluon::Context, info: FrameInfo) {
 		_ = self.frame_sender.send(info);
 	}
 }

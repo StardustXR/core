@@ -208,14 +208,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "gluon-codegen-rust"
+name = "gluon"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#1965276bab2b03a151ebb10b5cc02870a7443142"
+source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
+dependencies = [
+ "binderbinder",
+ "bitflags",
+ "gluon-derive",
+ "rustix",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "gluon-codegen"
+version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
 dependencies = [
  "convert_case",
+ "gluon",
  "gluon-parser",
- "gluon-wire",
  "prettyplease",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "gluon-derive"
+version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",
@@ -224,35 +247,12 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#1965276bab2b03a151ebb10b5cc02870a7443142"
+source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
 dependencies = [
  "ansi_term",
  "binderbinder",
  "chumsky",
  "convert_case",
-]
-
-[[package]]
-name = "gluon-wire"
-version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#1965276bab2b03a151ebb10b5cc02870a7443142"
-dependencies = [
- "binderbinder",
- "bitflags",
- "gluon-wire-derive",
- "rustix",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "gluon-wire-derive"
-version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#1965276bab2b03a151ebb10b5cc02870a7443142"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -611,7 +611,7 @@ version = "0.51.1"
 dependencies = [
  "binderbinder",
  "glam 0.30.10",
- "gluon-wire",
+ "gluon",
  "parking_lot",
  "pion-binder",
  "stardust-xr-protocol",
@@ -630,9 +630,8 @@ dependencies = [
  "binderbinder",
  "fnv",
  "glam 0.29.3",
- "gluon-codegen-rust",
- "gluon-parser",
- "gluon-wire",
+ "gluon",
+ "gluon-codegen",
  "mint",
  "prettyplease",
  "rustix",

@@ -29,7 +29,7 @@ tokio = { version = "1.38.0", features = [
 xkbcommon = { version = "0.9.0", default-features = false, optional = true }
 tracing = "0.1.37"
 stardust-xr-protocol = { version = "0.51.0", path = "../protocol" }
-gluon-wire = { git = "https://github.com/technobaboo/gluon", features = [
+gluon = { git = "https://github.com/technobaboo/gluon", features = [
 	"tracing",
 ] }
 binderbinder = { git = "https://github.com/technobaboo/binderbinder" }

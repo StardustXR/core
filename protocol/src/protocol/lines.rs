@@ -1,15 +1,15 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon_wire::GluonConvertable;
-pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
+use gluon::Convertable;
+pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Lines",
     types: &[
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "Line",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
         },
-        gluon_wire::ExternalGluonType {
+        gluon::ExternalGluonType {
             name: "LinePoint",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(3u32),
         },
     ],
 };
@@ -20,26 +20,24 @@ pub struct Line {
     ///Whether this line is a closed loop
     pub cyclic: bool,
 }
-impl gluon_wire::GluonConvertable for Line {
+impl gluon::Convertable for Line {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.points.write(gluon_data)?;
         self.cyclic.write(gluon_data)?;
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        let points = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let cyclic = gluon_wire::GluonConvertable::read(gluon_data)?;
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let points = gluon::Convertable::read(gluon_data)?;
+        let cyclic = gluon::Convertable::read(gluon_data)?;
         Ok(Line { points, cyclic })
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.points.write_owned(gluon_data)?;
         self.cyclic.write_owned(gluon_data)?;
         Ok(())
@@ -55,11 +53,11 @@ pub struct LinePoint {
     ///Color of the point
     pub color: crate::types::Color,
 }
-impl gluon_wire::GluonConvertable for LinePoint {
+impl gluon::Convertable for LinePoint {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::Vec3F = self.point.clone().into();
             __w.write_owned(gluon_data)?;
@@ -71,20 +69,14 @@ impl gluon_wire::GluonConvertable for LinePoint {
         }
         Ok(())
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let point: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
-                gluon_data,
-            )?;
+            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
             __w.into()
         };
-        let thickness = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let thickness = gluon::Convertable::read(gluon_data)?;
         let color: crate::types::Color = {
-            let __w: super::types::Color = gluon_wire::GluonConvertable::read(
-                gluon_data,
-            )?;
+            let __w: super::types::Color = gluon::Convertable::read(gluon_data)?;
             __w.into()
         };
         Ok(LinePoint {
@@ -95,8 +87,8 @@ impl gluon_wire::GluonConvertable for LinePoint {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::Vec3F = self.point.into();
             __w.write_owned(gluon_data)?;
@@ -113,23 +105,21 @@ impl gluon_wire::GluonConvertable for LinePoint {
 pub struct Lines {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for Lines {
+impl gluon::Convertable for Lines {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(Lines::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -137,9 +127,9 @@ impl Lines {
     pub fn set_lines(
         &self,
         lines: impl Into<Vec<Line>>,
-    ) -> Result<(), gluon_wire::GluonSendError> {
+    ) -> Result<(), gluon::SendError> {
         let lines: Vec<Line> = lines.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
         lines.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -179,21 +169,19 @@ impl Eq for Lines {}
 pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn set_lines(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         lines: Vec<Line>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_lines = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_lines = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.set_lines(ctx, param_lines).await;
                 }
@@ -207,23 +195,21 @@ pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync +
 pub struct LinesInterface {
     obj: binderbinder::binder_object::BinderObjectOrRef,
 }
-impl gluon_wire::GluonConvertable for LinesInterface {
+impl gluon::Convertable for LinesInterface {
     fn write<'a, 'b: 'a>(
         &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
         Ok(LinesInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
@@ -232,19 +218,19 @@ impl LinesInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         lines: impl Into<Vec<Line>>,
-    ) -> Result<Lines, gluon_wire::GluonSendError> {
+    ) -> Result<Lines, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let lines: Vec<Line> = lines.into();
-        let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         lines.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
-        Ok(gluon_wire::GluonConvertable::read(&mut reader)?)
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub fn from_handler<H: LinesInterfaceHandler>(
         obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
@@ -281,27 +267,23 @@ impl Eq for LinesInterface {}
 pub trait LinesInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
     fn create_lines(
         &self,
-        _ctx: gluon_wire::GluonCtx,
+        _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
         lines: Vec<Line>,
     ) -> impl Future<Output = Lines> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon_wire::GluonDataReader,
-        ctx: gluon_wire::GluonCtx,
-    ) -> impl Future<Output = Result<(), gluon_wire::GluonSendError>> + Send + Sync {
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon_wire::GluonDataBuilder::new();
-                    let param_spatial = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_lines = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_lines = gluon::Convertable::read(&mut gluon_data)?;
                     let (lines) = self
                         .create_lines(ctx, param_spatial, param_lines)
                         .await;
