@@ -10,8 +10,6 @@ mod drawable_ext;
 pub use drawable_ext::*;
 mod field_ext;
 pub use field_ext::*;
-mod query_ext;
-pub use query_ext::*;
 mod spatial_ext;
 pub use spatial_ext::*;
 mod suis_ext;

@@ -9,6 +9,7 @@ pub mod dmatex;
 pub mod drawable;
 pub mod error;
 pub mod fields;
+pub mod query;
 pub mod spatial;
 pub mod suis;
 pub mod types;

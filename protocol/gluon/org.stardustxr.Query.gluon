@@ -15,12 +15,7 @@ interface QueryableInterfaceGuard {}
 
 /// interface to register queryable objects
 interface QueryInterface {
-  register_queryable(spatial: Ref<spatial::SpatialRef>, field: Ref<field::FieldRef>) -> (queryable: Result<Ref<QueryableObject>, QueryableError>)
-}
-
-/// error returned from QueryInterface::register_queryable
-enum QueryableError {
-  InvalidField,
+  register_queryable(spatial: Ref<spatial::SpatialRef>, field: Ref<field::FieldRef>) -> (queryable: Ref<QueryableObject>)
 }
 
 /// Dependency on an interface in query

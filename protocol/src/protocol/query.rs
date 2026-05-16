@@ -11,10 +11,6 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
             name: "QueriedInterface",
             supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
         },
-        gluon_wire::ExternalGluonType {
-            name: "QueryableError",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
-        },
     ],
 };
 ///Dependency on an interface in query
@@ -82,45 +78,6 @@ impl gluon_wire::GluonConvertable for QueriedInterface {
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.interface_id.write_owned(gluon_data)?;
         self.interface.write_owned(gluon_data)?;
-        Ok(())
-    }
-}
-///error returned from QueryInterface::register_queryable
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum QueryableError {
-    InvalidField,
-}
-impl gluon_wire::GluonConvertable for QueryableError {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        match self {
-            QueryableError::InvalidField => {
-                gluon_data.write_u16(0u16)?;
-            }
-        };
-        Ok(())
-    }
-    fn read(
-        gluon_data: &mut gluon_wire::GluonDataReader,
-    ) -> Result<Self, gluon_wire::GluonReadError> {
-        Ok(
-            match gluon_data.read_u16()? {
-                0u16 => QueryableError::InvalidField,
-                v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
-            },
-        )
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
-    ) -> Result<(), gluon_wire::GluonWriteError> {
-        match self {
-            QueryableError::InvalidField => {
-                gluon_data.write_u16(0u16)?;
-            }
-        };
         Ok(())
     }
 }
@@ -437,7 +394,7 @@ impl QueryInterface {
         &self,
         spatial: impl Into<super::spatial::SpatialRef>,
         field: impl Into<super::field::FieldRef>,
-    ) -> Result<Result<QueryableObject, QueryableError>, gluon_wire::GluonSendError> {
+    ) -> Result<QueryableObject, gluon_wire::GluonSendError> {
         let spatial: super::spatial::SpatialRef = spatial.into();
         let field: super::field::FieldRef = field.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
@@ -489,7 +446,7 @@ pub trait QueryInterfaceHandler: binderbinder::device::TransactionHandler + Send
         _ctx: gluon_wire::GluonCtx,
         spatial: super::spatial::SpatialRef,
         field: super::field::FieldRef,
-    ) -> impl Future<Output = Result<QueryableObject, QueryableError>> + Send + Sync;
+    ) -> impl Future<Output = QueryableObject> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

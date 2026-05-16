@@ -51,7 +51,6 @@ async fn main() {
 		.query_interface()
 		.register_queryable(field_spatial_ref, field_ref)
 		.await
-		.unwrap()
 		.unwrap();
 	let _guard = queryable
 		.add_interface(
