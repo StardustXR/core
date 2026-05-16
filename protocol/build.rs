@@ -28,28 +28,43 @@ fn main() {
 		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
 		&[
 			TypeProxy {
+				protocol_type_name: "types::Size2".into(),
+				rust_type: "crate::types::Size2".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Size3".into(),
+				rust_type: "crate::types::Size3".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
 				protocol_type_name: "types::Vec2f".into(),
-				rust_type: "mint::Vector2<f32>".into(),
+				rust_type: "crate::types::Vec2F".into(),
 				derives: Derives::CLONE | Derives::COPY,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Vec3f".into(),
-				rust_type: "mint::Vector3<f32>".into(),
+				rust_type: "crate::types::Vec3F".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Vec4f".into(),
+				rust_type: "crate::types::Vec4F".into(),
 				derives: Derives::CLONE | Derives::COPY,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Quatf".into(),
-				rust_type: "mint::Quaternion<f32>".into(),
+				rust_type: "crate::types::QuatF".into(),
 				derives: Derives::CLONE | Derives::COPY,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Mat4f".into(),
-				rust_type: "mint::ColumnMatrix4<f32>".into(),
+				rust_type: "crate::types::Mat4F".into(),
 				derives: Derives::CLONE | Derives::COPY,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Color".into(),
-				rust_type: "crate::Color".into(),
+				rust_type: "crate::types::Color".into(),
 				derives: Derives::CLONE | Derives::COPY,
 			},
 		],

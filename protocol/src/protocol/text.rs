@@ -29,7 +29,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 #[derive(Debug, Copy, Clone)]
 pub struct TextBounds {
     ///Bounds in meters
-    pub bounds: mint::Vector2<f32>,
+    pub bounds: crate::types::Vec2F,
     pub fit: TextFit,
     pub anchor_align_x: XAlign,
     pub anchor_align_y: YAlign,
@@ -51,7 +51,7 @@ impl gluon_wire::GluonConvertable for TextBounds {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let bounds: mint::Vector2<f32> = {
+        let bounds: crate::types::Vec2F = {
             let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -86,7 +86,7 @@ impl gluon_wire::GluonConvertable for TextBounds {
 pub struct TextStyle {
     ///Height of a character in meters
     pub character_height: f32,
-    pub color: crate::Color,
+    pub color: crate::types::Color,
     pub text_align_x: XAlign,
     pub text_align_y: YAlign,
     pub font: Option<super::types::Resource>,
@@ -112,7 +112,7 @@ impl gluon_wire::GluonConvertable for TextStyle {
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let character_height = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let color: crate::Color = {
+        let color: crate::types::Color = {
             let __w: super::types::Color = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;

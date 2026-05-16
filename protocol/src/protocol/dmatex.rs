@@ -13,7 +13,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
         gluon_wire::ExternalGluonType {
             name: "DmatexSize",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
     ],
 };
@@ -106,11 +106,11 @@ impl gluon_wire::GluonConvertable for DmatexPlane {
     }
 }
 ///Size of a DMA texture.
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone)]
 pub enum DmatexSize {
     Size1D { size: u32 },
-    Size2D { size: super::types::Size2 },
-    Size3D { size: super::types::Size3 },
+    Size2D { size: crate::types::Size2 },
+    Size3D { size: crate::types::Size3 },
 }
 impl gluon_wire::GluonConvertable for DmatexSize {
     fn write<'a, 'b: 'a>(
@@ -124,11 +124,17 @@ impl gluon_wire::GluonConvertable for DmatexSize {
             }
             DmatexSize::Size2D { size } => {
                 gluon_data.write_u16(1u16)?;
-                size.write(gluon_data)?;
+                {
+                    let __w: super::types::Size2 = size.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             DmatexSize::Size3D { size } => {
                 gluon_data.write_u16(2u16)?;
-                size.write(gluon_data)?;
+                {
+                    let __w: super::types::Size3 = size.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
         };
         Ok(())
@@ -143,11 +149,21 @@ impl gluon_wire::GluonConvertable for DmatexSize {
                     DmatexSize::Size1D { size }
                 }
                 1u16 => {
-                    let size = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let size: crate::types::Size2 = {
+                        let __w: super::types::Size2 = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     DmatexSize::Size2D { size }
                 }
                 2u16 => {
-                    let size = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let size: crate::types::Size3 = {
+                        let __w: super::types::Size3 = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     DmatexSize::Size3D { size }
                 }
                 v => return Err(gluon_wire::GluonReadError::UnknownEnumVariant(v)),
@@ -165,11 +181,17 @@ impl gluon_wire::GluonConvertable for DmatexSize {
             }
             DmatexSize::Size2D { size } => {
                 gluon_data.write_u16(1u16)?;
-                size.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Size2 = size.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             DmatexSize::Size3D { size } => {
                 gluon_data.write_u16(2u16)?;
-                size.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Size3 = size.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
         };
         Ok(())

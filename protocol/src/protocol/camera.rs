@@ -13,7 +13,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 #[derive(Debug, Copy, Clone)]
 pub struct View {
     ///Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up
-    pub projection_matrix: mint::ColumnMatrix4<f32>,
+    pub projection_matrix: crate::types::Mat4F,
     ///Transform applied to the view, relative to the camera
     pub camera_relative_transform: super::spatial::Transform,
 }
@@ -32,7 +32,7 @@ impl gluon_wire::GluonConvertable for View {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let projection_matrix: mint::ColumnMatrix4<f32> = {
+        let projection_matrix: crate::types::Mat4F = {
             let __w: super::types::Mat4F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;

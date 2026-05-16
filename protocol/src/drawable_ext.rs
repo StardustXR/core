@@ -1,7 +1,8 @@
-use crate::protocol::lines::LinePoint;
-use crate::protocol::model::{MaterialParamError, ModelLoadError};
-use crate::protocol::types::{Color, Vec3F};
-use crate::types::Quatf;
+use crate::{
+	lines::LinePoint,
+	model::{MaterialParamError, ModelLoadError},
+	types::{Color, QuatF, Vec3F},
+};
 use color::rgba_linear;
 use std::error::Error;
 use std::fmt::Display;

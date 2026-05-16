@@ -4,10 +4,10 @@ use stardust_xr_fusion::{
 	drawable::ModelExt,
 	project_local_resources,
 	spatial::{Spatial, SpatialExt, Transform},
+	types::rgba_linear,
 };
 use stardust_xr_protocol::{
 	model::{MaterialParameter, Model},
-	rgba_linear,
 	types::Resource,
 };
 use tokio::sync::broadcast::error::RecvError;

@@ -27,8 +27,8 @@ pub struct BeamQuery {
     pub handler: BeamQueryHandler,
     pub interfaces: Vec<super::query::InterfaceDependency>,
     pub reference_spatial: super::spatial::SpatialRef,
-    pub origin: mint::Vector3<f32>,
-    pub direction: mint::Vector3<f32>,
+    pub origin: crate::types::Vec3F,
+    pub direction: crate::types::Vec3F,
     ///Maximum length of the beam in meters, can be the max f32 value
     pub max_length: f32,
 }
@@ -57,13 +57,13 @@ impl gluon_wire::GluonConvertable for BeamQuery {
         let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
         let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
         let reference_spatial = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let origin: mint::Vector3<f32> = {
+        let origin: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let direction: mint::Vector3<f32> = {
+        let direction: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -189,7 +189,7 @@ impl gluon_wire::GluonConvertable for PointsQuery {
 ///Point for a PointsQuery
 #[derive(Debug, Copy, Clone)]
 pub struct Point {
-    pub point: mint::Vector3<f32>,
+    pub point: crate::types::Vec3F,
     pub margin: f32,
 }
 impl gluon_wire::GluonConvertable for Point {
@@ -207,7 +207,7 @@ impl gluon_wire::GluonConvertable for Point {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let point: mint::Vector3<f32> = {
+        let point: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -486,7 +486,7 @@ impl ZoneQueryHandler {
         field: impl Into<super::field::FieldRef>,
         spatial: impl Into<super::spatial::SpatialRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
-        relative_position: mint::Vector3<f32>,
+        relative_position: crate::types::Vec3F,
         distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
@@ -521,7 +521,7 @@ impl ZoneQueryHandler {
     pub fn moved(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
-        relative_position: mint::Vector3<f32>,
+        relative_position: crate::types::Vec3F,
         distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
@@ -588,7 +588,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
         interfaces: Vec<super::query::QueriedInterface>,
-        relative_position: mint::Vector3<f32>,
+        relative_position: crate::types::Vec3F,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
@@ -601,7 +601,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
         &self,
         _ctx: gluon_wire::GluonCtx,
         obj: super::query::QueryableObjectRef,
-        relative_position: mint::Vector3<f32>,
+        relative_position: crate::types::Vec3F,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
@@ -628,7 +628,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                     let param_interfaces = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_relative_position: mint::Vector3<f32> = {
+                    let param_relative_position: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
@@ -659,7 +659,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                 }
                 10u32 => {
                     let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_relative_position: mint::Vector3<f32> = {
+                    let param_relative_position: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;

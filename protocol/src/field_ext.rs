@@ -34,10 +34,13 @@
 //! to your existing code.
 //!
 
-use crate::Color;
-use crate::field::FieldSample;
-use crate::protocol::field::{CubicBezierControlPoint, Shape};
-use crate::protocol::lines::{Line, LinePoint};
+use crate::{
+	field::FieldSample,
+	protocol::{
+		field::{CubicBezierControlPoint, Shape},
+		lines::{Line, LinePoint},
+	},
+};
 use color::rgba_linear;
 use glam::{Mat4, Vec3, Vec3A, vec3, vec3a};
 

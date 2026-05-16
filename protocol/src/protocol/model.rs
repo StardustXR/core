@@ -141,9 +141,9 @@ pub enum MaterialParameter {
     Int { value: i32 },
     Uint { value: u32 },
     Float { value: f32 },
-    Vec2 { value: mint::Vector2<f32> },
-    Vec3 { value: mint::Vector3<f32> },
-    Color { value: crate::Color },
+    Vec2 { value: crate::types::Vec2F },
+    Vec3 { value: crate::types::Vec3F },
+    Color { value: crate::types::Color },
     Texture { value: super::types::Resource },
     Dmatex {
         dmatex: super::dmatex::DmatexRef,
@@ -231,7 +231,7 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                     MaterialParameter::Float { value }
                 }
                 4u16 => {
-                    let value: mint::Vector2<f32> = {
+                    let value: crate::types::Vec2F = {
                         let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;
@@ -240,7 +240,7 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                     MaterialParameter::Vec2 { value }
                 }
                 5u16 => {
-                    let value: mint::Vector3<f32> = {
+                    let value: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;
@@ -249,7 +249,7 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                     MaterialParameter::Vec3 { value }
                 }
                 6u16 => {
-                    let value: crate::Color = {
+                    let value: crate::types::Color = {
                         let __w: super::types::Color = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;
@@ -501,7 +501,7 @@ impl Model {
     }
     pub fn set_model_scale(
         &self,
-        scale: mint::Vector3<f32>,
+        scale: crate::types::Vec3F,
     ) -> Result<(), gluon_wire::GluonSendError> {
         let scale: super::types::Vec3F = scale.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
@@ -556,7 +556,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn set_model_scale(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        scale: mint::Vector3<f32>,
+        scale: crate::types::Vec3F,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
@@ -590,7 +590,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 10u32 => {
-                    let param_scale: mint::Vector3<f32> = {
+                    let param_scale: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;

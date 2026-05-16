@@ -534,8 +534,8 @@ impl gluon_wire::GluonConvertable for InputDataType {
 pub enum DatamapData {
     Bool { value: bool },
     Float { value: f32 },
-    Vec2 { value: mint::Vector2<f32> },
-    Vec3 { value: mint::Vector3<f32> },
+    Vec2 { value: crate::types::Vec2F },
+    Vec3 { value: crate::types::Vec3F },
     String { value: String },
 }
 impl gluon_wire::GluonConvertable for DatamapData {
@@ -587,7 +587,7 @@ impl gluon_wire::GluonConvertable for DatamapData {
                     DatamapData::Float { value }
                 }
                 2u16 => {
-                    let value: mint::Vector2<f32> = {
+                    let value: crate::types::Vec2F = {
                         let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;
@@ -596,7 +596,7 @@ impl gluon_wire::GluonConvertable for DatamapData {
                     DatamapData::Vec2 { value }
                 }
                 3u16 => {
-                    let value: mint::Vector3<f32> = {
+                    let value: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;

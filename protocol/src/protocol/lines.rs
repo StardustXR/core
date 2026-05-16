@@ -49,11 +49,11 @@ impl gluon_wire::GluonConvertable for Line {
 #[derive(Debug, Copy, Clone)]
 pub struct LinePoint {
     ///The position of the point relative to the Lines Spatial
-    pub point: mint::Vector3<f32>,
+    pub point: crate::types::Vec3F,
     ///Thickness in meters, world space
     pub thickness: f32,
     ///Color of the point
-    pub color: crate::Color,
+    pub color: crate::types::Color,
 }
 impl gluon_wire::GluonConvertable for LinePoint {
     fn write<'a, 'b: 'a>(
@@ -74,14 +74,14 @@ impl gluon_wire::GluonConvertable for LinePoint {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let point: mint::Vector3<f32> = {
+        let point: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
         let thickness = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let color: crate::Color = {
+        let color: crate::types::Color = {
             let __w: super::types::Color = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;

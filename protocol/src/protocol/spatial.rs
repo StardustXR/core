@@ -20,9 +20,9 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
 ///Transform
 #[derive(Debug, Copy, Clone)]
 pub struct Transform {
-    pub translation: mint::Vector3<f32>,
-    pub rotation: mint::Quaternion<f32>,
-    pub scale: mint::Vector3<f32>,
+    pub translation: crate::types::Vec3F,
+    pub rotation: crate::types::QuatF,
+    pub scale: crate::types::Vec3F,
 }
 impl gluon_wire::GluonConvertable for Transform {
     fn write<'a, 'b: 'a>(
@@ -46,19 +46,19 @@ impl gluon_wire::GluonConvertable for Transform {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation: mint::Vector3<f32> = {
+        let translation: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let rotation: mint::Quaternion<f32> = {
+        let rotation: crate::types::QuatF = {
             let __w: super::types::Quatf = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let scale: mint::Vector3<f32> = {
+        let scale: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -92,9 +92,9 @@ impl gluon_wire::GluonConvertable for Transform {
 ///Transform
 #[derive(Debug, Copy, Clone)]
 pub struct PartialTransform {
-    pub translation: Option<mint::Vector3<f32>>,
-    pub rotation: Option<mint::Quaternion<f32>>,
-    pub scale: Option<mint::Vector3<f32>>,
+    pub translation: Option<crate::types::Vec3F>,
+    pub rotation: Option<crate::types::QuatF>,
+    pub scale: Option<crate::types::Vec3F>,
 }
 impl gluon_wire::GluonConvertable for PartialTransform {
     fn write<'a, 'b: 'a>(
@@ -127,19 +127,19 @@ impl gluon_wire::GluonConvertable for PartialTransform {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation: Option<mint::Vector3<f32>> = {
+        let translation: Option<crate::types::Vec3F> = {
             let __w: Option<super::types::Vec3F> = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.map(|__v| __v.into())
         };
-        let rotation: Option<mint::Quaternion<f32>> = {
+        let rotation: Option<crate::types::QuatF> = {
             let __w: Option<super::types::Quatf> = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.map(|__v| __v.into())
         };
-        let scale: Option<mint::Vector3<f32>> = {
+        let scale: Option<crate::types::Vec3F> = {
             let __w: Option<super::types::Vec3F> = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -175,8 +175,8 @@ impl gluon_wire::GluonConvertable for PartialTransform {
 ///Bounding box
 #[derive(Debug, Copy, Clone)]
 pub struct BoundingBox {
-    pub center: mint::Vector3<f32>,
-    pub extents: mint::Vector3<f32>,
+    pub center: crate::types::Vec3F,
+    pub extents: crate::types::Vec3F,
 }
 impl gluon_wire::GluonConvertable for BoundingBox {
     fn write<'a, 'b: 'a>(
@@ -196,13 +196,13 @@ impl gluon_wire::GluonConvertable for BoundingBox {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let center: mint::Vector3<f32> = {
+        let center: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let extents: mint::Vector3<f32> = {
+        let extents: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;

@@ -29,9 +29,9 @@ pub struct FieldSample {
     /**Unit outward surface normal at the closest point.
 Always points away from the shape interior, regardless of whether the
 query point is inside or outside.*/
-    pub gradient: mint::Vector3<f32>,
+    pub gradient: crate::types::Vec3F,
     ///Closest point on the shape boundary, in the same space as the query.
-    pub closest_point: mint::Vector3<f32>,
+    pub closest_point: crate::types::Vec3F,
 }
 impl gluon_wire::GluonConvertable for FieldSample {
     fn write<'a, 'b: 'a>(
@@ -53,13 +53,13 @@ impl gluon_wire::GluonConvertable for FieldSample {
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let distance = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let gradient: mint::Vector3<f32> = {
+        let gradient: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let closest_point: mint::Vector3<f32> = {
+        let closest_point: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -138,9 +138,9 @@ impl gluon_wire::GluonConvertable for RayMarchResult {
 ///Control point for cubic bezier spline
 #[derive(Debug, Copy, Clone)]
 pub struct CubicBezierControlPoint {
-    pub handle_in: mint::Vector3<f32>,
-    pub anchor: mint::Vector3<f32>,
-    pub handle_out: mint::Vector3<f32>,
+    pub handle_in: crate::types::Vec3F,
+    pub anchor: crate::types::Vec3F,
+    pub handle_out: crate::types::Vec3F,
     ///Thickness of the spline tube at the point
     pub thickness: f32,
 }
@@ -167,19 +167,19 @@ impl gluon_wire::GluonConvertable for CubicBezierControlPoint {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let handle_in: mint::Vector3<f32> = {
+        let handle_in: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let anchor: mint::Vector3<f32> = {
+        let anchor: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let handle_out: mint::Vector3<f32> = {
+        let handle_out: crate::types::Vec3F = {
             let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                 gluon_data,
             )?;
@@ -217,7 +217,7 @@ impl gluon_wire::GluonConvertable for CubicBezierControlPoint {
 #[derive(Debug, Clone)]
 pub enum Shape {
     ///Axis-aligned box.  `size` = full extents in metres.
-    Box { size: mint::Vector3<f32> },
+    Box { size: crate::types::Vec3F },
     ///Sphere.
     Sphere { radius: f32 },
     /**Capsule aligned to the **Y** axis.
@@ -235,7 +235,7 @@ pub enum Shape {
         cyclic: bool,
     },
     ///Affine transform wrapper: child is evaluated in local space.
-    Transform { shape: Box<Shape>, transform: mint::ColumnMatrix4<f32> },
+    Transform { shape: Box<Shape>, transform: crate::types::Mat4F },
     ///Hard union (min) with routed-VDF interior.
     Union { shapes: Vec<Shape> },
     ///Smooth union (smooth-min).  `smoothing` = blend radius k.
@@ -312,7 +312,7 @@ impl gluon_wire::GluonConvertable for Shape {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => {
-                    let size: mint::Vector3<f32> = {
+                    let size: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;
@@ -352,7 +352,7 @@ impl gluon_wire::GluonConvertable for Shape {
                 }
                 6u16 => {
                     let shape = gluon_wire::GluonConvertable::read(gluon_data)?;
-                    let transform: mint::ColumnMatrix4<f32> = {
+                    let transform: crate::types::Mat4F = {
                         let __w: super::types::Mat4F = gluon_wire::GluonConvertable::read(
                             gluon_data,
                         )?;
@@ -568,7 +568,7 @@ impl Field {
     pub async fn sample(
         &self,
         reference_space: impl Into<super::spatial::SpatialRef>,
-        point: mint::Vector3<f32>,
+        point: crate::types::Vec3F,
     ) -> Result<FieldSample, gluon_wire::GluonSendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
         let point: super::types::Vec3F = point.into();
@@ -588,8 +588,8 @@ impl Field {
     pub async fn ray_march(
         &self,
         reference_space: impl Into<super::spatial::SpatialRef>,
-        ray_origin: mint::Vector3<f32>,
-        ray_direction: mint::Vector3<f32>,
+        ray_origin: crate::types::Vec3F,
+        ray_direction: crate::types::Vec3F,
     ) -> Result<Option<RayMarchResult>, gluon_wire::GluonSendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
         let ray_origin: super::types::Vec3F = ray_origin.into();
@@ -665,14 +665,14 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
         &self,
         _ctx: gluon_wire::GluonCtx,
         reference_space: super::spatial::SpatialRef,
-        point: mint::Vector3<f32>,
+        point: crate::types::Vec3F,
     ) -> impl Future<Output = FieldSample> + Send + Sync;
     fn ray_march(
         &self,
         _ctx: gluon_wire::GluonCtx,
         reference_space: super::spatial::SpatialRef,
-        ray_origin: mint::Vector3<f32>,
-        ray_direction: mint::Vector3<f32>,
+        ray_origin: crate::types::Vec3F,
+        ray_direction: crate::types::Vec3F,
     ) -> impl Future<Output = Option<RayMarchResult>> + Send + Sync;
     fn set_shape(
         &self,
@@ -713,7 +713,7 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                     let param_reference_space = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_point: mint::Vector3<f32> = {
+                    let param_point: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
@@ -734,13 +734,13 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
                     let param_reference_space = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_ray_origin: mint::Vector3<f32> = {
+                    let param_ray_origin: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
                     };
-                    let param_ray_direction: mint::Vector3<f32> = {
+                    let param_ray_direction: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
@@ -802,7 +802,7 @@ impl FieldInterface {
         &self,
         field: impl Into<FieldRef>,
         space: impl Into<super::spatial::SpatialRef>,
-        point: mint::Vector3<f32>,
+        point: crate::types::Vec3F,
     ) -> Result<FieldSample, gluon_wire::GluonSendError> {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
@@ -823,8 +823,8 @@ impl FieldInterface {
         &self,
         field: impl Into<FieldRef>,
         space: impl Into<super::spatial::SpatialRef>,
-        ray_origin: mint::Vector3<f32>,
-        ray_direction: mint::Vector3<f32>,
+        ray_origin: crate::types::Vec3F,
+        ray_direction: crate::types::Vec3F,
     ) -> Result<Option<RayMarchResult>, gluon_wire::GluonSendError> {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
@@ -901,15 +901,15 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
         _ctx: gluon_wire::GluonCtx,
         field: FieldRef,
         space: super::spatial::SpatialRef,
-        point: mint::Vector3<f32>,
+        point: crate::types::Vec3F,
     ) -> impl Future<Output = FieldSample> + Send + Sync;
     fn ray_march(
         &self,
         _ctx: gluon_wire::GluonCtx,
         field: FieldRef,
         space: super::spatial::SpatialRef,
-        ray_origin: mint::Vector3<f32>,
-        ray_direction: mint::Vector3<f32>,
+        ray_origin: crate::types::Vec3F,
+        ray_direction: crate::types::Vec3F,
     ) -> impl Future<Output = Option<RayMarchResult>> + Send + Sync;
     fn create_field(
         &self,
@@ -934,7 +934,7 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let param_space = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_point: mint::Vector3<f32> = {
+                    let param_point: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
@@ -958,13 +958,13 @@ pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send
                     let param_space = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_ray_origin: mint::Vector3<f32> = {
+                    let param_ray_origin: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
                     };
-                    let param_ray_direction: mint::Vector3<f32> = {
+                    let param_ray_direction: crate::types::Vec3F = {
                         let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
                             &mut gluon_data,
                         )?;
