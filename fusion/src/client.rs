@@ -2,9 +2,10 @@
 
 use binderbinder::binder_object::BinderObject;
 use pion_binder::PionBinderDevice;
+pub use stardust_xr_protocol::client::ClientHandler;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
-	client::{Client as ProtocolClient, ClientHandler, FrameInfo},
+	client::{Client as ProtocolClient, FrameInfo},
 	dir::find_pion_file,
 	dmatex::DmatexInterface,
 	field::FieldInterface,
