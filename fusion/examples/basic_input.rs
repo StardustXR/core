@@ -11,7 +11,6 @@ use stardust_xr_fusion::{
 };
 use stardust_xr_protocol::{suis::InputHandler as InputHandlerProxy, types::Timestamp};
 use tokio::sync::{RwLock, broadcast::error::RecvError};
-use tracing::{info, warn};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -67,7 +66,7 @@ async fn main() {
 		let info = match frame_recv.recv().await {
 			Ok(v) => v,
 			Err(RecvError::Lagged(n)) => {
-				warn!("lost {n} frame events");
+				eprintln!("lost {n} frame events");
 				continue;
 			}
 			Err(RecvError::Closed) => {
