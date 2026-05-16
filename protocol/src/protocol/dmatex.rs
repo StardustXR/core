@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Dmatex",
@@ -279,12 +274,17 @@ impl gluon_wire::GluonConvertable for DmatexInterface {
 impl DmatexInterface {
     pub async fn import_dmatex(
         &self,
-        size: DmatexSize,
-        format: DmatexFormat,
-        array_layers: u32,
-        planes: Vec<DmatexPlane>,
-        timeline_syncobj_fd: std::os::fd::OwnedFd,
+        size: impl Into<DmatexSize>,
+        format: impl Into<DmatexFormat>,
+        array_layers: impl Into<u32>,
+        planes: impl Into<Vec<DmatexPlane>>,
+        timeline_syncobj_fd: impl Into<std::os::fd::OwnedFd>,
     ) -> Result<DmatexRef, gluon_wire::GluonSendError> {
+        let size: DmatexSize = size.into();
+        let format: DmatexFormat = format.into();
+        let array_layers: u32 = array_layers.into();
+        let planes: Vec<DmatexPlane> = planes.into();
+        let timeline_syncobj_fd: std::os::fd::OwnedFd = timeline_syncobj_fd.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -301,8 +301,9 @@ impl DmatexInterface {
     }
     pub async fn enumerate_formats(
         &self,
-        render_node: u64,
+        render_node: impl Into<u64>,
     ) -> Result<Vec<DmatexFormat>, gluon_wire::GluonSendError> {
+        let render_node: u64 = render_node.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

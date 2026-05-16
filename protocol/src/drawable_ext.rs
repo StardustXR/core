@@ -2,6 +2,7 @@ use crate::protocol::lines::LinePoint;
 use crate::protocol::model::{MaterialParamError, ModelLoadError};
 use crate::protocol::types::{Color, Vec3F};
 use crate::types::Quatf;
+use color::rgba_linear;
 use std::error::Error;
 use std::fmt::Display;
 use std::hash::Hash;
@@ -9,22 +10,18 @@ use std::hash::Hash;
 impl Default for LinePoint {
 	fn default() -> Self {
 		Self {
-			point: Vec3F {
-				x: 0.0,
-				y: 0.0,
-				z: 0.0,
-			},
+			point: [0.0; 3].into(),
 			thickness: 0.01,
-			color: Color::WHITE,
+			color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
 		}
 	}
 }
 
 impl Hash for LinePoint {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		self.color.r.to_bits().hash(state);
-		self.color.g.to_bits().hash(state);
-		self.color.b.to_bits().hash(state);
+		self.color.c.r.to_bits().hash(state);
+		self.color.c.g.to_bits().hash(state);
+		self.color.c.b.to_bits().hash(state);
 		self.color.a.to_bits().hash(state);
 
 		self.point.x.to_bits().hash(state);

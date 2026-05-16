@@ -18,6 +18,7 @@ tokio = "1.49.0"
 mint = "0.5.9"
 xdg = "3.0.0"
 rustix = { version = "1.0.8", features = ["time"] }
+shiva-color-rs = "0.0.1"
 
 [build-dependencies]
 syn = "2"

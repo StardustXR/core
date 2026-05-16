@@ -1,36 +1,31 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.SUIS",
     types: &[
         gluon_wire::ExternalGluonType {
             name: "Joint",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Finger",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Thumb",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Hand",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Pointer",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Tip",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "SemanticData",
@@ -38,7 +33,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
         gluon_wire::ExternalGluonType {
             name: "SpatialData",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Chirality",
@@ -46,16 +41,16 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
         gluon_wire::ExternalGluonType {
             name: "InputDataType",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "DatamapData",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
         },
     ],
 };
 ///A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Joint {
     ///Pose of the joint relative to the input handler.
     pub pose: super::types::Posef,
@@ -93,7 +88,7 @@ impl gluon_wire::GluonConvertable for Joint {
     }
 }
 ///Finger
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Finger {
     pub tip: Joint,
     pub distal: Joint,
@@ -142,7 +137,7 @@ impl gluon_wire::GluonConvertable for Finger {
     }
 }
 ///Different than finger to be explicit about number of joints.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Thumb {
     pub tip: Joint,
     pub distal: Joint,
@@ -186,7 +181,7 @@ impl gluon_wire::GluonConvertable for Thumb {
     }
 }
 ///A fully articulated and tracked hand (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#convention-of-hand-joints).
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Hand {
     pub chirality: Chirality,
     pub thumb: Thumb,
@@ -255,7 +250,7 @@ impl gluon_wire::GluonConvertable for Hand {
     }
 }
 ///A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Pointer {
     ///Often corresponds to the aim pose (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
     pub pose: super::types::Posef,
@@ -289,7 +284,7 @@ impl gluon_wire::GluonConvertable for Pointer {
     }
 }
 ///Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Tip {
     ///Pose you can use to tap/poke elements (in front of the face of a controller, or on a pen tip).
     pub pose: super::types::Posef,
@@ -385,7 +380,7 @@ impl gluon_wire::GluonConvertable for SemanticData {
     }
 }
 ///Information about a given input method's spatial state. All coordinates are relative to the InputHandlers SpatialRef.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct SpatialData {
     ///All vectors and quaternions are relative to the input handler spatial ref.
     pub input: InputDataType,
@@ -465,7 +460,7 @@ impl gluon_wire::GluonConvertable for Chirality {
     }
 }
 ///The special type of an InputMethod.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub enum InputDataType {
     Pointer { data: Pointer },
     Hand { data: Hand },
@@ -535,12 +530,12 @@ impl gluon_wire::GluonConvertable for InputDataType {
     }
 }
 ///Data types for datamap
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum DatamapData {
     Bool { value: bool },
     Float { value: f32 },
-    Vec2 { value: super::types::Vec2F },
-    Vec3 { value: super::types::Vec3F },
+    Vec2 { value: mint::Vector2<f32> },
+    Vec3 { value: mint::Vector3<f32> },
     String { value: String },
 }
 impl gluon_wire::GluonConvertable for DatamapData {
@@ -559,11 +554,17 @@ impl gluon_wire::GluonConvertable for DatamapData {
             }
             DatamapData::Vec2 { value } => {
                 gluon_data.write_u16(2u16)?;
-                value.write(gluon_data)?;
+                {
+                    let __w: super::types::Vec2F = value.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             DatamapData::Vec3 { value } => {
                 gluon_data.write_u16(3u16)?;
-                value.write(gluon_data)?;
+                {
+                    let __w: super::types::Vec3F = value.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             DatamapData::String { value } => {
                 gluon_data.write_u16(4u16)?;
@@ -586,11 +587,21 @@ impl gluon_wire::GluonConvertable for DatamapData {
                     DatamapData::Float { value }
                 }
                 2u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value: mint::Vector2<f32> = {
+                        let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     DatamapData::Vec2 { value }
                 }
                 3u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value: mint::Vector3<f32> = {
+                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     DatamapData::Vec3 { value }
                 }
                 4u16 => {
@@ -616,11 +627,17 @@ impl gluon_wire::GluonConvertable for DatamapData {
             }
             DatamapData::Vec2 { value } => {
                 gluon_data.write_u16(2u16)?;
-                value.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Vec2F = value.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             DatamapData::Vec3 { value } => {
                 gluon_data.write_u16(3u16)?;
-                value.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Vec3F = value.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             DatamapData::String { value } => {
                 gluon_data.write_u16(4u16)?;
@@ -720,11 +737,15 @@ This is considered static and should not change after handler creation.*/
     ///An input method just started sending input to this handler.
     pub fn input_gained(
         &self,
-        method: InputMethod,
-        time: super::types::Timestamp,
-        spatial: SpatialData,
-        semantic: SemanticData,
+        method: impl Into<InputMethod>,
+        time: impl Into<super::types::Timestamp>,
+        spatial: impl Into<SpatialData>,
+        semantic: impl Into<SemanticData>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let method: InputMethod = method.into();
+        let time: super::types::Timestamp = time.into();
+        let spatial: SpatialData = spatial.into();
+        let semantic: SemanticData = semantic.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
@@ -738,11 +759,15 @@ This is considered static and should not change after handler creation.*/
     ///An input method's data has been updated.
     pub fn input_updated(
         &self,
-        method: InputMethod,
-        time: super::types::Timestamp,
-        spatial: SpatialData,
-        semantic: SemanticData,
+        method: impl Into<InputMethod>,
+        time: impl Into<super::types::Timestamp>,
+        spatial: impl Into<SpatialData>,
+        semantic: impl Into<SemanticData>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let method: InputMethod = method.into();
+        let time: super::types::Timestamp = time.into();
+        let spatial: SpatialData = spatial.into();
+        let semantic: SemanticData = semantic.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
@@ -756,9 +781,11 @@ This is considered static and should not change after handler creation.*/
     ///An input method just stopped sending input to this handler.
     pub fn input_left(
         &self,
-        method: InputMethod,
-        time: super::types::Timestamp,
+        method: impl Into<InputMethod>,
+        time: impl Into<super::types::Timestamp>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let method: InputMethod = method.into();
+        let time: super::types::Timestamp = time.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
@@ -988,8 +1015,9 @@ impl InputMethod {
     ///Request to capture the input method with the given handler.
     pub fn request_capture(
         &self,
-        handler: InputHandler,
+        handler: impl Into<InputHandler>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let handler: InputHandler = handler.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -998,8 +1026,9 @@ impl InputMethod {
     ///If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
     pub fn release_capture(
         &self,
-        handler: InputHandler,
+        handler: impl Into<InputHandler>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let handler: InputHandler = handler.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
@@ -1009,9 +1038,11 @@ impl InputMethod {
 Should return None when the InputMethod is captured by another InputHandler.*/
     pub async fn get_spatial_data(
         &self,
-        handler: InputHandler,
-        time: super::types::Timestamp,
+        handler: impl Into<InputHandler>,
+        time: impl Into<super::types::Timestamp>,
     ) -> Result<Option<SpatialData>, gluon_wire::GluonSendError> {
+        let handler: InputHandler = handler.into();
+        let time: super::types::Timestamp = time.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Tracked",
@@ -36,11 +31,12 @@ impl gluon_wire::GluonConvertable for Tracked {
 impl Tracked {
     pub async fn get(
         &self,
-        handler: TrackedStateReceiver,
+        handler: impl Into<TrackedStateReceiver>,
     ) -> Result<
         (super::spatial::SpatialRef, TrackedGuard, bool),
         gluon_wire::GluonSendError,
     > {
+        let handler: TrackedStateReceiver = handler.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -57,9 +53,11 @@ impl Tracked {
     }
     pub async fn get_pose(
         &self,
-        at: super::types::Timestamp,
-        relative_to: super::spatial::SpatialRef,
+        at: impl Into<super::types::Timestamp>,
+        relative_to: impl Into<super::spatial::SpatialRef>,
     ) -> Result<(Option<super::types::Posef>, bool), gluon_wire::GluonSendError> {
+        let at: super::types::Timestamp = at.into();
+        let relative_to: super::spatial::SpatialRef = relative_to.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -263,7 +261,11 @@ impl gluon_wire::GluonConvertable for TrackedStateReceiver {
     }
 }
 impl TrackedStateReceiver {
-    pub fn tracked(&self, tracked: bool) -> Result<(), gluon_wire::GluonSendError> {
+    pub fn tracked(
+        &self,
+        tracked: impl Into<bool>,
+    ) -> Result<(), gluon_wire::GluonSendError> {
+        let tracked: bool = tracked.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         tracked.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;

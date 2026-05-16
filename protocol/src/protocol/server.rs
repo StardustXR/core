@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Server",
@@ -180,8 +175,9 @@ impl Server {
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.*/
     pub async fn generate_startup_token(
         &self,
-        root: super::spatial::SpatialRef,
+        root: impl Into<super::spatial::SpatialRef>,
     ) -> Result<String, gluon_wire::GluonSendError> {
+        let root: super::spatial::SpatialRef = root.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -432,10 +428,13 @@ impl ServerInterface {
     ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
     pub async fn connect(
         &self,
-        client: super::client::Client,
-        startup_token: Option<String>,
-        resource_prefixes: Vec<String>,
+        client: impl Into<super::client::Client>,
+        startup_token: impl Into<Option<String>>,
+        resource_prefixes: impl Into<Vec<String>>,
     ) -> Result<(Server, super::spatial::SpatialRef), gluon_wire::GluonSendError> {
+        let client: super::client::Client = client.into();
+        let startup_token: Option<String> = startup_token.into();
+        let resource_prefixes: Vec<String> = resource_prefixes.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -453,8 +452,9 @@ impl ServerInterface {
     }
     pub async fn startup_spatial(
         &self,
-        startup_token: String,
+        startup_token: impl Into<String>,
     ) -> Result<Option<super::spatial::SpatialRef>, gluon_wire::GluonSendError> {
+        let startup_token: String = startup_token.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

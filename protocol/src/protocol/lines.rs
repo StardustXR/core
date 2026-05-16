@@ -1,25 +1,20 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Lines",
     types: &[
         gluon_wire::ExternalGluonType {
             name: "Line",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
         },
         gluon_wire::ExternalGluonType {
             name: "LinePoint",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
     ],
 };
 ///A single continuous polyline
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Line {
     pub points: Vec<LinePoint>,
     ///Whether this line is a closed loop
@@ -51,31 +46,47 @@ impl gluon_wire::GluonConvertable for Line {
     }
 }
 ///A single point on a line
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct LinePoint {
     ///The position of the point relative to the Lines Spatial
-    pub point: super::types::Vec3F,
+    pub point: mint::Vector3<f32>,
     ///Thickness in meters, world space
     pub thickness: f32,
     ///Color of the point
-    pub color: super::types::Color,
+    pub color: crate::Color,
 }
 impl gluon_wire::GluonConvertable for LinePoint {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.point.write(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.point.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         self.thickness.write(gluon_data)?;
-        self.color.write(gluon_data)?;
+        {
+            let __w: super::types::Color = self.color.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let point = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let point: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         let thickness = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let color = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let color: crate::Color = {
+            let __w: super::types::Color = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         Ok(LinePoint {
             point,
             thickness,
@@ -86,9 +97,15 @@ impl gluon_wire::GluonConvertable for LinePoint {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.point.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.point.into();
+            __w.write_owned(gluon_data)?;
+        }
         self.thickness.write_owned(gluon_data)?;
-        self.color.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Color = self.color.into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
 }
@@ -117,7 +134,11 @@ impl gluon_wire::GluonConvertable for Lines {
     }
 }
 impl Lines {
-    pub fn set_lines(&self, lines: Vec<Line>) -> Result<(), gluon_wire::GluonSendError> {
+    pub fn set_lines(
+        &self,
+        lines: impl Into<Vec<Line>>,
+    ) -> Result<(), gluon_wire::GluonSendError> {
+        let lines: Vec<Line> = lines.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         lines.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -209,9 +230,11 @@ impl gluon_wire::GluonConvertable for LinesInterface {
 impl LinesInterface {
     pub async fn create_lines(
         &self,
-        spatial: super::spatial::Spatial,
-        lines: Vec<Line>,
+        spatial: impl Into<super::spatial::Spatial>,
+        lines: impl Into<Vec<Line>>,
     ) -> Result<Lines, gluon_wire::GluonSendError> {
+        let spatial: super::spatial::Spatial = spatial.into();
+        let lines: Vec<Line> = lines.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

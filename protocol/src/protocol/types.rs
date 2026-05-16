@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Types",
@@ -38,7 +33,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
         gluon_wire::ExternalGluonType {
             name: "Posef",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "Color",
@@ -122,9 +117,9 @@ impl gluon_wire::GluonConvertable for Size3 {
 }
 ///2D vector
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Vec2F {
-    pub x: f32,
-    pub y: f32,
+pub(crate) struct Vec2F {
+    pub(crate) x: f32,
+    pub(crate) y: f32,
 }
 impl gluon_wire::GluonConvertable for Vec2F {
     fn write<'a, 'b: 'a>(
@@ -153,10 +148,10 @@ impl gluon_wire::GluonConvertable for Vec2F {
 }
 ///3D vector
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Vec3F {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+pub(crate) struct Vec3F {
+    pub(crate) x: f32,
+    pub(crate) y: f32,
+    pub(crate) z: f32,
 }
 impl gluon_wire::GluonConvertable for Vec3F {
     fn write<'a, 'b: 'a>(
@@ -227,11 +222,11 @@ impl gluon_wire::GluonConvertable for Vec4F {
 }
 ///Quaternion
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Quatf {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
+pub(crate) struct Quatf {
+    pub(crate) x: f32,
+    pub(crate) y: f32,
+    pub(crate) z: f32,
+    pub(crate) w: f32,
 }
 impl gluon_wire::GluonConvertable for Quatf {
     fn write<'a, 'b: 'a>(
@@ -266,11 +261,11 @@ impl gluon_wire::GluonConvertable for Quatf {
 }
 ///Colum major matrix
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Mat4F {
-    pub x: Vec4F,
-    pub y: Vec4F,
-    pub z: Vec4F,
-    pub w: Vec4F,
+pub(crate) struct Mat4F {
+    pub(crate) x: Vec4F,
+    pub(crate) y: Vec4F,
+    pub(crate) z: Vec4F,
+    pub(crate) w: Vec4F,
 }
 impl gluon_wire::GluonConvertable for Mat4F {
     fn write<'a, 'b: 'a>(
@@ -304,43 +299,61 @@ impl gluon_wire::GluonConvertable for Mat4F {
     }
 }
 ///Pose
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Posef {
-    pub position: Vec3F,
-    pub orientation: Quatf,
+    pub position: mint::Vector3<f32>,
+    pub orientation: mint::Quaternion<f32>,
 }
 impl gluon_wire::GluonConvertable for Posef {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write(gluon_data)?;
-        self.orientation.write(gluon_data)?;
+        {
+            let __w: Vec3F = self.position.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: Quatf = self.orientation.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let position = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let orientation = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let position: mint::Vector3<f32> = {
+            let __w: Vec3F = gluon_wire::GluonConvertable::read(gluon_data)?;
+            __w.into()
+        };
+        let orientation: mint::Quaternion<f32> = {
+            let __w: Quatf = gluon_wire::GluonConvertable::read(gluon_data)?;
+            __w.into()
+        };
         Ok(Posef { position, orientation })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.position.write_owned(gluon_data)?;
-        self.orientation.write_owned(gluon_data)?;
+        {
+            let __w: Vec3F = self.position.into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: Quatf = self.orientation.into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
 }
 ///A color in linear rgb, premultiplied alpha
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
+pub(crate) struct Color {
+    pub(crate) r: f32,
+    pub(crate) g: f32,
+    pub(crate) b: f32,
+    pub(crate) a: f32,
 }
 impl gluon_wire::GluonConvertable for Color {
     fn write<'a, 'b: 'a>(

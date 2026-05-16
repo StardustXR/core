@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Client",
@@ -83,7 +78,11 @@ impl Client {
         let mut reader = gluon_wire::GluonDataReader::from_payload(transaction.payload);
         Ok(())
     }
-    pub fn frame(&self, info: FrameInfo) -> Result<(), gluon_wire::GluonSendError> {
+    pub fn frame(
+        &self,
+        info: impl Into<FrameInfo>,
+    ) -> Result<(), gluon_wire::GluonSendError> {
+        let info: FrameInfo = info.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         info.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;

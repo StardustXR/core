@@ -3,8 +3,6 @@
 mod protocol;
 pub use protocol::*;
 
-mod conversions;
-pub use conversions::*;
 mod drawable_ext;
 pub use drawable_ext::*;
 mod field_ext;

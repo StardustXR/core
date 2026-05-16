@@ -1,50 +1,69 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Spatial",
     types: &[
         gluon_wire::ExternalGluonType {
             name: "Transform",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "PartialTransform",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "BoundingBox",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
     ],
 };
 ///Transform
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Transform {
-    pub translation: super::types::Vec3F,
-    pub rotation: super::types::Quatf,
-    pub scale: super::types::Vec3F,
+    pub translation: mint::Vector3<f32>,
+    pub rotation: mint::Quaternion<f32>,
+    pub scale: mint::Vector3<f32>,
 }
 impl gluon_wire::GluonConvertable for Transform {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write(gluon_data)?;
-        self.rotation.write(gluon_data)?;
-        self.scale.write(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.translation.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Quatf = self.rotation.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Vec3F = self.scale.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let translation: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
+        let rotation: mint::Quaternion<f32> = {
+            let __w: super::types::Quatf = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
+        let scale: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         Ok(Transform {
             translation,
             rotation,
@@ -55,35 +74,77 @@ impl gluon_wire::GluonConvertable for Transform {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write_owned(gluon_data)?;
-        self.rotation.write_owned(gluon_data)?;
-        self.scale.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.translation.into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Quatf = self.rotation.into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Vec3F = self.scale.into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
 }
 ///Transform
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct PartialTransform {
-    pub translation: Option<super::types::Vec3F>,
-    pub rotation: Option<super::types::Quatf>,
-    pub scale: Option<super::types::Vec3F>,
+    pub translation: Option<mint::Vector3<f32>>,
+    pub rotation: Option<mint::Quaternion<f32>>,
+    pub scale: Option<mint::Vector3<f32>>,
 }
 impl gluon_wire::GluonConvertable for PartialTransform {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write(gluon_data)?;
-        self.rotation.write(gluon_data)?;
-        self.scale.write(gluon_data)?;
+        {
+            let __w: Option<super::types::Vec3F> = self
+                .translation
+                .clone()
+                .map(|__v| __v.into());
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: Option<super::types::Quatf> = self
+                .rotation
+                .clone()
+                .map(|__v| __v.into());
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: Option<super::types::Vec3F> = self
+                .scale
+                .clone()
+                .map(|__v| __v.into());
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let translation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let rotation = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let scale = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let translation: Option<mint::Vector3<f32>> = {
+            let __w: Option<super::types::Vec3F> = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.map(|__v| __v.into())
+        };
+        let rotation: Option<mint::Quaternion<f32>> = {
+            let __w: Option<super::types::Quatf> = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.map(|__v| __v.into())
+        };
+        let scale: Option<mint::Vector3<f32>> = {
+            let __w: Option<super::types::Vec3F> = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.map(|__v| __v.into())
+        };
         Ok(PartialTransform {
             translation,
             rotation,
@@ -94,40 +155,73 @@ impl gluon_wire::GluonConvertable for PartialTransform {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.translation.write_owned(gluon_data)?;
-        self.rotation.write_owned(gluon_data)?;
-        self.scale.write_owned(gluon_data)?;
+        {
+            let __w: Option<super::types::Vec3F> = self
+                .translation
+                .map(|__v| __v.into());
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: Option<super::types::Quatf> = self.rotation.map(|__v| __v.into());
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: Option<super::types::Vec3F> = self.scale.map(|__v| __v.into());
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
 }
 ///Bounding box
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct BoundingBox {
-    pub center: super::types::Vec3F,
-    pub extents: super::types::Vec3F,
+    pub center: mint::Vector3<f32>,
+    pub extents: mint::Vector3<f32>,
 }
 impl gluon_wire::GluonConvertable for BoundingBox {
     fn write<'a, 'b: 'a>(
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.center.write(gluon_data)?;
-        self.extents.write(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.center.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Vec3F = self.extents.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let center = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let extents = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let center: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
+        let extents: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         Ok(BoundingBox { center, extents })
     }
     fn write_owned(
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.center.write_owned(gluon_data)?;
-        self.extents.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.center.into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Vec3F = self.extents.into();
+            __w.write_owned(gluon_data)?;
+        }
         Ok(())
     }
 }
@@ -255,8 +349,9 @@ impl Spatial {
     ///Get the bounding box of this spatial and its children relative to another spatial.
     pub async fn get_relative_bounding_box(
         &self,
-        relative_to: SpatialRef,
+        relative_to: impl Into<SpatialRef>,
     ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
+        let relative_to: SpatialRef = relative_to.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -272,8 +367,9 @@ impl Spatial {
     ///Get the transform of this spatial object.
     pub async fn get_relative_transform(
         &self,
-        relative_to: SpatialRef,
+        relative_to: impl Into<SpatialRef>,
     ) -> Result<Transform, gluon_wire::GluonSendError> {
+        let relative_to: SpatialRef = relative_to.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -290,8 +386,9 @@ impl Spatial {
 It will silently error and not set the spatial parent if it is to a child of itself.*/
     pub fn set_parent(
         &self,
-        parent: SpatialRef,
+        parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let parent: SpatialRef = parent.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         parent.write(&mut gluon_builder)?;
         self.obj
@@ -303,8 +400,9 @@ It will silently error and not set the spatial parent if it is to a child of its
 It will silently error and not set the spatial parent if it is to a child of itself.*/
     pub fn set_parent_in_place(
         &self,
-        parent: SpatialRef,
+        parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let parent: SpatialRef = parent.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         parent.write(&mut gluon_builder)?;
         self.obj
@@ -315,8 +413,9 @@ It will silently error and not set the spatial parent if it is to a child of its
     ///Set the transform of this spatial relative to its spatial parent.
     pub fn set_local_transform(
         &self,
-        transform: PartialTransform,
+        transform: impl Into<PartialTransform>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let transform: PartialTransform = transform.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         transform.write(&mut gluon_builder)?;
         self.obj
@@ -327,9 +426,11 @@ It will silently error and not set the spatial parent if it is to a child of its
     ///Set the transform of this spatial relative to another spatial.
     pub fn set_relative_transform(
         &self,
-        relative_to: SpatialRef,
-        transform: PartialTransform,
+        relative_to: impl Into<SpatialRef>,
+        transform: impl Into<PartialTransform>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let relative_to: SpatialRef = relative_to.into();
+        let transform: PartialTransform = transform.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         relative_to.write(&mut gluon_builder)?;
         transform.write(&mut gluon_builder)?;
@@ -544,9 +645,11 @@ impl SpatialInterface {
     ///Create a new spatial object.
     pub async fn create_spatial(
         &self,
-        parent: SpatialRef,
-        transform: Transform,
+        parent: impl Into<SpatialRef>,
+        transform: impl Into<Transform>,
     ) -> Result<Spatial, gluon_wire::GluonSendError> {
+        let parent: SpatialRef = parent.into();
+        let transform: Transform = transform.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -561,9 +664,11 @@ impl SpatialInterface {
     ///Get the relative bounding box of a spatial object relative to another spatial.
     pub async fn get_relative_bounding_box(
         &self,
-        relative_to: SpatialRef,
-        spatial: SpatialRef,
+        relative_to: impl Into<SpatialRef>,
+        spatial: impl Into<SpatialRef>,
     ) -> Result<BoundingBox, gluon_wire::GluonSendError> {
+        let relative_to: SpatialRef = relative_to.into();
+        let spatial: SpatialRef = spatial.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -578,9 +683,11 @@ impl SpatialInterface {
     ///Get the relative transform of a spatial object relative to another spatial.
     pub async fn get_relative_transform(
         &self,
-        relative_to: SpatialRef,
-        spatial: SpatialRef,
+        relative_to: impl Into<SpatialRef>,
+        spatial: impl Into<SpatialRef>,
     ) -> Result<Transform, gluon_wire::GluonSendError> {
+        let relative_to: SpatialRef = relative_to.into();
+        let spatial: SpatialRef = spatial.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

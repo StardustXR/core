@@ -1,20 +1,15 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Text",
     types: &[
         gluon_wire::ExternalGluonType {
             name: "TextBounds",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
         gluon_wire::ExternalGluonType {
             name: "TextStyle",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(2u32),
         },
         gluon_wire::ExternalGluonType {
             name: "XAlign",
@@ -31,10 +26,10 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
     ],
 };
 ///Bounds for text
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct TextBounds {
     ///Bounds in meters
-    pub bounds: super::types::Vec2F,
+    pub bounds: mint::Vector2<f32>,
     pub fit: TextFit,
     pub anchor_align_x: XAlign,
     pub anchor_align_y: YAlign,
@@ -44,7 +39,10 @@ impl gluon_wire::GluonConvertable for TextBounds {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.bounds.write(gluon_data)?;
+        {
+            let __w: super::types::Vec2F = self.bounds.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         self.fit.write(gluon_data)?;
         self.anchor_align_x.write(gluon_data)?;
         self.anchor_align_y.write(gluon_data)?;
@@ -53,7 +51,12 @@ impl gluon_wire::GluonConvertable for TextBounds {
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let bounds = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let bounds: mint::Vector2<f32> = {
+            let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         let fit = gluon_wire::GluonConvertable::read(gluon_data)?;
         let anchor_align_x = gluon_wire::GluonConvertable::read(gluon_data)?;
         let anchor_align_y = gluon_wire::GluonConvertable::read(gluon_data)?;
@@ -68,7 +71,10 @@ impl gluon_wire::GluonConvertable for TextBounds {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.bounds.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Vec2F = self.bounds.into();
+            __w.write_owned(gluon_data)?;
+        }
         self.fit.write_owned(gluon_data)?;
         self.anchor_align_x.write_owned(gluon_data)?;
         self.anchor_align_y.write_owned(gluon_data)?;
@@ -76,11 +82,11 @@ impl gluon_wire::GluonConvertable for TextBounds {
     }
 }
 ///Styling info for text
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct TextStyle {
     ///Height of a character in meters
     pub character_height: f32,
-    pub color: super::types::Color,
+    pub color: crate::Color,
     pub text_align_x: XAlign,
     pub text_align_y: YAlign,
     pub font: Option<super::types::Resource>,
@@ -92,7 +98,10 @@ impl gluon_wire::GluonConvertable for TextStyle {
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.character_height.write(gluon_data)?;
-        self.color.write(gluon_data)?;
+        {
+            let __w: super::types::Color = self.color.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         self.text_align_x.write(gluon_data)?;
         self.text_align_y.write(gluon_data)?;
         self.font.write(gluon_data)?;
@@ -103,7 +112,12 @@ impl gluon_wire::GluonConvertable for TextStyle {
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
         let character_height = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let color = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let color: crate::Color = {
+            let __w: super::types::Color = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         let text_align_x = gluon_wire::GluonConvertable::read(gluon_data)?;
         let text_align_y = gluon_wire::GluonConvertable::read(gluon_data)?;
         let font = gluon_wire::GluonConvertable::read(gluon_data)?;
@@ -122,7 +136,10 @@ impl gluon_wire::GluonConvertable for TextStyle {
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
         self.character_height.write_owned(gluon_data)?;
-        self.color.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Color = self.color.into();
+            __w.write_owned(gluon_data)?;
+        }
         self.text_align_x.write_owned(gluon_data)?;
         self.text_align_y.write_owned(gluon_data)?;
         self.font.write_owned(gluon_data)?;
@@ -338,10 +355,13 @@ impl gluon_wire::GluonConvertable for TextInterface {
 impl TextInterface {
     pub async fn create_text(
         &self,
-        spatial: super::spatial::Spatial,
-        text: String,
-        style: TextStyle,
+        spatial: impl Into<super::spatial::Spatial>,
+        text: impl Into<String>,
+        style: impl Into<TextStyle>,
     ) -> Result<Text, gluon_wire::GluonSendError> {
+        let spatial: super::spatial::Spatial = spatial.into();
+        let text: String = text.into();
+        let style: TextStyle = style.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -457,15 +477,20 @@ impl Text {
     ///Set the character height in meters
     pub fn set_character_height(
         &self,
-        height: f32,
+        height: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let height: f32 = height.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         height.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Set the text content
-    pub fn set_text(&self, text: String) -> Result<(), gluon_wire::GluonSendError> {
+    pub fn set_text(
+        &self,
+        text: impl Into<String>,
+    ) -> Result<(), gluon_wire::GluonSendError> {
+        let text: String = text.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         text.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;

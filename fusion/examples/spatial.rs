@@ -7,7 +7,8 @@ use stardust_xr_fusion::{
 };
 use stardust_xr_protocol::{
 	model::{MaterialParameter, Model},
-	types::{Color, Resource},
+	rgba_linear,
+	types::Resource,
 };
 use tokio::sync::broadcast::error::RecvError;
 use tracing::warn;
@@ -33,21 +34,21 @@ async fn main() {
 	.await
 	.unwrap();
 
-	let gem = gyro.get_part("Gem".into()).await.unwrap().unwrap();
+	let gem = gyro.get_part("Gem").await.unwrap().unwrap();
 	let gem_spatial = gem.get_spatial().await.unwrap();
 	let ring_inner = gyro
-		.get_part("OuterRing/MiddleRing/InnerRing".into())
+		.get_part("OuterRing/MiddleRing/InnerRing")
 		.await
 		.unwrap()
 		.unwrap();
 	let ring_inner_spatial = ring_inner.get_spatial().await.unwrap();
 	let ring_middle = gyro
-		.get_part("OuterRing/MiddleRing".into())
+		.get_part("OuterRing/MiddleRing")
 		.await
 		.unwrap()
 		.unwrap();
 	let ring_middle_spatial = ring_middle.get_spatial().await.unwrap();
-	let ring_outer = gyro.get_part("OuterRing".into()).await.unwrap().unwrap();
+	let ring_outer = gyro.get_part("OuterRing").await.unwrap().unwrap();
 	let ring_outer_spatial = ring_outer.get_spatial().await.unwrap();
 
 	let mut elapsed = 0f32;
@@ -66,9 +67,9 @@ async fn main() {
 		elapsed += info.delta;
 
 		gem.set_material_parameter(
-			"color".into(),
+			"color",
 			MaterialParameter::Color {
-				value: Color::rgba(0.0, 0.25, 1.0, elapsed.sin().abs()),
+				value: rgba_linear!(0.0, 0.25, 1.0, elapsed.sin().abs()),
 			},
 		)
 		.await

@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.SpatialQuery",
@@ -22,7 +17,7 @@ pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::Ext
         },
         gluon_wire::ExternalGluonType {
             name: "Point",
-            supported_derives: gluon_wire::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon_wire::Derives::from_bits_truncate(3u32),
         },
     ],
 };
@@ -32,8 +27,8 @@ pub struct BeamQuery {
     pub handler: BeamQueryHandler,
     pub interfaces: Vec<super::query::InterfaceDependency>,
     pub reference_spatial: super::spatial::SpatialRef,
-    pub origin: super::types::Vec3F,
-    pub direction: super::types::Vec3F,
+    pub origin: mint::Vector3<f32>,
+    pub direction: mint::Vector3<f32>,
     ///Maximum length of the beam in meters, can be the max f32 value
     pub max_length: f32,
 }
@@ -45,8 +40,14 @@ impl gluon_wire::GluonConvertable for BeamQuery {
         self.handler.write(gluon_data)?;
         self.interfaces.write(gluon_data)?;
         self.reference_spatial.write(gluon_data)?;
-        self.origin.write(gluon_data)?;
-        self.direction.write(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.origin.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Vec3F = self.direction.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         self.max_length.write(gluon_data)?;
         Ok(())
     }
@@ -56,8 +57,18 @@ impl gluon_wire::GluonConvertable for BeamQuery {
         let handler = gluon_wire::GluonConvertable::read(gluon_data)?;
         let interfaces = gluon_wire::GluonConvertable::read(gluon_data)?;
         let reference_spatial = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let origin = gluon_wire::GluonConvertable::read(gluon_data)?;
-        let direction = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let origin: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
+        let direction: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         let max_length = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(BeamQuery {
             handler,
@@ -75,8 +86,14 @@ impl gluon_wire::GluonConvertable for BeamQuery {
         self.handler.write_owned(gluon_data)?;
         self.interfaces.write_owned(gluon_data)?;
         self.reference_spatial.write_owned(gluon_data)?;
-        self.origin.write_owned(gluon_data)?;
-        self.direction.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.origin.into();
+            __w.write_owned(gluon_data)?;
+        }
+        {
+            let __w: super::types::Vec3F = self.direction.into();
+            __w.write_owned(gluon_data)?;
+        }
         self.max_length.write_owned(gluon_data)?;
         Ok(())
     }
@@ -170,9 +187,9 @@ impl gluon_wire::GluonConvertable for PointsQuery {
     }
 }
 ///Point for a PointsQuery
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone)]
 pub struct Point {
-    pub point: super::types::Vec3F,
+    pub point: mint::Vector3<f32>,
     pub margin: f32,
 }
 impl gluon_wire::GluonConvertable for Point {
@@ -180,14 +197,22 @@ impl gluon_wire::GluonConvertable for Point {
         &'b self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'a>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.point.write(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.point.clone().into();
+            __w.write_owned(gluon_data)?;
+        }
         self.margin.write(gluon_data)?;
         Ok(())
     }
     fn read(
         gluon_data: &mut gluon_wire::GluonDataReader,
     ) -> Result<Self, gluon_wire::GluonReadError> {
-        let point = gluon_wire::GluonConvertable::read(gluon_data)?;
+        let point: mint::Vector3<f32> = {
+            let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                gluon_data,
+            )?;
+            __w.into()
+        };
         let margin = gluon_wire::GluonConvertable::read(gluon_data)?;
         Ok(Point { point, margin })
     }
@@ -195,7 +220,10 @@ impl gluon_wire::GluonConvertable for Point {
         self,
         gluon_data: &mut gluon_wire::GluonDataBuilder<'_>,
     ) -> Result<(), gluon_wire::GluonWriteError> {
-        self.point.write_owned(gluon_data)?;
+        {
+            let __w: super::types::Vec3F = self.point.into();
+            __w.write_owned(gluon_data)?;
+        }
         self.margin.write_owned(gluon_data)?;
         Ok(())
     }
@@ -227,13 +255,19 @@ impl gluon_wire::GluonConvertable for BeamQueryHandler {
 impl BeamQueryHandler {
     pub fn intersected(
         &self,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        spatial: super::spatial::SpatialRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        deepest_point_distance: f32,
-        distance: f32,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        field: impl Into<super::field::FieldRef>,
+        spatial: impl Into<super::spatial::SpatialRef>,
+        interfaces: impl Into<Vec<super::query::QueriedInterface>>,
+        deepest_point_distance: impl Into<f32>,
+        distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let field: super::field::FieldRef = field.into();
+        let spatial: super::spatial::SpatialRef = spatial.into();
+        let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
+        let deepest_point_distance: f32 = deepest_point_distance.into();
+        let distance: f32 = distance.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
@@ -246,9 +280,11 @@ impl BeamQueryHandler {
     }
     pub fn interfaces_changed(
         &self,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        interfaces: impl Into<Vec<super::query::QueriedInterface>>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
@@ -257,10 +293,13 @@ impl BeamQueryHandler {
     }
     pub fn moved(
         &self,
-        obj: super::query::QueryableObjectRef,
-        deepest_point_distance: f32,
-        distance: f32,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        deepest_point_distance: impl Into<f32>,
+        distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let deepest_point_distance: f32 = deepest_point_distance.into();
+        let distance: f32 = distance.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         deepest_point_distance.write(&mut gluon_builder)?;
@@ -272,8 +311,9 @@ impl BeamQueryHandler {
     }
     pub fn left(
         &self,
-        obj: super::query::QueryableObjectRef,
+        obj: impl Into<super::query::QueryableObjectRef>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         self.obj
@@ -442,13 +482,19 @@ impl gluon_wire::GluonConvertable for ZoneQueryHandler {
 impl ZoneQueryHandler {
     pub fn entered(
         &self,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        spatial: super::spatial::SpatialRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        relative_position: super::types::Vec3F,
-        distance: f32,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        field: impl Into<super::field::FieldRef>,
+        spatial: impl Into<super::spatial::SpatialRef>,
+        interfaces: impl Into<Vec<super::query::QueriedInterface>>,
+        relative_position: mint::Vector3<f32>,
+        distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let field: super::field::FieldRef = field.into();
+        let spatial: super::spatial::SpatialRef = spatial.into();
+        let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
+        let relative_position: super::types::Vec3F = relative_position.into();
+        let distance: f32 = distance.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
@@ -461,9 +507,11 @@ impl ZoneQueryHandler {
     }
     pub fn interfaces_changed(
         &self,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        interfaces: impl Into<Vec<super::query::QueriedInterface>>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
@@ -472,10 +520,13 @@ impl ZoneQueryHandler {
     }
     pub fn moved(
         &self,
-        obj: super::query::QueryableObjectRef,
-        relative_position: super::types::Vec3F,
-        distance: f32,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        relative_position: mint::Vector3<f32>,
+        distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let relative_position: super::types::Vec3F = relative_position.into();
+        let distance: f32 = distance.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         relative_position.write(&mut gluon_builder)?;
@@ -487,8 +538,9 @@ impl ZoneQueryHandler {
     }
     pub fn left(
         &self,
-        obj: super::query::QueryableObjectRef,
+        obj: impl Into<super::query::QueryableObjectRef>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         self.obj
@@ -536,7 +588,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
         interfaces: Vec<super::query::QueriedInterface>,
-        relative_position: super::types::Vec3F,
+        relative_position: mint::Vector3<f32>,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
@@ -549,7 +601,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
         &self,
         _ctx: gluon_wire::GluonCtx,
         obj: super::query::QueryableObjectRef,
-        relative_position: super::types::Vec3F,
+        relative_position: mint::Vector3<f32>,
         distance: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
@@ -576,9 +628,12 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                     let param_interfaces = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_relative_position = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_relative_position: mint::Vector3<f32> = {
+                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                            &mut gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     let param_distance = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
@@ -604,9 +659,12 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
                 }
                 10u32 => {
                     let param_obj = gluon_wire::GluonConvertable::read(&mut gluon_data)?;
-                    let param_relative_position = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_relative_position: mint::Vector3<f32> = {
+                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                            &mut gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     let param_distance = gluon_wire::GluonConvertable::read(
                         &mut gluon_data,
                     )?;
@@ -652,12 +710,17 @@ impl gluon_wire::GluonConvertable for PointsQueryHandler {
 impl PointsQueryHandler {
     pub fn entered(
         &self,
-        obj: super::query::QueryableObjectRef,
-        field: super::field::FieldRef,
-        spatial: super::spatial::SpatialRef,
-        interfaces: Vec<super::query::QueriedInterface>,
-        distance: f32,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        field: impl Into<super::field::FieldRef>,
+        spatial: impl Into<super::spatial::SpatialRef>,
+        interfaces: impl Into<Vec<super::query::QueriedInterface>>,
+        distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let field: super::field::FieldRef = field.into();
+        let spatial: super::spatial::SpatialRef = spatial.into();
+        let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
+        let distance: f32 = distance.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
@@ -669,9 +732,11 @@ impl PointsQueryHandler {
     }
     pub fn interfaces_changed(
         &self,
-        obj: super::query::QueryableObjectRef,
-        interfaces: Vec<super::query::QueriedInterface>,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        interfaces: impl Into<Vec<super::query::QueriedInterface>>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
@@ -680,9 +745,11 @@ impl PointsQueryHandler {
     }
     pub fn moved(
         &self,
-        obj: super::query::QueryableObjectRef,
-        distance: f32,
+        obj: impl Into<super::query::QueryableObjectRef>,
+        distance: impl Into<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
+        let distance: f32 = distance.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         distance.write(&mut gluon_builder)?;
@@ -693,8 +760,9 @@ impl PointsQueryHandler {
     }
     pub fn left(
         &self,
-        obj: super::query::QueryableObjectRef,
+        obj: impl Into<super::query::QueryableObjectRef>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let obj: super::query::QueryableObjectRef = obj.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         obj.write(&mut gluon_builder)?;
         self.obj
@@ -848,8 +916,9 @@ impl gluon_wire::GluonConvertable for SpatialQueryInterface {
 impl SpatialQueryInterface {
     pub async fn beam_query(
         &self,
-        query: BeamQuery,
+        query: impl Into<BeamQuery>,
     ) -> Result<SpatialQueryGuard, gluon_wire::GluonSendError> {
+        let query: BeamQuery = query.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -862,8 +931,9 @@ impl SpatialQueryInterface {
     }
     pub async fn zone_query(
         &self,
-        query: ZoneQuery,
+        query: impl Into<ZoneQuery>,
     ) -> Result<SpatialQueryGuard, gluon_wire::GluonSendError> {
+        let query: ZoneQuery = query.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -876,8 +946,9 @@ impl SpatialQueryInterface {
     }
     pub async fn points_query(
         &self,
-        query: PointsQuery,
+        query: impl Into<PointsQuery>,
     ) -> Result<PointsQueryHandle, gluon_wire::GluonSendError> {
+        let query: PointsQuery = query.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -1018,8 +1089,9 @@ impl gluon_wire::GluonConvertable for PointsQueryHandle {
 impl PointsQueryHandle {
     pub fn update_points(
         &self,
-        points: Vec<Point>,
+        points: impl Into<Vec<Point>>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let points: Vec<Point> = points.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         points.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;

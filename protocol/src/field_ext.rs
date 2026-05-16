@@ -34,10 +34,11 @@
 //! to your existing code.
 //!
 
+use crate::Color;
 use crate::field::FieldSample;
 use crate::protocol::field::{CubicBezierControlPoint, Shape};
 use crate::protocol::lines::{Line, LinePoint};
-use crate::protocol::types::Color;
+use color::rgba_linear;
 use glam::{Mat4, Vec3, Vec3A, vec3, vec3a};
 
 impl Shape {
@@ -66,7 +67,7 @@ pub fn cubic_bezier_to_line(
 			points.push(LinePoint {
 				point: cp.anchor,
 				thickness: cp.thickness,
-				color: Color::WHITE,
+				color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
 			});
 		}
 	} else {
@@ -111,7 +112,7 @@ pub fn cubic_bezier_to_line(
 				points.push(LinePoint {
 					point: [x, y, z].into(),
 					thickness,
-					color: Color::WHITE,
+					color: rgba_linear!(1.0, 1.0, 1.0, 1.0),
 				});
 			}
 		}
@@ -149,7 +150,7 @@ impl Shape {
 			} => torus_sample(point, *major_radius, *minor_radius),
 			Shape::CubicBezierSpline { points, cyclic } => spline_sample(point, points, *cyclic),
 			Shape::Transform { shape, transform } => {
-				transform_sample(point, shape, &transform.mint())
+				transform_sample(point, shape, &(*transform).into())
 			}
 			Shape::Union { shapes } => union_sample(point, shapes),
 			Shape::SmoothUnion { shapes, smoothing } => {
@@ -370,10 +371,10 @@ fn spline_sample(p: Vec3A, cps: &[CubicBezierControlPoint], cyclic: bool) -> Fie
 		let c0 = &cps[i];
 		let c1 = &cps[(i + 1) % cps.len()];
 		let (b0, b1, b2, b3) = (
-			c0.anchor.mint(),
-			c0.handle_out.mint(),
-			c1.handle_in.mint(),
-			c1.anchor.mint(),
+			c0.anchor.into(),
+			c0.handle_out.into(),
+			c1.handle_in.into(),
+			c1.anchor.into(),
 		);
 
 		let mut prev: Option<(Vec3A, f32)> = None;
@@ -407,7 +408,7 @@ fn transform_sample(p: Vec3A, shape: &Shape, m: &Mat4) -> FieldSample {
 	let local = shape.sample(p_local);
 
 	// 4. Transform closest point back to world space (exact surface point).
-	let q_world = m.transform_point3a(local.closest_point.mint());
+	let q_world = m.transform_point3a(local.closest_point.into());
 
 	// 5. True world-space distance to that surface point.
 	//    Under non-uniform scale this may not be the *minimum* world distance,
@@ -422,7 +423,7 @@ fn transform_sample(p: Vec3A, shape: &Shape, m: &Mat4) -> FieldSample {
 	let grad_world = m
 		.inverse()
 		.transpose()
-		.transform_vector3(local.gradient.mint())
+		.transform_vector3(local.gradient.into())
 		.normalize_or_zero();
 
 	FieldSample {
@@ -487,7 +488,7 @@ fn union_sample(p: Vec3A, shapes: &[Shape]) -> FieldSample {
 			}
 			// A small negative tolerance avoids numerical rejection at
 			// near-tangent intersections.
-			shapes[j].sample(cp.mint()).distance >= -1e-3
+			shapes[j].sample(cp.into()).distance >= -1e-3
 		});
 
 		if on_boundary {
@@ -514,8 +515,8 @@ fn smooth_union_sample(p: Vec3A, shapes: &[Shape], k: f32) -> FieldSample {
 		let h = (0.5 + 0.5 * (b.distance - acc.distance) / k).clamp(0.0, 1.0);
 		let d = acc.distance * h + b.distance * (1.0 - h) - k * h * (1.0 - h);
 		// Blend closest points and gradients proportionally.
-		let closest = Vec3A::lerp(b.closest_point.mint(), acc.closest_point.mint(), h).into();
-		let gradient = Vec3A::lerp(b.gradient.mint(), acc.gradient.mint(), h)
+		let closest = Vec3A::lerp(b.closest_point.into(), acc.closest_point.into(), h).into();
+		let gradient = Vec3A::lerp(b.gradient.into(), acc.gradient.into(), h)
 			.normalize_or_zero()
 			.into();
 		acc = FieldSample {
@@ -539,7 +540,7 @@ fn support_fn(shape: &Shape, d: Vec3A) -> f32 {
 		Shape::Sphere { radius } => *radius,
 
 		Shape::Box { size } => {
-			let hs = (*size).mint::<Vec3A>() * 0.5;
+			let hs = Vec3A::from(*size) * 0.5;
 			hs.x * d.x.abs() + hs.y * d.y.abs() + hs.z * d.z.abs()
 		}
 
@@ -563,7 +564,7 @@ fn support_fn(shape: &Shape, d: Vec3A) -> f32 {
 
 		// Transform: h_{AK}(d) = h_K(Aᵀd).  Magnitude of Aᵀd scales the result.
 		Shape::Transform { shape, transform } => {
-			let d_local = transform.mint::<Mat4>().transpose().transform_vector3a(d);
+			let d_local = Mat4::from(*transform).transpose().transform_vector3a(d);
 			let scale = d_local.length();
 			if scale > 1e-10 {
 				support_fn(shape, d_local / scale) * scale
@@ -593,11 +594,10 @@ fn support_fn(shape: &Shape, d: Vec3A) -> f32 {
 /// produces a rounded box at zero extra sample cost.
 fn sweep_sample(p: Vec3A, surface: &Shape, sweeper: &Shape) -> FieldSample {
 	let mut res = surface.sample(p);
-	let s = support_fn(sweeper, res.gradient.mint());
+	let s = support_fn(sweeper, res.gradient.into());
 	res.distance -= s;
 	// Shift the closest point outward by the sweep extent along the gradient.
-	res.closest_point =
-		(res.closest_point.mint::<Vec3A>() - (res.gradient.mint::<Vec3A>() * s)).into();
+	res.closest_point = (Vec3A::from(res.closest_point) - (Vec3A::from(res.gradient) * s)).into();
 	res
 }
 
@@ -612,7 +612,7 @@ fn field_shape_sphere_exterior_distance_and_gradient() {
 	let r = sphere_sample(vec3a(3.0, 0.0, 0.0), 1.0);
 	near(r.distance, 2.0, 1e-5, "sphere exterior dist");
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
+		Vec3A::from(r.gradient).dot(Vec3A::X) > 0.999,
 		"gradient outward"
 	);
 }
@@ -623,7 +623,7 @@ fn field_shape_sphere_interior_gradient_still_outward() {
 	near(r.distance, -0.5, 1e-5, "sphere interior dist");
 	// Gradient must point *outward* (same direction as the position) even inside.
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
+		Vec3A::from(r.gradient).dot(Vec3A::X) > 0.999,
 		"interior gradient outward"
 	);
 }
@@ -633,7 +633,7 @@ fn field_shape_box_exterior() {
 	let r = box_sample(vec3a(1.0, 0.0, 0.0), Vec3A::splat(0.5));
 	near(r.distance, 0.5, 1e-5, "box exterior dist");
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
+		Vec3A::from(r.gradient).dot(Vec3A::X) > 0.999,
 		"box exterior gradient"
 	);
 }
@@ -643,7 +643,7 @@ fn field_shape_box_interior_nearest_face() {
 	let r = box_sample(vec3a(0.4, 0.0, 0.0), Vec3A::splat(0.5));
 	near(r.distance, -0.1, 1e-5, "box interior dist");
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.999,
+		Vec3A::from(r.gradient).dot(Vec3A::X) > 0.999,
 		"box interior gradient toward +X face"
 	);
 }
@@ -655,7 +655,7 @@ fn field_shape_cylinder_interior_gradient_outward() {
 	assert!(r.distance < 0.0, "inside cylinder");
 	// Gradient must point outward (+X direction for this point).
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.5,
+		Vec3A::from(r.gradient).dot(Vec3A::X) > 0.5,
 		"cylinder interior gradient outward"
 	);
 }
@@ -679,7 +679,7 @@ fn field_shape_torus_interior_gradient_outward() {
 	let r = torus_sample(vec3a(2.0, 0.1, 0.0), 2.0, 0.3);
 	assert!(r.distance < 0.0, "inside torus tube");
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::Y) > 0.9,
+		Vec3A::from(r.gradient).dot(Vec3A::Y) > 0.9,
 		"torus interior gradient outward in Y"
 	);
 }
@@ -712,7 +712,7 @@ fn field_shape_union_exterior_exact() {
 	let r = u.sample(vec3a(3.0, 0.0, 0.0));
 	near(r.distance, 0.5, 1e-4, "union exterior dist");
 	assert!(
-		r.gradient.mint::<Vec3A>().dot(Vec3A::X) > 0.99,
+		Vec3A::from(r.gradient).dot(Vec3A::X) > 0.99,
 		"union exterior gradient"
 	);
 }

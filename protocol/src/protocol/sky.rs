@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Sky",
@@ -110,8 +105,9 @@ impl SkyInterface {
 Returns None if the sky texture is already set.*/
     pub async fn set_sky_tex(
         &self,
-        tex: super::types::Resource,
+        tex: impl Into<super::types::Resource>,
     ) -> Result<Option<SkyGuard>, gluon_wire::GluonSendError> {
+        let tex: super::types::Resource = tex.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -126,8 +122,9 @@ Returns None if the sky texture is already set.*/
 Returns None if the sky lighting is already set.*/
     pub async fn set_sky_light(
         &self,
-        tex: super::types::Resource,
+        tex: impl Into<super::types::Resource>,
     ) -> Result<Option<SkyGuard>, gluon_wire::GluonSendError> {
+        let tex: super::types::Resource = tex.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

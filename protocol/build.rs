@@ -1,4 +1,4 @@
-use gluon_codegen_rust::Derives;
+use gluon_codegen_rust::{Derives, TypeProxy};
 use std::path::Path;
 
 fn main() {
@@ -18,11 +18,41 @@ fn main() {
 			("audio", Path::new("./gluon/org.stardustxr.Audio.gluon")),
 			("suis", Path::new("./gluon/org.stardustxr.SUIS.gluon")),
 			("query", Path::new("./gluon/org.stardustxr.Query.gluon")),
-			("spatial_query", Path::new("./gluon/org.stardustxr.SpatialQuery.gluon")),
+			(
+				"spatial_query",
+				Path::new("./gluon/org.stardustxr.SpatialQuery.gluon"),
+			),
 			("tracked", Path::new("./gluon/org.stardustxr.Tracked.gluon")),
 		],
 		&[],
 		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
+		&[
+			TypeProxy {
+				protocol_type_name: "types::Vec2f".into(),
+				rust_type: "mint::Vector2<f32>".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Vec3f".into(),
+				rust_type: "mint::Vector3<f32>".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Quatf".into(),
+				rust_type: "mint::Quaternion<f32>".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Mat4f".into(),
+				rust_type: "mint::ColumnMatrix4<f32>".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Color".into(),
+				rust_type: "crate::Color".into(),
+				derives: Derives::CLONE | Derives::COPY,
+			},
+		],
 		"./src/protocol",
 	);
 }

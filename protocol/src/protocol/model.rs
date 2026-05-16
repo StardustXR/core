@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Model",
@@ -146,9 +141,9 @@ pub enum MaterialParameter {
     Int { value: i32 },
     Uint { value: u32 },
     Float { value: f32 },
-    Vec2 { value: super::types::Vec2F },
-    Vec3 { value: super::types::Vec3F },
-    Color { value: super::types::Color },
+    Vec2 { value: mint::Vector2<f32> },
+    Vec3 { value: mint::Vector3<f32> },
+    Color { value: crate::Color },
     Texture { value: super::types::Resource },
     Dmatex {
         dmatex: super::dmatex::DmatexRef,
@@ -182,15 +177,24 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
             }
             MaterialParameter::Vec2 { value } => {
                 gluon_data.write_u16(4u16)?;
-                value.write(gluon_data)?;
+                {
+                    let __w: super::types::Vec2F = value.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             MaterialParameter::Vec3 { value } => {
                 gluon_data.write_u16(5u16)?;
-                value.write(gluon_data)?;
+                {
+                    let __w: super::types::Vec3F = value.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             MaterialParameter::Color { value } => {
                 gluon_data.write_u16(6u16)?;
-                value.write(gluon_data)?;
+                {
+                    let __w: super::types::Color = value.clone().into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             MaterialParameter::Texture { value } => {
                 gluon_data.write_u16(7u16)?;
@@ -227,15 +231,30 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
                     MaterialParameter::Float { value }
                 }
                 4u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value: mint::Vector2<f32> = {
+                        let __w: super::types::Vec2F = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     MaterialParameter::Vec2 { value }
                 }
                 5u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value: mint::Vector3<f32> = {
+                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     MaterialParameter::Vec3 { value }
                 }
                 6u16 => {
-                    let value = gluon_wire::GluonConvertable::read(gluon_data)?;
+                    let value: crate::Color = {
+                        let __w: super::types::Color = gluon_wire::GluonConvertable::read(
+                            gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     MaterialParameter::Color { value }
                 }
                 7u16 => {
@@ -281,15 +300,24 @@ impl gluon_wire::GluonConvertable for MaterialParameter {
             }
             MaterialParameter::Vec2 { value } => {
                 gluon_data.write_u16(4u16)?;
-                value.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Vec2F = value.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             MaterialParameter::Vec3 { value } => {
                 gluon_data.write_u16(5u16)?;
-                value.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Vec3F = value.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             MaterialParameter::Color { value } => {
                 gluon_data.write_u16(6u16)?;
-                value.write_owned(gluon_data)?;
+                {
+                    let __w: super::types::Color = value.into();
+                    __w.write_owned(gluon_data)?;
+                }
             }
             MaterialParameter::Texture { value } => {
                 gluon_data.write_u16(7u16)?;
@@ -333,9 +361,11 @@ impl ModelInterface {
     ///Load a GLTF model into a Model
     pub async fn load_model(
         &self,
-        spatial: super::spatial::Spatial,
-        model: super::types::Resource,
+        spatial: impl Into<super::spatial::Spatial>,
+        model: impl Into<super::types::Resource>,
     ) -> Result<Result<Model, ModelLoadError>, gluon_wire::GluonSendError> {
+        let spatial: super::spatial::Spatial = spatial.into();
+        let model: super::types::Resource = model.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -444,8 +474,9 @@ impl gluon_wire::GluonConvertable for Model {
 impl Model {
     pub async fn get_part(
         &self,
-        path: String,
+        path: impl Into<String>,
     ) -> Result<Option<ModelPart>, gluon_wire::GluonSendError> {
+        let path: String = path.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -470,8 +501,9 @@ impl Model {
     }
     pub fn set_model_scale(
         &self,
-        scale: super::types::Vec3F,
+        scale: mint::Vector3<f32>,
     ) -> Result<(), gluon_wire::GluonSendError> {
+        let scale: super::types::Vec3F = scale.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         scale.write(&mut gluon_builder)?;
         self.obj
@@ -524,7 +556,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
     fn set_model_scale(
         &self,
         _ctx: gluon_wire::GluonCtx,
-        scale: super::types::Vec3F,
+        scale: mint::Vector3<f32>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
@@ -558,9 +590,12 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 10u32 => {
-                    let param_scale = gluon_wire::GluonConvertable::read(
-                        &mut gluon_data,
-                    )?;
+                    let param_scale: mint::Vector3<f32> = {
+                        let __w: super::types::Vec3F = gluon_wire::GluonConvertable::read(
+                            &mut gluon_data,
+                        )?;
+                        __w.into()
+                    };
                     drop(gluon_data);
                     self.set_model_scale(ctx, param_scale).await;
                 }
@@ -619,9 +654,11 @@ impl ModelPart {
     }
     pub async fn set_material_parameter(
         &self,
-        parameter_name: String,
-        value: MaterialParameter,
+        parameter_name: impl Into<String>,
+        value: impl Into<MaterialParameter>,
     ) -> Result<Option<MaterialParamError>, gluon_wire::GluonSendError> {
+        let parameter_name: String = parameter_name.into();
+        let value: MaterialParameter = value.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

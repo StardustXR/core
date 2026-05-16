@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Audio",
@@ -132,9 +127,11 @@ impl gluon_wire::GluonConvertable for AudioInterface {
 impl AudioInterface {
     pub async fn create_sound(
         &self,
-        spatial: super::spatial::Spatial,
-        sound: super::types::Resource,
+        spatial: impl Into<super::spatial::Spatial>,
+        sound: impl Into<super::types::Resource>,
     ) -> Result<Sound, gluon_wire::GluonSendError> {
+        let spatial: super::spatial::Spatial = spatial.into();
+        let sound: super::types::Resource = sound.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);

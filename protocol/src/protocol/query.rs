@@ -1,9 +1,4 @@
-#![allow(
-    unused,
-    clippy::single_match,
-    clippy::match_single_binding,
-    clippy::large_enum_variant
-)]
+#![allow(unused, clippy::all, private_bounds, private_interfaces)]
 use gluon_wire::GluonConvertable;
 pub const EXTERNAL_PROTOCOL: gluon_wire::ExternalGluonProtocol = gluon_wire::ExternalGluonProtocol {
     protocol_name: "org.stardustxr.Query",
@@ -240,9 +235,11 @@ impl QueryableObject {
     }
     pub async fn add_interface(
         &self,
-        interface: binderbinder::binder_object::BinderObjectOrRef,
-        interface_id: String,
+        interface: impl Into<binderbinder::binder_object::BinderObjectOrRef>,
+        interface_id: impl Into<String>,
     ) -> Result<QueryableInterfaceGuard, gluon_wire::GluonSendError> {
+        let interface: binderbinder::binder_object::BinderObjectOrRef = interface.into();
+        let interface_id: String = interface_id.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -438,9 +435,11 @@ impl gluon_wire::GluonConvertable for QueryInterface {
 impl QueryInterface {
     pub async fn register_queryable(
         &self,
-        spatial: super::spatial::SpatialRef,
-        field: super::field::FieldRef,
+        spatial: impl Into<super::spatial::SpatialRef>,
+        field: impl Into<super::field::FieldRef>,
     ) -> Result<Result<QueryableObject, QueryableError>, gluon_wire::GluonSendError> {
+        let spatial: super::spatial::SpatialRef = spatial.into();
+        let field: super::field::FieldRef = field.into();
         let mut gluon_builder = gluon_wire::GluonDataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon_wire::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
