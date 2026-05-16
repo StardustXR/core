@@ -79,7 +79,7 @@ async fn main() {
 				.get_spatial_data(handler_proxy.clone(), info.predicted_display_time)
 				.await
 				.unwrap();
-			info!(?method, ?spatial_data, "spatial data");
+			println!("spatial data, {method:?}, {spatial_data:?}");
 		}
 	}
 }
@@ -122,7 +122,7 @@ impl InputHandlerHandler for InputHandler {
 		spatial: SpatialData,
 		semantic: SemanticData,
 	) {
-		info!(?method, ?time, ?spatial, ?semantic, "input gained");
+		println!("input gained, {method:?}, {time:?}, {spatial:?}, {semantic:?}");
 		self.methods.write().await.insert(method);
 	}
 
@@ -134,11 +134,11 @@ impl InputHandlerHandler for InputHandler {
 		spatial: SpatialData,
 		semantic: SemanticData,
 	) {
-		info!(?method, ?time, ?spatial, ?semantic, "input updated");
+		println!("input updated, {method:?}, {time:?}, {spatial:?}, {semantic:?}");
 	}
 
 	async fn input_left(&self, _ctx: GluonCtx, method: InputMethod, _time: Timestamp) {
 		self.methods.write().await.remove(&method);
-		info!(?method, "input left");
+		println!("input left, {method:?}");
 	}
 }
