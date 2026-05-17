@@ -6,8 +6,8 @@ import "org.stardustxr.Types" as types
 interface QueryableObjectRef {}
 /// Object used to expose interfaces to the query system
 interface QueryableObject {
-  queryable_ref() -> (queryable: Ref<QueryableObjectRef>)
-  add_interface(interface: Ref, interface_id: String) -> (guard: Ref<QueryableInterfaceGuard>)
+	queryable_ref() -> (queryable: Ref<QueryableObjectRef>)
+	add_interface(interface: Ref, interface_id: String) -> (guard: Ref<QueryableInterfaceGuard>)
 }
 
 /// interface that handles removing interfaces from the object
@@ -15,17 +15,25 @@ interface QueryableInterfaceGuard {}
 
 /// interface to register queryable objects
 interface QueryInterface {
-  register_queryable(spatial: Ref<spatial::SpatialRef>, field: Ref<field::FieldRef>) -> (queryable: Ref<QueryableObject>)
+	register_queryable(spatial: Ref<spatial::Spatial>, field: Ref<field::Field>) -> (queryable: Result<Ref<QueryableObject>, QueryableError>)
+}
+
+/// error returned from QueryInterface::register_queryable
+enum QueryableError {
+	/// You don't own this spatial or it didn't come from the right stardust server!
+	NotOwnedSpatial,
+	/// You don't own this field or it didn't come from the right stardust server!
+	NotOwnedField,
 }
 
 /// Dependency on an interface in query
 struct InterfaceDependency {
-  id: String,
-  optional: bool,
+	id: String,
+	optional: bool,
 }
 
 /// A successfully queried interface
 struct QueriedInterface {
-  interface_id: String,
-  interface: Ref,
+	interface_id: String,
+	interface: Ref,
 }
