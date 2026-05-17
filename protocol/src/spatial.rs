@@ -1,49 +1,50 @@
-use crate::protocol::spatial::{PartialTransform, Transform};
-use mint::{Quaternion, Vector3};
+use crate::types::{QuatF, Vec3F};
+
+pub use crate::protocol::spatial::*;
 
 impl Transform {
 	pub const IDENTITY: Transform = Transform {
-		translation: Vector3 {
+		translation: Vec3F {
 			x: 0.0,
 			y: 0.0,
 			z: 0.0,
 		},
-		rotation: Quaternion {
-			v: Vector3 {
+		rotation: QuatF {
+			v: Vec3F {
 				x: 0.0,
 				y: 0.0,
 				z: 0.0,
 			},
 			s: 1.0,
 		},
-		scale: Vector3 {
+		scale: Vec3F {
 			x: 1.0,
 			y: 1.0,
 			z: 1.0,
 		},
 	};
 
-	pub fn from_translation(translation: impl Into<Vector3<f32>>) -> Self {
+	pub fn from_translation(translation: impl Into<Vec3F>) -> Self {
 		Transform {
 			translation: translation.into(),
 			..Self::IDENTITY
 		}
 	}
-	pub fn from_rotation(rotation: impl Into<Quaternion<f32>>) -> Self {
+	pub fn from_rotation(rotation: impl Into<QuatF>) -> Self {
 		Transform {
 			rotation: rotation.into(),
 			..Self::IDENTITY
 		}
 	}
-	pub fn from_scale(scale: impl Into<Vector3<f32>>) -> Self {
+	pub fn from_scale(scale: impl Into<Vec3F>) -> Self {
 		Transform {
 			scale: scale.into(),
 			..Self::IDENTITY
 		}
 	}
 	pub fn from_translation_rotation(
-		translation: impl Into<Vector3<f32>>,
-		rotation: impl Into<Quaternion<f32>>,
+		translation: impl Into<Vec3F>,
+		rotation: impl Into<QuatF>,
 	) -> Self {
 		Transform {
 			translation: translation.into(),
@@ -51,20 +52,14 @@ impl Transform {
 			..Self::IDENTITY
 		}
 	}
-	pub fn from_translation_scale(
-		translation: impl Into<Vector3<f32>>,
-		scale: impl Into<Vector3<f32>>,
-	) -> Self {
+	pub fn from_translation_scale(translation: impl Into<Vec3F>, scale: impl Into<Vec3F>) -> Self {
 		Transform {
 			translation: translation.into(),
 			scale: scale.into(),
 			..Self::IDENTITY
 		}
 	}
-	pub fn from_rotation_scale(
-		rotation: impl Into<Quaternion<f32>>,
-		scale: impl Into<Vector3<f32>>,
-	) -> Self {
+	pub fn from_rotation_scale(rotation: impl Into<QuatF>, scale: impl Into<Vec3F>) -> Self {
 		Transform {
 			rotation: rotation.into(),
 			scale: scale.into(),
@@ -72,9 +67,9 @@ impl Transform {
 		}
 	}
 	pub fn from_translation_rotation_scale(
-		translation: impl Into<Vector3<f32>>,
-		rotation: impl Into<Quaternion<f32>>,
-		scale: impl Into<Vector3<f32>>,
+		translation: impl Into<Vec3F>,
+		rotation: impl Into<QuatF>,
+		scale: impl Into<Vec3F>,
 	) -> Self {
 		Transform {
 			translation: translation.into(),
@@ -91,27 +86,27 @@ impl PartialTransform {
 		scale: None,
 	};
 
-	pub fn from_translation(translation: impl Into<Vector3<f32>>) -> Self {
+	pub fn from_translation(translation: impl Into<Vec3F>) -> Self {
 		PartialTransform {
 			translation: Some(translation.into()),
 			..Self::NONE
 		}
 	}
-	pub fn from_rotation(rotation: impl Into<Quaternion<f32>>) -> Self {
+	pub fn from_rotation(rotation: impl Into<QuatF>) -> Self {
 		PartialTransform {
 			rotation: Some(rotation.into()),
 			..Self::NONE
 		}
 	}
-	pub fn from_scale(scale: impl Into<Vector3<f32>>) -> Self {
+	pub fn from_scale(scale: impl Into<Vec3F>) -> Self {
 		PartialTransform {
 			scale: Some(scale.into()),
 			..Self::NONE
 		}
 	}
 	pub fn from_translation_rotation(
-		translation: impl Into<Vector3<f32>>,
-		rotation: impl Into<Quaternion<f32>>,
+		translation: impl Into<Vec3F>,
+		rotation: impl Into<QuatF>,
 	) -> Self {
 		PartialTransform {
 			translation: Some(translation.into()),
@@ -119,20 +114,14 @@ impl PartialTransform {
 			..Self::NONE
 		}
 	}
-	pub fn from_translation_scale(
-		translation: impl Into<Vector3<f32>>,
-		scale: impl Into<Vector3<f32>>,
-	) -> Self {
+	pub fn from_translation_scale(translation: impl Into<Vec3F>, scale: impl Into<Vec3F>) -> Self {
 		PartialTransform {
 			translation: Some(translation.into()),
 			scale: Some(scale.into()),
 			..Self::NONE
 		}
 	}
-	pub fn from_rotation_scale(
-		rotation: impl Into<Quaternion<f32>>,
-		scale: impl Into<Vector3<f32>>,
-	) -> Self {
+	pub fn from_rotation_scale(rotation: impl Into<QuatF>, scale: impl Into<Vec3F>) -> Self {
 		PartialTransform {
 			rotation: Some(rotation.into()),
 			scale: Some(scale.into()),
@@ -140,9 +129,9 @@ impl PartialTransform {
 		}
 	}
 	pub fn from_translation_rotation_scale(
-		translation: impl Into<Vector3<f32>>,
-		rotation: impl Into<Quaternion<f32>>,
-		scale: impl Into<Vector3<f32>>,
+		translation: impl Into<Vec3F>,
+		rotation: impl Into<QuatF>,
+		scale: impl Into<Vec3F>,
 	) -> Self {
 		PartialTransform {
 			translation: Some(translation.into()),

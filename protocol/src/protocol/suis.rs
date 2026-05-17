@@ -627,7 +627,7 @@ impl gluon::Convertable for DatamapData {
 }
 #[derive(Debug, Clone)]
 pub struct InputHandler {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for InputHandler {
     fn write<'a, 'b: 'a>(
@@ -637,7 +637,7 @@ impl gluon::Convertable for InputHandler {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(InputHandler::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -763,25 +763,17 @@ This is considered static and should not change after handler creation.*/
             .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: InputHandlerHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> InputHandler {
-        InputHandler::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> InputHandler {
+        InputHandler::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> InputHandler {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> InputHandler {
         InputHandler { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for InputHandler {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<InputHandler> for gluon::ObjectOrRef {
+    fn from(value: InputHandler) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for InputHandler {
@@ -795,7 +787,7 @@ impl PartialEq for InputHandler {
     }
 }
 impl Eq for InputHandler {}
-pub trait InputHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait InputHandlerHandler: gluon::Handler + Send + Sync + 'static {
     /**All input coordinates will be relative to this
 This is considered static and should not change after handler creation.*/
     fn get_spatial(
@@ -938,7 +930,7 @@ This is considered static and should not change after handler creation.*/
 }
 #[derive(Debug, Clone)]
 pub struct InputMethod {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for InputMethod {
     fn write<'a, 'b: 'a>(
@@ -948,7 +940,7 @@ impl gluon::Convertable for InputMethod {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(InputMethod::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -1003,25 +995,17 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: InputMethodHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> InputMethod {
-        InputMethod::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> InputMethod {
+        InputMethod::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> InputMethod {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> InputMethod {
         InputMethod { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for InputMethod {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<InputMethod> for gluon::ObjectOrRef {
+    fn from(value: InputMethod) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for InputMethod {
@@ -1035,7 +1019,7 @@ impl PartialEq for InputMethod {
     }
 }
 impl Eq for InputMethod {}
-pub trait InputMethodHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait InputMethodHandler: gluon::Handler + Send + Sync + 'static {
     ///Request to capture the input method with the given handler.
     fn request_capture(
         &self,

@@ -34,15 +34,11 @@
 //! to your existing code.
 //!
 
-use crate::{
-	field::FieldSample,
-	protocol::{
-		field::{CubicBezierControlPoint, Shape},
-		lines::{Line, LinePoint},
-	},
-};
+use crate::protocol::lines::{Line, LinePoint};
 use color::rgba_linear;
 use glam::{Mat4, Vec3, Vec3A, vec3, vec3a};
+
+pub use crate::protocol::field::*;
 
 impl Shape {
 	/// Convert a CubicBezierSpline shape to a Line for visualization.

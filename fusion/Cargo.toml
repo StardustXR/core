@@ -32,7 +32,6 @@ stardust-xr-protocol = { version = "0.51.0", path = "../protocol" }
 gluon = { git = "https://github.com/technobaboo/gluon", features = [
 	"tracing",
 ] }
-binderbinder = { git = "https://github.com/technobaboo/binderbinder" }
 pion-binder = { git = "https://github.com/technobaboo/pion" }
 xdg = "3.0.0"
 

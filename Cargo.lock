@@ -66,7 +66,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 [[package]]
 name = "binderbinder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/binderbinder#83cfaa9946c7fc5d4065eec6a7cacd7d60547f04"
+source = "git+https://github.com/technobaboo/binderbinder#3b3cf21ee04f88c35a018f13f0e113cacb118056"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -210,7 +210,7 @@ dependencies = [
 [[package]]
 name = "gluon"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
+source = "git+https://github.com/technobaboo/gluon#24bdae4531319063074c89bb4c67fca0a256f647"
 dependencies = [
  "binderbinder",
  "bitflags",
@@ -223,7 +223,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
+source = "git+https://github.com/technobaboo/gluon#24bdae4531319063074c89bb4c67fca0a256f647"
 dependencies = [
  "convert_case",
  "gluon",
@@ -237,9 +237,8 @@ dependencies = [
 [[package]]
 name = "gluon-derive"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
+source = "git+https://github.com/technobaboo/gluon#24bdae4531319063074c89bb4c67fca0a256f647"
 dependencies = [
- "proc-macro2",
  "quote",
  "syn",
 ]
@@ -247,10 +246,9 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#e15a87cdddc70814ec00338b6a2d604822c5c7df"
+source = "git+https://github.com/technobaboo/gluon#24bdae4531319063074c89bb4c67fca0a256f647"
 dependencies = [
  "ansi_term",
- "binderbinder",
  "chumsky",
  "convert_case",
 ]
@@ -609,7 +607,6 @@ dependencies = [
 name = "stardust-xr-fusion"
 version = "0.51.1"
 dependencies = [
- "binderbinder",
  "glam 0.30.10",
  "gluon",
  "parking_lot",
@@ -627,7 +624,6 @@ dependencies = [
 name = "stardust-xr-protocol"
 version = "0.51.1"
 dependencies = [
- "binderbinder",
  "fnv",
  "glam 0.29.3",
  "gluon",

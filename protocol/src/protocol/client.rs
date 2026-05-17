@@ -43,7 +43,7 @@ impl gluon::Convertable for FrameInfo {
 }
 #[derive(Debug, Clone)]
 pub struct Client {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Client {
     fn write<'a, 'b: 'a>(
@@ -53,7 +53,7 @@ impl gluon::Convertable for Client {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Client::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -81,25 +81,17 @@ impl Client {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: ClientHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Client {
-        Client::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Client {
+        Client::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Client {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Client {
         Client { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Client {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Client> for gluon::ObjectOrRef {
+    fn from(value: Client) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Client {
@@ -113,7 +105,7 @@ impl PartialEq for Client {
     }
 }
 impl Eq for Client {}
-pub trait ClientHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
     fn ping(&self, _ctx: gluon::Context) -> impl Future<Output = ()> + Send + Sync;
     fn frame(
         &self,

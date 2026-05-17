@@ -329,7 +329,7 @@ impl gluon::Convertable for MaterialParameter {
 }
 #[derive(Debug, Clone)]
 pub struct ModelInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for ModelInterface {
     fn write<'a, 'b: 'a>(
@@ -339,7 +339,7 @@ impl gluon::Convertable for ModelInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(ModelInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -369,25 +369,17 @@ impl ModelInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: ModelInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> ModelInterface {
-        ModelInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ModelInterface {
+        ModelInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> ModelInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ModelInterface {
         ModelInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for ModelInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<ModelInterface> for gluon::ObjectOrRef {
+    fn from(value: ModelInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for ModelInterface {
@@ -401,7 +393,7 @@ impl PartialEq for ModelInterface {
     }
 }
 impl Eq for ModelInterface {}
-pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Load a GLTF model into a Model
     fn load_model(
         &self,
@@ -437,7 +429,7 @@ pub trait ModelInterfaceHandler: binderbinder::device::TransactionHandler + Send
 }
 #[derive(Debug, Clone)]
 pub struct Model {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Model {
     fn write<'a, 'b: 'a>(
@@ -447,7 +439,7 @@ impl gluon::Convertable for Model {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Model::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -495,25 +487,17 @@ impl Model {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: ModelHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Model {
-        Model::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Model {
+        Model::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Model {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Model {
         Model { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Model {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Model> for gluon::ObjectOrRef {
+    fn from(value: Model) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Model {
@@ -527,7 +511,7 @@ impl PartialEq for Model {
     }
 }
 impl Eq for Model {}
-pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
     fn get_part(
         &self,
         _ctx: gluon::Context,
@@ -589,7 +573,7 @@ pub trait ModelHandler: binderbinder::device::TransactionHandler + Send + Sync +
 }
 #[derive(Debug, Clone)]
 pub struct ModelPart {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for ModelPart {
     fn write<'a, 'b: 'a>(
@@ -599,7 +583,7 @@ impl gluon::Convertable for ModelPart {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(ModelPart::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -660,25 +644,17 @@ impl ModelPart {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: ModelPartHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> ModelPart {
-        ModelPart::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ModelPart {
+        ModelPart::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> ModelPart {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ModelPart {
         ModelPart { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for ModelPart {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<ModelPart> for gluon::ObjectOrRef {
+    fn from(value: ModelPart) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for ModelPart {
@@ -692,7 +668,7 @@ impl PartialEq for ModelPart {
     }
 }
 impl Eq for ModelPart {}
-pub trait ModelPartHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
     fn get_part_path(
         &self,
         _ctx: gluon::Context,

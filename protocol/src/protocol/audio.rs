@@ -6,7 +6,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 };
 #[derive(Debug, Clone)]
 pub struct Sound {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Sound {
     fn write<'a, 'b: 'a>(
@@ -16,7 +16,7 @@ impl gluon::Convertable for Sound {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Sound::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -39,25 +39,17 @@ impl Sound {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: SoundHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Sound {
-        Sound::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Sound {
+        Sound::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Sound {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Sound {
         Sound { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Sound {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Sound> for gluon::ObjectOrRef {
+    fn from(value: Sound) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Sound {
@@ -71,7 +63,7 @@ impl PartialEq for Sound {
     }
 }
 impl Eq for Sound {}
-pub trait SoundHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
     ///Play sound effect
     fn play(&self, _ctx: gluon::Context) -> impl Future<Output = ()> + Send + Sync;
     ///Stop sound effect
@@ -100,7 +92,7 @@ pub trait SoundHandler: binderbinder::device::TransactionHandler + Send + Sync +
 }
 #[derive(Debug, Clone)]
 pub struct AudioInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for AudioInterface {
     fn write<'a, 'b: 'a>(
@@ -110,7 +102,7 @@ impl gluon::Convertable for AudioInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(AudioInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -139,25 +131,17 @@ impl AudioInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: AudioInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> AudioInterface {
-        AudioInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> AudioInterface {
+        AudioInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> AudioInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> AudioInterface {
         AudioInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for AudioInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<AudioInterface> for gluon::ObjectOrRef {
+    fn from(value: AudioInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for AudioInterface {
@@ -171,7 +155,7 @@ impl PartialEq for AudioInterface {
     }
 }
 impl Eq for AudioInterface {}
-pub trait AudioInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn create_sound(
         &self,
         _ctx: gluon::Context,

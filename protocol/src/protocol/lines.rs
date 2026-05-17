@@ -103,7 +103,7 @@ impl gluon::Convertable for LinePoint {
 }
 #[derive(Debug, Clone)]
 pub struct Lines {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Lines {
     fn write<'a, 'b: 'a>(
@@ -113,7 +113,7 @@ impl gluon::Convertable for Lines {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Lines::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -134,25 +134,17 @@ impl Lines {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: LinesHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Lines {
-        Lines::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Lines {
+        Lines::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Lines {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Lines {
         Lines { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Lines {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Lines> for gluon::ObjectOrRef {
+    fn from(value: Lines) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Lines {
@@ -166,7 +158,7 @@ impl PartialEq for Lines {
     }
 }
 impl Eq for Lines {}
-pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait LinesHandler: gluon::Handler + Send + Sync + 'static {
     fn set_lines(
         &self,
         _ctx: gluon::Context,
@@ -193,7 +185,7 @@ pub trait LinesHandler: binderbinder::device::TransactionHandler + Send + Sync +
 }
 #[derive(Debug, Clone)]
 pub struct LinesInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for LinesInterface {
     fn write<'a, 'b: 'a>(
@@ -203,7 +195,7 @@ impl gluon::Convertable for LinesInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(LinesInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -232,25 +224,17 @@ impl LinesInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: LinesInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> LinesInterface {
-        LinesInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> LinesInterface {
+        LinesInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> LinesInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> LinesInterface {
         LinesInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for LinesInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<LinesInterface> for gluon::ObjectOrRef {
+    fn from(value: LinesInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for LinesInterface {
@@ -264,7 +248,7 @@ impl PartialEq for LinesInterface {
     }
 }
 impl Eq for LinesInterface {}
-pub trait LinesInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn create_lines(
         &self,
         _ctx: gluon::Context,

@@ -6,7 +6,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 };
 #[derive(Debug, Clone)]
 pub struct SkyGuard {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SkyGuard {
     fn write<'a, 'b: 'a>(
@@ -16,7 +16,7 @@ impl gluon::Convertable for SkyGuard {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(SkyGuard::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -27,25 +27,17 @@ impl gluon::Convertable for SkyGuard {
     }
 }
 impl SkyGuard {
-    pub fn from_handler<H: SkyGuardHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> SkyGuard {
-        SkyGuard::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SkyGuard {
+        SkyGuard::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SkyGuard {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SkyGuard {
         SkyGuard { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SkyGuard {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<SkyGuard> for gluon::ObjectOrRef {
+    fn from(value: SkyGuard) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for SkyGuard {
@@ -59,7 +51,7 @@ impl PartialEq for SkyGuard {
     }
 }
 impl Eq for SkyGuard {}
-pub trait SkyGuardHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SkyGuardHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -76,7 +68,7 @@ pub trait SkyGuardHandler: binderbinder::device::TransactionHandler + Send + Syn
 }
 #[derive(Debug, Clone)]
 pub struct SkyInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SkyInterface {
     fn write<'a, 'b: 'a>(
@@ -86,7 +78,7 @@ impl gluon::Convertable for SkyInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(SkyInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -131,25 +123,17 @@ Returns None if the sky lighting is already set.*/
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: SkyInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> SkyInterface {
-        SkyInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SkyInterface {
+        SkyInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SkyInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SkyInterface {
         SkyInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SkyInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<SkyInterface> for gluon::ObjectOrRef {
+    fn from(value: SkyInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for SkyInterface {
@@ -163,7 +147,7 @@ impl PartialEq for SkyInterface {
     }
 }
 impl Eq for SkyInterface {}
-pub trait SkyInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SkyInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     /**Set the sky texture to a given equirectagular texture.
 Returns None if the sky texture is already set.*/
     fn set_sky_tex(

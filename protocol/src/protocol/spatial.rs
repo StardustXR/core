@@ -205,7 +205,7 @@ impl gluon::Convertable for BoundingBox {
 }
 #[derive(Debug, Clone)]
 pub struct SpatialRef {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SpatialRef {
     fn write<'a, 'b: 'a>(
@@ -215,7 +215,7 @@ impl gluon::Convertable for SpatialRef {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(SpatialRef::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -226,25 +226,17 @@ impl gluon::Convertable for SpatialRef {
     }
 }
 impl SpatialRef {
-    pub fn from_handler<H: SpatialRefHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> SpatialRef {
-        SpatialRef::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialRef {
+        SpatialRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SpatialRef {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SpatialRef {
         SpatialRef { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialRef {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<SpatialRef> for gluon::ObjectOrRef {
+    fn from(value: SpatialRef) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for SpatialRef {
@@ -258,7 +250,7 @@ impl PartialEq for SpatialRef {
     }
 }
 impl Eq for SpatialRef {}
-pub trait SpatialRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SpatialRefHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -275,7 +267,7 @@ pub trait SpatialRefHandler: binderbinder::device::TransactionHandler + Send + S
 }
 #[derive(Debug, Clone)]
 pub struct Spatial {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Spatial {
     fn write<'a, 'b: 'a>(
@@ -285,7 +277,7 @@ impl gluon::Convertable for Spatial {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Spatial::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -411,25 +403,17 @@ It will silently error and not set the spatial parent if it is to a child of its
             .transact_one_way(&self.obj, 15u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: SpatialHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Spatial {
-        Spatial::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Spatial {
+        Spatial::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Spatial {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Spatial {
         Spatial { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Spatial {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Spatial> for gluon::ObjectOrRef {
+    fn from(value: Spatial) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Spatial {
@@ -443,7 +427,7 @@ impl PartialEq for Spatial {
     }
 }
 impl Eq for Spatial {}
-pub trait SpatialHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SpatialHandler: gluon::Handler + Send + Sync + 'static {
     ///Get the spatial ref for this spatial object.
     fn spatial_ref(
         &self,
@@ -577,7 +561,7 @@ It will silently error and not set the spatial parent if it is to a child of its
 }
 #[derive(Debug, Clone)]
 pub struct SpatialInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SpatialInterface {
     fn write<'a, 'b: 'a>(
@@ -587,7 +571,7 @@ impl gluon::Convertable for SpatialInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(SpatialInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -657,25 +641,19 @@ impl SpatialInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: SpatialInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> SpatialInterface {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialInterface {
         SpatialInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SpatialInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SpatialInterface {
         SpatialInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<SpatialInterface> for gluon::ObjectOrRef {
+    fn from(value: SpatialInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for SpatialInterface {
@@ -689,7 +667,7 @@ impl PartialEq for SpatialInterface {
     }
 }
 impl Eq for SpatialInterface {}
-pub trait SpatialInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Create a new spatial object.
     fn create_spatial(
         &self,

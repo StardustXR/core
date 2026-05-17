@@ -430,7 +430,7 @@ impl gluon::Convertable for Shape {
 }
 #[derive(Debug, Clone)]
 pub struct FieldRef {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for FieldRef {
     fn write<'a, 'b: 'a>(
@@ -440,7 +440,7 @@ impl gluon::Convertable for FieldRef {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(FieldRef::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -451,25 +451,17 @@ impl gluon::Convertable for FieldRef {
     }
 }
 impl FieldRef {
-    pub fn from_handler<H: FieldRefHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> FieldRef {
-        FieldRef::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> FieldRef {
+        FieldRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> FieldRef {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> FieldRef {
         FieldRef { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for FieldRef {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<FieldRef> for gluon::ObjectOrRef {
+    fn from(value: FieldRef) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for FieldRef {
@@ -483,7 +475,7 @@ impl PartialEq for FieldRef {
     }
 }
 impl Eq for FieldRef {}
-pub trait FieldRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait FieldRefHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -500,7 +492,7 @@ pub trait FieldRefHandler: binderbinder::device::TransactionHandler + Send + Syn
 }
 #[derive(Debug, Clone)]
 pub struct Field {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Field {
     fn write<'a, 'b: 'a>(
@@ -510,7 +502,7 @@ impl gluon::Convertable for Field {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Field::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -593,25 +585,17 @@ impl Field {
             .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: FieldHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Field {
-        Field::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Field {
+        Field::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Field {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Field {
         Field { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Field {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Field> for gluon::ObjectOrRef {
+    fn from(value: Field) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Field {
@@ -625,7 +609,7 @@ impl PartialEq for Field {
     }
 }
 impl Eq for Field {}
-pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
     fn field_ref(
         &self,
         _ctx: gluon::Context,
@@ -746,7 +730,7 @@ pub trait FieldHandler: binderbinder::device::TransactionHandler + Send + Sync +
 }
 #[derive(Debug, Clone)]
 pub struct FieldInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for FieldInterface {
     fn write<'a, 'b: 'a>(
@@ -756,7 +740,7 @@ impl gluon::Convertable for FieldInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(FieldInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -832,25 +816,17 @@ impl FieldInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: FieldInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> FieldInterface {
-        FieldInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> FieldInterface {
+        FieldInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> FieldInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> FieldInterface {
         FieldInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for FieldInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<FieldInterface> for gluon::ObjectOrRef {
+    fn from(value: FieldInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for FieldInterface {
@@ -864,7 +840,7 @@ impl PartialEq for FieldInterface {
     }
 }
 impl Eq for FieldInterface {}
-pub trait FieldInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn sample(
         &self,
         _ctx: gluon::Context,

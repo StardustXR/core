@@ -216,7 +216,7 @@ impl gluon::Convertable for Point {
 }
 #[derive(Debug, Clone)]
 pub struct BeamQueryHandler {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for BeamQueryHandler {
     fn write<'a, 'b: 'a>(
@@ -226,7 +226,7 @@ impl gluon::Convertable for BeamQueryHandler {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(BeamQueryHandler::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -305,25 +305,19 @@ impl BeamQueryHandler {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: BeamQueryHandlerHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> BeamQueryHandler {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> BeamQueryHandler {
         BeamQueryHandler::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> BeamQueryHandler {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> BeamQueryHandler {
         BeamQueryHandler { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for BeamQueryHandler {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<BeamQueryHandler> for gluon::ObjectOrRef {
+    fn from(value: BeamQueryHandler) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for BeamQueryHandler {
@@ -337,7 +331,7 @@ impl PartialEq for BeamQueryHandler {
     }
 }
 impl Eq for BeamQueryHandler {}
-pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
     fn intersected(
         &self,
         _ctx: gluon::Context,
@@ -429,7 +423,7 @@ pub trait BeamQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
 }
 #[derive(Debug, Clone)]
 pub struct ZoneQueryHandler {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for ZoneQueryHandler {
     fn write<'a, 'b: 'a>(
@@ -439,7 +433,7 @@ impl gluon::Convertable for ZoneQueryHandler {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(ZoneQueryHandler::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -518,25 +512,19 @@ impl ZoneQueryHandler {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: ZoneQueryHandlerHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> ZoneQueryHandler {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ZoneQueryHandler {
         ZoneQueryHandler::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> ZoneQueryHandler {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ZoneQueryHandler {
         ZoneQueryHandler { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for ZoneQueryHandler {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<ZoneQueryHandler> for gluon::ObjectOrRef {
+    fn from(value: ZoneQueryHandler) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for ZoneQueryHandler {
@@ -550,7 +538,7 @@ impl PartialEq for ZoneQueryHandler {
     }
 }
 impl Eq for ZoneQueryHandler {}
-pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
     fn entered(
         &self,
         _ctx: gluon::Context,
@@ -643,7 +631,7 @@ pub trait ZoneQueryHandlerHandler: binderbinder::device::TransactionHandler + Se
 }
 #[derive(Debug, Clone)]
 pub struct PointsQueryHandler {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for PointsQueryHandler {
     fn write<'a, 'b: 'a>(
@@ -653,7 +641,7 @@ impl gluon::Convertable for PointsQueryHandler {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(PointsQueryHandler::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -726,25 +714,19 @@ impl PointsQueryHandler {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: PointsQueryHandlerHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> PointsQueryHandler {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> PointsQueryHandler {
         PointsQueryHandler::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> PointsQueryHandler {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> PointsQueryHandler {
         PointsQueryHandler { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for PointsQueryHandler {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<PointsQueryHandler> for gluon::ObjectOrRef {
+    fn from(value: PointsQueryHandler) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for PointsQueryHandler {
@@ -758,7 +740,7 @@ impl PartialEq for PointsQueryHandler {
     }
 }
 impl Eq for PointsQueryHandler {}
-pub trait PointsQueryHandlerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
     fn entered(
         &self,
         _ctx: gluon::Context,
@@ -835,7 +817,7 @@ pub trait PointsQueryHandlerHandler: binderbinder::device::TransactionHandler + 
 }
 #[derive(Debug, Clone)]
 pub struct SpatialQueryInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SpatialQueryInterface {
     fn write<'a, 'b: 'a>(
@@ -845,7 +827,7 @@ impl gluon::Convertable for SpatialQueryInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(SpatialQueryInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -903,25 +885,19 @@ impl SpatialQueryInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: SpatialQueryInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> SpatialQueryInterface {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialQueryInterface {
         SpatialQueryInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SpatialQueryInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SpatialQueryInterface {
         SpatialQueryInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialQueryInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<SpatialQueryInterface> for gluon::ObjectOrRef {
+    fn from(value: SpatialQueryInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for SpatialQueryInterface {
@@ -935,7 +911,7 @@ impl PartialEq for SpatialQueryInterface {
     }
 }
 impl Eq for SpatialQueryInterface {}
-pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SpatialQueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn beam_query(
         &self,
         _ctx: gluon::Context,
@@ -1000,7 +976,7 @@ pub trait SpatialQueryInterfaceHandler: binderbinder::device::TransactionHandler
 }
 #[derive(Debug, Clone)]
 pub struct PointsQueryHandle {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for PointsQueryHandle {
     fn write<'a, 'b: 'a>(
@@ -1010,7 +986,7 @@ impl gluon::Convertable for PointsQueryHandle {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(PointsQueryHandle::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -1031,25 +1007,19 @@ impl PointsQueryHandle {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: PointsQueryHandleHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> PointsQueryHandle {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> PointsQueryHandle {
         PointsQueryHandle::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> PointsQueryHandle {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> PointsQueryHandle {
         PointsQueryHandle { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for PointsQueryHandle {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<PointsQueryHandle> for gluon::ObjectOrRef {
+    fn from(value: PointsQueryHandle) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for PointsQueryHandle {
@@ -1063,7 +1033,7 @@ impl PartialEq for PointsQueryHandle {
     }
 }
 impl Eq for PointsQueryHandle {}
-pub trait PointsQueryHandleHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait PointsQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
     fn update_points(
         &self,
         _ctx: gluon::Context,
@@ -1090,7 +1060,7 @@ pub trait PointsQueryHandleHandler: binderbinder::device::TransactionHandler + S
 }
 #[derive(Debug, Clone)]
 pub struct SpatialQueryGuard {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SpatialQueryGuard {
     fn write<'a, 'b: 'a>(
@@ -1100,7 +1070,7 @@ impl gluon::Convertable for SpatialQueryGuard {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(SpatialQueryGuard::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -1111,25 +1081,19 @@ impl gluon::Convertable for SpatialQueryGuard {
     }
 }
 impl SpatialQueryGuard {
-    pub fn from_handler<H: SpatialQueryGuardHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> SpatialQueryGuard {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialQueryGuard {
         SpatialQueryGuard::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> SpatialQueryGuard {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SpatialQueryGuard {
         SpatialQueryGuard { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for SpatialQueryGuard {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<SpatialQueryGuard> for gluon::ObjectOrRef {
+    fn from(value: SpatialQueryGuard) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for SpatialQueryGuard {
@@ -1143,7 +1107,7 @@ impl PartialEq for SpatialQueryGuard {
     }
 }
 impl Eq for SpatialQueryGuard {}
-pub trait SpatialQueryGuardHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait SpatialQueryGuardHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

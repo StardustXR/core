@@ -54,7 +54,7 @@ impl gluon::Convertable for View {
 }
 #[derive(Debug, Clone)]
 pub struct CameraInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for CameraInterface {
     fn write<'a, 'b: 'a>(
@@ -64,7 +64,7 @@ impl gluon::Convertable for CameraInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(CameraInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -90,25 +90,17 @@ impl CameraInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: CameraInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> CameraInterface {
-        CameraInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> CameraInterface {
+        CameraInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> CameraInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> CameraInterface {
         CameraInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for CameraInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<CameraInterface> for gluon::ObjectOrRef {
+    fn from(value: CameraInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for CameraInterface {
@@ -122,7 +114,7 @@ impl PartialEq for CameraInterface {
     }
 }
 impl Eq for CameraInterface {}
-pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn create_camera(
         &self,
         _ctx: gluon::Context,
@@ -155,7 +147,7 @@ pub trait CameraInterfaceHandler: binderbinder::device::TransactionHandler + Sen
 }
 #[derive(Debug, Clone)]
 pub struct Camera {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Camera {
     fn write<'a, 'b: 'a>(
@@ -165,7 +157,7 @@ impl gluon::Convertable for Camera {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Camera::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -196,25 +188,17 @@ impl Camera {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: CameraHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Camera {
-        Camera::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Camera {
+        Camera::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Camera {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Camera {
         Camera { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Camera {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Camera> for gluon::ObjectOrRef {
+    fn from(value: Camera) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Camera {
@@ -228,7 +212,7 @@ impl PartialEq for Camera {
     }
 }
 impl Eq for Camera {}
-pub trait CameraHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
     fn request_draw(
         &self,

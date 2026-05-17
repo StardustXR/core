@@ -193,7 +193,7 @@ impl gluon::Convertable for DmatexSize {
 }
 #[derive(Debug, Clone)]
 pub struct DmatexRef {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for DmatexRef {
     fn write<'a, 'b: 'a>(
@@ -203,7 +203,7 @@ impl gluon::Convertable for DmatexRef {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(DmatexRef::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -214,25 +214,17 @@ impl gluon::Convertable for DmatexRef {
     }
 }
 impl DmatexRef {
-    pub fn from_handler<H: DmatexRefHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> DmatexRef {
-        DmatexRef::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> DmatexRef {
+        DmatexRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> DmatexRef {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> DmatexRef {
         DmatexRef { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexRef {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<DmatexRef> for gluon::ObjectOrRef {
+    fn from(value: DmatexRef) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for DmatexRef {
@@ -246,7 +238,7 @@ impl PartialEq for DmatexRef {
     }
 }
 impl Eq for DmatexRef {}
-pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait DmatexRefHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -263,7 +255,7 @@ pub trait DmatexRefHandler: binderbinder::device::TransactionHandler + Send + Sy
 }
 #[derive(Debug, Clone)]
 pub struct DmatexInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for DmatexInterface {
     fn write<'a, 'b: 'a>(
@@ -273,7 +265,7 @@ impl gluon::Convertable for DmatexInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(DmatexInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -338,25 +330,17 @@ impl DmatexInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: DmatexInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> DmatexInterface {
-        DmatexInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> DmatexInterface {
+        DmatexInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> DmatexInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> DmatexInterface {
         DmatexInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for DmatexInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<DmatexInterface> for gluon::ObjectOrRef {
+    fn from(value: DmatexInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for DmatexInterface {
@@ -370,7 +354,7 @@ impl PartialEq for DmatexInterface {
     }
 }
 impl Eq for DmatexInterface {}
-pub trait DmatexInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn import_dmatex(
         &self,
         _ctx: gluon::Context,

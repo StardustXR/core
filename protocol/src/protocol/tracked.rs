@@ -6,7 +6,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 };
 #[derive(Debug, Clone)]
 pub struct Tracked {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Tracked {
     fn write<'a, 'b: 'a>(
@@ -16,7 +16,7 @@ impl gluon::Convertable for Tracked {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Tracked::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -67,25 +67,17 @@ impl Tracked {
             gluon::Convertable::read(&mut reader)?,
         ))
     }
-    pub fn from_handler<H: TrackedHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Tracked {
-        Tracked::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Tracked {
+        Tracked::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Tracked {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Tracked {
         Tracked { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Tracked {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Tracked> for gluon::ObjectOrRef {
+    fn from(value: Tracked) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Tracked {
@@ -99,7 +91,7 @@ impl PartialEq for Tracked {
     }
 }
 impl Eq for Tracked {}
-pub trait TrackedHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
     fn get(
         &self,
         _ctx: gluon::Context,
@@ -157,7 +149,7 @@ pub trait TrackedHandler: binderbinder::device::TransactionHandler + Send + Sync
 }
 #[derive(Debug, Clone)]
 pub struct TrackedGuard {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for TrackedGuard {
     fn write<'a, 'b: 'a>(
@@ -167,7 +159,7 @@ impl gluon::Convertable for TrackedGuard {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(TrackedGuard::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -178,25 +170,17 @@ impl gluon::Convertable for TrackedGuard {
     }
 }
 impl TrackedGuard {
-    pub fn from_handler<H: TrackedGuardHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> TrackedGuard {
-        TrackedGuard::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> TrackedGuard {
+        TrackedGuard::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> TrackedGuard {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> TrackedGuard {
         TrackedGuard { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for TrackedGuard {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<TrackedGuard> for gluon::ObjectOrRef {
+    fn from(value: TrackedGuard) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for TrackedGuard {
@@ -210,7 +194,7 @@ impl PartialEq for TrackedGuard {
     }
 }
 impl Eq for TrackedGuard {}
-pub trait TrackedGuardHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TrackedGuardHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -227,7 +211,7 @@ pub trait TrackedGuardHandler: binderbinder::device::TransactionHandler + Send +
 }
 #[derive(Debug, Clone)]
 pub struct TrackedStateReceiver {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for TrackedStateReceiver {
     fn write<'a, 'b: 'a>(
@@ -237,7 +221,7 @@ impl gluon::Convertable for TrackedStateReceiver {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(TrackedStateReceiver::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -255,25 +239,19 @@ impl TrackedStateReceiver {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: TrackedStateReceiverHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> TrackedStateReceiver {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> TrackedStateReceiver {
         TrackedStateReceiver::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> TrackedStateReceiver {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> TrackedStateReceiver {
         TrackedStateReceiver { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for TrackedStateReceiver {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<TrackedStateReceiver> for gluon::ObjectOrRef {
+    fn from(value: TrackedStateReceiver) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for TrackedStateReceiver {
@@ -287,7 +265,7 @@ impl PartialEq for TrackedStateReceiver {
     }
 }
 impl Eq for TrackedStateReceiver {}
-pub trait TrackedStateReceiverHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
     fn tracked(
         &self,
         _ctx: gluon::Context,

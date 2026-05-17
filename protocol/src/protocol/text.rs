@@ -316,7 +316,7 @@ impl gluon::Convertable for TextFit {
 }
 #[derive(Debug, Clone)]
 pub struct TextInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for TextInterface {
     fn write<'a, 'b: 'a>(
@@ -326,7 +326,7 @@ impl gluon::Convertable for TextInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(TextInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -358,25 +358,17 @@ impl TextInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: TextInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> TextInterface {
-        TextInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> TextInterface {
+        TextInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> TextInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> TextInterface {
         TextInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for TextInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<TextInterface> for gluon::ObjectOrRef {
+    fn from(value: TextInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for TextInterface {
@@ -390,7 +382,7 @@ impl PartialEq for TextInterface {
     }
 }
 impl Eq for TextInterface {}
-pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn create_text(
         &self,
         _ctx: gluon::Context,
@@ -429,7 +421,7 @@ pub trait TextInterfaceHandler: binderbinder::device::TransactionHandler + Send 
 }
 #[derive(Debug, Clone)]
 pub struct Text {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Text {
     fn write<'a, 'b: 'a>(
@@ -439,7 +431,7 @@ impl gluon::Convertable for Text {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Text::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -469,25 +461,17 @@ impl Text {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler<H: TextHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Text {
-        Text::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Text {
+        Text::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Text {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Text {
         Text { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Text {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Text> for gluon::ObjectOrRef {
+    fn from(value: Text) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Text {
@@ -501,7 +485,7 @@ impl PartialEq for Text {
     }
 }
 impl Eq for Text {}
-pub trait TextHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
     ///Set the character height in meters
     fn set_character_height(
         &self,

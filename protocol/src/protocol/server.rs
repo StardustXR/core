@@ -6,7 +6,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 };
 #[derive(Debug, Clone)]
 pub struct Server {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Server {
     fn write<'a, 'b: 'a>(
@@ -16,7 +16,7 @@ impl gluon::Convertable for Server {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(Server::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -185,25 +185,17 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: ServerHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> Server {
-        Server::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Server {
+        Server::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> Server {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Server {
         Server { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for Server {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<Server> for gluon::ObjectOrRef {
+    fn from(value: Server) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for Server {
@@ -217,7 +209,7 @@ impl PartialEq for Server {
     }
 }
 impl Eq for Server {}
-pub trait ServerHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     ///Get the spatial interface node.
     fn spatial_interface(
         &self,
@@ -395,7 +387,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
 }
 #[derive(Debug, Clone)]
 pub struct ServerInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for ServerInterface {
     fn write<'a, 'b: 'a>(
@@ -405,7 +397,7 @@ impl gluon::Convertable for ServerInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(ServerInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -456,25 +448,17 @@ impl ServerInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: ServerInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> ServerInterface {
-        ServerInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ServerInterface {
+        ServerInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> ServerInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ServerInterface {
         ServerInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for ServerInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<ServerInterface> for gluon::ObjectOrRef {
+    fn from(value: ServerInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for ServerInterface {
@@ -488,7 +472,7 @@ impl PartialEq for ServerInterface {
     }
 }
 impl Eq for ServerInterface {}
-pub trait ServerInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
     fn connect(
         &self,

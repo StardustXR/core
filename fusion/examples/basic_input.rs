@@ -1,4 +1,3 @@
-use binderbinder::binder_object::ToBinderObjectOrRef;
 use stardust_xr_fusion::{
 	client::Client,
 	fields::{Field, FieldExt, FieldRef, Shape},
@@ -51,10 +50,7 @@ async fn main() {
 		.await
 		.unwrap();
 	let _guard = queryable
-		.add_interface(
-			input_handler.to_binder_object_or_ref(),
-			"org.stardustxr.SUIS.Handler".to_string(),
-		)
+		.add_interface(&input_handler, "org.stardustxr.SUIS.Handler".to_string())
 		.await
 		.unwrap();
 	let handler_proxy = InputHandlerProxy::from_handler(&input_handler);

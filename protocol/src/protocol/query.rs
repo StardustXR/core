@@ -49,7 +49,7 @@ impl gluon::Convertable for InterfaceDependency {
 #[derive(Debug, Clone)]
 pub struct QueriedInterface {
     pub interface_id: String,
-    pub interface: binderbinder::binder_object::BinderObjectOrRef,
+    pub interface: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for QueriedInterface {
     fn write<'a, 'b: 'a>(
@@ -79,7 +79,7 @@ impl gluon::Convertable for QueriedInterface {
 }
 #[derive(Debug, Clone)]
 pub struct QueryableObjectRef {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for QueryableObjectRef {
     fn write<'a, 'b: 'a>(
@@ -89,7 +89,7 @@ impl gluon::Convertable for QueryableObjectRef {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(QueryableObjectRef::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -100,25 +100,19 @@ impl gluon::Convertable for QueryableObjectRef {
     }
 }
 impl QueryableObjectRef {
-    pub fn from_handler<H: QueryableObjectRefHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> QueryableObjectRef {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryableObjectRef {
         QueryableObjectRef::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> QueryableObjectRef {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryableObjectRef {
         QueryableObjectRef { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for QueryableObjectRef {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<QueryableObjectRef> for gluon::ObjectOrRef {
+    fn from(value: QueryableObjectRef) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for QueryableObjectRef {
@@ -132,7 +126,7 @@ impl PartialEq for QueryableObjectRef {
     }
 }
 impl Eq for QueryableObjectRef {}
-pub trait QueryableObjectRefHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait QueryableObjectRefHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -149,7 +143,7 @@ pub trait QueryableObjectRefHandler: binderbinder::device::TransactionHandler + 
 }
 #[derive(Debug, Clone)]
 pub struct QueryableObject {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for QueryableObject {
     fn write<'a, 'b: 'a>(
@@ -159,7 +153,7 @@ impl gluon::Convertable for QueryableObject {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(QueryableObject::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -182,10 +176,12 @@ impl QueryableObject {
     }
     pub async fn add_interface(
         &self,
-        interface: impl Into<binderbinder::binder_object::BinderObjectOrRef>,
+        interface: &impl gluon::OwnedObjectRef,
         interface_id: impl Into<String>,
     ) -> Result<QueryableInterfaceGuard, gluon::SendError> {
-        let interface: binderbinder::binder_object::BinderObjectOrRef = interface.into();
+        let interface: gluon::ObjectOrRef = gluon::OwnedObjectRef::to_object_or_ref(
+            interface,
+        );
         let interface_id: String = interface_id.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -198,25 +194,17 @@ impl QueryableObject {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: QueryableObjectHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> QueryableObject {
-        QueryableObject::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryableObject {
+        QueryableObject::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> QueryableObject {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryableObject {
         QueryableObject { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for QueryableObject {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<QueryableObject> for gluon::ObjectOrRef {
+    fn from(value: QueryableObject) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for QueryableObject {
@@ -230,7 +218,7 @@ impl PartialEq for QueryableObject {
     }
 }
 impl Eq for QueryableObject {}
-pub trait QueryableObjectHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
     fn queryable_ref(
         &self,
         _ctx: gluon::Context,
@@ -238,7 +226,7 @@ pub trait QueryableObjectHandler: binderbinder::device::TransactionHandler + Sen
     fn add_interface(
         &self,
         _ctx: gluon::Context,
-        interface: binderbinder::binder_object::BinderObjectOrRef,
+        interface: gluon::ObjectOrRef,
         interface_id: String,
     ) -> impl Future<Output = QueryableInterfaceGuard> + Send + Sync;
     fn dispatch_one_way(
@@ -281,7 +269,7 @@ pub trait QueryableObjectHandler: binderbinder::device::TransactionHandler + Sen
 }
 #[derive(Debug, Clone)]
 pub struct QueryableInterfaceGuard {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for QueryableInterfaceGuard {
     fn write<'a, 'b: 'a>(
@@ -291,7 +279,7 @@ impl gluon::Convertable for QueryableInterfaceGuard {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(QueryableInterfaceGuard::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -302,25 +290,19 @@ impl gluon::Convertable for QueryableInterfaceGuard {
     }
 }
 impl QueryableInterfaceGuard {
-    pub fn from_handler<H: QueryableInterfaceGuardHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> QueryableInterfaceGuard {
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryableInterfaceGuard {
         QueryableInterfaceGuard::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> QueryableInterfaceGuard {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryableInterfaceGuard {
         QueryableInterfaceGuard { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for QueryableInterfaceGuard {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<QueryableInterfaceGuard> for gluon::ObjectOrRef {
+    fn from(value: QueryableInterfaceGuard) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for QueryableInterfaceGuard {
@@ -334,7 +316,7 @@ impl PartialEq for QueryableInterfaceGuard {
     }
 }
 impl Eq for QueryableInterfaceGuard {}
-pub trait QueryableInterfaceGuardHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait QueryableInterfaceGuardHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -351,7 +333,7 @@ pub trait QueryableInterfaceGuardHandler: binderbinder::device::TransactionHandl
 }
 #[derive(Debug, Clone)]
 pub struct QueryInterface {
-    obj: binderbinder::binder_object::BinderObjectOrRef,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for QueryInterface {
     fn write<'a, 'b: 'a>(
@@ -361,7 +343,7 @@ impl gluon::Convertable for QueryInterface {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = binderbinder::binder_object::BinderObjectOrRef::read(gluon_data)?;
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
         Ok(QueryInterface::from_object_or_ref(obj))
     }
     fn write_owned(
@@ -390,25 +372,17 @@ impl QueryInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler<H: QueryInterfaceHandler>(
-        obj: &impl binderbinder::binder_object::OwnedBinderObjectRefTrait<H>,
-    ) -> QueryInterface {
-        QueryInterface::from_object_or_ref(
-            binderbinder::binder_object::ToBinderObjectOrRef::to_binder_object_or_ref(
-                obj,
-            ),
-        )
+    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryInterface {
+        QueryInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(
-        obj: binderbinder::binder_object::BinderObjectOrRef,
-    ) -> QueryInterface {
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryInterface {
         QueryInterface { obj }
     }
 }
-impl binderbinder::binder_object::ToBinderObjectOrRef for QueryInterface {
-    fn to_binder_object_or_ref(&self) -> binderbinder::binder_object::BinderObjectOrRef {
-        self.obj.to_binder_object_or_ref()
+impl From<QueryInterface> for gluon::ObjectOrRef {
+    fn from(value: QueryInterface) -> Self {
+        value.obj
     }
 }
 impl std::hash::Hash for QueryInterface {
@@ -422,7 +396,7 @@ impl PartialEq for QueryInterface {
     }
 }
 impl Eq for QueryInterface {}
-pub trait QueryInterfaceHandler: binderbinder::device::TransactionHandler + Send + Sync + 'static {
+pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn register_queryable(
         &self,
         _ctx: gluon::Context,

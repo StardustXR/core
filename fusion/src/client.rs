@@ -1,6 +1,6 @@
 //! Your connection to the Stardust server and other essentials.
 
-use binderbinder::binder_object::BinderObject;
+use gluon::Object;
 use pion_binder::PionBinderDevice;
 pub use stardust_xr_protocol::client::ClientHandler;
 use stardust_xr_protocol::{
@@ -44,7 +44,7 @@ pub enum ClientError {
 /// Your connection to the Stardust server.
 pub struct Client<H: ClientHandler> {
 	pion_dev: PionBinderDevice,
-	handler: BinderObject<H>,
+	handler: Object<H>,
 	server: Server,
 	root: SpatialRef,
 	spatial_interface: SpatialInterface,
@@ -83,7 +83,7 @@ impl Client<DefaultHandler> {
 
 impl<H: ClientHandler> Client<H> {
 	pub async fn auto_connect_with_handler(
-		handler: BinderObject<H>,
+		handler: Object<H>,
 		resource_prefixes: &[&Path],
 	) -> Result<(Self, SpatialRef), ClientError> {
 		let dev = PionBinderDevice::default();
@@ -92,7 +92,7 @@ impl<H: ClientHandler> Client<H> {
 
 	pub async fn manual_connect_with_handler(
 		pion_device: &PionBinderDevice,
-		handler: BinderObject<H>,
+		handler: Object<H>,
 		resource_prefixes: &[&Path],
 	) -> Result<(Client<H>, SpatialRef), ClientError> {
 		let server_path = find_pion_file("stardust-server").ok_or(ClientError::NoServerFile)?;
