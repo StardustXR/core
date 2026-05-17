@@ -6,21 +6,28 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "BeamQuery",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "ZoneQuery",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "PointsQuery",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Point",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///shoot a beam and return everything it hit
 #[derive(Debug, Clone)]
 pub struct BeamQuery {
@@ -41,11 +48,11 @@ impl gluon::Convertable for BeamQuery {
         self.interfaces.write(gluon_data)?;
         self.reference_spatial.write(gluon_data)?;
         {
-            let __w: super::types::Vec3F = self.origin.clone().into();
+            let __w: super::types::proxied::Vec3F = self.origin.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.direction.clone().into();
+            let __w: super::types::proxied::Vec3F = self.direction.clone().into();
             __w.write_owned(gluon_data)?;
         }
         self.max_length.write(gluon_data)?;
@@ -56,11 +63,15 @@ impl gluon::Convertable for BeamQuery {
         let interfaces = gluon::Convertable::read(gluon_data)?;
         let reference_spatial = gluon::Convertable::read(gluon_data)?;
         let origin: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let direction: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let max_length = gluon::Convertable::read(gluon_data)?;
@@ -81,11 +92,11 @@ impl gluon::Convertable for BeamQuery {
         self.interfaces.write_owned(gluon_data)?;
         self.reference_spatial.write_owned(gluon_data)?;
         {
-            let __w: super::types::Vec3F = self.origin.into();
+            let __w: super::types::proxied::Vec3F = self.origin.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.direction.into();
+            let __w: super::types::proxied::Vec3F = self.direction.into();
             __w.write_owned(gluon_data)?;
         }
         self.max_length.write_owned(gluon_data)?;
@@ -188,7 +199,7 @@ impl gluon::Convertable for Point {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.point.clone().into();
+            let __w: super::types::proxied::Vec3F = self.point.clone().into();
             __w.write_owned(gluon_data)?;
         }
         self.margin.write(gluon_data)?;
@@ -196,7 +207,9 @@ impl gluon::Convertable for Point {
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let point: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let margin = gluon::Convertable::read(gluon_data)?;
@@ -207,7 +220,7 @@ impl gluon::Convertable for Point {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.point.into();
+            let __w: super::types::proxied::Vec3F = self.point.into();
             __w.write_owned(gluon_data)?;
         }
         self.margin.write_owned(gluon_data)?;
@@ -464,7 +477,7 @@ impl ZoneQueryHandler {
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
-        let relative_position: super::types::Vec3F = relative_position.into();
+        let relative_position: super::types::proxied::Vec3F = relative_position.into();
         let distance: f32 = distance.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
@@ -496,7 +509,7 @@ impl ZoneQueryHandler {
         distance: impl Into<f32>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
-        let relative_position: super::types::Vec3F = relative_position.into();
+        let relative_position: super::types::proxied::Vec3F = relative_position.into();
         let distance: f32 = distance.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
@@ -595,7 +608,7 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_position: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -622,7 +635,7 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                 10u32 => {
                     let param_obj = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_position: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -1163,4 +1176,7 @@ pub trait SpatialQueryGuardHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

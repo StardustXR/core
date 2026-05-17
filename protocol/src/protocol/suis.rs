@@ -6,49 +6,63 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "Joint",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Finger",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Thumb",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Hand",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Pointer",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Tip",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "SemanticData",
             supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "SpatialData",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Chirality",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "InputDataType",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "DatamapData",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
 #[derive(Debug, Copy, Clone)]
 pub struct Joint {
@@ -535,14 +549,14 @@ impl gluon::Convertable for DatamapData {
             DatamapData::Vec2 { value } => {
                 gluon_data.write_u16(2u16)?;
                 {
-                    let __w: super::types::Vec2F = value.clone().into();
+                    let __w: super::types::proxied::Vec2F = value.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             DatamapData::Vec3 { value } => {
                 gluon_data.write_u16(3u16)?;
                 {
-                    let __w: super::types::Vec3F = value.clone().into();
+                    let __w: super::types::proxied::Vec3F = value.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -566,7 +580,7 @@ impl gluon::Convertable for DatamapData {
                 }
                 2u16 => {
                     let value: crate::types::Vec2F = {
-                        let __w: super::types::Vec2F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec2F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -575,7 +589,7 @@ impl gluon::Convertable for DatamapData {
                 }
                 3u16 => {
                     let value: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -606,14 +620,14 @@ impl gluon::Convertable for DatamapData {
             DatamapData::Vec2 { value } => {
                 gluon_data.write_u16(2u16)?;
                 {
-                    let __w: super::types::Vec2F = value.into();
+                    let __w: super::types::proxied::Vec2F = value.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             DatamapData::Vec3 { value } => {
                 gluon_data.write_u16(3u16)?;
                 {
-                    let __w: super::types::Vec3F = value.into();
+                    let __w: super::types::proxied::Vec3F = value.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -1091,4 +1105,7 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

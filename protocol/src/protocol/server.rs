@@ -4,6 +4,9 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Server",
     types: &[],
 };
+pub mod proxies {
+    use super::*;
+}
 #[derive(Debug, Clone)]
 pub struct Server {
     obj: gluon::ObjectOrRef,
@@ -549,4 +552,7 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

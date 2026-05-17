@@ -6,9 +6,13 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "View",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///A single viewpoint for a camera
 #[derive(Debug, Copy, Clone)]
 pub struct View {
@@ -23,7 +27,10 @@ impl gluon::Convertable for View {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Mat4F = self.projection_matrix.clone().into();
+            let __w: super::types::proxied::Mat4F = self
+                .projection_matrix
+                .clone()
+                .into();
             __w.write_owned(gluon_data)?;
         }
         self.camera_relative_transform.write(gluon_data)?;
@@ -31,7 +38,9 @@ impl gluon::Convertable for View {
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let projection_matrix: crate::types::Mat4F = {
-            let __w: super::types::Mat4F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Mat4F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let camera_relative_transform = gluon::Convertable::read(gluon_data)?;
@@ -45,7 +54,7 @@ impl gluon::Convertable for View {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Mat4F = self.projection_matrix.into();
+            let __w: super::types::proxied::Mat4F = self.projection_matrix.into();
             __w.write_owned(gluon_data)?;
         }
         self.camera_relative_transform.write_owned(gluon_data)?;
@@ -264,4 +273,7 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

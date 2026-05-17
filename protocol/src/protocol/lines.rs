@@ -6,13 +6,18 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "Line",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "LinePoint",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///A single continuous polyline
 #[derive(Debug, Clone)]
 pub struct Line {
@@ -59,24 +64,28 @@ impl gluon::Convertable for LinePoint {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.point.clone().into();
+            let __w: super::types::proxied::Vec3F = self.point.clone().into();
             __w.write_owned(gluon_data)?;
         }
         self.thickness.write(gluon_data)?;
         {
-            let __w: super::types::Color = self.color.clone().into();
+            let __w: super::types::proxied::Color = self.color.clone().into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let point: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let thickness = gluon::Convertable::read(gluon_data)?;
         let color: crate::types::Color = {
-            let __w: super::types::Color = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Color = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         Ok(LinePoint {
@@ -90,12 +99,12 @@ impl gluon::Convertable for LinePoint {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.point.into();
+            let __w: super::types::proxied::Vec3F = self.point.into();
             __w.write_owned(gluon_data)?;
         }
         self.thickness.write_owned(gluon_data)?;
         {
-            let __w: super::types::Color = self.color.into();
+            let __w: super::types::proxied::Color = self.color.into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
@@ -294,4 +303,7 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

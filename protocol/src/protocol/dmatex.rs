@@ -6,17 +6,23 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "DmatexFormat",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "DmatexPlane",
             supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "DmatexSize",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Information about a DMA texture format.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct DmatexFormat {
@@ -121,14 +127,14 @@ impl gluon::Convertable for DmatexSize {
             DmatexSize::Size2D { size } => {
                 gluon_data.write_u16(1u16)?;
                 {
-                    let __w: super::types::Size2 = size.clone().into();
+                    let __w: super::types::proxied::Size2 = size.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             DmatexSize::Size3D { size } => {
                 gluon_data.write_u16(2u16)?;
                 {
-                    let __w: super::types::Size3 = size.clone().into();
+                    let __w: super::types::proxied::Size3 = size.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -144,7 +150,7 @@ impl gluon::Convertable for DmatexSize {
                 }
                 1u16 => {
                     let size: crate::types::Size2 = {
-                        let __w: super::types::Size2 = gluon::Convertable::read(
+                        let __w: super::types::proxied::Size2 = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -153,7 +159,7 @@ impl gluon::Convertable for DmatexSize {
                 }
                 2u16 => {
                     let size: crate::types::Size3 = {
-                        let __w: super::types::Size3 = gluon::Convertable::read(
+                        let __w: super::types::proxied::Size3 = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -176,14 +182,14 @@ impl gluon::Convertable for DmatexSize {
             DmatexSize::Size2D { size } => {
                 gluon_data.write_u16(1u16)?;
                 {
-                    let __w: super::types::Size2 = size.into();
+                    let __w: super::types::proxied::Size2 = size.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             DmatexSize::Size3D { size } => {
                 gluon_data.write_u16(2u16)?;
                 {
-                    let __w: super::types::Size3 = size.into();
+                    let __w: super::types::proxied::Size3 = size.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -447,4 +453,7 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

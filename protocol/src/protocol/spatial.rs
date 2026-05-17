@@ -6,17 +6,23 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "Transform",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "PartialTransform",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "BoundingBox",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Transform
 #[derive(Debug, Copy, Clone)]
 pub struct Transform {
@@ -30,30 +36,36 @@ impl gluon::Convertable for Transform {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.translation.clone().into();
+            let __w: super::types::proxied::Vec3F = self.translation.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Quatf = self.rotation.clone().into();
+            let __w: super::types::proxied::Quatf = self.rotation.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.scale.clone().into();
+            let __w: super::types::proxied::Vec3F = self.scale.clone().into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let translation: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let rotation: crate::types::QuatF = {
-            let __w: super::types::Quatf = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Quatf = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let scale: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         Ok(Transform {
@@ -67,15 +79,15 @@ impl gluon::Convertable for Transform {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.translation.into();
+            let __w: super::types::proxied::Vec3F = self.translation.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Quatf = self.rotation.into();
+            let __w: super::types::proxied::Quatf = self.rotation.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.scale.into();
+            let __w: super::types::proxied::Vec3F = self.scale.into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
@@ -94,21 +106,21 @@ impl gluon::Convertable for PartialTransform {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: Option<super::types::Vec3F> = self
+            let __w: Option<super::types::proxied::Vec3F> = self
                 .translation
                 .clone()
                 .map(|__v| __v.into());
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: Option<super::types::Quatf> = self
+            let __w: Option<super::types::proxied::Quatf> = self
                 .rotation
                 .clone()
                 .map(|__v| __v.into());
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: Option<super::types::Vec3F> = self
+            let __w: Option<super::types::proxied::Vec3F> = self
                 .scale
                 .clone()
                 .map(|__v| __v.into());
@@ -118,15 +130,21 @@ impl gluon::Convertable for PartialTransform {
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let translation: Option<crate::types::Vec3F> = {
-            let __w: Option<super::types::Vec3F> = gluon::Convertable::read(gluon_data)?;
+            let __w: Option<super::types::proxied::Vec3F> = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.map(|__v| __v.into())
         };
         let rotation: Option<crate::types::QuatF> = {
-            let __w: Option<super::types::Quatf> = gluon::Convertable::read(gluon_data)?;
+            let __w: Option<super::types::proxied::Quatf> = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.map(|__v| __v.into())
         };
         let scale: Option<crate::types::Vec3F> = {
-            let __w: Option<super::types::Vec3F> = gluon::Convertable::read(gluon_data)?;
+            let __w: Option<super::types::proxied::Vec3F> = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.map(|__v| __v.into())
         };
         Ok(PartialTransform {
@@ -140,17 +158,21 @@ impl gluon::Convertable for PartialTransform {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: Option<super::types::Vec3F> = self
+            let __w: Option<super::types::proxied::Vec3F> = self
                 .translation
                 .map(|__v| __v.into());
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: Option<super::types::Quatf> = self.rotation.map(|__v| __v.into());
+            let __w: Option<super::types::proxied::Quatf> = self
+                .rotation
+                .map(|__v| __v.into());
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: Option<super::types::Vec3F> = self.scale.map(|__v| __v.into());
+            let __w: Option<super::types::proxied::Vec3F> = self
+                .scale
+                .map(|__v| __v.into());
             __w.write_owned(gluon_data)?;
         }
         Ok(())
@@ -168,22 +190,26 @@ impl gluon::Convertable for BoundingBox {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.center.clone().into();
+            let __w: super::types::proxied::Vec3F = self.center.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.extents.clone().into();
+            let __w: super::types::proxied::Vec3F = self.extents.clone().into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let center: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let extents: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         Ok(BoundingBox { center, extents })
@@ -193,11 +219,11 @@ impl gluon::Convertable for BoundingBox {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.center.into();
+            let __w: super::types::proxied::Vec3F = self.center.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.extents.into();
+            let __w: super::types::proxied::Vec3F = self.extents.into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
@@ -765,4 +791,7 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

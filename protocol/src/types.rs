@@ -9,12 +9,12 @@ pub type Vec4F = mint::Vector4<f32>;
 pub type QuatF = mint::Quaternion<f32>;
 pub type Mat4F = mint::ColumnMatrix4<f32>;
 
-pub use crate::protocol::types::{EXTERNAL_PROTOCOL, Posef, Resource, Timestamp};
-use crate::protocol::types::{
-	Mat4F as ProtocolMat4F, Posef as ProtocolPosef, Quatf as ProtocolQuatF, Size2 as ProtocolSize2,
-	Size3 as ProtocolSize3, Timestamp as ProtocolTimestamp, Vec2F as ProtocolVec2F,
-	Vec3F as ProtocolVec3F, Vec4F as ProtocolVec4F,
+use crate::protocol::types::proxied::{
+	Mat4F as ProtocolMat4F, Quatf as ProtocolQuatF, Size2 as ProtocolSize2, Size3 as ProtocolSize3,
+	Vec2F as ProtocolVec2F, Vec3F as ProtocolVec3F, Vec4F as ProtocolVec4F,
 };
+pub use crate::protocol::types::{EXTERNAL_PROTOCOL, Posef, Resource, Timestamp};
+use crate::protocol::types::{Posef as ProtocolPosef, Timestamp as ProtocolTimestamp};
 
 pub use color::rgba_linear;
 pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;
@@ -165,7 +165,7 @@ impl From<ProtocolMat4F> for Mat4F {
 }
 
 // Color
-impl From<Color> for crate::protocol::types::Color {
+impl From<Color> for crate::protocol::types::proxied::Color {
 	fn from(value: color::Rgba<f32, LinearRgb>) -> Self {
 		Self {
 			r: value.c.r,
@@ -175,8 +175,8 @@ impl From<Color> for crate::protocol::types::Color {
 		}
 	}
 }
-impl From<crate::protocol::types::Color> for Color {
-	fn from(value: crate::protocol::types::Color) -> Self {
+impl From<crate::protocol::types::proxied::Color> for Color {
+	fn from(value: crate::protocol::types::proxied::Color) -> Self {
 		color::rgba_linear!(value.r, value.g, value.b, value.a)
 	}
 }

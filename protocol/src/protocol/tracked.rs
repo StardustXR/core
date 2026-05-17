@@ -4,6 +4,9 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Tracked",
     types: &[],
 };
+pub mod proxies {
+    use super::*;
+}
 #[derive(Debug, Clone)]
 pub struct Tracked {
     obj: gluon::ObjectOrRef,
@@ -310,4 +313,7 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

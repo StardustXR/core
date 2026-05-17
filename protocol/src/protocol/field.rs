@@ -6,21 +6,28 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "FieldSample",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "RayMarchResult",
             supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "CubicBezierControlPoint",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Shape",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Information about the field at a sample point in space.
 #[derive(Debug, Copy, Clone)]
 pub struct FieldSample {
@@ -40,11 +47,11 @@ impl gluon::Convertable for FieldSample {
     ) -> Result<(), gluon::WriteError> {
         self.distance.write(gluon_data)?;
         {
-            let __w: super::types::Vec3F = self.gradient.clone().into();
+            let __w: super::types::proxied::Vec3F = self.gradient.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.closest_point.clone().into();
+            let __w: super::types::proxied::Vec3F = self.closest_point.clone().into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
@@ -52,11 +59,15 @@ impl gluon::Convertable for FieldSample {
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let distance = gluon::Convertable::read(gluon_data)?;
         let gradient: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let closest_point: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         Ok(FieldSample {
@@ -71,11 +82,11 @@ impl gluon::Convertable for FieldSample {
     ) -> Result<(), gluon::WriteError> {
         self.distance.write_owned(gluon_data)?;
         {
-            let __w: super::types::Vec3F = self.gradient.into();
+            let __w: super::types::proxied::Vec3F = self.gradient.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.closest_point.into();
+            let __w: super::types::proxied::Vec3F = self.closest_point.into();
             __w.write_owned(gluon_data)?;
         }
         Ok(())
@@ -142,15 +153,15 @@ impl gluon::Convertable for CubicBezierControlPoint {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.handle_in.clone().into();
+            let __w: super::types::proxied::Vec3F = self.handle_in.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.anchor.clone().into();
+            let __w: super::types::proxied::Vec3F = self.anchor.clone().into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.handle_out.clone().into();
+            let __w: super::types::proxied::Vec3F = self.handle_out.clone().into();
             __w.write_owned(gluon_data)?;
         }
         self.thickness.write(gluon_data)?;
@@ -158,15 +169,21 @@ impl gluon::Convertable for CubicBezierControlPoint {
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let handle_in: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let anchor: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let handle_out: crate::types::Vec3F = {
-            let __w: super::types::Vec3F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let thickness = gluon::Convertable::read(gluon_data)?;
@@ -182,15 +199,15 @@ impl gluon::Convertable for CubicBezierControlPoint {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec3F = self.handle_in.into();
+            let __w: super::types::proxied::Vec3F = self.handle_in.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.anchor.into();
+            let __w: super::types::proxied::Vec3F = self.anchor.into();
             __w.write_owned(gluon_data)?;
         }
         {
-            let __w: super::types::Vec3F = self.handle_out.into();
+            let __w: super::types::proxied::Vec3F = self.handle_out.into();
             __w.write_owned(gluon_data)?;
         }
         self.thickness.write_owned(gluon_data)?;
@@ -237,7 +254,7 @@ impl gluon::Convertable for Shape {
             Shape::Box { size } => {
                 gluon_data.write_u16(0u16)?;
                 {
-                    let __w: super::types::Vec3F = size.clone().into();
+                    let __w: super::types::proxied::Vec3F = size.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -269,7 +286,7 @@ impl gluon::Convertable for Shape {
                 gluon_data.write_u16(6u16)?;
                 shape.write(gluon_data)?;
                 {
-                    let __w: super::types::Mat4F = transform.clone().into();
+                    let __w: super::types::proxied::Mat4F = transform.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -295,7 +312,7 @@ impl gluon::Convertable for Shape {
             match gluon_data.read_u16()? {
                 0u16 => {
                     let size: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -335,7 +352,7 @@ impl gluon::Convertable for Shape {
                 6u16 => {
                     let shape = gluon::Convertable::read(gluon_data)?;
                     let transform: crate::types::Mat4F = {
-                        let __w: super::types::Mat4F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Mat4F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -374,7 +391,7 @@ impl gluon::Convertable for Shape {
             Shape::Box { size } => {
                 gluon_data.write_u16(0u16)?;
                 {
-                    let __w: super::types::Vec3F = size.into();
+                    let __w: super::types::proxied::Vec3F = size.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -406,7 +423,7 @@ impl gluon::Convertable for Shape {
                 gluon_data.write_u16(6u16)?;
                 shape.write_owned(gluon_data)?;
                 {
-                    let __w: super::types::Mat4F = transform.into();
+                    let __w: super::types::proxied::Mat4F = transform.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -546,7 +563,7 @@ impl Field {
         point: crate::types::Vec3F,
     ) -> Result<FieldSample, gluon::SendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
-        let point: super::types::Vec3F = point.into();
+        let point: super::types::proxied::Vec3F = point.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -567,8 +584,8 @@ impl Field {
         ray_direction: crate::types::Vec3F,
     ) -> Result<Option<RayMarchResult>, gluon::SendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
-        let ray_origin: super::types::Vec3F = ray_origin.into();
-        let ray_direction: super::types::Vec3F = ray_direction.into();
+        let ray_origin: super::types::proxied::Vec3F = ray_origin.into();
+        let ray_direction: super::types::proxied::Vec3F = ray_direction.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -683,7 +700,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         &mut gluon_data,
                     )?;
                     let param_point: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -704,13 +721,13 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         &mut gluon_data,
                     )?;
                     let param_ray_origin: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
                     };
                     let param_ray_direction: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -771,7 +788,7 @@ impl FieldInterface {
     ) -> Result<FieldSample, gluon::SendError> {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
-        let point: super::types::Vec3F = point.into();
+        let point: super::types::proxied::Vec3F = point.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -793,8 +810,8 @@ impl FieldInterface {
     ) -> Result<Option<RayMarchResult>, gluon::SendError> {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
-        let ray_origin: super::types::Vec3F = ray_origin.into();
-        let ray_direction: super::types::Vec3F = ray_direction.into();
+        let ray_origin: super::types::proxied::Vec3F = ray_origin.into();
+        let ray_direction: super::types::proxied::Vec3F = ray_direction.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -895,7 +912,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_space = gluon::Convertable::read(&mut gluon_data)?;
                     let param_point: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -915,13 +932,13 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_space = gluon::Convertable::read(&mut gluon_data)?;
                     let param_ray_origin: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
                     };
                     let param_ray_direction: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -960,4 +977,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

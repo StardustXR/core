@@ -6,9 +6,13 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "FrameInfo",
             supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Information for a specific frame
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct FrameInfo {
@@ -146,4 +150,7 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

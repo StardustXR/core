@@ -4,6 +4,9 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Sky",
     types: &[],
 };
+pub mod proxies {
+    use super::*;
+}
 #[derive(Debug, Clone)]
 pub struct SkyGuard {
     obj: gluon::ObjectOrRef,
@@ -211,4 +214,7 @@ Returns None if the sky lighting is already set.*/
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

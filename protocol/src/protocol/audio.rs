@@ -4,6 +4,9 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Audio",
     types: &[],
 };
+pub mod proxies {
+    use super::*;
+}
 #[derive(Debug, Clone)]
 pub struct Sound {
     obj: gluon::ObjectOrRef,
@@ -201,4 +204,7 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

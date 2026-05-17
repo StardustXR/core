@@ -6,17 +6,23 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "InterfaceDependency",
             supported_derives: gluon::Derives::from_bits_truncate(30u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "QueriedInterface",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "QueryableError",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Dependency on an interface in query
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct InterfaceDependency {
@@ -509,4 +515,7 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

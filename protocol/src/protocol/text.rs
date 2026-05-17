@@ -6,25 +6,33 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "TextBounds",
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "TextStyle",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "XAlign",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "YAlign",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "TextFit",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Bounds for text
 #[derive(Debug, Copy, Clone)]
 pub struct TextBounds {
@@ -40,7 +48,7 @@ impl gluon::Convertable for TextBounds {
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec2F = self.bounds.clone().into();
+            let __w: super::types::proxied::Vec2F = self.bounds.clone().into();
             __w.write_owned(gluon_data)?;
         }
         self.fit.write(gluon_data)?;
@@ -50,7 +58,9 @@ impl gluon::Convertable for TextBounds {
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let bounds: crate::types::Vec2F = {
-            let __w: super::types::Vec2F = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Vec2F = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let fit = gluon::Convertable::read(gluon_data)?;
@@ -68,7 +78,7 @@ impl gluon::Convertable for TextBounds {
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
-            let __w: super::types::Vec2F = self.bounds.into();
+            let __w: super::types::proxied::Vec2F = self.bounds.into();
             __w.write_owned(gluon_data)?;
         }
         self.fit.write_owned(gluon_data)?;
@@ -95,7 +105,7 @@ impl gluon::Convertable for TextStyle {
     ) -> Result<(), gluon::WriteError> {
         self.character_height.write(gluon_data)?;
         {
-            let __w: super::types::Color = self.color.clone().into();
+            let __w: super::types::proxied::Color = self.color.clone().into();
             __w.write_owned(gluon_data)?;
         }
         self.text_align_x.write(gluon_data)?;
@@ -107,7 +117,9 @@ impl gluon::Convertable for TextStyle {
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let character_height = gluon::Convertable::read(gluon_data)?;
         let color: crate::types::Color = {
-            let __w: super::types::Color = gluon::Convertable::read(gluon_data)?;
+            let __w: super::types::proxied::Color = gluon::Convertable::read(
+                gluon_data,
+            )?;
             __w.into()
         };
         let text_align_x = gluon::Convertable::read(gluon_data)?;
@@ -129,7 +141,7 @@ impl gluon::Convertable for TextStyle {
     ) -> Result<(), gluon::WriteError> {
         self.character_height.write_owned(gluon_data)?;
         {
-            let __w: super::types::Color = self.color.into();
+            let __w: super::types::proxied::Color = self.color.into();
             __w.write_owned(gluon_data)?;
         }
         self.text_align_x.write_owned(gluon_data)?;
@@ -533,4 +545,7 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }

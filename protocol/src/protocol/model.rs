@@ -6,17 +6,23 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         gluon::ExternalGluonType {
             name: "ModelLoadError",
             supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "MaterialParamError",
             supported_derives: gluon::Derives::from_bits_truncate(30u32),
+            proxy: None,
         },
         gluon::ExternalGluonType {
             name: "MaterialParameter",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
         },
     ],
 };
+pub mod proxies {
+    use super::*;
+}
 ///Error potentially produced when loading a model
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum ModelLoadError {
@@ -174,21 +180,21 @@ impl gluon::Convertable for MaterialParameter {
             MaterialParameter::Vec2 { value } => {
                 gluon_data.write_u16(4u16)?;
                 {
-                    let __w: super::types::Vec2F = value.clone().into();
+                    let __w: super::types::proxied::Vec2F = value.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             MaterialParameter::Vec3 { value } => {
                 gluon_data.write_u16(5u16)?;
                 {
-                    let __w: super::types::Vec3F = value.clone().into();
+                    let __w: super::types::proxied::Vec3F = value.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             MaterialParameter::Color { value } => {
                 gluon_data.write_u16(6u16)?;
                 {
-                    let __w: super::types::Color = value.clone().into();
+                    let __w: super::types::proxied::Color = value.clone().into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -226,7 +232,7 @@ impl gluon::Convertable for MaterialParameter {
                 }
                 4u16 => {
                     let value: crate::types::Vec2F = {
-                        let __w: super::types::Vec2F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec2F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -235,7 +241,7 @@ impl gluon::Convertable for MaterialParameter {
                 }
                 5u16 => {
                     let value: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -244,7 +250,7 @@ impl gluon::Convertable for MaterialParameter {
                 }
                 6u16 => {
                     let value: crate::types::Color = {
-                        let __w: super::types::Color = gluon::Convertable::read(
+                        let __w: super::types::proxied::Color = gluon::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -295,21 +301,21 @@ impl gluon::Convertable for MaterialParameter {
             MaterialParameter::Vec2 { value } => {
                 gluon_data.write_u16(4u16)?;
                 {
-                    let __w: super::types::Vec2F = value.into();
+                    let __w: super::types::proxied::Vec2F = value.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             MaterialParameter::Vec3 { value } => {
                 gluon_data.write_u16(5u16)?;
                 {
-                    let __w: super::types::Vec3F = value.into();
+                    let __w: super::types::proxied::Vec3F = value.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
             MaterialParameter::Color { value } => {
                 gluon_data.write_u16(6u16)?;
                 {
-                    let __w: super::types::Color = value.into();
+                    let __w: super::types::proxied::Color = value.into();
                     __w.write_owned(gluon_data)?;
                 }
             }
@@ -486,7 +492,7 @@ impl Model {
         &self,
         scale: crate::types::Vec3F,
     ) -> Result<(), gluon::SendError> {
-        let scale: super::types::Vec3F = scale.into();
+        let scale: super::types::proxied::Vec3F = scale.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         scale.write(&mut gluon_builder)?;
         self.obj
@@ -569,7 +575,7 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 10u32 => {
                     let param_scale: crate::types::Vec3F = {
-                        let __w: super::types::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
                             &mut gluon_data,
                         )?;
                         __w.into()
@@ -760,4 +766,7 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+}
+pub mod proxied {
+    use super::*;
 }
