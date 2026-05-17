@@ -13,7 +13,7 @@ use crate::protocol::types::proxied::{
 	Mat4F as ProtocolMat4F, Quatf as ProtocolQuatF, Size2 as ProtocolSize2, Size3 as ProtocolSize3,
 	Vec2F as ProtocolVec2F, Vec3F as ProtocolVec3F, Vec4F as ProtocolVec4F,
 };
-pub use crate::protocol::types::{EXTERNAL_PROTOCOL, Posef, Resource, Timestamp};
+pub use crate::protocol::types::{EXTERNAL_PROTOCOL, Posef, Resource, Timestamp, proxied, proxies};
 use crate::protocol::types::{Posef as ProtocolPosef, Timestamp as ProtocolTimestamp};
 
 pub use color::rgba_linear;
