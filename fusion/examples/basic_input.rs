@@ -36,18 +36,17 @@ async fn main() {
 	)
 	.await
 	.unwrap();
-	let field_spatial_ref = field_spatial.spatial_ref().await.unwrap();
-	let field_ref = field.field_ref().await.unwrap();
 
 	let input_handler = client.pion_device().register_object(InputHandler {
-		field,
+		field: field.clone(),
 		spatial: handler_spatial,
 		methods: RwLock::default(),
 	});
 	let queryable = client
 		.query_interface()
-		.register_queryable(field_spatial_ref, field_ref)
+		.register_queryable(field_spatial, field)
 		.await
+		.unwrap()
 		.unwrap();
 	let _guard = queryable
 		.add_interface(&input_handler, "org.stardustxr.SUIS.Handler".to_string())
