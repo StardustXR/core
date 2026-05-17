@@ -214,7 +214,9 @@ impl gluon::Convertable for DmatexRef {
     }
 }
 impl DmatexRef {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> DmatexRef {
+    pub fn from_handler<H: DmatexRefHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> DmatexRef {
         DmatexRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -225,6 +227,11 @@ impl DmatexRef {
 impl From<DmatexRef> for gluon::ObjectOrRef {
     fn from(value: DmatexRef) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for DmatexRef {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for DmatexRef {
@@ -330,7 +337,9 @@ impl DmatexInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> DmatexInterface {
+    pub fn from_handler<H: DmatexInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> DmatexInterface {
         DmatexInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -341,6 +350,11 @@ impl DmatexInterface {
 impl From<DmatexInterface> for gluon::ObjectOrRef {
     fn from(value: DmatexInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for DmatexInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for DmatexInterface {

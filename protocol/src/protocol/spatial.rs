@@ -226,7 +226,9 @@ impl gluon::Convertable for SpatialRef {
     }
 }
 impl SpatialRef {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialRef {
+    pub fn from_handler<H: SpatialRefHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SpatialRef {
         SpatialRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -237,6 +239,11 @@ impl SpatialRef {
 impl From<SpatialRef> for gluon::ObjectOrRef {
     fn from(value: SpatialRef) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for SpatialRef {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for SpatialRef {
@@ -403,7 +410,9 @@ It will silently error and not set the spatial parent if it is to a child of its
             .transact_one_way(&self.obj, 15u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Spatial {
+    pub fn from_handler<H: SpatialHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Spatial {
         Spatial::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -414,6 +423,11 @@ It will silently error and not set the spatial parent if it is to a child of its
 impl From<Spatial> for gluon::ObjectOrRef {
     fn from(value: Spatial) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Spatial {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Spatial {
@@ -641,7 +655,9 @@ impl SpatialInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialInterface {
+    pub fn from_handler<H: SpatialInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SpatialInterface {
         SpatialInterface::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -654,6 +670,11 @@ impl SpatialInterface {
 impl From<SpatialInterface> for gluon::ObjectOrRef {
     fn from(value: SpatialInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for SpatialInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for SpatialInterface {

@@ -151,7 +151,9 @@ impl gluon::Convertable for QueryableObjectRef {
     }
 }
 impl QueryableObjectRef {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryableObjectRef {
+    pub fn from_handler<H: QueryableObjectRefHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> QueryableObjectRef {
         QueryableObjectRef::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -164,6 +166,11 @@ impl QueryableObjectRef {
 impl From<QueryableObjectRef> for gluon::ObjectOrRef {
     fn from(value: QueryableObjectRef) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for QueryableObjectRef {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for QueryableObjectRef {
@@ -227,10 +234,10 @@ impl QueryableObject {
     }
     pub async fn add_interface(
         &self,
-        interface: &impl gluon::OwnedObjectRef,
+        interface: &impl gluon::ToObjectOrRef,
         interface_id: impl Into<String>,
     ) -> Result<QueryableInterfaceGuard, gluon::SendError> {
-        let interface: gluon::ObjectOrRef = gluon::OwnedObjectRef::to_object_or_ref(
+        let interface: gluon::ObjectOrRef = gluon::ToObjectOrRef::to_binder_object_or_ref(
             interface,
         );
         let interface_id: String = interface_id.into();
@@ -245,7 +252,9 @@ impl QueryableObject {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryableObject {
+    pub fn from_handler<H: QueryableObjectHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> QueryableObject {
         QueryableObject::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -256,6 +265,11 @@ impl QueryableObject {
 impl From<QueryableObject> for gluon::ObjectOrRef {
     fn from(value: QueryableObject) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for QueryableObject {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for QueryableObject {
@@ -341,7 +355,9 @@ impl gluon::Convertable for QueryableInterfaceGuard {
     }
 }
 impl QueryableInterfaceGuard {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryableInterfaceGuard {
+    pub fn from_handler<H: QueryableInterfaceGuardHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> QueryableInterfaceGuard {
         QueryableInterfaceGuard::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -354,6 +370,11 @@ impl QueryableInterfaceGuard {
 impl From<QueryableInterfaceGuard> for gluon::ObjectOrRef {
     fn from(value: QueryableInterfaceGuard) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for QueryableInterfaceGuard {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for QueryableInterfaceGuard {
@@ -423,7 +444,9 @@ impl QueryInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> QueryInterface {
+    pub fn from_handler<H: QueryInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> QueryInterface {
         QueryInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -434,6 +457,11 @@ impl QueryInterface {
 impl From<QueryInterface> for gluon::ObjectOrRef {
     fn from(value: QueryInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for QueryInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for QueryInterface {

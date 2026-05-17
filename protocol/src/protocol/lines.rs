@@ -134,7 +134,7 @@ impl Lines {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Lines {
+    pub fn from_handler<H: LinesHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Lines {
         Lines::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -145,6 +145,11 @@ impl Lines {
 impl From<Lines> for gluon::ObjectOrRef {
     fn from(value: Lines) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Lines {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Lines {
@@ -224,7 +229,9 @@ impl LinesInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> LinesInterface {
+    pub fn from_handler<H: LinesInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> LinesInterface {
         LinesInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -235,6 +242,11 @@ impl LinesInterface {
 impl From<LinesInterface> for gluon::ObjectOrRef {
     fn from(value: LinesInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for LinesInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for LinesInterface {

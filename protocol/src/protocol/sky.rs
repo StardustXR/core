@@ -27,7 +27,9 @@ impl gluon::Convertable for SkyGuard {
     }
 }
 impl SkyGuard {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SkyGuard {
+    pub fn from_handler<H: SkyGuardHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SkyGuard {
         SkyGuard::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -38,6 +40,11 @@ impl SkyGuard {
 impl From<SkyGuard> for gluon::ObjectOrRef {
     fn from(value: SkyGuard) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for SkyGuard {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for SkyGuard {
@@ -123,7 +130,9 @@ Returns None if the sky lighting is already set.*/
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SkyInterface {
+    pub fn from_handler<H: SkyInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SkyInterface {
         SkyInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -134,6 +143,11 @@ Returns None if the sky lighting is already set.*/
 impl From<SkyInterface> for gluon::ObjectOrRef {
     fn from(value: SkyInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for SkyInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for SkyInterface {

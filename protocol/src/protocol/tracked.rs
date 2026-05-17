@@ -67,7 +67,9 @@ impl Tracked {
             gluon::Convertable::read(&mut reader)?,
         ))
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Tracked {
+    pub fn from_handler<H: TrackedHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Tracked {
         Tracked::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -78,6 +80,11 @@ impl Tracked {
 impl From<Tracked> for gluon::ObjectOrRef {
     fn from(value: Tracked) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Tracked {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Tracked {
@@ -170,7 +177,9 @@ impl gluon::Convertable for TrackedGuard {
     }
 }
 impl TrackedGuard {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> TrackedGuard {
+    pub fn from_handler<H: TrackedGuardHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> TrackedGuard {
         TrackedGuard::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -181,6 +190,11 @@ impl TrackedGuard {
 impl From<TrackedGuard> for gluon::ObjectOrRef {
     fn from(value: TrackedGuard) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for TrackedGuard {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for TrackedGuard {
@@ -239,7 +253,9 @@ impl TrackedStateReceiver {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> TrackedStateReceiver {
+    pub fn from_handler<H: TrackedStateReceiverHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> TrackedStateReceiver {
         TrackedStateReceiver::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -252,6 +268,11 @@ impl TrackedStateReceiver {
 impl From<TrackedStateReceiver> for gluon::ObjectOrRef {
     fn from(value: TrackedStateReceiver) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for TrackedStateReceiver {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for TrackedStateReceiver {

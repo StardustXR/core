@@ -81,7 +81,9 @@ impl Client {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Client {
+    pub fn from_handler<H: ClientHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Client {
         Client::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -92,6 +94,11 @@ impl Client {
 impl From<Client> for gluon::ObjectOrRef {
     fn from(value: Client) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Client {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Client {

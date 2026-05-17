@@ -185,7 +185,9 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Server {
+    pub fn from_handler<H: ServerHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Server {
         Server::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -196,6 +198,11 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
 impl From<Server> for gluon::ObjectOrRef {
     fn from(value: Server) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Server {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Server {
@@ -448,7 +455,9 @@ impl ServerInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ServerInterface {
+    pub fn from_handler<H: ServerInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> ServerInterface {
         ServerInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -459,6 +468,11 @@ impl ServerInterface {
 impl From<ServerInterface> for gluon::ObjectOrRef {
     fn from(value: ServerInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for ServerInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for ServerInterface {

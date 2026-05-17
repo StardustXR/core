@@ -305,7 +305,9 @@ impl BeamQueryHandler {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> BeamQueryHandler {
+    pub fn from_handler<H: BeamQueryHandlerHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> BeamQueryHandler {
         BeamQueryHandler::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -318,6 +320,11 @@ impl BeamQueryHandler {
 impl From<BeamQueryHandler> for gluon::ObjectOrRef {
     fn from(value: BeamQueryHandler) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for BeamQueryHandler {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for BeamQueryHandler {
@@ -512,7 +519,9 @@ impl ZoneQueryHandler {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ZoneQueryHandler {
+    pub fn from_handler<H: ZoneQueryHandlerHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> ZoneQueryHandler {
         ZoneQueryHandler::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -525,6 +534,11 @@ impl ZoneQueryHandler {
 impl From<ZoneQueryHandler> for gluon::ObjectOrRef {
     fn from(value: ZoneQueryHandler) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for ZoneQueryHandler {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for ZoneQueryHandler {
@@ -714,7 +728,9 @@ impl PointsQueryHandler {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> PointsQueryHandler {
+    pub fn from_handler<H: PointsQueryHandlerHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> PointsQueryHandler {
         PointsQueryHandler::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -727,6 +743,11 @@ impl PointsQueryHandler {
 impl From<PointsQueryHandler> for gluon::ObjectOrRef {
     fn from(value: PointsQueryHandler) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for PointsQueryHandler {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for PointsQueryHandler {
@@ -885,7 +906,9 @@ impl SpatialQueryInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialQueryInterface {
+    pub fn from_handler<H: SpatialQueryInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SpatialQueryInterface {
         SpatialQueryInterface::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -898,6 +921,11 @@ impl SpatialQueryInterface {
 impl From<SpatialQueryInterface> for gluon::ObjectOrRef {
     fn from(value: SpatialQueryInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for SpatialQueryInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for SpatialQueryInterface {
@@ -1007,7 +1035,9 @@ impl PointsQueryHandle {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> PointsQueryHandle {
+    pub fn from_handler<H: PointsQueryHandleHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> PointsQueryHandle {
         PointsQueryHandle::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -1020,6 +1050,11 @@ impl PointsQueryHandle {
 impl From<PointsQueryHandle> for gluon::ObjectOrRef {
     fn from(value: PointsQueryHandle) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for PointsQueryHandle {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for PointsQueryHandle {
@@ -1081,7 +1116,9 @@ impl gluon::Convertable for SpatialQueryGuard {
     }
 }
 impl SpatialQueryGuard {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> SpatialQueryGuard {
+    pub fn from_handler<H: SpatialQueryGuardHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SpatialQueryGuard {
         SpatialQueryGuard::from_object_or_ref(
             gluon::OwnedObjectRef::to_object_or_ref(obj),
         )
@@ -1094,6 +1131,11 @@ impl SpatialQueryGuard {
 impl From<SpatialQueryGuard> for gluon::ObjectOrRef {
     fn from(value: SpatialQueryGuard) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for SpatialQueryGuard {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for SpatialQueryGuard {

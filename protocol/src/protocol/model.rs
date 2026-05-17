@@ -369,7 +369,9 @@ impl ModelInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ModelInterface {
+    pub fn from_handler<H: ModelInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> ModelInterface {
         ModelInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -380,6 +382,11 @@ impl ModelInterface {
 impl From<ModelInterface> for gluon::ObjectOrRef {
     fn from(value: ModelInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for ModelInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for ModelInterface {
@@ -487,7 +494,7 @@ impl Model {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Model {
+    pub fn from_handler<H: ModelHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Model {
         Model::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -498,6 +505,11 @@ impl Model {
 impl From<Model> for gluon::ObjectOrRef {
     fn from(value: Model) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Model {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Model {
@@ -644,7 +656,9 @@ impl ModelPart {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> ModelPart {
+    pub fn from_handler<H: ModelPartHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> ModelPart {
         ModelPart::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -655,6 +669,11 @@ impl ModelPart {
 impl From<ModelPart> for gluon::ObjectOrRef {
     fn from(value: ModelPart) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for ModelPart {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for ModelPart {

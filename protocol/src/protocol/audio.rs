@@ -39,7 +39,7 @@ impl Sound {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Sound {
+    pub fn from_handler<H: SoundHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Sound {
         Sound::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -50,6 +50,11 @@ impl Sound {
 impl From<Sound> for gluon::ObjectOrRef {
     fn from(value: Sound) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Sound {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Sound {
@@ -131,7 +136,9 @@ impl AudioInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> AudioInterface {
+    pub fn from_handler<H: AudioInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> AudioInterface {
         AudioInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -142,6 +149,11 @@ impl AudioInterface {
 impl From<AudioInterface> for gluon::ObjectOrRef {
     fn from(value: AudioInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for AudioInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for AudioInterface {

@@ -9,12 +9,12 @@ pub type Vec4F = mint::Vector4<f32>;
 pub type QuatF = mint::Quaternion<f32>;
 pub type Mat4F = mint::ColumnMatrix4<f32>;
 
+pub use crate::protocol::types::{EXTERNAL_PROTOCOL, Posef, Resource, Timestamp};
 use crate::protocol::types::{
 	Mat4F as ProtocolMat4F, Posef as ProtocolPosef, Quatf as ProtocolQuatF, Size2 as ProtocolSize2,
 	Size3 as ProtocolSize3, Timestamp as ProtocolTimestamp, Vec2F as ProtocolVec2F,
 	Vec3F as ProtocolVec3F, Vec4F as ProtocolVec4F,
 };
-pub use crate::protocol::types::{Posef, Resource, Timestamp};
 
 pub use color::rgba_linear;
 pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;

@@ -763,7 +763,9 @@ This is considered static and should not change after handler creation.*/
             .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> InputHandler {
+    pub fn from_handler<H: InputHandlerHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> InputHandler {
         InputHandler::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -774,6 +776,11 @@ This is considered static and should not change after handler creation.*/
 impl From<InputHandler> for gluon::ObjectOrRef {
     fn from(value: InputHandler) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for InputHandler {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for InputHandler {
@@ -995,7 +1002,9 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> InputMethod {
+    pub fn from_handler<H: InputMethodHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> InputMethod {
         InputMethod::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -1006,6 +1015,11 @@ Should return None when the InputMethod is captured by another InputHandler.*/
 impl From<InputMethod> for gluon::ObjectOrRef {
     fn from(value: InputMethod) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for InputMethod {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for InputMethod {

@@ -358,7 +358,9 @@ impl TextInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> TextInterface {
+    pub fn from_handler<H: TextInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> TextInterface {
         TextInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -369,6 +371,11 @@ impl TextInterface {
 impl From<TextInterface> for gluon::ObjectOrRef {
     fn from(value: TextInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for TextInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for TextInterface {
@@ -461,7 +468,7 @@ impl Text {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Text {
+    pub fn from_handler<H: TextHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Text {
         Text::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -472,6 +479,11 @@ impl Text {
 impl From<Text> for gluon::ObjectOrRef {
     fn from(value: Text) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Text {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Text {

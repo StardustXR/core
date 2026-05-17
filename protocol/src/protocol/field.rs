@@ -451,7 +451,9 @@ impl gluon::Convertable for FieldRef {
     }
 }
 impl FieldRef {
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> FieldRef {
+    pub fn from_handler<H: FieldRefHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> FieldRef {
         FieldRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -462,6 +464,11 @@ impl FieldRef {
 impl From<FieldRef> for gluon::ObjectOrRef {
     fn from(value: FieldRef) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for FieldRef {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for FieldRef {
@@ -585,7 +592,7 @@ impl Field {
             .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Field {
+    pub fn from_handler<H: FieldHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Field {
         Field::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -596,6 +603,11 @@ impl Field {
 impl From<Field> for gluon::ObjectOrRef {
     fn from(value: Field) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Field {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Field {
@@ -816,7 +828,9 @@ impl FieldInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> FieldInterface {
+    pub fn from_handler<H: FieldInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> FieldInterface {
         FieldInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -827,6 +841,11 @@ impl FieldInterface {
 impl From<FieldInterface> for gluon::ObjectOrRef {
     fn from(value: FieldInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for FieldInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for FieldInterface {

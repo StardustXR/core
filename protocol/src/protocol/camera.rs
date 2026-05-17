@@ -90,7 +90,9 @@ impl CameraInterface {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> CameraInterface {
+    pub fn from_handler<H: CameraInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> CameraInterface {
         CameraInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -101,6 +103,11 @@ impl CameraInterface {
 impl From<CameraInterface> for gluon::ObjectOrRef {
     fn from(value: CameraInterface) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for CameraInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for CameraInterface {
@@ -188,7 +195,9 @@ impl Camera {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn from_handler(obj: &impl gluon::OwnedObjectRef) -> Camera {
+    pub fn from_handler<H: CameraHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Camera {
         Camera::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
     ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
@@ -199,6 +208,11 @@ impl Camera {
 impl From<Camera> for gluon::ObjectOrRef {
     fn from(value: Camera) -> Self {
         value.obj
+    }
+}
+impl gluon::ToObjectOrRef for Camera {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
     }
 }
 impl std::hash::Hash for Camera {
