@@ -11,6 +11,10 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             name: "QueriedInterface",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
         },
+        gluon::ExternalGluonType {
+            name: "QueryableError",
+            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+        },
     ],
 };
 ///Dependency on an interface in query
@@ -74,6 +78,53 @@ impl gluon::Convertable for QueriedInterface {
     ) -> Result<(), gluon::WriteError> {
         self.interface_id.write_owned(gluon_data)?;
         self.interface.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///error returned from QueryInterface::register_queryable
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum QueryableError {
+    ///You don't own this spatial or it didn't come from the right stardust server!
+    NotOwnedSpatial,
+    ///You don't own this field or it didn't come from the right stardust server!
+    NotOwnedField,
+}
+impl gluon::Convertable for QueryableError {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            QueryableError::NotOwnedSpatial => {
+                gluon_data.write_u16(0u16)?;
+            }
+            QueryableError::NotOwnedField => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => QueryableError::NotOwnedSpatial,
+                1u16 => QueryableError::NotOwnedField,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            QueryableError::NotOwnedSpatial => {
+                gluon_data.write_u16(0u16)?;
+            }
+            QueryableError::NotOwnedField => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
         Ok(())
     }
 }
@@ -356,11 +407,11 @@ impl gluon::Convertable for QueryInterface {
 impl QueryInterface {
     pub async fn register_queryable(
         &self,
-        spatial: impl Into<super::spatial::SpatialRef>,
-        field: impl Into<super::field::FieldRef>,
-    ) -> Result<QueryableObject, gluon::SendError> {
-        let spatial: super::spatial::SpatialRef = spatial.into();
-        let field: super::field::FieldRef = field.into();
+        spatial: impl Into<super::spatial::Spatial>,
+        field: impl Into<super::field::Field>,
+    ) -> Result<Result<QueryableObject, QueryableError>, gluon::SendError> {
+        let spatial: super::spatial::Spatial = spatial.into();
+        let field: super::field::Field = field.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -400,9 +451,9 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn register_queryable(
         &self,
         _ctx: gluon::Context,
-        spatial: super::spatial::SpatialRef,
-        field: super::field::FieldRef,
-    ) -> impl Future<Output = QueryableObject> + Send + Sync;
+        spatial: super::spatial::Spatial,
+        field: super::field::Field,
+    ) -> impl Future<Output = Result<QueryableObject, QueryableError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
