@@ -6,14 +6,14 @@ use stardust_xr_protocol::{client::ClientHandler, spatial::Spatial, types::Resou
 use crate::{client::Client, error::ServerError};
 
 pub trait SoundExt {
-	fn new<H: ClientHandler>(
+	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		sound: Resource,
 	) -> impl std::future::Future<Output = Result<Sound, ServerError>> + Send;
 }
 impl SoundExt for Sound {
-	async fn new<H: ClientHandler>(
+	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		sound: Resource,

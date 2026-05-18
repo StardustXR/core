@@ -16,14 +16,14 @@ use crate::{client::Client, error::ServerError};
 use thiserror::Error;
 
 pub trait LinesExt {
-	fn new<H: ClientHandler>(
+	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
 	) -> impl std::future::Future<Output = Result<Lines, ServerError>> + Send;
 }
 impl LinesExt for Lines {
-	async fn new<H: ClientHandler>(
+	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
@@ -46,14 +46,14 @@ pub enum ModelLoadError {
 }
 
 pub trait ModelExt {
-	fn new<H: ClientHandler>(
+	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
 	) -> impl std::future::Future<Output = Result<Model, ModelLoadError>> + Send;
 }
 impl ModelExt for Model {
-	async fn new<H: ClientHandler>(
+	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
@@ -70,7 +70,7 @@ impl ModelExt for Model {
 }
 
 pub trait TextExt {
-	fn new<H: ClientHandler>(
+	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		text: String,
@@ -78,7 +78,7 @@ pub trait TextExt {
 	) -> impl std::future::Future<Output = Result<Text, ServerError>> + Send;
 }
 impl TextExt for Text {
-	async fn new<H: ClientHandler>(
+	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		text: String,

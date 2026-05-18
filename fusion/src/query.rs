@@ -7,7 +7,7 @@ use stardust_xr_protocol::{
 pub use stardust_xr_protocol::{query::QueryableObject, spatial::SpatialRef, spatial_query::*};
 
 pub trait QueryExt {
-	fn new<H: ClientHandler>(
+	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: Spatial,
 		field: Field,
@@ -15,7 +15,7 @@ pub trait QueryExt {
 	+ Send;
 }
 impl QueryExt for QueryableObject {
-	async fn new<H: ClientHandler>(
+	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: Spatial,
 		field: Field,

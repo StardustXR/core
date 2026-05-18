@@ -6,14 +6,14 @@ use stardust_xr_protocol::{client::ClientHandler, spatial::Spatial};
 use crate::{client::Client, error::ServerError};
 
 pub trait FieldExt {
-	fn new<H: ClientHandler>(
+	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		shape: Shape,
 	) -> impl std::future::Future<Output = Result<Field, ServerError>> + Send;
 }
 impl FieldExt for Field {
-	async fn new<H: ClientHandler>(
+	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		shape: Shape,
