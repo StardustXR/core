@@ -1,10 +1,9 @@
 //! Spatial query system
 
 use crate::{client::Client, error::ServerError};
-use stardust_xr_protocol::{
-	client::ClientHandler, field::Field, query::QueryableError, spatial::Spatial,
-};
-pub use stardust_xr_protocol::{query::QueryableObject, spatial::SpatialRef, spatial_query::*};
+use stardust_xr_protocol::{client::ClientHandler, field::Field, spatial::Spatial};
+
+pub use stardust_xr_protocol::query::*;
 
 pub trait QueryExt {
 	fn create<H: ClientHandler>(

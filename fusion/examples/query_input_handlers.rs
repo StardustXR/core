@@ -7,8 +7,8 @@ use stardust_xr_fusion::{
 	drawable::LinesExt,
 	fields::FieldRef,
 	project_local_resources,
-	query::{Point, PointsQuery, PointsQueryHandler, PointsQueryHandlerHandler, SpatialRef},
-	spatial::{Spatial, SpatialExt, Transform},
+	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
+	spatial_query::{Point, PointsQuery, PointsQueryHandler, PointsQueryHandlerHandler},
 	suis::InputHandler,
 	types::rgba_linear,
 };
