@@ -49,7 +49,7 @@ async fn main() {
 		.unwrap()
 		.unwrap();
 	let _guard = queryable
-		.add_interface(&input_handler, "org.stardustxr.SUIS.Handler".to_string())
+		.add_interface(&input_handler, InputHandlerProxy::QUERY_INTERFACE)
 		.await
 		.unwrap();
 	let handler_proxy = InputHandlerProxy::from_handler(&input_handler);
