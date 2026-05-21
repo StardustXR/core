@@ -2,7 +2,6 @@
 
 use gluon::Object;
 use pion_binder::PionBinderDevice;
-pub use stardust_xr_protocol::client::ClientHandler;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
 	client::Client as ProtocolClient,
@@ -22,7 +21,7 @@ use std::{env, fs, path::Path, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast;
 
-pub use stardust_xr_protocol::client::FrameInfo;
+pub use stardust_xr_protocol::client::{ClientHandler, FrameInfo};
 
 #[macro_export]
 macro_rules! project_local_resources {
