@@ -5,7 +5,7 @@ use pion_binder::PionBinderDevice;
 pub use stardust_xr_protocol::client::ClientHandler;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
-	client::{Client as ProtocolClient, FrameInfo},
+	client::Client as ProtocolClient,
 	dir::find_pion_file,
 	dmatex::DmatexInterface,
 	field::FieldInterface,
@@ -21,6 +21,8 @@ use stardust_xr_protocol::{
 use std::{env, fs, path::Path, sync::Arc};
 use thiserror::Error;
 use tokio::sync::broadcast;
+
+pub use stardust_xr_protocol::client::FrameInfo;
 
 #[macro_export]
 macro_rules! project_local_resources {
