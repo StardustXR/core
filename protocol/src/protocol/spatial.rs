@@ -627,7 +627,7 @@ impl SpatialInterface {
         &self,
         parent: impl Into<SpatialRef>,
         transform: impl Into<Transform>,
-    ) -> Result<Spatial, gluon::SendError> {
+    ) -> Result<(Spatial, SpatialRef), gluon::SendError> {
         let parent: SpatialRef = parent.into();
         let transform: Transform = transform.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -639,7 +639,10 @@ impl SpatialInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        Ok((
+            gluon::Convertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
+        ))
     }
     ///Get the relative bounding box of a spatial object relative to another spatial.
     pub async fn get_relative_bounding_box(
@@ -721,7 +724,7 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         parent: SpatialRef,
         transform: Transform,
-    ) -> impl Future<Output = Spatial> + Send + Sync;
+    ) -> impl Future<Output = (Spatial, SpatialRef)> + Send + Sync;
     ///Get the relative bounding box of a spatial object relative to another spatial.
     fn get_relative_bounding_box(
         &self,
@@ -749,11 +752,12 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
-                    let (spatial) = self
+                    let (spatial, spatial_ref) = self
                         .create_spatial(ctx, param_parent, param_transform)
                         .await;
                     drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
+                    spatial_ref.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;

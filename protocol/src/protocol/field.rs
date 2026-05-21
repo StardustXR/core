@@ -829,7 +829,7 @@ impl FieldInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         shape: impl Into<Shape>,
-    ) -> Result<Field, gluon::SendError> {
+    ) -> Result<(Field, FieldRef), gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let shape: Shape = shape.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -843,7 +843,10 @@ impl FieldInterface {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        Ok((
+            gluon::Convertable::read(&mut reader)?,
+            gluon::Convertable::read(&mut reader)?,
+        ))
     }
     pub fn from_handler<H: FieldInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -897,7 +900,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
         shape: Shape,
-    ) -> impl Future<Output = Field> + Send + Sync;
+    ) -> impl Future<Output = (Field, FieldRef)> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -963,11 +966,12 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
-                    let (field) = self
+                    let (field, field_ref) = self
                         .create_field(ctx, param_spatial, param_shape)
                         .await;
                     drop(gluon_data);
                     field.write_owned(&mut gluon_out)?;
+                    field_ref.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;

@@ -10,14 +10,14 @@ pub trait FieldExt {
 		client: &Client<H>,
 		spatial: &Spatial,
 		shape: Shape,
-	) -> impl std::future::Future<Output = Result<Field, ServerError>> + Send;
+	) -> impl std::future::Future<Output = Result<(Field, FieldRef), ServerError>> + Send;
 }
 impl FieldExt for Field {
 	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		shape: Shape,
-	) -> Result<Field, ServerError> {
+	) -> Result<(Field, FieldRef), ServerError> {
 		// TODO: actually handle invalid handles at the protocol level
 		Ok(client
 			.field_interface()

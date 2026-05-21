@@ -25,9 +25,10 @@ async fn main() {
 	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
-	let spatial = Spatial::create(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
-		.await
-		.unwrap();
+	let (spatial, _) =
+		Spatial::create(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
+			.await
+			.unwrap();
 
 	let handlers: Arc<Mutex<HashMap<QueryableObjectRef, SpatialRef>>> =
 		Arc::new(Mutex::new(HashMap::new()));
