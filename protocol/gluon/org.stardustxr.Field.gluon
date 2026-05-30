@@ -102,5 +102,11 @@ interface FieldInterface {
 	sample(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (result: FieldSample)
 	ray_march(field: Ref<FieldRef>, space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
 
-	create_field(spatial: Ref<spatial::Spatial>, shape: Shape) -> (field: Ref<Field>, field_ref: Ref<FieldRef>)
+	create_field(spatial: Ref<spatial::Spatial>, shape: Shape) -> (field: Result<CreatedField, types::CreateError>)
+}
+
+/// Struct returned by FieldInterface::create_field so it can have proper errors
+struct CreatedField {
+    field: Ref<Field>, 
+    field_ref: Ref<FieldRef>
 }

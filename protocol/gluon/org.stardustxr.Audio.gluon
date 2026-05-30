@@ -11,5 +11,5 @@ interface Sound {
 
 /// Entry point for creating Sounds
 interface AudioInterface {
-	create_sound(spatial: Ref<spatial::Spatial>, sound: types::Resource) -> (sound: Ref<Sound>)
+	create_sound(spatial: Ref<spatial::Spatial>, sound: types::Resource) -> (sound: Result<Ref<Sound>, types::ResourceLoadError>)
 }

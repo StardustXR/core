@@ -1,6 +1,7 @@
 #![allow(clippy::derivable_impls, unused)]
 
 mod protocol;
+mod dmatex;
 pub use protocol::{
 	audio, camera, client, dmatex, query, server, sky, spatial_query, text, tracked,
 };

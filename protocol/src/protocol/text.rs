@@ -354,7 +354,7 @@ impl TextInterface {
         spatial: impl Into<super::spatial::Spatial>,
         text: impl Into<String>,
         style: impl Into<TextStyle>,
-    ) -> Result<Text, gluon::SendError> {
+    ) -> Result<Result<Text, super::types::ResourceLoadError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let text: String = text.into();
         let style: TextStyle = style.into();
@@ -408,7 +408,9 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         spatial: super::spatial::Spatial,
         text: String,
         style: TextStyle,
-    ) -> impl Future<Output = Text> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<Text, super::types::ResourceLoadError>,
+    > + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

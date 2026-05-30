@@ -6,15 +6,6 @@ use std::hash::Hash;
 
 pub use crate::protocol::model::*;
 
-impl Error for ModelLoadError {}
-impl Display for ModelLoadError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			ModelLoadError::NotFound => f.write_str("Model resource not found"),
-			ModelLoadError::InvalidSpatial => f.write_str("Invalid Spatial used for Model"),
-		}
-	}
-}
 impl Error for MaterialParamError {}
 impl Display for MaterialParamError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

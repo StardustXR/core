@@ -59,9 +59,9 @@ interface PointsQueryHandler {
 
 /// main spatial query service
 interface SpatialQueryInterface {
-  beam_query(query: BeamQuery) -> (guard: Ref<SpatialQueryGuard>)
-  zone_query(query: ZoneQuery) -> (guard: Ref<SpatialQueryGuard>)
-  points_query(query: PointsQuery) -> (handle: Ref<PointsQueryHandle>)
+  beam_query(query: BeamQuery) -> (guard: Result<Ref<SpatialQueryGuard>, types::CreateError>)
+  zone_query(query: ZoneQuery) -> (guard: Result<Ref<SpatialQueryGuard>, types::CreateError>)
+  points_query(query: PointsQuery) -> (handle: Result<Ref<PointsQueryHandle>, types::CreateError>)
 }
 
 /// Point for a PointsQuery

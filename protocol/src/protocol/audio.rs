@@ -125,7 +125,7 @@ impl AudioInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         sound: impl Into<super::types::Resource>,
-    ) -> Result<Sound, gluon::SendError> {
+    ) -> Result<Result<Sound, super::types::ResourceLoadError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let sound: super::types::Resource = sound.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -176,7 +176,9 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
         sound: super::types::Resource,
-    ) -> impl Future<Output = Sound> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<Sound, super::types::ResourceLoadError>,
+    > + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

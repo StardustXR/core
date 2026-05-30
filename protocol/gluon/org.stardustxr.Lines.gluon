@@ -25,5 +25,5 @@ struct LinePoint {
 
 /// Entry point for creating Lines
 interface LinesInterface {
-	create_lines(spatial: Ref<spatial::Spatial>, lines: Vec<Line>) -> (lines: Ref<Lines>)
+	create_lines(spatial: Ref<spatial::Spatial>, lines: Vec<Line>) -> (lines: Result<Ref<Lines>, types::CreateError>)
 }

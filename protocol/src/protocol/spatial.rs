@@ -18,6 +18,16 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
             proxy: None,
         },
+        gluon::ExternalGluonType {
+            name: "CreatedSpatial",
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "SpatialRefOpError",
+            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
+        },
     ],
 };
 pub mod proxies {
@@ -226,6 +236,85 @@ impl gluon::Convertable for BoundingBox {
             let __w: super::types::proxied::Vec3F = self.extents.into();
             __w.write_owned(gluon_data)?;
         }
+        Ok(())
+    }
+}
+///Struct returned by SpatialInterface::create_spatial so it can have proper errors
+#[derive(Debug, Clone)]
+pub struct CreatedSpatial {
+    pub spatial: Spatial,
+    pub spatial_ref: SpatialRef,
+}
+impl gluon::Convertable for CreatedSpatial {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.spatial.write(gluon_data)?;
+        self.spatial_ref.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let spatial = gluon::Convertable::read(gluon_data)?;
+        let spatial_ref = gluon::Convertable::read(gluon_data)?;
+        Ok(CreatedSpatial {
+            spatial,
+            spatial_ref,
+        })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.spatial.write_owned(gluon_data)?;
+        self.spatial_ref.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Error returned when getting information from a SpatialRef
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum SpatialRefOpError {
+    ///The SpatialRef passed to relative_to is invalid
+    RelativeToInvalid,
+    ///The SpatialRef passed to spatial is invalid
+    SpatialRefInvalid,
+}
+impl gluon::Convertable for SpatialRefOpError {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            SpatialRefOpError::RelativeToInvalid => {
+                gluon_data.write_u16(0u16)?;
+            }
+            SpatialRefOpError::SpatialRefInvalid => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => SpatialRefOpError::RelativeToInvalid,
+                1u16 => SpatialRefOpError::SpatialRefInvalid,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            SpatialRefOpError::RelativeToInvalid => {
+                gluon_data.write_u16(0u16)?;
+            }
+            SpatialRefOpError::SpatialRefInvalid => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
         Ok(())
     }
 }
@@ -627,7 +716,7 @@ impl SpatialInterface {
         &self,
         parent: impl Into<SpatialRef>,
         transform: impl Into<Transform>,
-    ) -> Result<(Spatial, SpatialRef), gluon::SendError> {
+    ) -> Result<Result<CreatedSpatial, super::types::CreateError>, gluon::SendError> {
         let parent: SpatialRef = parent.into();
         let transform: Transform = transform.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -639,17 +728,14 @@ impl SpatialInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok((
-            gluon::Convertable::read(&mut reader)?,
-            gluon::Convertable::read(&mut reader)?,
-        ))
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     ///Get the relative bounding box of a spatial object relative to another spatial.
     pub async fn get_relative_bounding_box(
         &self,
         relative_to: impl Into<SpatialRef>,
         spatial: impl Into<SpatialRef>,
-    ) -> Result<BoundingBox, gluon::SendError> {
+    ) -> Result<Result<BoundingBox, SpatialRefOpError>, gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         let spatial: SpatialRef = spatial.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -668,7 +754,7 @@ impl SpatialInterface {
         &self,
         relative_to: impl Into<SpatialRef>,
         spatial: impl Into<SpatialRef>,
-    ) -> Result<Transform, gluon::SendError> {
+    ) -> Result<Result<Transform, SpatialRefOpError>, gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         let spatial: SpatialRef = spatial.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -724,21 +810,23 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         parent: SpatialRef,
         transform: Transform,
-    ) -> impl Future<Output = (Spatial, SpatialRef)> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<CreatedSpatial, super::types::CreateError>,
+    > + Send + Sync;
     ///Get the relative bounding box of a spatial object relative to another spatial.
     fn get_relative_bounding_box(
         &self,
         _ctx: gluon::Context,
         relative_to: SpatialRef,
         spatial: SpatialRef,
-    ) -> impl Future<Output = BoundingBox> + Send + Sync;
+    ) -> impl Future<Output = Result<BoundingBox, SpatialRefOpError>> + Send + Sync;
     ///Get the relative transform of a spatial object relative to another spatial.
     fn get_relative_transform(
         &self,
         _ctx: gluon::Context,
         relative_to: SpatialRef,
         spatial: SpatialRef,
-    ) -> impl Future<Output = Transform> + Send + Sync;
+    ) -> impl Future<Output = Result<Transform, SpatialRefOpError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -752,12 +840,11 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
-                    let (spatial, spatial_ref) = self
+                    let (spatial) = self
                         .create_spatial(ctx, param_parent, param_transform)
                         .await;
                     drop(gluon_data);
                     spatial.write_owned(&mut gluon_out)?;
-                    spatial_ref.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;

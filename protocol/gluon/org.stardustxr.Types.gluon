@@ -84,3 +84,16 @@ struct Timestamp {
     seconds: i64,
     nanoseconds: i64,
 }
+
+/// Error potentially produced when loading a resource
+enum ResourceLoadError {
+    /// invalid Ref used
+	InvalidRef,
+	NotFound,
+}
+
+/// Error potentially produced when creating an interface
+enum CreateError {
+    /// invalid Ref used
+	InvalidRef,
+}

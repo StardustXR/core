@@ -10,7 +10,7 @@ pub trait DmatexExt {
 		array_layers: u32,
 		planes: Vec<DmatexPlane>,
 		timeline_syncobj_fd: std::os::fd::OwnedFd,
-	) -> impl std::future::Future<Output = Result<DmatexRef, ServerError>> + Send;
+	) -> impl std::future::Future<Output = Result<Result<DmatexRef, DmatexImportError>, ServerError>> + Send;
 }
 impl DmatexExt for DmatexRef {
 	async fn import<H: ClientHandler>(
@@ -20,10 +20,7 @@ impl DmatexExt for DmatexRef {
 		array_layers: u32,
 		planes: Vec<DmatexPlane>,
 		timeline_syncobj_fd: std::os::fd::OwnedFd,
-	) -> Result<DmatexRef, ServerError> {
-		// should this just return a Gluon error or something like that? there aren't an
-		// SpatialRef handles or anything that could be wrong, unless you count the timeline
-		// syncobj fd
+	) -> Result<Result<DmatexRef, DmatexImportError>, ServerError> {
 		Ok(client
 			.dmatex_interface()
 			.import_dmatex(size, format, array_layers, planes, timeline_syncobj_fd)

@@ -18,6 +18,11 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
             proxy: None,
         },
+        gluon::ExternalGluonType {
+            name: "DmatexImportError",
+            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
+        },
     ],
 };
 pub mod proxies {
@@ -197,6 +202,82 @@ impl gluon::Convertable for DmatexSize {
         Ok(())
     }
 }
+///Error potentially produced when loading a model
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum DmatexImportError {
+    InvalidSize,
+    InvalidFormat,
+    UnsupportedArrayLayers { max_supported_layers: u32 },
+    InvalidPlanes,
+    InvalidTimelineFd,
+}
+impl gluon::Convertable for DmatexImportError {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            DmatexImportError::InvalidSize => {
+                gluon_data.write_u16(0u16)?;
+            }
+            DmatexImportError::InvalidFormat => {
+                gluon_data.write_u16(1u16)?;
+            }
+            DmatexImportError::UnsupportedArrayLayers { max_supported_layers } => {
+                gluon_data.write_u16(2u16)?;
+                max_supported_layers.write(gluon_data)?;
+            }
+            DmatexImportError::InvalidPlanes => {
+                gluon_data.write_u16(3u16)?;
+            }
+            DmatexImportError::InvalidTimelineFd => {
+                gluon_data.write_u16(4u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => DmatexImportError::InvalidSize,
+                1u16 => DmatexImportError::InvalidFormat,
+                2u16 => {
+                    let max_supported_layers = gluon::Convertable::read(gluon_data)?;
+                    DmatexImportError::UnsupportedArrayLayers {
+                        max_supported_layers,
+                    }
+                }
+                3u16 => DmatexImportError::InvalidPlanes,
+                4u16 => DmatexImportError::InvalidTimelineFd,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            DmatexImportError::InvalidSize => {
+                gluon_data.write_u16(0u16)?;
+            }
+            DmatexImportError::InvalidFormat => {
+                gluon_data.write_u16(1u16)?;
+            }
+            DmatexImportError::UnsupportedArrayLayers { max_supported_layers } => {
+                gluon_data.write_u16(2u16)?;
+                max_supported_layers.write_owned(gluon_data)?;
+            }
+            DmatexImportError::InvalidPlanes => {
+                gluon_data.write_u16(3u16)?;
+            }
+            DmatexImportError::InvalidTimelineFd => {
+                gluon_data.write_u16(4u16)?;
+            }
+        };
+        Ok(())
+    }
+}
 #[derive(Debug, Clone)]
 pub struct DmatexRef {
     obj: gluon::ObjectOrRef,
@@ -296,7 +377,7 @@ impl DmatexInterface {
         array_layers: impl Into<u32>,
         planes: impl Into<Vec<DmatexPlane>>,
         timeline_syncobj_fd: impl Into<std::os::fd::OwnedFd>,
-    ) -> Result<DmatexRef, gluon::SendError> {
+    ) -> Result<Result<DmatexRef, DmatexImportError>, gluon::SendError> {
         let size: DmatexSize = size.into();
         let format: DmatexFormat = format.into();
         let array_layers: u32 = array_layers.into();
@@ -319,7 +400,7 @@ impl DmatexInterface {
     pub async fn enumerate_formats(
         &self,
         render_node: impl Into<u64>,
-    ) -> Result<Vec<DmatexFormat>, gluon::SendError> {
+    ) -> Result<Option<Vec<DmatexFormat>>, gluon::SendError> {
         let render_node: u64 = render_node.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -383,12 +464,12 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         array_layers: u32,
         planes: Vec<DmatexPlane>,
         timeline_syncobj_fd: std::os::fd::OwnedFd,
-    ) -> impl Future<Output = DmatexRef> + Send + Sync;
+    ) -> impl Future<Output = Result<DmatexRef, DmatexImportError>> + Send + Sync;
     fn enumerate_formats(
         &self,
         _ctx: gluon::Context,
         render_node: u64,
-    ) -> impl Future<Output = Vec<DmatexFormat>> + Send + Sync;
+    ) -> impl Future<Output = Option<Vec<DmatexFormat>>> + Send + Sync;
     fn primary_render_node_id(
         &self,
         _ctx: gluon::Context,

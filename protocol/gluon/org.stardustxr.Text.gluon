@@ -3,7 +3,7 @@ import "org.stardustxr.Spatial" as spatial
 
 /// Entry point to displaying Text.
 interface TextInterface {
-	create_text(spatial: Ref<spatial::Spatial>, text: String, style: TextStyle) -> (text: Ref<Text>)
+	create_text(spatial: Ref<spatial::Spatial>, text: String, style: TextStyle) -> (text: Result<Ref<Text>, types::ResourceLoadError>)
 }
 
 /// Text rendered to work best in XR

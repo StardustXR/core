@@ -216,9 +216,6 @@ pub struct DefaultHandler {
 	frame_sender: broadcast::Sender<FrameInfo>,
 }
 impl ClientHandler for DefaultHandler {
-	// do we maybe want to wait for something in the main code paths?
-	async fn ping(&self, _ctx: gluon::Context) {}
-
 	async fn frame(&self, _ctx: gluon::Context, info: FrameInfo) {
 		_ = self.frame_sender.send(info);
 	}

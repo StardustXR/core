@@ -19,6 +19,11 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             proxy: None,
         },
         gluon::ExternalGluonType {
+            name: "CreatedField",
+            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
             name: "Shape",
             supported_derives: gluon::Derives::from_bits_truncate(2u32),
             proxy: None,
@@ -211,6 +216,35 @@ impl gluon::Convertable for CubicBezierControlPoint {
             __w.write_owned(gluon_data)?;
         }
         self.thickness.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Struct returned by FieldInterface::create_field so it can have proper errors
+#[derive(Debug, Clone)]
+pub struct CreatedField {
+    pub field: Field,
+    pub field_ref: FieldRef,
+}
+impl gluon::Convertable for CreatedField {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.field.write(gluon_data)?;
+        self.field_ref.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let field = gluon::Convertable::read(gluon_data)?;
+        let field_ref = gluon::Convertable::read(gluon_data)?;
+        Ok(CreatedField { field, field_ref })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.field.write_owned(gluon_data)?;
+        self.field_ref.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -829,7 +863,7 @@ impl FieldInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         shape: impl Into<Shape>,
-    ) -> Result<(Field, FieldRef), gluon::SendError> {
+    ) -> Result<Result<CreatedField, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let shape: Shape = shape.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -843,10 +877,7 @@ impl FieldInterface {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok((
-            gluon::Convertable::read(&mut reader)?,
-            gluon::Convertable::read(&mut reader)?,
-        ))
+        Ok(gluon::Convertable::read(&mut reader)?)
     }
     pub fn from_handler<H: FieldInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -900,7 +931,9 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
         shape: Shape,
-    ) -> impl Future<Output = (Field, FieldRef)> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<CreatedField, super::types::CreateError>,
+    > + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -966,12 +999,11 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
-                    let (field, field_ref) = self
+                    let (field) = self
                         .create_field(ctx, param_spatial, param_shape)
                         .await;
                     drop(gluon_data);
                     field.write_owned(&mut gluon_out)?;
-                    field_ref.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;

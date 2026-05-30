@@ -875,7 +875,7 @@ impl SpatialQueryInterface {
     pub async fn beam_query(
         &self,
         query: impl Into<BeamQuery>,
-    ) -> Result<SpatialQueryGuard, gluon::SendError> {
+    ) -> Result<Result<SpatialQueryGuard, super::types::CreateError>, gluon::SendError> {
         let query: BeamQuery = query.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -890,7 +890,7 @@ impl SpatialQueryInterface {
     pub async fn zone_query(
         &self,
         query: impl Into<ZoneQuery>,
-    ) -> Result<SpatialQueryGuard, gluon::SendError> {
+    ) -> Result<Result<SpatialQueryGuard, super::types::CreateError>, gluon::SendError> {
         let query: ZoneQuery = query.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -905,7 +905,7 @@ impl SpatialQueryInterface {
     pub async fn points_query(
         &self,
         query: impl Into<PointsQuery>,
-    ) -> Result<PointsQueryHandle, gluon::SendError> {
+    ) -> Result<Result<PointsQueryHandle, super::types::CreateError>, gluon::SendError> {
         let query: PointsQuery = query.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -957,17 +957,23 @@ pub trait SpatialQueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         query: BeamQuery,
-    ) -> impl Future<Output = SpatialQueryGuard> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<SpatialQueryGuard, super::types::CreateError>,
+    > + Send + Sync;
     fn zone_query(
         &self,
         _ctx: gluon::Context,
         query: ZoneQuery,
-    ) -> impl Future<Output = SpatialQueryGuard> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<SpatialQueryGuard, super::types::CreateError>,
+    > + Send + Sync;
     fn points_query(
         &self,
         _ctx: gluon::Context,
         query: PointsQuery,
-    ) -> impl Future<Output = PointsQueryHandle> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<PointsQueryHandle, super::types::CreateError>,
+    > + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

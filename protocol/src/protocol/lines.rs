@@ -224,7 +224,7 @@ impl LinesInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         lines: impl Into<Vec<Line>>,
-    ) -> Result<Lines, gluon::SendError> {
+    ) -> Result<Result<Lines, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let lines: Vec<Line> = lines.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -275,7 +275,7 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
         lines: Vec<Line>,
-    ) -> impl Future<Output = Lines> + Send + Sync;
+    ) -> impl Future<Output = Result<Lines, super::types::CreateError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

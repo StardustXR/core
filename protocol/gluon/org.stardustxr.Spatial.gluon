@@ -55,11 +55,24 @@ interface Spatial {
 /// Root interface for spatial operations.
 interface SpatialInterface {
 	/// Create a new spatial object.
-	create_spatial(parent: Ref<SpatialRef>, transform: Transform) -> (spatial: Ref<Spatial>, spatial_ref: Ref<SpatialRef>)
+	create_spatial(parent: Ref<SpatialRef>, transform: Transform) -> (spatial: Result<CreatedSpatial, types::CreateError>)
 
 	/// Get the relative bounding box of a spatial object relative to another spatial.
-	get_relative_bounding_box(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (bounding_box: BoundingBox)
+	get_relative_bounding_box(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (bounding_box: Result<BoundingBox, SpatialRefOpError>)
 
 	/// Get the relative transform of a spatial object relative to another spatial.
-	get_relative_transform(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (transform: Transform)
+	get_relative_transform(relative_to: Ref<SpatialRef>, spatial: Ref<SpatialRef>) -> (transform: Result<Transform, SpatialRefOpError>)
+}
+
+/// Struct returned by SpatialInterface::create_spatial so it can have proper errors
+struct CreatedSpatial {
+    spatial: Ref<Spatial>, 
+    spatial_ref: Ref<SpatialRef>
+}
+/// Error returned when getting information from a SpatialRef
+enum SpatialRefOpError {
+    /// The SpatialRef passed to relative_to is invalid
+    RelativeToInvalid,
+    /// The SpatialRef passed to spatial is invalid
+	SpatialRefInvalid,
 }

@@ -104,13 +104,16 @@ Returns None if the sky texture is already set.*/
     pub async fn set_sky_tex(
         &self,
         tex: impl Into<super::types::Resource>,
+        opaque: impl Into<bool>,
     ) -> Result<Option<SkyGuard>, gluon::SendError> {
         let tex: super::types::Resource = tex.into();
+        let opaque: bool = opaque.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
         gluon_builder.write_binder(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
+        opaque.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
@@ -171,6 +174,7 @@ Returns None if the sky texture is already set.*/
         &self,
         _ctx: gluon::Context,
         tex: super::types::Resource,
+        opaque: bool,
     ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
     /**Set the sky lighting to a given equirectagular texture, supports HDRI images.
 Returns None if the sky lighting is already set.*/
@@ -191,7 +195,8 @@ Returns None if the sky lighting is already set.*/
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
-                    let (guard) = self.set_sky_tex(ctx, param_tex).await;
+                    let param_opaque = gluon::Convertable::read(&mut gluon_data)?;
+                    let (guard) = self.set_sky_tex(ctx, param_tex, param_opaque).await;
                     drop(gluon_data);
                     guard.write_owned(&mut gluon_out)?;
                     return_callback

@@ -6,7 +6,7 @@ interface SkyGuard {}
 interface SkyInterface {
 	/// Set the sky texture to a given equirectagular texture.
 	/// Returns None if the sky texture is already set.
-	set_sky_tex(tex: types::Resource) -> (guard: Option<Ref<SkyGuard>>)
+	set_sky_tex(tex: types::Resource, opaque: bool) -> (guard: Option<Ref<SkyGuard>>)
 	/// Set the sky lighting to a given equirectagular texture, supports HDRI images.
 	/// Returns None if the sky lighting is already set.
 	set_sky_light(tex: types::Resource) -> (guard: Option<Ref<SkyGuard>>)

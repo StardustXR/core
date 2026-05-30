@@ -9,6 +9,7 @@ import "org.stardustxr.Client" as client
 import "org.stardustxr.Audio" as audio
 import "org.stardustxr.Query" as query
 import "org.stardustxr.SpatialQuery" as spatial_query
+import "org.stardustxr.Types" as types
 
 
 /// Proxy to your own client
@@ -29,7 +30,7 @@ interface Server {
 	/// Generate a client state token and return it back.
 	///
 	/// When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.
-	generate_startup_token(root: Ref<spatial::SpatialRef>) -> (token: String)
+	generate_startup_token(root: Ref<spatial::SpatialRef>) -> (token: Result<String, types::CreateError>)
 }
 
 /// The entry point for the stardust server

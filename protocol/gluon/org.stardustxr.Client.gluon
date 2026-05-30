@@ -9,7 +9,5 @@ struct FrameInfo {
 // The hub of the client. Spatially this is positioned where the client is started so is a stable base to position things relative to.
 /// Client
 interface Client {
-	ping() -> ()
-
 	frame(info: FrameInfo)
 }

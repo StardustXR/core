@@ -4,13 +4,14 @@
 
 use stardust_xr_protocol::client::ClientHandler;
 pub use stardust_xr_protocol::lines::*;
-use stardust_xr_protocol::model;
 pub use stardust_xr_protocol::model::*;
 pub use stardust_xr_protocol::sky::*;
 pub use stardust_xr_protocol::text::*;
 
 use stardust_xr_protocol::spatial::Spatial;
+use stardust_xr_protocol::types::CreateError;
 use stardust_xr_protocol::types::Resource;
+use stardust_xr_protocol::types::ResourceLoadError;
 
 use crate::{client::Client, error::ServerError};
 use thiserror::Error;
@@ -20,14 +21,14 @@ pub trait LinesExt {
 		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
-	) -> impl std::future::Future<Output = Result<Lines, ServerError>> + Send;
+	) -> impl std::future::Future<Output = Result<Result<Lines, CreateError>, ServerError>> + Send;
 }
 impl LinesExt for Lines {
 	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
-	) -> Result<Lines, ServerError> {
+	) -> Result<Result<Lines, CreateError>, ServerError> {
 		Ok(client
 			.lines_interface()
 			.create_lines(spatial.clone(), lines)
@@ -63,8 +64,8 @@ impl ModelExt for Model {
 			.load_model(spatial.clone(), model)
 			.await?
 			.map_err(|err| match err {
-				model::ModelLoadError::NotFound => ModelLoadError::NotFound,
-				model::ModelLoadError::InvalidSpatial => ModelLoadError::InvalidSpatial,
+				ResourceLoadError::NotFound => ModelLoadError::NotFound,
+				ResourceLoadError::InvalidRef => ModelLoadError::InvalidSpatial,
 			})
 	}
 }
@@ -75,7 +76,7 @@ pub trait TextExt {
 		spatial: &Spatial,
 		text: String,
 		style: TextStyle,
-	) -> impl std::future::Future<Output = Result<Text, ServerError>> + Send;
+	) -> impl std::future::Future<Output = Result<Result<Text, ResourceLoadError>, ServerError>> + Send;
 }
 impl TextExt for Text {
 	async fn create<H: ClientHandler>(
@@ -83,7 +84,7 @@ impl TextExt for Text {
 		spatial: &Spatial,
 		text: String,
 		style: TextStyle,
-	) -> Result<Text, ServerError> {
+	) -> Result<Result<Text, ResourceLoadError>, ServerError> {
 		// TODO: actually handle invalid handles at the protocol level
 		Ok(client
 			.text_interface()

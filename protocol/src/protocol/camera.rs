@@ -87,7 +87,7 @@ impl CameraInterface {
     pub async fn create_camera(
         &self,
         spatial: impl Into<super::spatial::Spatial>,
-    ) -> Result<Camera, gluon::SendError> {
+    ) -> Result<Result<Camera, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -135,7 +135,7 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
-    ) -> impl Future<Output = Camera> + Send + Sync;
+    ) -> impl Future<Output = Result<Camera, super::types::CreateError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

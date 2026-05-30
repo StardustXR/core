@@ -174,7 +174,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
     pub async fn generate_startup_token(
         &self,
         root: impl Into<super::spatial::SpatialRef>,
-    ) -> Result<String, gluon::SendError> {
+    ) -> Result<Result<String, super::types::CreateError>, gluon::SendError> {
         let root: super::spatial::SpatialRef = root.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -269,7 +269,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         &self,
         _ctx: gluon::Context,
         root: super::spatial::SpatialRef,
-    ) -> impl Future<Output = String> + Send + Sync;
+    ) -> impl Future<Output = Result<String, super::types::CreateError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

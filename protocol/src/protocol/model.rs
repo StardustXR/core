@@ -4,11 +4,6 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Model",
     types: &[
         gluon::ExternalGluonType {
-            name: "ModelLoadError",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
-            proxy: None,
-        },
-        gluon::ExternalGluonType {
             name: "MaterialParamError",
             supported_derives: gluon::Derives::from_bits_truncate(30u32),
             proxy: None,
@@ -22,51 +17,6 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 };
 pub mod proxies {
     use super::*;
-}
-///Error potentially produced when loading a model
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum ModelLoadError {
-    NotFound,
-    InvalidSpatial,
-}
-impl gluon::Convertable for ModelLoadError {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
-    ) -> Result<(), gluon::WriteError> {
-        match self {
-            ModelLoadError::NotFound => {
-                gluon_data.write_u16(0u16)?;
-            }
-            ModelLoadError::InvalidSpatial => {
-                gluon_data.write_u16(1u16)?;
-            }
-        };
-        Ok(())
-    }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        Ok(
-            match gluon_data.read_u16()? {
-                0u16 => ModelLoadError::NotFound,
-                1u16 => ModelLoadError::InvalidSpatial,
-                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
-            },
-        )
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
-    ) -> Result<(), gluon::WriteError> {
-        match self {
-            ModelLoadError::NotFound => {
-                gluon_data.write_u16(0u16)?;
-            }
-            ModelLoadError::InvalidSpatial => {
-                gluon_data.write_u16(1u16)?;
-            }
-        };
-        Ok(())
-    }
 }
 ///Error potentially produced when trying to set a material paramterer
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -361,7 +311,7 @@ impl ModelInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         model: impl Into<super::types::Resource>,
-    ) -> Result<Result<Model, ModelLoadError>, gluon::SendError> {
+    ) -> Result<Result<Model, super::types::ResourceLoadError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let model: super::types::Resource = model.into();
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -413,7 +363,9 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
         model: super::types::Resource,
-    ) -> impl Future<Output = Result<Model, ModelLoadError>> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<Model, super::types::ResourceLoadError>,
+    > + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

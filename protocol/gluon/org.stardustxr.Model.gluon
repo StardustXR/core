@@ -5,7 +5,7 @@ import "org.stardustxr.Dmatex" as dmatex
 /// Entry point for loading Models
 interface ModelInterface {
 	/// Load a GLTF model into a Model
-	load_model(spatial: Ref<spatial::Spatial>, model: types::Resource) -> (model: Result<Ref<Model>, ModelLoadError>)
+	load_model(spatial: Ref<spatial::Spatial>, model: types::Resource) -> (model: Result<Ref<Model>, types::ResourceLoadError>)
 }
 
 /// A GLTF model loaded by the server.
@@ -24,12 +24,6 @@ interface ModelPart {
 	set_material_parameter(parameter_name: String, value: MaterialParameter) -> (error: Option<MaterialParamError>)
 	/// Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
 	apply_holdout_material()
-}
-
-/// Error potentially produced when loading a model
-enum ModelLoadError {
-	NotFound,
-	InvalidSpatial,
 }
 
 /// Error potentially produced when trying to set a material paramterer

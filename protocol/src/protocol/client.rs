@@ -68,21 +68,11 @@ impl gluon::Convertable for Client {
     }
 }
 impl Client {
-    pub async fn ping(&self) -> Result<(), gluon::SendError> {
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(())
-    }
     pub fn frame(&self, info: impl Into<FrameInfo>) -> Result<(), gluon::SendError> {
         let info: FrameInfo = info.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         info.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: ClientHandler>(
@@ -117,7 +107,6 @@ impl PartialEq for Client {
 }
 impl Eq for Client {}
 pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
-    fn ping(&self, _ctx: gluon::Context) -> impl Future<Output = ()> + Send + Sync;
     fn frame(
         &self,
         _ctx: gluon::Context,
@@ -132,15 +121,6 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
-                    let () = self.ping(ctx).await;
-                    drop(gluon_data);
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                9u32 => {
                     let param_info = gluon::Convertable::read(&mut gluon_data)?;
                     drop(gluon_data);
                     self.frame(ctx, param_info).await;
