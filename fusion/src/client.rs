@@ -1,5 +1,8 @@
 //! Your connection to the Stardust server and other essentials.
 
+pub use stardust_xr_protocol::client::{ClientHandler, FrameInfo};
+
+use crate::error::Error;
 use gluon::Object;
 use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
@@ -18,28 +21,13 @@ use stardust_xr_protocol::{
 	text::TextInterface,
 };
 use std::{env, fs, path::Path, sync::Arc};
-use thiserror::Error;
 use tokio::sync::broadcast;
-
-pub use stardust_xr_protocol::client::{ClientHandler, FrameInfo};
 
 #[macro_export]
 macro_rules! project_local_resources {
 	($relative_path:expr) => {
 		std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join($relative_path)
 	};
-}
-
-#[derive(Error, Debug)]
-pub enum ClientError {
-	#[error("Unable to open servers pion file: {0}")]
-	PionFileError(std::io::Error),
-	#[error("Could not find the stardust server instance")]
-	NoServerFile,
-	#[error("Could not connect to the stardust server")]
-	ConnectionFailure,
-	#[error("Gluon error: {0}")]
-	GluonError(#[from] gluon::SendError),
 }
 
 /// Your connection to the Stardust server.
@@ -61,16 +49,14 @@ pub struct Client<H: ClientHandler> {
 }
 
 impl Client<DefaultHandler> {
-	pub async fn auto_connect(
-		resource_prefixes: &[&Path],
-	) -> Result<(Self, SpatialRef), ClientError> {
+	pub async fn auto_connect(resource_prefixes: &[&Path]) -> Result<(Self, SpatialRef), Error> {
 		let dev = PionBinderDevice::default();
 		Self::manual_connect(&dev, resource_prefixes).await
 	}
 	pub async fn manual_connect(
 		pion_device: &PionBinderDevice,
 		resource_prefixes: &[&Path],
-	) -> Result<(Self, SpatialRef), ClientError> {
+	) -> Result<(Self, SpatialRef), Error> {
 		// TODO: do proper checks to make sure this is actually a server interface
 		let handler = pion_device.register_object(DefaultHandler {
 			frame_sender: broadcast::channel(8).0,
@@ -86,7 +72,7 @@ impl<H: ClientHandler> Client<H> {
 	pub async fn auto_connect_with_handler(
 		handler: Object<H>,
 		resource_prefixes: &[&Path],
-	) -> Result<(Self, SpatialRef), ClientError> {
+	) -> Result<(Self, SpatialRef), Error> {
 		let dev = PionBinderDevice::default();
 		Self::manual_connect_with_handler(&dev, handler, resource_prefixes).await
 	}
@@ -95,8 +81,8 @@ impl<H: ClientHandler> Client<H> {
 		pion_device: &PionBinderDevice,
 		handler: Object<H>,
 		resource_prefixes: &[&Path],
-	) -> Result<(Client<H>, SpatialRef), ClientError> {
-		let server_path = find_pion_file("stardust-server").ok_or(ClientError::NoServerFile)?;
+	) -> Result<(Client<H>, SpatialRef), Error> {
+		let server_path = find_pion_file("stardust-server").ok_or(Error::NoServerFile)?;
 
 		let paths = resource_prefixes
 			.iter()
@@ -116,11 +102,11 @@ impl<H: ClientHandler> Client<H> {
 			.write(true)
 			.create(false)
 			.open(&server_path)
-			.map_err(ClientError::PionFileError)?;
+			.map_err(Error::PionFile)?;
 		let interface = pion_device
 			.get_binder_ref_from_file(file)
 			.await
-			.map_err(|_| ClientError::ConnectionFailure)?;
+			.map_err(|_| Error::ConnectionFailure)?;
 		// TODO: do proper checks to make sure this is actually a server interface
 		let server_interface = ServerInterface::from_object_or_ref(interface);
 		let client = ProtocolClient::from_handler(&handler);
@@ -128,7 +114,7 @@ impl<H: ClientHandler> Client<H> {
 		let (server, root) = server_interface
 			.connect(client, state_token, prefixes)
 			.await
-			.map_err(ClientError::GluonError)?;
+			.map_err(Error::Gluon)?;
 		Ok((
 			Client {
 				pion_dev: pion_device.clone(),

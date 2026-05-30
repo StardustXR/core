@@ -1,28 +1,27 @@
 //! Spatial query system
 
-use crate::{client::Client, error::ServerError};
-use stardust_xr_protocol::{client::ClientHandler, field::Field, spatial::Spatial};
-
 pub use stardust_xr_protocol::query::*;
+
+use crate::{Result, client::Client};
+use stardust_xr_protocol::{client::ClientHandler, field::Field, spatial::Spatial};
 
 pub trait QueryExt {
 	fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: Spatial,
 		field: Field,
-	) -> impl std::future::Future<Output = Result<Result<QueryableObject, QueryableError>, ServerError>>
-	+ Send;
+	) -> impl std::future::Future<Output = Result<QueryableObject>> + Send;
 }
 impl QueryExt for QueryableObject {
 	async fn create<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: Spatial,
 		field: Field,
-	) -> Result<Result<QueryableObject, QueryableError>, ServerError> {
+	) -> Result<QueryableObject> {
 		// TODO: actually handle invalid handles at the protocol level
 		Ok(client
 			.query_interface()
 			.register_queryable(spatial, field)
-			.await?)
+			.await??)
 	}
 }

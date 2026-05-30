@@ -2,12 +2,14 @@
 
 #![allow(dead_code)]
 
+mod error;
+pub use error::{Error, Result};
+
 pub mod audio;
 pub mod camera;
 pub mod client;
 pub mod dmatex;
 pub mod drawable;
-pub mod error;
 pub mod fields;
 pub mod query;
 pub mod spatial;
