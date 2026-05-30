@@ -70,7 +70,7 @@ async fn main() {
 		let handler_spatials: Vec<SpatialRef> = handlers.lock().values().cloned().collect();
 		let mut drawn_lines = Vec::new();
 		for handler_spatial in handler_spatials {
-			let Ok(transform) = client
+			let Ok(Ok(transform)) = client
 				.spatial_interface()
 				.get_relative_transform(spatial_ref.clone(), handler_spatial)
 				.await
