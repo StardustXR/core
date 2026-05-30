@@ -1,6 +1,5 @@
+pub use crate::protocol::dmatex::*;
 use std::{error::Error, fmt::Display};
-
-use crate::protocol::dmatex::DmatexImportError;
 
 impl Error for DmatexImportError {}
 impl Display for DmatexImportError {

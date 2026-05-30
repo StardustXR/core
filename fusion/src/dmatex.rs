@@ -10,7 +10,8 @@ pub trait DmatexExt {
 		array_layers: u32,
 		planes: Vec<DmatexPlane>,
 		timeline_syncobj_fd: std::os::fd::OwnedFd,
-	) -> impl std::future::Future<Output = Result<Result<DmatexRef, DmatexImportError>, ServerError>> + Send;
+	) -> impl std::future::Future<Output = Result<Result<DmatexRef, DmatexImportError>, ServerError>>
+	+ Send;
 }
 impl DmatexExt for DmatexRef {
 	async fn import<H: ClientHandler>(
