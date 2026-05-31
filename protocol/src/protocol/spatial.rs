@@ -436,7 +436,7 @@ impl Spatial {
     pub async fn get_relative_bounding_box(
         &self,
         relative_to: impl Into<SpatialRef>,
-    ) -> Result<BoundingBox, gluon::SendError> {
+    ) -> Result<Result<BoundingBox, super::types::CreateError>, gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -454,7 +454,7 @@ impl Spatial {
     pub async fn get_relative_transform(
         &self,
         relative_to: impl Into<SpatialRef>,
-    ) -> Result<Transform, gluon::SendError> {
+    ) -> Result<Result<Transform, super::types::CreateError>, gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -572,13 +572,17 @@ pub trait SpatialHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         relative_to: SpatialRef,
-    ) -> impl Future<Output = BoundingBox> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<BoundingBox, super::types::CreateError>,
+    > + Send + Sync;
     ///Get the transform of this spatial object.
     fn get_relative_transform(
         &self,
         _ctx: gluon::Context,
         relative_to: SpatialRef,
-    ) -> impl Future<Output = Transform> + Send + Sync;
+    ) -> impl Future<
+        Output = Result<Transform, super::types::CreateError>,
+    > + Send + Sync;
     /**Sets the parent of this spatial object, keeping the local transform.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
     fn set_parent(
