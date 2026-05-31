@@ -59,9 +59,17 @@ interface PointsQueryHandler {
 
 /// main spatial query service
 interface SpatialQueryInterface {
-  beam_query(query: BeamQuery) -> (guard: Result<Ref<SpatialQueryGuard>, types::CreateError>)
-  zone_query(query: ZoneQuery) -> (guard: Result<Ref<SpatialQueryGuard>, types::CreateError>)
-  points_query(query: PointsQuery) -> (handle: Result<Ref<PointsQueryHandle>, types::CreateError>)
+  beam_query(query: BeamQuery) -> (guard: Result<Ref<SpatialQueryGuard>, QueryError>)
+  zone_query(query: ZoneQuery) -> (guard: Result<Ref<SpatialQueryGuard>, QueryError>)
+  points_query(query: PointsQuery) -> (handle: Result<Ref<PointsQueryHandle>, QueryError>)
+}
+
+/// Error potentially returned when registering a query
+enum QueryError {
+    /// Invalid Refs for objects owned by the server
+    InvalidRef,
+	/// Querying requires at least one required interface
+    NoRequiredInterfaces,
 }
 
 /// Point for a PointsQuery

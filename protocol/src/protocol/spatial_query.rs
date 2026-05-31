@@ -23,6 +23,11 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             supported_derives: gluon::Derives::from_bits_truncate(3u32),
             proxy: None,
         },
+        gluon::ExternalGluonType {
+            name: "QueryError",
+            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            proxy: None,
+        },
     ],
 };
 pub mod proxies {
@@ -224,6 +229,53 @@ impl gluon::Convertable for Point {
             __w.write_owned(gluon_data)?;
         }
         self.margin.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Error potentially returned when registering a query
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum QueryError {
+    ///Invalid Refs for objects owned by the server
+    InvalidRef,
+    ///Querying requires at least one required interface
+    NoRequiredInterfaces,
+}
+impl gluon::Convertable for QueryError {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            QueryError::InvalidRef => {
+                gluon_data.write_u16(0u16)?;
+            }
+            QueryError::NoRequiredInterfaces => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => QueryError::InvalidRef,
+                1u16 => QueryError::NoRequiredInterfaces,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            QueryError::InvalidRef => {
+                gluon_data.write_u16(0u16)?;
+            }
+            QueryError::NoRequiredInterfaces => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
         Ok(())
     }
 }
@@ -875,7 +927,7 @@ impl SpatialQueryInterface {
     pub async fn beam_query(
         &self,
         query: impl Into<BeamQuery>,
-    ) -> Result<Result<SpatialQueryGuard, super::types::CreateError>, gluon::SendError> {
+    ) -> Result<Result<SpatialQueryGuard, QueryError>, gluon::SendError> {
         let query: BeamQuery = query.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -890,7 +942,7 @@ impl SpatialQueryInterface {
     pub async fn zone_query(
         &self,
         query: impl Into<ZoneQuery>,
-    ) -> Result<Result<SpatialQueryGuard, super::types::CreateError>, gluon::SendError> {
+    ) -> Result<Result<SpatialQueryGuard, QueryError>, gluon::SendError> {
         let query: ZoneQuery = query.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -905,7 +957,7 @@ impl SpatialQueryInterface {
     pub async fn points_query(
         &self,
         query: impl Into<PointsQuery>,
-    ) -> Result<Result<PointsQueryHandle, super::types::CreateError>, gluon::SendError> {
+    ) -> Result<Result<PointsQueryHandle, QueryError>, gluon::SendError> {
         let query: PointsQuery = query.into();
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -957,23 +1009,17 @@ pub trait SpatialQueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         query: BeamQuery,
-    ) -> impl Future<
-        Output = Result<SpatialQueryGuard, super::types::CreateError>,
-    > + Send + Sync;
+    ) -> impl Future<Output = Result<SpatialQueryGuard, QueryError>> + Send + Sync;
     fn zone_query(
         &self,
         _ctx: gluon::Context,
         query: ZoneQuery,
-    ) -> impl Future<
-        Output = Result<SpatialQueryGuard, super::types::CreateError>,
-    > + Send + Sync;
+    ) -> impl Future<Output = Result<SpatialQueryGuard, QueryError>> + Send + Sync;
     fn points_query(
         &self,
         _ctx: gluon::Context,
         query: PointsQuery,
-    ) -> impl Future<
-        Output = Result<PointsQueryHandle, super::types::CreateError>,
-    > + Send + Sync;
+    ) -> impl Future<Output = Result<PointsQueryHandle, QueryError>> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
