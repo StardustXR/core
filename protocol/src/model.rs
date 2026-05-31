@@ -29,6 +29,7 @@ impl Display for MaterialParamError {
 				)
 			}
 			MaterialParamError::Holdout => f.write_str("Holdout material was applied previously"),
+			MaterialParamError::InvalidValue => f.write_str("Invalid value"),
 		}
 	}
 }

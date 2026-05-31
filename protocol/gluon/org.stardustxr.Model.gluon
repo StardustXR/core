@@ -36,6 +36,7 @@ enum MaterialParamError {
 	},
 	/// ModelPart had apply_holdout_material called before
 	Holdout,
+	InvalidValue,
 }
 
 /// Material parameter values

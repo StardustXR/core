@@ -25,6 +25,7 @@ pub enum MaterialParamError {
     IncorrectType { valid_type: String },
     ///ModelPart had apply_holdout_material called before
     Holdout,
+    InvalidValue,
 }
 impl gluon::Convertable for MaterialParamError {
     fn write<'a, 'b: 'a>(
@@ -42,6 +43,9 @@ impl gluon::Convertable for MaterialParamError {
             }
             MaterialParamError::Holdout => {
                 gluon_data.write_u16(2u16)?;
+            }
+            MaterialParamError::InvalidValue => {
+                gluon_data.write_u16(3u16)?;
             }
         };
         Ok(())
@@ -62,6 +66,7 @@ impl gluon::Convertable for MaterialParamError {
                     }
                 }
                 2u16 => MaterialParamError::Holdout,
+                3u16 => MaterialParamError::InvalidValue,
                 v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
             },
         )
@@ -81,6 +86,9 @@ impl gluon::Convertable for MaterialParamError {
             }
             MaterialParamError::Holdout => {
                 gluon_data.write_u16(2u16)?;
+            }
+            MaterialParamError::InvalidValue => {
+                gluon_data.write_u16(3u16)?;
             }
         };
         Ok(())
