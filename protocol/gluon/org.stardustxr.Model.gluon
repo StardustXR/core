@@ -12,7 +12,6 @@ interface ModelInterface {
 interface Model {
 	get_part(path: String) -> (part: Option<Ref<ModelPart>>)
 	enumerate_parts() -> (parts: Vec<Ref<ModelPart>>)
-	set_model_scale(scale: types::Vec3f)
 }
 
 /// A graphical node in the GLTF hierarchy for the given model. Can be reparented and have material parameters set on.

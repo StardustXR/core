@@ -448,18 +448,6 @@ impl Model {
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         Ok(gluon::Convertable::read(&mut reader)?)
     }
-    pub fn set_model_scale(
-        &self,
-        scale: crate::types::Vec3F,
-    ) -> Result<(), gluon::SendError> {
-        let scale: super::types::proxied::Vec3F = scale.into();
-        let mut gluon_builder = gluon::DataBuilder::new();
-        scale.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
     pub fn from_handler<H: ModelHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Model {
         Model::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
     }
@@ -499,11 +487,6 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = Vec<ModelPart>> + Send + Sync;
-    fn set_model_scale(
-        &self,
-        _ctx: gluon::Context,
-        scale: crate::types::Vec3F,
-    ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -532,16 +515,6 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
                     return_callback
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                10u32 => {
-                    let param_scale: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
-                        __w.into()
-                    };
-                    drop(gluon_data);
-                    self.set_model_scale(ctx, param_scale).await;
                 }
                 _ => {}
             }
