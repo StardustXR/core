@@ -40,4 +40,5 @@ enum DmatexImportError {
 	UnsupportedArrayLayers { max_supported_layers: u32 },
 	InvalidPlanes,
 	InvalidTimelineFd,
+	InternalImportError,
 }

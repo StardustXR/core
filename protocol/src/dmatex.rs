@@ -14,6 +14,7 @@ impl Display for DmatexImportError {
 			)),
 			DmatexImportError::InvalidPlanes => f.write_str("Invalid planes"),
 			DmatexImportError::InvalidTimelineFd => f.write_str("Invalide timeline syncobj"),
+			DmatexImportError::InternalImportError => f.write_str("Internal Dmatex Import Error"),
 		}
 	}
 }

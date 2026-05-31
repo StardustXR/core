@@ -210,6 +210,7 @@ pub enum DmatexImportError {
     UnsupportedArrayLayers { max_supported_layers: u32 },
     InvalidPlanes,
     InvalidTimelineFd,
+    InternalImportError,
 }
 impl gluon::Convertable for DmatexImportError {
     fn write<'a, 'b: 'a>(
@@ -233,6 +234,9 @@ impl gluon::Convertable for DmatexImportError {
             DmatexImportError::InvalidTimelineFd => {
                 gluon_data.write_u16(4u16)?;
             }
+            DmatexImportError::InternalImportError => {
+                gluon_data.write_u16(5u16)?;
+            }
         };
         Ok(())
     }
@@ -249,6 +253,7 @@ impl gluon::Convertable for DmatexImportError {
                 }
                 3u16 => DmatexImportError::InvalidPlanes,
                 4u16 => DmatexImportError::InvalidTimelineFd,
+                5u16 => DmatexImportError::InternalImportError,
                 v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
             },
         )
@@ -273,6 +278,9 @@ impl gluon::Convertable for DmatexImportError {
             }
             DmatexImportError::InvalidTimelineFd => {
                 gluon_data.write_u16(4u16)?;
+            }
+            DmatexImportError::InternalImportError => {
+                gluon_data.write_u16(5u16)?;
             }
         };
         Ok(())
