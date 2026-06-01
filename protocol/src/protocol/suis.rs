@@ -5,32 +5,32 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "Joint",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Finger",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Thumb",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Hand",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Pointer",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Tip",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -40,7 +40,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "SpatialData",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -50,12 +50,12 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "InputDataType",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "DatamapData",
-            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
     ],
@@ -64,7 +64,7 @@ pub mod proxies {
     use super::*;
 }
 ///A hand joint. Distance from input handler's field is given because it's cheap to calculate and laggy to request from the server.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Joint {
     ///Pose of the joint relative to the input handler.
     pub pose: super::types::Posef,
@@ -100,7 +100,7 @@ impl gluon::Convertable for Joint {
     }
 }
 ///Finger
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Finger {
     pub tip: Joint,
     pub distal: Joint,
@@ -147,7 +147,7 @@ impl gluon::Convertable for Finger {
     }
 }
 ///Different than finger to be explicit about number of joints.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Thumb {
     pub tip: Joint,
     pub distal: Joint,
@@ -189,7 +189,7 @@ impl gluon::Convertable for Thumb {
     }
 }
 ///A fully articulated and tracked hand (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#convention-of-hand-joints).
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Hand {
     pub chirality: Chirality,
     pub thumb: Thumb,
@@ -256,7 +256,7 @@ impl gluon::Convertable for Hand {
     }
 }
 ///A 3D pointer, such as a gaze pointer for eye tracking or a mouse or a ray from a controller.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Pointer {
     ///Often corresponds to the aim pose (https://registry.khronos.org/OpenXR/specs/1.1/html/xrspec.html#semantic-paths-standard-pose-identifiers)
     pub pose: super::types::Posef,
@@ -288,7 +288,7 @@ impl gluon::Convertable for Pointer {
     }
 }
 ///Represents a controller, pen tip, spatial cursor, etc. that is just a single point.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Tip {
     ///Pose you can use to tap/poke elements (in front of the face of a controller, or on a pen tip).
     pub pose: super::types::Posef,
@@ -380,7 +380,7 @@ impl gluon::Convertable for SemanticData {
     }
 }
 ///Information about a given input method's spatial state. All coordinates are relative to the InputHandlers SpatialRef.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct SpatialData {
     ///All vectors and quaternions are relative to the input handler spatial ref.
     pub input: InputDataType,
@@ -456,7 +456,7 @@ impl gluon::Convertable for Chirality {
     }
 }
 ///The special type of an InputMethod.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum InputDataType {
     Pointer { data: Pointer },
     Hand { data: Hand },
@@ -524,7 +524,7 @@ impl gluon::Convertable for InputDataType {
     }
 }
 ///Data types for datamap
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DatamapData {
     Bool { value: bool },
     Float { value: f32 },

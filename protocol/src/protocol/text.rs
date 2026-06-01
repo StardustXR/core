@@ -5,12 +5,12 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "TextBounds",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "TextStyle",
-            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -34,7 +34,7 @@ pub mod proxies {
     use super::*;
 }
 ///Bounds for text
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TextBounds {
     ///Bounds in meters
     pub bounds: crate::types::Vec2F,
@@ -88,7 +88,7 @@ impl gluon::Convertable for TextBounds {
     }
 }
 ///Styling info for text
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TextStyle {
     ///Height of a character in meters
     pub character_height: f32,

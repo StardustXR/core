@@ -5,17 +5,17 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "Transform",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "PartialTransform",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "BoundingBox",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -34,7 +34,7 @@ pub mod proxies {
     use super::*;
 }
 ///Transform
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Transform {
     pub translation: crate::types::Vec3F,
     pub rotation: crate::types::QuatF,
@@ -104,7 +104,7 @@ impl gluon::Convertable for Transform {
     }
 }
 ///Transform
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct PartialTransform {
     pub translation: Option<crate::types::Vec3F>,
     pub rotation: Option<crate::types::QuatF>,
@@ -189,7 +189,7 @@ impl gluon::Convertable for PartialTransform {
     }
 }
 ///Bounding box
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct BoundingBox {
     pub center: crate::types::Vec3F,
     pub extents: crate::types::Vec3F,

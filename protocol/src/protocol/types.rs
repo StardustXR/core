@@ -35,12 +35,12 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "Mat4f",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: Some("proxies::Mat4F"),
         },
         gluon::ExternalGluonType {
             name: "Posef",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -82,7 +82,7 @@ pub mod proxies {
     pub use crate::types::Color;
 }
 ///Pose
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Posef {
     pub position: crate::types::Vec3F,
     pub orientation: crate::types::QuatF,
@@ -512,7 +512,7 @@ pub mod proxied {
         }
     }
     ///Colum major matrix
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug, Copy, Clone, PartialEq)]
     pub struct Mat4F {
         pub x: crate::types::Vec4F,
         pub y: crate::types::Vec4F,

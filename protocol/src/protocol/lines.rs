@@ -5,12 +5,12 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "Line",
-            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "LinePoint",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
     ],
@@ -19,7 +19,7 @@ pub mod proxies {
     use super::*;
 }
 ///A single continuous polyline
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Line {
     pub points: Vec<LinePoint>,
     ///Whether this line is a closed loop
@@ -49,7 +49,7 @@ impl gluon::Convertable for Line {
     }
 }
 ///A single point on a line
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct LinePoint {
     ///The position of the point relative to the Lines Spatial
     pub point: crate::types::Vec3F,

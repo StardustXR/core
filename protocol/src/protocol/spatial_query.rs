@@ -20,7 +20,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "Point",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -193,7 +193,7 @@ impl gluon::Convertable for PointsQuery {
     }
 }
 ///Point for a PointsQuery
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point {
     pub point: crate::types::Vec3F,
     pub margin: f32,

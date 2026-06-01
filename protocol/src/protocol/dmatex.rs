@@ -15,7 +15,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "DmatexSize",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(31u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -113,7 +113,7 @@ impl gluon::Convertable for DmatexPlane {
     }
 }
 ///Size of a DMA texture.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum DmatexSize {
     Size1D { size: u32 },
     Size2D { size: crate::types::Size2 },

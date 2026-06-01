@@ -5,7 +5,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "FieldSample",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -15,7 +15,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "CubicBezierControlPoint",
-            supported_derives: gluon::Derives::from_bits_truncate(3u32),
+            supported_derives: gluon::Derives::from_bits_truncate(11u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -25,7 +25,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "Shape",
-            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
     ],
@@ -34,7 +34,7 @@ pub mod proxies {
     use super::*;
 }
 ///Information about the field at a sample point in space.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct FieldSample {
     ///Signed Euclidean distance: negative inside, positive outside.
     pub distance: f32,
@@ -144,7 +144,7 @@ impl gluon::Convertable for RayMarchResult {
     }
 }
 ///Control point for cubic bezier spline
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct CubicBezierControlPoint {
     pub handle_in: crate::types::Vec3F,
     pub anchor: crate::types::Vec3F,
@@ -249,7 +249,7 @@ impl gluon::Convertable for CreatedField {
     }
 }
 ///Shape for a signed distance field.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Shape {
     ///Axis-aligned box.  `size` = full extents in metres.
     Box { size: crate::types::Vec3F },
