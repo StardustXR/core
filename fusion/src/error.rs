@@ -1,5 +1,6 @@
 use stardust_xr_protocol::{
 	dmatex::DmatexImportError,
+	model::MaterialParamError,
 	query::QueryableError,
 	types::{CreateError, ResourceLoadError},
 };
@@ -22,6 +23,8 @@ pub enum Error {
 	Create(#[from] CreateError),
 	#[error("Dmatex import error: {0}")]
 	DmatexImport(#[from] DmatexImportError),
+	#[error("Material param error: {0}")]
+	MaterialParam(#[from] MaterialParamError),
 	#[error("Resource loading error: {0}")]
 	ResourceLoad(#[from] ResourceLoadError),
 	#[error("Queryable error: {0}")]
