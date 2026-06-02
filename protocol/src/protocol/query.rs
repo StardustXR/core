@@ -10,7 +10,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "QueriedInterface",
-            supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            supported_derives: gluon::Derives::from_bits_truncate(30u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -57,7 +57,7 @@ impl gluon::Convertable for InterfaceDependency {
     }
 }
 ///A successfully queried interface
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct QueriedInterface {
     pub interface_id: String,
     pub interface: gluon::ObjectOrRef,

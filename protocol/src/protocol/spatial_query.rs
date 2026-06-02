@@ -5,17 +5,17 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "BeamQuery",
-            supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "ZoneQuery",
-            supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "PointsQuery",
-            supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            supported_derives: gluon::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -34,7 +34,7 @@ pub mod proxies {
     use super::*;
 }
 ///shoot a beam and return everything it hit
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BeamQuery {
     pub handler: BeamQueryHandler,
     pub interfaces: Vec<super::query::InterfaceDependency>,
@@ -109,7 +109,7 @@ impl gluon::Convertable for BeamQuery {
     }
 }
 ///Get interfaces intersecting this field
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ZoneQuery {
     pub handler: ZoneQueryHandler,
     pub interfaces: Vec<super::query::InterfaceDependency>,
@@ -151,7 +151,7 @@ impl gluon::Convertable for ZoneQuery {
     }
 }
 ///Get interfaces of fields containing any points
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PointsQuery {
     pub handler: PointsQueryHandler,
     pub interfaces: Vec<super::query::InterfaceDependency>,

@@ -20,7 +20,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "CreatedField",
-            supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            supported_derives: gluon::Derives::from_bits_truncate(30u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -223,7 +223,7 @@ impl gluon::Convertable for CubicBezierControlPoint {
     }
 }
 ///Struct returned by FieldInterface::create_field so it can have proper errors
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct CreatedField {
     pub field: Field,
     pub field_ref: FieldRef,

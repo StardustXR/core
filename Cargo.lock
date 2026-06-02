@@ -210,7 +210,7 @@ dependencies = [
 [[package]]
 name = "gluon"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#45a2f214ccedcd4842497e028c0f7ffb739af5ca"
+source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
 dependencies = [
  "binderbinder",
  "bitflags",
@@ -223,7 +223,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#45a2f214ccedcd4842497e028c0f7ffb739af5ca"
+source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
 dependencies = [
  "convert_case",
  "gluon",
@@ -237,7 +237,7 @@ dependencies = [
 [[package]]
 name = "gluon-derive"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#45a2f214ccedcd4842497e028c0f7ffb739af5ca"
+source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
 dependencies = [
  "quote",
  "syn",
@@ -246,7 +246,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#45a2f214ccedcd4842497e028c0f7ffb739af5ca"
+source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
 dependencies = [
  "ansi_term",
  "chumsky",
