@@ -10,7 +10,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "MaterialParameter",
-            supported_derives: gluon::Derives::from_bits_truncate(2u32),
+            supported_derives: gluon::Derives::from_bits_truncate(0u32),
             proxy: None,
         },
     ],
@@ -96,7 +96,7 @@ impl gluon::Convertable for MaterialParamError {
     }
 }
 ///Material parameter values
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum MaterialParameter {
     Bool { value: bool },
     Int { value: i32 },
