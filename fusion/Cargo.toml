@@ -12,6 +12,7 @@ homepage.workspace = true
 [features]
 default = []
 keymap = ["dep:xkbcommon"]
+serde = ["stardust-xr-protocol/serde"]
 
 [dependencies]
 glam = { version = "0.30.0", features = ["mint"] }
