@@ -11,7 +11,6 @@ homepage.workspace = true
 
 [features]
 default = []
-keymap = ["dep:xkbcommon"]
 serde = ["stardust-xr-protocol/serde"]
 
 [dependencies]
@@ -27,7 +26,6 @@ tokio = { version = "1.38.0", features = [
 	"io-util",
 	"signal",
 ] }
-xkbcommon = { version = "0.9.0", default-features = false, optional = true }
 tracing = "0.1.37"
 stardust-xr-protocol = { version = "0.51.0", path = "../protocol" }
 gluon = { git = "https://github.com/technobaboo/gluon", features = [
