@@ -5,27 +5,27 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "TextBounds",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "TextStyle",
-            supported_derives: gluon::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon::Derives::from_bits_truncate(778u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "XAlign",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "YAlign",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "TextFit",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
     ],
@@ -35,6 +35,7 @@ pub mod proxies {
 }
 ///Bounds for text
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TextBounds {
     ///Bounds in meters
     pub bounds: crate::types::Vec2F,
@@ -89,6 +90,7 @@ impl gluon::Convertable for TextBounds {
 }
 ///Styling info for text
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TextStyle {
     ///Height of a character in meters
     pub character_height: f32,
@@ -153,6 +155,7 @@ impl gluon::Convertable for TextStyle {
 }
 ///X alignment
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum XAlign {
     Left,
     Center,
@@ -206,6 +209,7 @@ impl gluon::Convertable for XAlign {
 }
 ///Y alignment
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum YAlign {
     Top,
     Center,
@@ -259,6 +263,7 @@ impl gluon::Convertable for YAlign {
 }
 ///How the text fits in a box of any size
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TextFit {
     Wrap,
     Clip,

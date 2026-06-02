@@ -5,17 +5,17 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "Transform",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "PartialTransform",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "BoundingBox",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -25,7 +25,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "SpatialRefOpError",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
     ],
@@ -35,6 +35,7 @@ pub mod proxies {
 }
 ///Transform
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Transform {
     pub translation: crate::types::Vec3F,
     pub rotation: crate::types::QuatF,
@@ -105,6 +106,7 @@ impl gluon::Convertable for Transform {
 }
 ///Transform
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialTransform {
     pub translation: Option<crate::types::Vec3F>,
     pub rotation: Option<crate::types::QuatF>,
@@ -190,6 +192,7 @@ impl gluon::Convertable for PartialTransform {
 }
 ///Bounding box
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BoundingBox {
     pub center: crate::types::Vec3F,
     pub extents: crate::types::Vec3F,
@@ -273,6 +276,7 @@ impl gluon::Convertable for CreatedSpatial {
 }
 ///Error returned when getting information from a SpatialRef
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SpatialRefOpError {
     ///The SpatialRef passed to relative_to is invalid
     RelativeToInvalid,

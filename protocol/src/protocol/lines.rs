@@ -5,12 +5,12 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "Line",
-            supported_derives: gluon::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon::Derives::from_bits_truncate(778u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "LinePoint",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
     ],
@@ -20,6 +20,7 @@ pub mod proxies {
 }
 ///A single continuous polyline
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Line {
     pub points: Vec<LinePoint>,
     ///Whether this line is a closed loop
@@ -50,6 +51,7 @@ impl gluon::Convertable for Line {
 }
 ///A single point on a line
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LinePoint {
     ///The position of the point relative to the Lines Spatial
     pub point: crate::types::Vec3F,

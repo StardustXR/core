@@ -5,17 +5,17 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "FieldSample",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "RayMarchResult",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "CubicBezierControlPoint",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -25,7 +25,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "Shape",
-            supported_derives: gluon::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon::Derives::from_bits_truncate(778u32),
             proxy: None,
         },
     ],
@@ -35,6 +35,7 @@ pub mod proxies {
 }
 ///Information about the field at a sample point in space.
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FieldSample {
     ///Signed Euclidean distance: negative inside, positive outside.
     pub distance: f32,
@@ -99,6 +100,7 @@ impl gluon::Convertable for FieldSample {
 }
 ///Results for a ray march against a signed distance field
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RayMarchResult {
     ///How close to or far inside the field the ray got. If less than zero, the ray intersected the field.
     pub min_distance: f32,
@@ -145,6 +147,7 @@ impl gluon::Convertable for RayMarchResult {
 }
 ///Control point for cubic bezier spline
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CubicBezierControlPoint {
     pub handle_in: crate::types::Vec3F,
     pub anchor: crate::types::Vec3F,
@@ -250,6 +253,7 @@ impl gluon::Convertable for CreatedField {
 }
 ///Shape for a signed distance field.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Shape {
     ///Axis-aligned box.  `size` = full extents in metres.
     Box { size: crate::types::Vec3F },

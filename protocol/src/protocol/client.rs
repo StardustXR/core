@@ -5,7 +5,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "FrameInfo",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
     ],
@@ -15,6 +15,7 @@ pub mod proxies {
 }
 ///Information for a specific frame
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FrameInfo {
     pub delta: f32,
     pub predicted_display_time: super::types::Timestamp,

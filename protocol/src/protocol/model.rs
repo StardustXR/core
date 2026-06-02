@@ -5,7 +5,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "MaterialParamError",
-            supported_derives: gluon::Derives::from_bits_truncate(30u32),
+            supported_derives: gluon::Derives::from_bits_truncate(798u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -20,6 +20,7 @@ pub mod proxies {
 }
 ///Error potentially produced when trying to set a material paramterer
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MaterialParamError {
     ParamNotFound { known_params: Vec<String> },
     IncorrectType { valid_type: String },

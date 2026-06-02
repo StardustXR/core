@@ -5,67 +5,67 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "Size2",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: Some("proxies::Size2"),
         },
         gluon::ExternalGluonType {
             name: "Size3",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: Some("proxies::Size3"),
         },
         gluon::ExternalGluonType {
             name: "Vec2f",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::Vec2F"),
         },
         gluon::ExternalGluonType {
             name: "Vec3f",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::Vec3F"),
         },
         gluon::ExternalGluonType {
             name: "Vec4f",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::Vec4F"),
         },
         gluon::ExternalGluonType {
             name: "Quatf",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::QuatF"),
         },
         gluon::ExternalGluonType {
             name: "Mat4f",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::Mat4F"),
         },
         gluon::ExternalGluonType {
             name: "Posef",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Color",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::Color"),
         },
         gluon::ExternalGluonType {
             name: "Timestamp",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "Resource",
-            supported_derives: gluon::Derives::from_bits_truncate(30u32),
+            supported_derives: gluon::Derives::from_bits_truncate(798u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "ResourceLoadError",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "CreateError",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
     ],
@@ -83,6 +83,7 @@ pub mod proxies {
 }
 ///Pose
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Posef {
     pub position: crate::types::Vec3F,
     pub orientation: crate::types::QuatF,
@@ -130,6 +131,7 @@ impl gluon::Convertable for Posef {
 }
 ///Timestamp on the monotonic clock
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Timestamp {
     pub seconds: i64,
     pub nanoseconds: i64,
@@ -159,6 +161,7 @@ impl gluon::Convertable for Timestamp {
 }
 ///An identifier to a resource, such as a sound, model or texture
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Resource {
     /**An absolute path to a resource, not themed at all.
 You should only use this for content not included with your client.*/
@@ -229,6 +232,7 @@ impl gluon::Convertable for Resource {
 }
 ///Error potentially produced when loading a resource
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ResourceLoadError {
     ///invalid Ref used
     InvalidRef,
@@ -275,6 +279,7 @@ impl gluon::Convertable for ResourceLoadError {
 }
 ///Error potentially produced when creating an interface
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CreateError {
     ///invalid Ref used
     InvalidRef,
@@ -315,6 +320,7 @@ pub mod proxied {
     use super::*;
     ///2D vector
     #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Size2 {
         pub x: u32,
         pub y: u32,
@@ -344,6 +350,7 @@ pub mod proxied {
     }
     ///3D vector
     #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Size3 {
         pub x: u32,
         pub y: u32,
@@ -377,6 +384,7 @@ pub mod proxied {
     }
     ///2D vector
     #[derive(Debug, Copy, Clone, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Vec2F {
         pub x: f32,
         pub y: f32,
@@ -406,6 +414,7 @@ pub mod proxied {
     }
     ///3D vector
     #[derive(Debug, Copy, Clone, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Vec3F {
         pub x: f32,
         pub y: f32,
@@ -439,6 +448,7 @@ pub mod proxied {
     }
     ///4D vector
     #[derive(Debug, Copy, Clone, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Vec4F {
         pub x: f32,
         pub y: f32,
@@ -476,6 +486,7 @@ pub mod proxied {
     }
     ///Quaternion
     #[derive(Debug, Copy, Clone, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Quatf {
         pub x: f32,
         pub y: f32,
@@ -513,6 +524,7 @@ pub mod proxied {
     }
     ///Colum major matrix
     #[derive(Debug, Copy, Clone, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Mat4F {
         pub x: crate::types::Vec4F,
         pub y: crate::types::Vec4F,
@@ -586,6 +598,7 @@ pub mod proxied {
     }
     ///A color in linear rgb, premultiplied alpha
     #[derive(Debug, Copy, Clone, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct Color {
         pub r: f32,
         pub g: f32,

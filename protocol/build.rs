@@ -25,47 +25,58 @@ fn main() {
 			("tracked", Path::new("./gluon/org.stardustxr.Tracked.gluon")),
 		],
 		&[],
-		Derives::CLONE | Derives::COPY | Derives::HASH | Derives::PARTIAL_EQ | Derives::EQ,
+		Derives::CLONE
+			| Derives::COPY
+			| Derives::HASH
+			| Derives::PARTIAL_EQ
+			| Derives::EQ
+			| Derives::SERDE,
 		&[
 			TypeProxy {
 				protocol_type_name: "types::Size2".into(),
 				rust_type: "crate::types::Size2".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::EQ | Derives::HASH,
+				derives: Derives::CLONE
+					| Derives::COPY | Derives::PARTIAL_EQ
+					| Derives::EQ | Derives::HASH
+					| Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Size3".into(),
 				rust_type: "crate::types::Size3".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::EQ | Derives::HASH,
+				derives: Derives::CLONE
+					| Derives::COPY | Derives::PARTIAL_EQ
+					| Derives::EQ | Derives::HASH
+					| Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Vec2f".into(),
 				rust_type: "crate::types::Vec2F".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ,
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Vec3f".into(),
 				rust_type: "crate::types::Vec3F".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ,
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Vec4f".into(),
 				rust_type: "crate::types::Vec4F".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ,
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Quatf".into(),
 				rust_type: "crate::types::QuatF".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ,
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Mat4f".into(),
 				rust_type: "crate::types::Mat4F".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ,
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 			TypeProxy {
 				protocol_type_name: "types::Color".into(),
 				rust_type: "crate::types::Color".into(),
-				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ,
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 		],
 		"./src/protocol",

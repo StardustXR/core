@@ -5,7 +5,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "View",
-            supported_derives: gluon::Derives::from_bits_truncate(11u32),
+            supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
     ],
@@ -15,6 +15,7 @@ pub mod proxies {
 }
 ///A single viewpoint for a camera
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct View {
     ///Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up
     pub projection_matrix: crate::types::Mat4F,

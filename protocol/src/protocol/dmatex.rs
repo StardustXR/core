@@ -5,7 +5,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "DmatexFormat",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -15,12 +15,12 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "DmatexSize",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
             name: "DmatexImportError",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
     ],
@@ -30,6 +30,7 @@ pub mod proxies {
 }
 ///Information about a DMA texture format.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DmatexFormat {
     pub drm_fourcc: u32,
     pub drm_modifier: u64,
@@ -114,6 +115,7 @@ impl gluon::Convertable for DmatexPlane {
 }
 ///Size of a DMA texture.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DmatexSize {
     Size1D { size: u32 },
     Size2D { size: crate::types::Size2 },
@@ -204,6 +206,7 @@ impl gluon::Convertable for DmatexSize {
 }
 ///Error potentially produced when loading a model
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DmatexImportError {
     InvalidSize,
     InvalidFormat,

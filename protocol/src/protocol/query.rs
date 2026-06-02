@@ -5,7 +5,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     types: &[
         gluon::ExternalGluonType {
             name: "InterfaceDependency",
-            supported_derives: gluon::Derives::from_bits_truncate(30u32),
+            supported_derives: gluon::Derives::from_bits_truncate(798u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
@@ -15,7 +15,7 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
         },
         gluon::ExternalGluonType {
             name: "QueryableError",
-            supported_derives: gluon::Derives::from_bits_truncate(31u32),
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
     ],
@@ -25,6 +25,7 @@ pub mod proxies {
 }
 ///Dependency on an interface in query
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InterfaceDependency {
     pub id: String,
     pub optional: bool,
@@ -89,6 +90,7 @@ impl gluon::Convertable for QueriedInterface {
 }
 ///error returned from QueryInterface::register_queryable
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryableError {
     ///You don't own this spatial or it didn't come from the right stardust server!
     NotOwnedSpatial,
