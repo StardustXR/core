@@ -763,8 +763,8 @@ This is considered static and should not change after handler creation.*/
         let spatial: SpatialData = spatial.into();
         let semantic: SemanticData = semantic.into();
         tracing::trace!(
-            interface = "InputHandler", method = "input_gained", method = "InputMethod",
-            ? time, ? spatial, ? semantic, "→"
+            interface = "InputHandler", method = "input_gained", ? method, ? time, ?
+            spatial, ? semantic, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
@@ -789,8 +789,8 @@ This is considered static and should not change after handler creation.*/
         let spatial: SpatialData = spatial.into();
         let semantic: SemanticData = semantic.into();
         tracing::trace!(
-            interface = "InputHandler", method = "input_updated", method = "InputMethod",
-            ? time, ? spatial, ? semantic, "→"
+            interface = "InputHandler", method = "input_updated", ? method, ? time, ?
+            spatial, ? semantic, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
@@ -811,8 +811,7 @@ This is considered static and should not change after handler creation.*/
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
         tracing::trace!(
-            interface = "InputHandler", method = "input_left", method = "InputMethod", ?
-            time, "→"
+            interface = "InputHandler", method = "input_left", ? method, ? time, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
@@ -987,8 +986,8 @@ This is considered static and should not change after handler creation.*/
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_semantic = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "InputHandler", method = "input_gained", param_method
-                        = "InputMethod", ? param_time, ? param_spatial, ? param_semantic,
+                        interface = "InputHandler", method = "input_gained", ?
+                        param_method, ? param_time, ? param_spatial, ? param_semantic,
                         "dispatching"
                     );
                     drop(gluon_data);
@@ -1007,9 +1006,9 @@ This is considered static and should not change after handler creation.*/
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_semantic = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "InputHandler", method = "input_updated",
-                        param_method = "InputMethod", ? param_time, ? param_spatial, ?
-                        param_semantic, "dispatching"
+                        interface = "InputHandler", method = "input_updated", ?
+                        param_method, ? param_time, ? param_spatial, ? param_semantic,
+                        "dispatching"
                     );
                     drop(gluon_data);
                     self.input_updated(
@@ -1025,8 +1024,8 @@ This is considered static and should not change after handler creation.*/
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "InputHandler", method = "input_left", param_method =
-                        "InputMethod", ? param_time, "dispatching"
+                        interface = "InputHandler", method = "input_left", ?
+                        param_method, ? param_time, "dispatching"
                     );
                     drop(gluon_data);
                     self.input_left(ctx, param_method, param_time).await;
@@ -1067,8 +1066,7 @@ impl InputMethod {
     ) -> Result<(), gluon::SendError> {
         let handler: InputHandler = handler.into();
         tracing::trace!(
-            interface = "InputMethod", method = "request_capture", handler =
-            "InputHandler", "→"
+            interface = "InputMethod", method = "request_capture", ? handler, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         handler.write(&mut gluon_builder)?;
@@ -1082,8 +1080,7 @@ impl InputMethod {
     ) -> Result<(), gluon::SendError> {
         let handler: InputHandler = handler.into();
         tracing::trace!(
-            interface = "InputMethod", method = "release_capture", handler =
-            "InputHandler", "→"
+            interface = "InputMethod", method = "release_capture", ? handler, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         handler.write(&mut gluon_builder)?;
@@ -1100,8 +1097,8 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         let handler: InputHandler = handler.into();
         let time: super::types::Timestamp = time.into();
         tracing::trace!(
-            interface = "InputMethod", method = "get_spatial_data", handler =
-            "InputHandler", ? time, "→"
+            interface = "InputMethod", method = "get_spatial_data", ? handler, ? time,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -1183,8 +1180,8 @@ Should return None when the InputMethod is captured by another InputHandler.*/
                 8u32 => {
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "InputMethod", method = "request_capture",
-                        param_handler = "InputHandler", "dispatching"
+                        interface = "InputMethod", method = "request_capture", ?
+                        param_handler, "dispatching"
                     );
                     drop(gluon_data);
                     self.request_capture(ctx, param_handler).await;
@@ -1192,8 +1189,8 @@ Should return None when the InputMethod is captured by another InputHandler.*/
                 9u32 => {
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "InputMethod", method = "release_capture",
-                        param_handler = "InputHandler", "dispatching"
+                        interface = "InputMethod", method = "release_capture", ?
+                        param_handler, "dispatching"
                     );
                     drop(gluon_data);
                     self.release_capture(ctx, param_handler).await;
@@ -1204,8 +1201,8 @@ Should return None when the InputMethod is captured by another InputHandler.*/
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "InputMethod", method = "get_spatial_data",
-                        param_handler = "InputHandler", ? param_time, "dispatching"
+                        interface = "InputMethod", method = "get_spatial_data", ?
+                        param_handler, ? param_time, "dispatching"
                     );
                     let (data) = self
                         .get_spatial_data(ctx, param_handler, param_time)

@@ -228,8 +228,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
     ) -> Result<Result<String, super::types::CreateError>, gluon::SendError> {
         let root: super::spatial::SpatialRef = root.into();
         tracing::trace!(
-            interface = "Server", method = "generate_startup_token", root =
-            "spatial::SpatialRef", "→"
+            interface = "Server", method = "generate_startup_token", ? root, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -511,8 +510,8 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_root = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Server", method = "generate_startup_token",
-                        param_root = "spatial::SpatialRef", "dispatching"
+                        interface = "Server", method = "generate_startup_token", ?
+                        param_root, "dispatching"
                     );
                     let (token) = self.generate_startup_token(ctx, param_root).await;
                     drop(gluon_data);
@@ -565,8 +564,8 @@ impl ServerInterface {
         let startup_token: Option<String> = startup_token.into();
         let resource_prefixes: Vec<String> = resource_prefixes.into();
         tracing::trace!(
-            interface = "ServerInterface", method = "connect", client = "client::Client",
-            ? startup_token, ? resource_prefixes, "→"
+            interface = "ServerInterface", method = "connect", ? client, ? startup_token,
+            ? resource_prefixes, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -672,9 +671,9 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         &mut gluon_data,
                     )?;
                     tracing::trace!(
-                        interface = "ServerInterface", method = "connect", param_client =
-                        "client::Client", ? param_startup_token, ?
-                        param_resource_prefixes, "dispatching"
+                        interface = "ServerInterface", method = "connect", ?
+                        param_client, ? param_startup_token, ? param_resource_prefixes,
+                        "dispatching"
                     );
                     let (server, root) = self
                         .connect(

@@ -256,7 +256,7 @@ impl QueryableObject {
         );
         let interface_id: String = interface_id.into();
         tracing::trace!(
-            interface = "QueryableObject", method = "add_interface", interface = "ref", ?
+            interface = "QueryableObject", method = "add_interface", ? interface, ?
             interface_id, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -348,8 +348,8 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
                     let param_interface = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interface_id = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "QueryableObject", method = "add_interface",
-                        param_interface = "ref", ? param_interface_id, "dispatching"
+                        interface = "QueryableObject", method = "add_interface", ?
+                        param_interface, ? param_interface_id, "dispatching"
                     );
                     let (guard) = self
                         .add_interface(ctx, param_interface, param_interface_id)
@@ -472,8 +472,8 @@ impl QueryInterface {
         let spatial: super::spatial::Spatial = spatial.into();
         let field: super::field::Field = field.into();
         tracing::trace!(
-            interface = "QueryInterface", method = "register_queryable", spatial =
-            "spatial::Spatial", field = "field::Field", "→"
+            interface = "QueryInterface", method = "register_queryable", ? spatial, ?
+            field, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -543,9 +543,8 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "QueryInterface", method = "register_queryable",
-                        param_spatial = "spatial::Spatial", param_field = "field::Field",
-                        "dispatching"
+                        interface = "QueryInterface", method = "register_queryable", ?
+                        param_spatial, ? param_field, "dispatching"
                     );
                     let (queryable) = self
                         .register_queryable(ctx, param_spatial, param_field)

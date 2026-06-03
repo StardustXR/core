@@ -235,8 +235,8 @@ impl LinesInterface {
         let spatial: super::spatial::Spatial = spatial.into();
         let lines: Vec<Line> = lines.into();
         tracing::trace!(
-            interface = "LinesInterface", method = "create_lines", spatial =
-            "spatial::Spatial", ? lines, "→"
+            interface = "LinesInterface", method = "create_lines", ? spatial, ? lines,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -305,8 +305,8 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_lines = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "LinesInterface", method = "create_lines",
-                        param_spatial = "spatial::Spatial", ? param_lines, "dispatching"
+                        interface = "LinesInterface", method = "create_lines", ?
+                        param_spatial, ? param_lines, "dispatching"
                     );
                     let (lines) = self
                         .create_lines(ctx, param_spatial, param_lines)

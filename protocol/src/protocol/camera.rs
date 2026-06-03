@@ -91,8 +91,7 @@ impl CameraInterface {
     ) -> Result<Result<Camera, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         tracing::trace!(
-            interface = "CameraInterface", method = "create_camera", spatial =
-            "spatial::Spatial", "→"
+            interface = "CameraInterface", method = "create_camera", ? spatial, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -159,8 +158,8 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "CameraInterface", method = "create_camera",
-                        param_spatial = "spatial::Spatial", "dispatching"
+                        interface = "CameraInterface", method = "create_camera", ?
+                        param_spatial, "dispatching"
                     );
                     let (camera) = self.create_camera(ctx, param_spatial).await;
                     drop(gluon_data);
@@ -215,8 +214,8 @@ impl Camera {
         let release_point: u64 = release_point.into();
         let views: Vec<View> = views.into();
         tracing::trace!(
-            interface = "Camera", method = "request_draw", render_target =
-            "dmatex::DmatexRef", ? acquire_point, ? release_point, ? views, "→"
+            interface = "Camera", method = "request_draw", ? render_target, ?
+            acquire_point, ? release_point, ? views, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         render_target.write(&mut gluon_builder)?;
@@ -281,9 +280,9 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
                     let param_release_point = gluon::Convertable::read(&mut gluon_data)?;
                     let param_views = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Camera", method = "request_draw",
-                        param_render_target = "dmatex::DmatexRef", ? param_acquire_point,
-                        ? param_release_point, ? param_views, "dispatching"
+                        interface = "Camera", method = "request_draw", ?
+                        param_render_target, ? param_acquire_point, ?
+                        param_release_point, ? param_views, "dispatching"
                     );
                     drop(gluon_data);
                     self.request_draw(

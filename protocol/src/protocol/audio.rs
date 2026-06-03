@@ -133,8 +133,8 @@ impl AudioInterface {
         let spatial: super::spatial::Spatial = spatial.into();
         let sound: super::types::Resource = sound.into();
         tracing::trace!(
-            interface = "AudioInterface", method = "create_sound", spatial =
-            "spatial::Spatial", ? sound, "→"
+            interface = "AudioInterface", method = "create_sound", ? spatial, ? sound,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -205,8 +205,8 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_sound = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "AudioInterface", method = "create_sound",
-                        param_spatial = "spatial::Spatial", ? param_sound, "dispatching"
+                        interface = "AudioInterface", method = "create_sound", ?
+                        param_spatial, ? param_sound, "dispatching"
                     );
                     let (sound) = self
                         .create_sound(ctx, param_spatial, param_sound)

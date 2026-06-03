@@ -364,8 +364,8 @@ impl TextInterface {
         let text: String = text.into();
         let style: TextStyle = style.into();
         tracing::trace!(
-            interface = "TextInterface", method = "create_text", spatial =
-            "spatial::Spatial", ? text, ? style, "→"
+            interface = "TextInterface", method = "create_text", ? spatial, ? text, ?
+            style, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -439,9 +439,8 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
                     let param_style = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "TextInterface", method = "create_text",
-                        param_spatial = "spatial::Spatial", ? param_text, ? param_style,
-                        "dispatching"
+                        interface = "TextInterface", method = "create_text", ?
+                        param_spatial, ? param_text, ? param_style, "dispatching"
                     );
                     let (text) = self
                         .create_text(ctx, param_spatial, param_text, param_style)

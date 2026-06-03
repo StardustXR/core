@@ -324,8 +324,8 @@ impl ModelInterface {
         let spatial: super::spatial::Spatial = spatial.into();
         let model: super::types::Resource = model.into();
         tracing::trace!(
-            interface = "ModelInterface", method = "load_model", spatial =
-            "spatial::Spatial", ? model, "→"
+            interface = "ModelInterface", method = "load_model", ? spatial, ? model,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -397,8 +397,8 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_model = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "ModelInterface", method = "load_model",
-                        param_spatial = "spatial::Spatial", ? param_model, "dispatching"
+                        interface = "ModelInterface", method = "load_model", ?
+                        param_spatial, ? param_model, "dispatching"
                     );
                     let (model) = self.load_model(ctx, param_spatial, param_model).await;
                     drop(gluon_data);

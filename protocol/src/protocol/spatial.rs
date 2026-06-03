@@ -454,8 +454,8 @@ impl Spatial {
     ) -> Result<Result<BoundingBox, super::types::CreateError>, gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         tracing::trace!(
-            interface = "Spatial", method = "get_relative_bounding_box", relative_to =
-            "SpatialRef", "→"
+            interface = "Spatial", method = "get_relative_bounding_box", ? relative_to,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -481,8 +481,8 @@ impl Spatial {
     ) -> Result<Result<Transform, super::types::CreateError>, gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         tracing::trace!(
-            interface = "Spatial", method = "get_relative_transform", relative_to =
-            "SpatialRef", "→"
+            interface = "Spatial", method = "get_relative_transform", ? relative_to,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -508,9 +508,7 @@ It will silently error and not set the spatial parent if it is to a child of its
         parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon::SendError> {
         let parent: SpatialRef = parent.into();
-        tracing::trace!(
-            interface = "Spatial", method = "set_parent", parent = "SpatialRef", "→"
-        );
+        tracing::trace!(interface = "Spatial", method = "set_parent", ? parent, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         parent.write(&mut gluon_builder)?;
         self.obj
@@ -526,8 +524,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     ) -> Result<(), gluon::SendError> {
         let parent: SpatialRef = parent.into();
         tracing::trace!(
-            interface = "Spatial", method = "set_parent_in_place", parent = "SpatialRef",
-            "→"
+            interface = "Spatial", method = "set_parent_in_place", ? parent, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         parent.write(&mut gluon_builder)?;
@@ -561,8 +558,8 @@ It will silently error and not set the spatial parent if it is to a child of its
         let relative_to: SpatialRef = relative_to.into();
         let transform: PartialTransform = transform.into();
         tracing::trace!(
-            interface = "Spatial", method = "set_relative_transform", relative_to =
-            "SpatialRef", ? transform, "→"
+            interface = "Spatial", method = "set_relative_transform", ? relative_to, ?
+            transform, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         relative_to.write(&mut gluon_builder)?;
@@ -704,8 +701,8 @@ It will silently error and not set the spatial parent if it is to a child of its
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Spatial", method = "get_relative_bounding_box",
-                        param_relative_to = "SpatialRef", "dispatching"
+                        interface = "Spatial", method = "get_relative_bounding_box", ?
+                        param_relative_to, "dispatching"
                     );
                     let (bounding_box) = self
                         .get_relative_bounding_box(ctx, param_relative_to)
@@ -725,8 +722,8 @@ It will silently error and not set the spatial parent if it is to a child of its
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Spatial", method = "get_relative_transform",
-                        param_relative_to = "SpatialRef", "dispatching"
+                        interface = "Spatial", method = "get_relative_transform", ?
+                        param_relative_to, "dispatching"
                     );
                     let (transform) = self
                         .get_relative_transform(ctx, param_relative_to)
@@ -744,8 +741,8 @@ It will silently error and not set the spatial parent if it is to a child of its
                 12u32 => {
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Spatial", method = "set_parent", param_parent =
-                        "SpatialRef", "dispatching"
+                        interface = "Spatial", method = "set_parent", ? param_parent,
+                        "dispatching"
                     );
                     drop(gluon_data);
                     self.set_parent(ctx, param_parent).await;
@@ -753,8 +750,8 @@ It will silently error and not set the spatial parent if it is to a child of its
                 13u32 => {
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Spatial", method = "set_parent_in_place",
-                        param_parent = "SpatialRef", "dispatching"
+                        interface = "Spatial", method = "set_parent_in_place", ?
+                        param_parent, "dispatching"
                     );
                     drop(gluon_data);
                     self.set_parent_in_place(ctx, param_parent).await;
@@ -772,9 +769,8 @@ It will silently error and not set the spatial parent if it is to a child of its
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Spatial", method = "set_relative_transform",
-                        param_relative_to = "SpatialRef", ? param_transform,
-                        "dispatching"
+                        interface = "Spatial", method = "set_relative_transform", ?
+                        param_relative_to, ? param_transform, "dispatching"
                     );
                     drop(gluon_data);
                     self.set_relative_transform(ctx, param_relative_to, param_transform)
@@ -818,8 +814,8 @@ impl SpatialInterface {
         let parent: SpatialRef = parent.into();
         let transform: Transform = transform.into();
         tracing::trace!(
-            interface = "SpatialInterface", method = "create_spatial", parent =
-            "SpatialRef", ? transform, "→"
+            interface = "SpatialInterface", method = "create_spatial", ? parent, ?
+            transform, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -846,8 +842,8 @@ impl SpatialInterface {
         let relative_to: SpatialRef = relative_to.into();
         let spatial: SpatialRef = spatial.into();
         tracing::trace!(
-            interface = "SpatialInterface", method = "get_relative_bounding_box",
-            relative_to = "SpatialRef", spatial = "SpatialRef", "→"
+            interface = "SpatialInterface", method = "get_relative_bounding_box", ?
+            relative_to, ? spatial, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -874,8 +870,8 @@ impl SpatialInterface {
         let relative_to: SpatialRef = relative_to.into();
         let spatial: SpatialRef = spatial.into();
         tracing::trace!(
-            interface = "SpatialInterface", method = "get_relative_transform",
-            relative_to = "SpatialRef", spatial = "SpatialRef", "→"
+            interface = "SpatialInterface", method = "get_relative_transform", ?
+            relative_to, ? spatial, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -966,8 +962,8 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "SpatialInterface", method = "create_spatial",
-                        param_parent = "SpatialRef", ? param_transform, "dispatching"
+                        interface = "SpatialInterface", method = "create_spatial", ?
+                        param_parent, ? param_transform, "dispatching"
                     );
                     let (spatial) = self
                         .create_spatial(ctx, param_parent, param_transform)
@@ -989,8 +985,8 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SpatialInterface", method =
-                        "get_relative_bounding_box", param_relative_to = "SpatialRef",
-                        param_spatial = "SpatialRef", "dispatching"
+                        "get_relative_bounding_box", ? param_relative_to, ?
+                        param_spatial, "dispatching"
                     );
                     let (bounding_box) = self
                         .get_relative_bounding_box(ctx, param_relative_to, param_spatial)
@@ -1012,8 +1008,8 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SpatialInterface", method =
-                        "get_relative_transform", param_relative_to = "SpatialRef",
-                        param_spatial = "SpatialRef", "dispatching"
+                        "get_relative_transform", ? param_relative_to, ? param_spatial,
+                        "dispatching"
                     );
                     let (transform) = self
                         .get_relative_transform(ctx, param_relative_to, param_spatial)

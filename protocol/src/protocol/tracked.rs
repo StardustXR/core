@@ -35,10 +35,7 @@ impl Tracked {
         handler: impl Into<TrackedStateReceiver>,
     ) -> Result<(super::spatial::SpatialRef, TrackedGuard, bool), gluon::SendError> {
         let handler: TrackedStateReceiver = handler.into();
-        tracing::trace!(
-            interface = "Tracked", method = "get", handler = "TrackedStateReceiver",
-            "→"
-        );
+        tracing::trace!(interface = "Tracked", method = "get", ? handler, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -64,8 +61,7 @@ impl Tracked {
         let at: super::types::Timestamp = at.into();
         let relative_to: super::spatial::SpatialRef = relative_to.into();
         tracing::trace!(
-            interface = "Tracked", method = "get_pose", ? at, relative_to =
-            "spatial::SpatialRef", "→"
+            interface = "Tracked", method = "get_pose", ? at, ? relative_to, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
@@ -142,8 +138,8 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Tracked", method = "get", param_handler =
-                        "TrackedStateReceiver", "dispatching"
+                        interface = "Tracked", method = "get", ? param_handler,
+                        "dispatching"
                     );
                     let (spatial, guard, tracked) = self.get(ctx, param_handler).await;
                     drop(gluon_data);
@@ -164,8 +160,8 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
                     let param_at = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
-                        interface = "Tracked", method = "get_pose", ? param_at,
-                        param_relative_to = "spatial::SpatialRef", "dispatching"
+                        interface = "Tracked", method = "get_pose", ? param_at, ?
+                        param_relative_to, "dispatching"
                     );
                     let (pose, tracked) = self
                         .get_pose(ctx, param_at, param_relative_to)
