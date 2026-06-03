@@ -32,12 +32,14 @@ impl gluon::Convertable for Sound {
 impl Sound {
     ///Play sound effect
     pub fn play(&self) -> Result<(), gluon::SendError> {
+        tracing::trace!(interface = "Sound", method = "play", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Stop sound effect
     pub fn stop(&self) -> Result<(), gluon::SendError> {
+        tracing::trace!(interface = "Sound", method = "stop", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
@@ -85,10 +87,12 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    tracing::trace!(interface = "Sound", method = "play", "dispatching");
                     drop(gluon_data);
                     self.play(ctx).await;
                 }
                 9u32 => {
+                    tracing::trace!(interface = "Sound", method = "stop", "dispatching");
                     drop(gluon_data);
                     self.stop(ctx).await;
                 }
@@ -128,6 +132,10 @@ impl AudioInterface {
     ) -> Result<Result<Sound, super::types::ResourceLoadError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let sound: super::types::Resource = sound.into();
+        tracing::trace!(
+            interface = "AudioInterface", method = "create_sound", spatial =
+            "spatial::Spatial", ? sound, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -137,7 +145,11 @@ impl AudioInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_sound = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "AudioInterface", method = "create_sound", ? __ret_sound, "←"
+        );
+        Ok(__ret_sound)
     }
     pub fn from_handler<H: AudioInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -192,10 +204,18 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_sound = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "AudioInterface", method = "create_sound",
+                        param_spatial = "spatial::Spatial", ? param_sound, "dispatching"
+                    );
                     let (sound) = self
                         .create_sound(ctx, param_spatial, param_sound)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "AudioInterface", method = "create_sound", ? sound,
+                        "←"
+                    );
                     sound.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

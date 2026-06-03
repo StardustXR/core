@@ -677,6 +677,7 @@ This is considered static and should not change after handler creation.*/
     pub async fn get_spatial(
         &self,
     ) -> Result<super::spatial::SpatialRef, gluon::SendError> {
+        tracing::trace!(interface = "InputHandler", method = "get_spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -684,10 +685,15 @@ This is considered static and should not change after handler creation.*/
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "InputHandler", method = "get_spatial", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     ///This is considered static and should not change after handler creation.
     pub async fn get_field(&self) -> Result<super::field::FieldRef, gluon::SendError> {
+        tracing::trace!(interface = "InputHandler", method = "get_field", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -695,13 +701,20 @@ This is considered static and should not change after handler creation.*/
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_field = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "InputHandler", method = "get_field", ? __ret_field, "←"
+        );
+        Ok(__ret_field)
     }
     /**Returns suggested bindings. The map key will equal a key in the datamap.
 This is considered static and should not change after handler creation.*/
     pub async fn suggested_bindings(
         &self,
     ) -> Result<std::collections::HashMap<String, Vec<String>>, gluon::SendError> {
+        tracing::trace!(
+            interface = "InputHandler", method = "suggested_bindings", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -711,11 +724,17 @@ This is considered static and should not change after handler creation.*/
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_suggested_bindings = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "InputHandler", method = "suggested_bindings", ?
+            __ret_suggested_bindings, "←"
+        );
+        Ok(__ret_suggested_bindings)
     }
     /**Returns a list of groups, for example the client app id and "grabbable".
 This is considered static and should not change after handler creation.*/
     pub async fn handler_groups(&self) -> Result<Vec<String>, gluon::SendError> {
+        tracing::trace!(interface = "InputHandler", method = "handler_groups", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -725,7 +744,11 @@ This is considered static and should not change after handler creation.*/
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_groups = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "InputHandler", method = "handler_groups", ? __ret_groups, "←"
+        );
+        Ok(__ret_groups)
     }
     ///An input method just started sending input to this handler.
     pub fn input_gained(
@@ -739,6 +762,10 @@ This is considered static and should not change after handler creation.*/
         let time: super::types::Timestamp = time.into();
         let spatial: SpatialData = spatial.into();
         let semantic: SemanticData = semantic.into();
+        tracing::trace!(
+            interface = "InputHandler", method = "input_gained", method = "InputMethod",
+            ? time, ? spatial, ? semantic, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
@@ -761,6 +788,10 @@ This is considered static and should not change after handler creation.*/
         let time: super::types::Timestamp = time.into();
         let spatial: SpatialData = spatial.into();
         let semantic: SemanticData = semantic.into();
+        tracing::trace!(
+            interface = "InputHandler", method = "input_updated", method = "InputMethod",
+            ? time, ? spatial, ? semantic, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
@@ -779,6 +810,10 @@ This is considered static and should not change after handler creation.*/
     ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
+        tracing::trace!(
+            interface = "InputHandler", method = "input_left", method = "InputMethod", ?
+            time, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
@@ -880,8 +915,15 @@ This is considered static and should not change after handler creation.*/
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "InputHandler", method = "get_spatial", "dispatching"
+                    );
                     let (spatial) = self.get_spatial(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "InputHandler", method = "get_spatial", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -890,8 +932,14 @@ This is considered static and should not change after handler creation.*/
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "InputHandler", method = "get_field", "dispatching"
+                    );
                     let (field) = self.get_field(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "InputHandler", method = "get_field", ? field, "←"
+                    );
                     field.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -900,8 +948,16 @@ This is considered static and should not change after handler creation.*/
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "InputHandler", method = "suggested_bindings",
+                        "dispatching"
+                    );
                     let (suggested_bindings) = self.suggested_bindings(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "InputHandler", method = "suggested_bindings", ?
+                        suggested_bindings, "←"
+                    );
                     suggested_bindings.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -910,8 +966,16 @@ This is considered static and should not change after handler creation.*/
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "InputHandler", method = "handler_groups",
+                        "dispatching"
+                    );
                     let (groups) = self.handler_groups(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "InputHandler", method = "handler_groups", ? groups,
+                        "←"
+                    );
                     groups.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -922,6 +986,11 @@ This is considered static and should not change after handler creation.*/
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_semantic = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "InputHandler", method = "input_gained", param_method
+                        = "InputMethod", ? param_time, ? param_spatial, ? param_semantic,
+                        "dispatching"
+                    );
                     drop(gluon_data);
                     self.input_gained(
                             ctx,
@@ -937,6 +1006,11 @@ This is considered static and should not change after handler creation.*/
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_semantic = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "InputHandler", method = "input_updated",
+                        param_method = "InputMethod", ? param_time, ? param_spatial, ?
+                        param_semantic, "dispatching"
+                    );
                     drop(gluon_data);
                     self.input_updated(
                             ctx,
@@ -950,6 +1024,10 @@ This is considered static and should not change after handler creation.*/
                 14u32 => {
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "InputHandler", method = "input_left", param_method =
+                        "InputMethod", ? param_time, "dispatching"
+                    );
                     drop(gluon_data);
                     self.input_left(ctx, param_method, param_time).await;
                 }
@@ -988,6 +1066,10 @@ impl InputMethod {
         handler: impl Into<InputHandler>,
     ) -> Result<(), gluon::SendError> {
         let handler: InputHandler = handler.into();
+        tracing::trace!(
+            interface = "InputMethod", method = "request_capture", handler =
+            "InputHandler", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -999,6 +1081,10 @@ impl InputMethod {
         handler: impl Into<InputHandler>,
     ) -> Result<(), gluon::SendError> {
         let handler: InputHandler = handler.into();
+        tracing::trace!(
+            interface = "InputMethod", method = "release_capture", handler =
+            "InputHandler", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
@@ -1013,6 +1099,10 @@ Should return None when the InputMethod is captured by another InputHandler.*/
     ) -> Result<Option<SpatialData>, gluon::SendError> {
         let handler: InputHandler = handler.into();
         let time: super::types::Timestamp = time.into();
+        tracing::trace!(
+            interface = "InputMethod", method = "get_spatial_data", handler =
+            "InputHandler", ? time, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -1024,7 +1114,11 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_data = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "InputMethod", method = "get_spatial_data", ? __ret_data, "←"
+        );
+        Ok(__ret_data)
     }
     pub fn from_handler<H: InputMethodHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -1088,11 +1182,19 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             match transaction_code {
                 8u32 => {
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "InputMethod", method = "request_capture",
+                        param_handler = "InputHandler", "dispatching"
+                    );
                     drop(gluon_data);
                     self.request_capture(ctx, param_handler).await;
                 }
                 9u32 => {
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "InputMethod", method = "release_capture",
+                        param_handler = "InputHandler", "dispatching"
+                    );
                     drop(gluon_data);
                     self.release_capture(ctx, param_handler).await;
                 }
@@ -1101,10 +1203,18 @@ Should return None when the InputMethod is captured by another InputHandler.*/
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "InputMethod", method = "get_spatial_data",
+                        param_handler = "InputHandler", ? param_time, "dispatching"
+                    );
                     let (data) = self
                         .get_spatial_data(ctx, param_handler, param_time)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "InputMethod", method = "get_spatial_data", ? data,
+                        "←"
+                    );
                     data.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

@@ -576,6 +576,7 @@ impl gluon::Convertable for Field {
 }
 impl Field {
     pub async fn field_ref(&self) -> Result<FieldRef, gluon::SendError> {
+        tracing::trace!(interface = "Field", method = "field_ref", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -583,9 +584,12 @@ impl Field {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_field = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(interface = "Field", method = "field_ref", ? __ret_field, "←");
+        Ok(__ret_field)
     }
     pub async fn spatial(&self) -> Result<super::spatial::Spatial, gluon::SendError> {
+        tracing::trace!(interface = "Field", method = "spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -593,7 +597,9 @@ impl Field {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(interface = "Field", method = "spatial", ? __ret_spatial, "←");
+        Ok(__ret_spatial)
     }
     pub async fn sample(
         &self,
@@ -602,6 +608,10 @@ impl Field {
     ) -> Result<FieldSample, gluon::SendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
         let point: super::types::proxied::Vec3F = point.into();
+        tracing::trace!(
+            interface = "Field", method = "sample", reference_space =
+            "spatial::SpatialRef", ? point, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -613,7 +623,9 @@ impl Field {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(interface = "Field", method = "sample", ? __ret_result, "←");
+        Ok(__ret_result)
     }
     pub async fn ray_march(
         &self,
@@ -624,6 +636,10 @@ impl Field {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
         let ray_origin: super::types::proxied::Vec3F = ray_origin.into();
         let ray_direction: super::types::proxied::Vec3F = ray_direction.into();
+        tracing::trace!(
+            interface = "Field", method = "ray_march", reference_space =
+            "spatial::SpatialRef", ? ray_origin, ? ray_direction, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -636,10 +652,15 @@ impl Field {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Field", method = "ray_march", ? __ret_result, "←"
+        );
+        Ok(__ret_result)
     }
     pub fn set_shape(&self, shape: impl Into<Shape>) -> Result<(), gluon::SendError> {
         let shape: Shape = shape.into();
+        tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         shape.write(&mut gluon_builder)?;
         self.obj
@@ -714,8 +735,14 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Field", method = "field_ref", "dispatching"
+                    );
                     let (field) = self.field_ref(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Field", method = "field_ref", ? field, "←"
+                    );
                     field.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -724,8 +751,14 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Field", method = "spatial", "dispatching"
+                    );
                     let (spatial) = self.spatial(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Field", method = "spatial", ? spatial, "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -737,16 +770,25 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                     let param_reference_space = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
+                    let __wire_param_point: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    tracing::trace!(
+                        interface = "Field", method = "sample", param_reference_space =
+                        "spatial::SpatialRef", param_point = ? __wire_param_point,
+                        "dispatching"
+                    );
                     let param_point: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
+                        let __w = __wire_param_point;
                         __w.into()
                     };
                     let (result) = self
                         .sample(ctx, param_reference_space, param_point)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Field", method = "sample", ? result, "←"
+                    );
                     result.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -758,16 +800,24 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                     let param_reference_space = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
+                    let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let __wire_param_ray_direction: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    tracing::trace!(
+                        interface = "Field", method = "ray_march", param_reference_space
+                        = "spatial::SpatialRef", param_ray_origin = ?
+                        __wire_param_ray_origin, param_ray_direction = ?
+                        __wire_param_ray_direction, "dispatching"
+                    );
                     let param_ray_origin: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
+                        let __w = __wire_param_ray_origin;
                         __w.into()
                     };
                     let param_ray_direction: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
+                        let __w = __wire_param_ray_direction;
                         __w.into()
                     };
                     let (result) = self
@@ -779,6 +829,9 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         )
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Field", method = "ray_march", ? result, "←"
+                    );
                     result.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -786,6 +839,10 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 12u32 => {
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Field", method = "set_shape", ? param_shape,
+                        "dispatching"
+                    );
                     drop(gluon_data);
                     self.set_shape(ctx, param_shape).await;
                 }
@@ -827,6 +884,10 @@ impl FieldInterface {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
         let point: super::types::proxied::Vec3F = point.into();
+        tracing::trace!(
+            interface = "FieldInterface", method = "sample", field = "FieldRef", space =
+            "spatial::SpatialRef", ? point, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -837,7 +898,11 @@ impl FieldInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "FieldInterface", method = "sample", ? __ret_result, "←"
+        );
+        Ok(__ret_result)
     }
     pub async fn ray_march(
         &self,
@@ -850,6 +915,10 @@ impl FieldInterface {
         let space: super::spatial::SpatialRef = space.into();
         let ray_origin: super::types::proxied::Vec3F = ray_origin.into();
         let ray_direction: super::types::proxied::Vec3F = ray_direction.into();
+        tracing::trace!(
+            interface = "FieldInterface", method = "ray_march", field = "FieldRef", space
+            = "spatial::SpatialRef", ? ray_origin, ? ray_direction, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -861,7 +930,11 @@ impl FieldInterface {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "FieldInterface", method = "ray_march", ? __ret_result, "←"
+        );
+        Ok(__ret_result)
     }
     pub async fn create_field(
         &self,
@@ -870,6 +943,10 @@ impl FieldInterface {
     ) -> Result<Result<CreatedField, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let shape: Shape = shape.into();
+        tracing::trace!(
+            interface = "FieldInterface", method = "create_field", spatial =
+            "spatial::Spatial", ? shape, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -881,7 +958,11 @@ impl FieldInterface {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_field = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "FieldInterface", method = "create_field", ? __ret_field, "←"
+        );
+        Ok(__ret_field)
     }
     pub fn from_handler<H: FieldInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -951,16 +1032,25 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_space = gluon::Convertable::read(&mut gluon_data)?;
+                    let __wire_param_point: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    tracing::trace!(
+                        interface = "FieldInterface", method = "sample", param_field =
+                        "FieldRef", param_space = "spatial::SpatialRef", param_point = ?
+                        __wire_param_point, "dispatching"
+                    );
                     let param_point: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
+                        let __w = __wire_param_point;
                         __w.into()
                     };
                     let (result) = self
                         .sample(ctx, param_field, param_space, param_point)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "FieldInterface", method = "sample", ? result, "←"
+                    );
                     result.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -971,16 +1061,24 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_space = gluon::Convertable::read(&mut gluon_data)?;
+                    let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let __wire_param_ray_direction: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    tracing::trace!(
+                        interface = "FieldInterface", method = "ray_march", param_field =
+                        "FieldRef", param_space = "spatial::SpatialRef", param_ray_origin
+                        = ? __wire_param_ray_origin, param_ray_direction = ?
+                        __wire_param_ray_direction, "dispatching"
+                    );
                     let param_ray_origin: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
+                        let __w = __wire_param_ray_origin;
                         __w.into()
                     };
                     let param_ray_direction: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
-                            &mut gluon_data,
-                        )?;
+                        let __w = __wire_param_ray_direction;
                         __w.into()
                     };
                     let (result) = self
@@ -993,6 +1091,10 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         )
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "FieldInterface", method = "ray_march", ? result,
+                        "←"
+                    );
                     result.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -1003,10 +1105,18 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "FieldInterface", method = "create_field",
+                        param_spatial = "spatial::Spatial", ? param_shape, "dispatching"
+                    );
                     let (field) = self
                         .create_field(ctx, param_spatial, param_shape)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "FieldInterface", method = "create_field", ? field,
+                        "←"
+                    );
                     field.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

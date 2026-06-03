@@ -34,6 +34,7 @@ impl Server {
     pub async fn spatial_interface(
         &self,
     ) -> Result<super::spatial::SpatialInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "spatial_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -41,11 +42,16 @@ impl Server {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "spatial_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn field_interface(
         &self,
     ) -> Result<super::field::FieldInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "field_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -53,12 +59,17 @@ impl Server {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "field_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     ///Get the dmatex interface node.
     pub async fn dmatex_interface(
         &self,
     ) -> Result<super::dmatex::DmatexInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "dmatex_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -68,11 +79,16 @@ impl Server {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "dmatex_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn text_interface(
         &self,
     ) -> Result<super::text::TextInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "text_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -82,11 +98,16 @@ impl Server {
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "text_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn model_interface(
         &self,
     ) -> Result<super::model::ModelInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "model_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -96,11 +117,16 @@ impl Server {
             .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "model_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn lines_interface(
         &self,
     ) -> Result<super::lines::LinesInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "lines_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -110,11 +136,16 @@ impl Server {
             .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "lines_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn sky_interface(
         &self,
     ) -> Result<super::sky::SkyInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "sky_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -124,11 +155,16 @@ impl Server {
             .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "sky_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn audio_interface(
         &self,
     ) -> Result<super::audio::AudioInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "audio_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -138,11 +174,16 @@ impl Server {
             .transact_one_way(&self.obj, 15u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "audio_interface", ? __ret_spatial, "←"
+        );
+        Ok(__ret_spatial)
     }
     pub async fn query_interface(
         &self,
     ) -> Result<super::query::QueryInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "query_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -152,11 +193,16 @@ impl Server {
             .transact_one_way(&self.obj, 16u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_interface = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "query_interface", ? __ret_interface, "←"
+        );
+        Ok(__ret_interface)
     }
     pub async fn spatial_query_interface(
         &self,
     ) -> Result<super::spatial_query::SpatialQueryInterface, gluon::SendError> {
+        tracing::trace!(interface = "Server", method = "spatial_query_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -166,7 +212,12 @@ impl Server {
             .transact_one_way(&self.obj, 17u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_interface = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "spatial_query_interface", ? __ret_interface,
+            "←"
+        );
+        Ok(__ret_interface)
     }
     /**Generate a client state token and return it back.
 
@@ -176,6 +227,10 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         root: impl Into<super::spatial::SpatialRef>,
     ) -> Result<Result<String, super::types::CreateError>, gluon::SendError> {
         let root: super::spatial::SpatialRef = root.into();
+        tracing::trace!(
+            interface = "Server", method = "generate_startup_token", root =
+            "spatial::SpatialRef", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -186,7 +241,11 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
             .transact_one_way(&self.obj, 18u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_token = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Server", method = "generate_startup_token", ? __ret_token, "←"
+        );
+        Ok(__ret_token)
     }
     pub fn from_handler<H: ServerHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -281,8 +340,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "spatial_interface", "dispatching"
+                    );
                     let (spatial) = self.spatial_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "spatial_interface", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -291,8 +357,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "field_interface", "dispatching"
+                    );
                     let (spatial) = self.field_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "field_interface", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -301,8 +374,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "dmatex_interface", "dispatching"
+                    );
                     let (spatial) = self.dmatex_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "dmatex_interface", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -311,8 +391,14 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "text_interface", "dispatching"
+                    );
                     let (spatial) = self.text_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "text_interface", ? spatial, "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -321,8 +407,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 12u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "model_interface", "dispatching"
+                    );
                     let (spatial) = self.model_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "model_interface", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -331,8 +424,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 13u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "lines_interface", "dispatching"
+                    );
                     let (spatial) = self.lines_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "lines_interface", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -341,8 +441,14 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 14u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "sky_interface", "dispatching"
+                    );
                     let (spatial) = self.sky_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "sky_interface", ? spatial, "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -351,8 +457,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 15u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "audio_interface", "dispatching"
+                    );
                     let (spatial) = self.audio_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "audio_interface", ? spatial,
+                        "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -361,8 +474,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 16u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "query_interface", "dispatching"
+                    );
                     let (interface) = self.query_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "query_interface", ? interface,
+                        "←"
+                    );
                     interface.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -371,8 +491,16 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 17u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "Server", method = "spatial_query_interface",
+                        "dispatching"
+                    );
                     let (interface) = self.spatial_query_interface(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "spatial_query_interface", ?
+                        interface, "←"
+                    );
                     interface.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -382,8 +510,16 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_root = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Server", method = "generate_startup_token",
+                        param_root = "spatial::SpatialRef", "dispatching"
+                    );
                     let (token) = self.generate_startup_token(ctx, param_root).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Server", method = "generate_startup_token", ? token,
+                        "←"
+                    );
                     token.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -428,6 +564,10 @@ impl ServerInterface {
         let client: super::client::Client = client.into();
         let startup_token: Option<String> = startup_token.into();
         let resource_prefixes: Vec<String> = resource_prefixes.into();
+        tracing::trace!(
+            interface = "ServerInterface", method = "connect", client = "client::Client",
+            ? startup_token, ? resource_prefixes, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -438,16 +578,23 @@ impl ServerInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok((
-            gluon::Convertable::read(&mut reader)?,
-            gluon::Convertable::read(&mut reader)?,
-        ))
+        let __ret_server = gluon::Convertable::read(&mut reader)?;
+        let __ret_root = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "ServerInterface", method = "connect", ? __ret_server, ?
+            __ret_root, "←"
+        );
+        Ok((__ret_server, __ret_root))
     }
     pub async fn startup_spatial(
         &self,
         startup_token: impl Into<String>,
     ) -> Result<Option<super::spatial::SpatialRef>, gluon::SendError> {
         let startup_token: String = startup_token.into();
+        tracing::trace!(
+            interface = "ServerInterface", method = "startup_spatial", ? startup_token,
+            "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -456,7 +603,12 @@ impl ServerInterface {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_spatial_ref = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "ServerInterface", method = "startup_spatial", ?
+            __ret_spatial_ref, "←"
+        );
+        Ok(__ret_spatial_ref)
     }
     pub fn from_handler<H: ServerInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -519,6 +671,11 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_resource_prefixes = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
+                    tracing::trace!(
+                        interface = "ServerInterface", method = "connect", param_client =
+                        "client::Client", ? param_startup_token, ?
+                        param_resource_prefixes, "dispatching"
+                    );
                     let (server, root) = self
                         .connect(
                             ctx,
@@ -528,6 +685,10 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         )
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "ServerInterface", method = "connect", ? server, ?
+                        root, "←"
+                    );
                     server.write_owned(&mut gluon_out)?;
                     root.write_owned(&mut gluon_out)?;
                     return_callback
@@ -538,10 +699,18 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "ServerInterface", method = "startup_spatial", ?
+                        param_startup_token, "dispatching"
+                    );
                     let (spatial_ref) = self
                         .startup_spatial(ctx, param_startup_token)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "ServerInterface", method = "startup_spatial", ?
+                        spatial_ref, "←"
+                    );
                     spatial_ref.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

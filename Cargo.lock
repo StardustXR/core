@@ -66,10 +66,9 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 [[package]]
 name = "binderbinder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/binderbinder#c5eab359d922500717674db5d8727eb394511bd8"
+source = "git+https://github.com/technobaboo/binderbinder#a65b5913d8373834d0dafa150829c6f2994d0e17"
 dependencies = [
  "bitflags",
- "byteorder",
  "dashmap",
  "rustix",
  "thiserror",
@@ -83,12 +82,6 @@ name = "bitflags"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
-
-[[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
@@ -210,7 +203,7 @@ dependencies = [
 [[package]]
 name = "gluon"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
+source = "git+https://github.com/technobaboo/gluon#a7e54c6d2745be9ec54d7ba62eb7c63dd1607abc"
 dependencies = [
  "binderbinder",
  "bitflags",
@@ -223,7 +216,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
+source = "git+https://github.com/technobaboo/gluon#a7e54c6d2745be9ec54d7ba62eb7c63dd1607abc"
 dependencies = [
  "convert_case",
  "gluon",
@@ -237,7 +230,7 @@ dependencies = [
 [[package]]
 name = "gluon-derive"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
+source = "git+https://github.com/technobaboo/gluon#a7e54c6d2745be9ec54d7ba62eb7c63dd1607abc"
 dependencies = [
  "quote",
  "syn",
@@ -246,7 +239,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/gluon#2df24dea8156c58d54c2b13e9034731c4a92fb79"
+source = "git+https://github.com/technobaboo/gluon#a7e54c6d2745be9ec54d7ba62eb7c63dd1607abc"
 dependencies = [
  "ansi_term",
  "chumsky",
@@ -648,6 +641,7 @@ dependencies = [
  "syn",
  "thiserror",
  "tokio",
+ "tracing",
  "xdg",
 ]
 

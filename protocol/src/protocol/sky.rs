@@ -108,6 +108,9 @@ Returns None if the sky texture is already set.*/
     ) -> Result<Option<SkyGuard>, gluon::SendError> {
         let tex: super::types::Resource = tex.into();
         let opaque: bool = opaque.into();
+        tracing::trace!(
+            interface = "SkyInterface", method = "set_sky_tex", ? tex, ? opaque, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -117,7 +120,11 @@ Returns None if the sky texture is already set.*/
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "SkyInterface", method = "set_sky_tex", ? __ret_guard, "←"
+        );
+        Ok(__ret_guard)
     }
     /**Set the sky lighting to a given equirectagular texture, supports HDRI images.
 Returns None if the sky lighting is already set.*/
@@ -126,6 +133,9 @@ Returns None if the sky lighting is already set.*/
         tex: impl Into<super::types::Resource>,
     ) -> Result<Option<SkyGuard>, gluon::SendError> {
         let tex: super::types::Resource = tex.into();
+        tracing::trace!(
+            interface = "SkyInterface", method = "set_sky_light", ? tex, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -134,7 +144,11 @@ Returns None if the sky lighting is already set.*/
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "SkyInterface", method = "set_sky_light", ? __ret_guard, "←"
+        );
+        Ok(__ret_guard)
     }
     pub fn from_handler<H: SkyInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -196,8 +210,16 @@ Returns None if the sky lighting is already set.*/
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
                     let param_opaque = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "SkyInterface", method = "set_sky_tex", ? param_tex,
+                        ? param_opaque, "dispatching"
+                    );
                     let (guard) = self.set_sky_tex(ctx, param_tex, param_opaque).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "SkyInterface", method = "set_sky_tex", ? guard,
+                        "←"
+                    );
                     guard.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -207,8 +229,16 @@ Returns None if the sky lighting is already set.*/
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "SkyInterface", method = "set_sky_light", ?
+                        param_tex, "dispatching"
+                    );
                     let (guard) = self.set_sky_light(ctx, param_tex).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "SkyInterface", method = "set_sky_light", ? guard,
+                        "←"
+                    );
                     guard.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

@@ -140,6 +140,7 @@ impl Lines {
         lines: impl Into<Vec<Line>>,
     ) -> Result<(), gluon::SendError> {
         let lines: Vec<Line> = lines.into();
+        tracing::trace!(interface = "Lines", method = "set_lines", ? lines, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         lines.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -190,6 +191,10 @@ pub trait LinesHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let param_lines = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Lines", method = "set_lines", ? param_lines,
+                        "dispatching"
+                    );
                     drop(gluon_data);
                     self.set_lines(ctx, param_lines).await;
                 }
@@ -229,6 +234,10 @@ impl LinesInterface {
     ) -> Result<Result<Lines, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let lines: Vec<Line> = lines.into();
+        tracing::trace!(
+            interface = "LinesInterface", method = "create_lines", spatial =
+            "spatial::Spatial", ? lines, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -238,7 +247,11 @@ impl LinesInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_lines = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "LinesInterface", method = "create_lines", ? __ret_lines, "←"
+        );
+        Ok(__ret_lines)
     }
     pub fn from_handler<H: LinesInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -291,10 +304,18 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_lines = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "LinesInterface", method = "create_lines",
+                        param_spatial = "spatial::Spatial", ? param_lines, "dispatching"
+                    );
                     let (lines) = self
                         .create_lines(ctx, param_spatial, param_lines)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "LinesInterface", method = "create_lines", ? lines,
+                        "←"
+                    );
                     lines.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

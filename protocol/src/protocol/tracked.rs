@@ -35,6 +35,10 @@ impl Tracked {
         handler: impl Into<TrackedStateReceiver>,
     ) -> Result<(super::spatial::SpatialRef, TrackedGuard, bool), gluon::SendError> {
         let handler: TrackedStateReceiver = handler.into();
+        tracing::trace!(
+            interface = "Tracked", method = "get", handler = "TrackedStateReceiver",
+            "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -43,11 +47,14 @@ impl Tracked {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok((
-            gluon::Convertable::read(&mut reader)?,
-            gluon::Convertable::read(&mut reader)?,
-            gluon::Convertable::read(&mut reader)?,
-        ))
+        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        let __ret_tracked = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Tracked", method = "get", ? __ret_spatial, ? __ret_guard, ?
+            __ret_tracked, "←"
+        );
+        Ok((__ret_spatial, __ret_guard, __ret_tracked))
     }
     pub async fn get_pose(
         &self,
@@ -56,6 +63,10 @@ impl Tracked {
     ) -> Result<(Option<super::types::Posef>, bool), gluon::SendError> {
         let at: super::types::Timestamp = at.into();
         let relative_to: super::spatial::SpatialRef = relative_to.into();
+        tracing::trace!(
+            interface = "Tracked", method = "get_pose", ? at, relative_to =
+            "spatial::SpatialRef", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -65,10 +76,13 @@ impl Tracked {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok((
-            gluon::Convertable::read(&mut reader)?,
-            gluon::Convertable::read(&mut reader)?,
-        ))
+        let __ret_pose = gluon::Convertable::read(&mut reader)?;
+        let __ret_tracked = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "Tracked", method = "get_pose", ? __ret_pose, ? __ret_tracked,
+            "←"
+        );
+        Ok((__ret_pose, __ret_tracked))
     }
     pub fn from_handler<H: TrackedHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -127,8 +141,16 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Tracked", method = "get", param_handler =
+                        "TrackedStateReceiver", "dispatching"
+                    );
                     let (spatial, guard, tracked) = self.get(ctx, param_handler).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Tracked", method = "get", ? spatial, ? guard, ?
+                        tracked, "←"
+                    );
                     spatial.write_owned(&mut gluon_out)?;
                     guard.write_owned(&mut gluon_out)?;
                     tracked.write_owned(&mut gluon_out)?;
@@ -141,10 +163,18 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_at = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Tracked", method = "get_pose", ? param_at,
+                        param_relative_to = "spatial::SpatialRef", "dispatching"
+                    );
                     let (pose, tracked) = self
                         .get_pose(ctx, param_at, param_relative_to)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "Tracked", method = "get_pose", ? pose, ? tracked,
+                        "←"
+                    );
                     pose.write_owned(&mut gluon_out)?;
                     tracked.write_owned(&mut gluon_out)?;
                     return_callback
@@ -251,6 +281,9 @@ impl gluon::Convertable for TrackedStateReceiver {
 impl TrackedStateReceiver {
     pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {
         let tracked: bool = tracked.into();
+        tracing::trace!(
+            interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         tracked.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -305,6 +338,10 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let param_tracked = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "TrackedStateReceiver", method = "tracked", ?
+                        param_tracked, "dispatching"
+                    );
                     drop(gluon_data);
                     self.tracked(ctx, param_tracked).await;
                 }

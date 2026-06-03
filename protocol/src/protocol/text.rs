@@ -363,6 +363,10 @@ impl TextInterface {
         let spatial: super::spatial::Spatial = spatial.into();
         let text: String = text.into();
         let style: TextStyle = style.into();
+        tracing::trace!(
+            interface = "TextInterface", method = "create_text", spatial =
+            "spatial::Spatial", ? text, ? style, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -373,7 +377,11 @@ impl TextInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_text = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "TextInterface", method = "create_text", ? __ret_text, "←"
+        );
+        Ok(__ret_text)
     }
     pub fn from_handler<H: TextInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -430,10 +438,19 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
                     let param_style = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "TextInterface", method = "create_text",
+                        param_spatial = "spatial::Spatial", ? param_text, ? param_style,
+                        "dispatching"
+                    );
                     let (text) = self
                         .create_text(ctx, param_spatial, param_text, param_style)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "TextInterface", method = "create_text", ? text,
+                        "←"
+                    );
                     text.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -474,6 +491,9 @@ impl Text {
         height: impl Into<f32>,
     ) -> Result<(), gluon::SendError> {
         let height: f32 = height.into();
+        tracing::trace!(
+            interface = "Text", method = "set_character_height", ? height, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         height.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -482,6 +502,7 @@ impl Text {
     ///Set the text content
     pub fn set_text(&self, text: impl Into<String>) -> Result<(), gluon::SendError> {
         let text: String = text.into();
+        tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         text.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
@@ -539,11 +560,19 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let param_height = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Text", method = "set_character_height", ?
+                        param_height, "dispatching"
+                    );
                     drop(gluon_data);
                     self.set_character_height(ctx, param_height).await;
                 }
                 9u32 => {
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Text", method = "set_text", ? param_text,
+                        "dispatching"
+                    );
                     drop(gluon_data);
                     self.set_text(ctx, param_text).await;
                 }

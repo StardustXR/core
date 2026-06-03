@@ -90,6 +90,10 @@ impl CameraInterface {
         spatial: impl Into<super::spatial::Spatial>,
     ) -> Result<Result<Camera, super::types::CreateError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
+        tracing::trace!(
+            interface = "CameraInterface", method = "create_camera", spatial =
+            "spatial::Spatial", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -98,7 +102,12 @@ impl CameraInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_camera = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "CameraInterface", method = "create_camera", ? __ret_camera,
+            "←"
+        );
+        Ok(__ret_camera)
     }
     pub fn from_handler<H: CameraInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -149,8 +158,16 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "CameraInterface", method = "create_camera",
+                        param_spatial = "spatial::Spatial", "dispatching"
+                    );
                     let (camera) = self.create_camera(ctx, param_spatial).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "CameraInterface", method = "create_camera", ?
+                        camera, "←"
+                    );
                     camera.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -197,6 +214,10 @@ impl Camera {
         let acquire_point: u64 = acquire_point.into();
         let release_point: u64 = release_point.into();
         let views: Vec<View> = views.into();
+        tracing::trace!(
+            interface = "Camera", method = "request_draw", render_target =
+            "dmatex::DmatexRef", ? acquire_point, ? release_point, ? views, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         render_target.write(&mut gluon_builder)?;
         acquire_point.write(&mut gluon_builder)?;
@@ -259,6 +280,11 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
                     let param_acquire_point = gluon::Convertable::read(&mut gluon_data)?;
                     let param_release_point = gluon::Convertable::read(&mut gluon_data)?;
                     let param_views = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Camera", method = "request_draw",
+                        param_render_target = "dmatex::DmatexRef", ? param_acquire_point,
+                        ? param_release_point, ? param_views, "dispatching"
+                    );
                     drop(gluon_data);
                     self.request_draw(
                             ctx,

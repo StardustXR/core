@@ -79,6 +79,7 @@ fn main() {
 				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 		],
+		true,
 		"./src/protocol",
 	);
 }

@@ -394,6 +394,10 @@ impl DmatexInterface {
         let array_layers: u32 = array_layers.into();
         let planes: Vec<DmatexPlane> = planes.into();
         let timeline_syncobj_fd: std::os::fd::OwnedFd = timeline_syncobj_fd.into();
+        tracing::trace!(
+            interface = "DmatexInterface", method = "import_dmatex", ? size, ? format, ?
+            array_layers, ? planes, ? timeline_syncobj_fd, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -406,13 +410,22 @@ impl DmatexInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_dmatex = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "DmatexInterface", method = "import_dmatex", ? __ret_dmatex,
+            "←"
+        );
+        Ok(__ret_dmatex)
     }
     pub async fn enumerate_formats(
         &self,
         render_node: impl Into<u64>,
     ) -> Result<Option<Vec<DmatexFormat>>, gluon::SendError> {
         let render_node: u64 = render_node.into();
+        tracing::trace!(
+            interface = "DmatexInterface", method = "enumerate_formats", ? render_node,
+            "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -421,9 +434,17 @@ impl DmatexInterface {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_formats = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "DmatexInterface", method = "enumerate_formats", ? __ret_formats,
+            "←"
+        );
+        Ok(__ret_formats)
     }
     pub async fn primary_render_node_id(&self) -> Result<u64, gluon::SendError> {
+        tracing::trace!(
+            interface = "DmatexInterface", method = "primary_render_node_id", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -433,7 +454,12 @@ impl DmatexInterface {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_drm_render_node_id = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "DmatexInterface", method = "primary_render_node_id", ?
+            __ret_drm_render_node_id, "←"
+        );
+        Ok(__ret_drm_render_node_id)
     }
     pub fn from_handler<H: DmatexInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -503,6 +529,11 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let param_timeline_syncobj_fd = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
+                    tracing::trace!(
+                        interface = "DmatexInterface", method = "import_dmatex", ?
+                        param_size, ? param_format, ? param_array_layers, ? param_planes,
+                        ? param_timeline_syncobj_fd, "dispatching"
+                    );
                     let (dmatex) = self
                         .import_dmatex(
                             ctx,
@@ -514,6 +545,10 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         )
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "DmatexInterface", method = "import_dmatex", ?
+                        dmatex, "←"
+                    );
                     dmatex.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -523,8 +558,16 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_render_node = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "DmatexInterface", method = "enumerate_formats", ?
+                        param_render_node, "dispatching"
+                    );
                     let (formats) = self.enumerate_formats(ctx, param_render_node).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "DmatexInterface", method = "enumerate_formats", ?
+                        formats, "←"
+                    );
                     formats.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -533,8 +576,16 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "DmatexInterface", method = "primary_render_node_id",
+                        "dispatching"
+                    );
                     let (drm_render_node_id) = self.primary_render_node_id(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "DmatexInterface", method = "primary_render_node_id",
+                        ? drm_render_node_id, "←"
+                    );
                     drm_render_node_id.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()

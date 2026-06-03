@@ -19,6 +19,7 @@ xdg = "3.0.0"
 rustix = { version = "1.0.8", features = ["time"] }
 shiva-color-rs = "0.0.1"
 serde = { version = "1.0.228", features = ["derive"], optional = true }
+tracing = "0.1.44"
 
 [build-dependencies]
 syn = "2"

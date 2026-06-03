@@ -71,6 +71,7 @@ impl gluon::Convertable for Client {
 impl Client {
     pub fn frame(&self, info: impl Into<FrameInfo>) -> Result<(), gluon::SendError> {
         let info: FrameInfo = info.into();
+        tracing::trace!(interface = "Client", method = "frame", ? info, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         info.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
@@ -123,6 +124,10 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let param_info = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "Client", method = "frame", ? param_info,
+                        "dispatching"
+                    );
                     drop(gluon_data);
                     self.frame(ctx, param_info).await;
                 }

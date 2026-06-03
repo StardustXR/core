@@ -231,6 +231,7 @@ impl gluon::Convertable for QueryableObject {
 }
 impl QueryableObject {
     pub async fn queryable_ref(&self) -> Result<QueryableObjectRef, gluon::SendError> {
+        tracing::trace!(interface = "QueryableObject", method = "queryable_ref", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -238,7 +239,12 @@ impl QueryableObject {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_queryable = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "QueryableObject", method = "queryable_ref", ? __ret_queryable,
+            "←"
+        );
+        Ok(__ret_queryable)
     }
     pub async fn add_interface(
         &self,
@@ -249,6 +255,10 @@ impl QueryableObject {
             interface,
         );
         let interface_id: String = interface_id.into();
+        tracing::trace!(
+            interface = "QueryableObject", method = "add_interface", interface = "ref", ?
+            interface_id, "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -258,7 +268,11 @@ impl QueryableObject {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "QueryableObject", method = "add_interface", ? __ret_guard, "←"
+        );
+        Ok(__ret_guard)
     }
     pub fn from_handler<H: QueryableObjectHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -313,8 +327,16 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "QueryableObject", method = "queryable_ref",
+                        "dispatching"
+                    );
                     let (queryable) = self.queryable_ref(ctx).await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "QueryableObject", method = "queryable_ref", ?
+                        queryable, "←"
+                    );
                     queryable.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -325,10 +347,18 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_interface = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interface_id = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "QueryableObject", method = "add_interface",
+                        param_interface = "ref", ? param_interface_id, "dispatching"
+                    );
                     let (guard) = self
                         .add_interface(ctx, param_interface, param_interface_id)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "QueryableObject", method = "add_interface", ? guard,
+                        "←"
+                    );
                     guard.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
@@ -441,6 +471,10 @@ impl QueryInterface {
     ) -> Result<Result<QueryableObject, QueryableError>, gluon::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let field: super::field::Field = field.into();
+        tracing::trace!(
+            interface = "QueryInterface", method = "register_queryable", spatial =
+            "spatial::Spatial", field = "field::Field", "→"
+        );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
@@ -450,7 +484,12 @@ impl QueryInterface {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        Ok(gluon::Convertable::read(&mut reader)?)
+        let __ret_queryable = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "QueryInterface", method = "register_queryable", ?
+            __ret_queryable, "←"
+        );
+        Ok(__ret_queryable)
     }
     pub fn from_handler<H: QueryInterfaceHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -503,10 +542,19 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "QueryInterface", method = "register_queryable",
+                        param_spatial = "spatial::Spatial", param_field = "field::Field",
+                        "dispatching"
+                    );
                     let (queryable) = self
                         .register_queryable(ctx, param_spatial, param_field)
                         .await;
                     drop(gluon_data);
+                    tracing::trace!(
+                        interface = "QueryInterface", method = "register_queryable", ?
+                        queryable, "←"
+                    );
                     queryable.write_owned(&mut gluon_out)?;
                     return_callback
                         .device()
