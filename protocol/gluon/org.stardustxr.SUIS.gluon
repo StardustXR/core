@@ -114,14 +114,6 @@ interface InputHandler {
 	/// This is considered static and should not change after handler creation.
 	get_field() -> (field: Ref<field::FieldRef>)
 
-	/// Returns suggested bindings. The map key will equal a key in the datamap.
-	/// This is considered static and should not change after handler creation.
-	suggested_bindings() -> (suggested_bindings: Map<String, Vec<String>>)
-
-	/// Returns a list of groups, for example the client app id and "grabbable".
-	/// This is considered static and should not change after handler creation.
-	handler_groups() -> (groups: Vec<String>)
-
 	/// An input method just started sending input to this handler.
 	input_gained(method: Ref<InputMethod>, time: types::Timestamp, spatial: SpatialData, semantic: SemanticData)
 	/// An input method's data has been updated.
@@ -147,12 +139,13 @@ interface InputHandler {
 /// 2. The handler can request temporary exclusive access to the input method, to prevent input collisions (if I'm grabbing something, i don't want anything else to interfere or assume it is being grabbed with a pinch gesture).
 /// 3. The heuristics of the input method and handler are both considered (e.g. the input method for a hand might send input only to nearby handlers, but then the handler requests a capture when it is pinched. This would make a handler with a field intersecing another that does not use pinch differentiated, and therefore improves reliability.).
 interface InputMethod {
-	// should this be 2 way?
 	/// Request to capture the input method with the given handler.
-	request_capture(handler: Ref<InputHandler>)
-	/// If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
-	release_capture(handler: Ref<InputHandler>)
+	request_capture(handler: Ref<InputHandler>) -> (capture: Option<InputMethodCapture>)
 	/// Get spatial data relative to the input handler at a specific point in time.
 	/// Should return None when the InputMethod is captured by another InputHandler.
 	get_spatial_data(handler: Ref<InputHandler>, time: types::Timestamp) -> (data: Option<SpatialData>)
 }
+
+/// An active input method capture, drop to release the capture (e.g. the object is let go of after grabbing).
+/// Will be invalidated if the input method sends input_left
+interface InputMethodCapture {}

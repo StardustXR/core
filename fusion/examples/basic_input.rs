@@ -6,7 +6,7 @@ use stardust_xr_fusion::{
 	suis::{InputHandlerHandler, InputMethod, SemanticData, SpatialData},
 };
 use stardust_xr_protocol::{suis::InputHandler as InputHandlerProxy, types::Timestamp};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use tokio::sync::{RwLock, broadcast::error::RecvError};
 
 #[tokio::main(flavor = "current_thread")]
@@ -85,21 +85,6 @@ impl InputHandlerHandler for InputHandler {
 
 	async fn get_field(&self, _ctx: gluon::Context) -> FieldRef {
 		self.field.field_ref().await.unwrap()
-	}
-
-	async fn suggested_bindings(&self, _ctx: gluon::Context) -> HashMap<String, Vec<String>> {
-		let mut bindings = HashMap::new();
-		bindings.insert("a".to_string(), vec!["pinch_strength".to_string()]);
-		bindings.insert("b".to_string(), vec!["grab_strength".to_string()]);
-		bindings.insert(
-			"c".to_string(),
-			vec!["pinch_strength".to_string(), "grab_strength".to_string()],
-		);
-		bindings
-	}
-
-	async fn handler_groups(&self, _ctx: gluon::Context) -> Vec<String> {
-		vec!["org.stardustxr.fusion.InputExample".to_string()]
 	}
 
 	async fn input_gained(

@@ -707,49 +707,6 @@ This is considered static and should not change after handler creation.*/
         );
         Ok(__ret_field)
     }
-    /**Returns suggested bindings. The map key will equal a key in the datamap.
-This is considered static and should not change after handler creation.*/
-    pub async fn suggested_bindings(
-        &self,
-    ) -> Result<std::collections::HashMap<String, Vec<String>>, gluon::SendError> {
-        tracing::trace!(
-            interface = "InputHandler", method = "suggested_bindings", "→"
-        );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        let __ret_suggested_bindings = gluon::Convertable::read(&mut reader)?;
-        tracing::trace!(
-            interface = "InputHandler", method = "suggested_bindings", ?
-            __ret_suggested_bindings, "←"
-        );
-        Ok(__ret_suggested_bindings)
-    }
-    /**Returns a list of groups, for example the client app id and "grabbable".
-This is considered static and should not change after handler creation.*/
-    pub async fn handler_groups(&self) -> Result<Vec<String>, gluon::SendError> {
-        tracing::trace!(interface = "InputHandler", method = "handler_groups", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
-        let __ret_groups = gluon::Convertable::read(&mut reader)?;
-        tracing::trace!(
-            interface = "InputHandler", method = "handler_groups", ? __ret_groups, "←"
-        );
-        Ok(__ret_groups)
-    }
     ///An input method just started sending input to this handler.
     pub fn input_gained(
         &self,
@@ -773,7 +730,7 @@ This is considered static and should not change after handler creation.*/
         semantic.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///An input method's data has been updated.
@@ -799,7 +756,7 @@ This is considered static and should not change after handler creation.*/
         semantic.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///An input method just stopped sending input to this handler.
@@ -818,7 +775,7 @@ This is considered static and should not change after handler creation.*/
         time.write(&mut gluon_builder)?;
         self.obj
             .device()
-            .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
         Ok(())
     }
     pub fn from_handler<H: InputHandlerHandler>(
@@ -864,20 +821,6 @@ This is considered static and should not change after handler creation.*/
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::field::FieldRef> + Send + Sync;
-    /**Returns suggested bindings. The map key will equal a key in the datamap.
-This is considered static and should not change after handler creation.*/
-    fn suggested_bindings(
-        &self,
-        _ctx: gluon::Context,
-    ) -> impl Future<
-        Output = std::collections::HashMap<String, Vec<String>>,
-    > + Send + Sync;
-    /**Returns a list of groups, for example the client app id and "grabbable".
-This is considered static and should not change after handler creation.*/
-    fn handler_groups(
-        &self,
-        _ctx: gluon::Context,
-    ) -> impl Future<Output = Vec<String>> + Send + Sync;
     ///An input method just started sending input to this handler.
     fn input_gained(
         &self,
@@ -945,42 +888,6 @@ This is considered static and should not change after handler creation.*/
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 10u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
-                    tracing::trace!(
-                        interface = "InputHandler", method = "suggested_bindings",
-                        "dispatching"
-                    );
-                    let (suggested_bindings) = self.suggested_bindings(ctx).await;
-                    drop(gluon_data);
-                    tracing::trace!(
-                        interface = "InputHandler", method = "suggested_bindings", ?
-                        suggested_bindings, "←"
-                    );
-                    suggested_bindings.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                11u32 => {
-                    let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
-                    tracing::trace!(
-                        interface = "InputHandler", method = "handler_groups",
-                        "dispatching"
-                    );
-                    let (groups) = self.handler_groups(ctx).await;
-                    drop(gluon_data);
-                    tracing::trace!(
-                        interface = "InputHandler", method = "handler_groups", ? groups,
-                        "←"
-                    );
-                    groups.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
-                }
-                12u32 => {
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
@@ -1000,7 +907,7 @@ This is considered static and should not change after handler creation.*/
                         )
                         .await;
                 }
-                13u32 => {
+                11u32 => {
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
@@ -1020,7 +927,7 @@ This is considered static and should not change after handler creation.*/
                         )
                         .await;
                 }
-                14u32 => {
+                12u32 => {
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -1060,32 +967,27 @@ impl gluon::Convertable for InputMethod {
 }
 impl InputMethod {
     ///Request to capture the input method with the given handler.
-    pub fn request_capture(
+    pub async fn request_capture(
         &self,
         handler: impl Into<InputHandler>,
-    ) -> Result<(), gluon::SendError> {
+    ) -> Result<Option<InputMethodCapture>, gluon::SendError> {
         let handler: InputHandler = handler.into();
         tracing::trace!(
             interface = "InputMethod", method = "request_capture", ? handler, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        Ok(())
-    }
-    ///If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
-    pub fn release_capture(
-        &self,
-        handler: impl Into<InputHandler>,
-    ) -> Result<(), gluon::SendError> {
-        let handler: InputHandler = handler.into();
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let __ret_capture = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
-            interface = "InputMethod", method = "release_capture", ? handler, "→"
+            interface = "InputMethod", method = "request_capture", ? __ret_capture, "←"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        handler.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        Ok(())
+        Ok(__ret_capture)
     }
     /**Get spatial data relative to the input handler at a specific point in time.
 Should return None when the InputMethod is captured by another InputHandler.*/
@@ -1106,9 +1008,7 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         gluon_builder.write_binder(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         let transaction = gluon_recv.recv().await.unwrap();
         let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_data = gluon::Convertable::read(&mut reader)?;
@@ -1154,13 +1054,7 @@ pub trait InputMethodHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         handler: InputHandler,
-    ) -> impl Future<Output = ()> + Send + Sync;
-    ///If this input method captured by this handler, release the capture (e.g. the object is let go of after grabbing).
-    fn release_capture(
-        &self,
-        _ctx: gluon::Context,
-        handler: InputHandler,
-    ) -> impl Future<Output = ()> + Send + Sync;
+    ) -> impl Future<Output = Option<InputMethodCapture>> + Send + Sync;
     /**Get spatial data relative to the input handler at a specific point in time.
 Should return None when the InputMethod is captured by another InputHandler.*/
     fn get_spatial_data(
@@ -1178,24 +1072,25 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         async move {
             match transaction_code {
                 8u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "InputMethod", method = "request_capture", ?
                         param_handler, "dispatching"
                     );
+                    let (capture) = self.request_capture(ctx, param_handler).await;
                     drop(gluon_data);
-                    self.request_capture(ctx, param_handler).await;
+                    tracing::trace!(
+                        interface = "InputMethod", method = "request_capture", ? capture,
+                        "←"
+                    );
+                    capture.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
                 9u32 => {
-                    let param_handler = gluon::Convertable::read(&mut gluon_data)?;
-                    tracing::trace!(
-                        interface = "InputMethod", method = "release_capture", ?
-                        param_handler, "dispatching"
-                    );
-                    drop(gluon_data);
-                    self.release_capture(ctx, param_handler).await;
-                }
-                10u32 => {
                     let return_callback = gluon_data.read_binder()?;
                     let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
@@ -1217,6 +1112,77 @@ Should return None when the InputMethod is captured by another InputHandler.*/
                         .device()
                         .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
                 }
+                _ => {}
+            }
+            Ok(())
+        }
+    }
+}
+#[derive(Debug, Clone)]
+pub struct InputMethodCapture {
+    obj: gluon::ObjectOrRef,
+}
+impl gluon::Convertable for InputMethodCapture {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.obj.write(gluon_data)
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(InputMethodCapture::from_object_or_ref(obj))
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.obj.write_owned(gluon_data)
+    }
+}
+impl InputMethodCapture {
+    pub fn from_handler<H: InputMethodCaptureHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> InputMethodCapture {
+        InputMethodCapture::from_object_or_ref(
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
+        )
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> InputMethodCapture {
+        InputMethodCapture { obj }
+    }
+}
+impl From<InputMethodCapture> for gluon::ObjectOrRef {
+    fn from(value: InputMethodCapture) -> Self {
+        value.obj
+    }
+}
+impl gluon::ToObjectOrRef for InputMethodCapture {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
+    }
+}
+impl std::hash::Hash for InputMethodCapture {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for InputMethodCapture {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for InputMethodCapture {}
+pub trait InputMethodCaptureHandler: gluon::Handler + Send + Sync + 'static {
+    fn dispatch_one_way(
+        &self,
+        transaction_code: u32,
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            match transaction_code {
                 _ => {}
             }
             Ok(())
