@@ -17,7 +17,7 @@ pub mod proxies {
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct View {
-    ///Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up
+    ///Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up and the X axis == Right
     pub projection_matrix: crate::types::Mat4F,
     ///Transform applied to the view, relative to the camera
     pub camera_relative_transform: super::spatial::Transform,
@@ -206,12 +206,12 @@ impl Camera {
         &self,
         render_target: impl Into<super::dmatex::DmatexRef>,
         acquire_point: impl Into<u64>,
-        release_point: impl Into<u64>,
+        release_point: impl Into<super::dmatex::DmatexSubmitRelease>,
         views: impl Into<Vec<View>>,
     ) -> Result<(), gluon::SendError> {
         let render_target: super::dmatex::DmatexRef = render_target.into();
         let acquire_point: u64 = acquire_point.into();
-        let release_point: u64 = release_point.into();
+        let release_point: super::dmatex::DmatexSubmitRelease = release_point.into();
         let views: Vec<View> = views.into();
         tracing::trace!(
             interface = "Camera", method = "request_draw", ? render_target, ?
@@ -263,7 +263,7 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         render_target: super::dmatex::DmatexRef,
         acquire_point: u64,
-        release_point: u64,
+        release_point: super::dmatex::DmatexSubmitRelease,
         views: Vec<View>,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(

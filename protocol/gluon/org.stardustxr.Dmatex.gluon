@@ -33,6 +33,12 @@ interface DmatexInterface {
 	primary_render_node_id() -> (drm_render_node_id: u64)
 }
 
+/// Guard for the release point of a submit, owned by the submit producer
+interface DmatexSubmitRelease {
+    /// Consume the release point, after you get the release point you have to signal it at some point!
+    consume() -> (release_point: u64)
+}
+
 /// Error potentially produced when loading a model
 enum DmatexImportError {
 	InvalidSize,

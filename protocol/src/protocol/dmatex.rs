@@ -597,6 +597,114 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         }
     }
 }
+#[derive(Debug, Clone)]
+pub struct DmatexSubmitRelease {
+    obj: gluon::ObjectOrRef,
+}
+impl gluon::Convertable for DmatexSubmitRelease {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.obj.write(gluon_data)
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(DmatexSubmitRelease::from_object_or_ref(obj))
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.obj.write_owned(gluon_data)
+    }
+}
+impl DmatexSubmitRelease {
+    ///Consume the release point, after you get the release point you have to signal it at some point!
+    pub async fn consume(&self) -> Result<u64, gluon::SendError> {
+        tracing::trace!(interface = "DmatexSubmitRelease", method = "consume", "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let __ret_release_point = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "DmatexSubmitRelease", method = "consume", ? __ret_release_point,
+            "←"
+        );
+        Ok(__ret_release_point)
+    }
+    pub fn from_handler<H: DmatexSubmitReleaseHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> DmatexSubmitRelease {
+        DmatexSubmitRelease::from_object_or_ref(
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
+        )
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> DmatexSubmitRelease {
+        DmatexSubmitRelease { obj }
+    }
+}
+impl From<DmatexSubmitRelease> for gluon::ObjectOrRef {
+    fn from(value: DmatexSubmitRelease) -> Self {
+        value.obj
+    }
+}
+impl gluon::ToObjectOrRef for DmatexSubmitRelease {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+        self.obj.clone()
+    }
+}
+impl std::hash::Hash for DmatexSubmitRelease {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.obj.hash(state);
+    }
+}
+impl PartialEq for DmatexSubmitRelease {
+    fn eq(&self, other: &Self) -> bool {
+        self.obj == other.obj
+    }
+}
+impl Eq for DmatexSubmitRelease {}
+pub trait DmatexSubmitReleaseHandler: gluon::Handler + Send + Sync + 'static {
+    ///Consume the release point, after you get the release point you have to signal it at some point!
+    fn consume(&self, _ctx: gluon::Context) -> impl Future<Output = u64> + Send + Sync;
+    fn dispatch_one_way(
+        &self,
+        transaction_code: u32,
+        mut gluon_data: gluon::DataReader,
+        ctx: gluon::Context,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            match transaction_code {
+                8u32 => {
+                    let return_callback = gluon_data.read_binder()?;
+                    let mut gluon_out = gluon::DataBuilder::new();
+                    tracing::trace!(
+                        interface = "DmatexSubmitRelease", method = "consume",
+                        "dispatching"
+                    );
+                    let (release_point) = self.consume(ctx).await;
+                    drop(gluon_data);
+                    tracing::trace!(
+                        interface = "DmatexSubmitRelease", method = "consume", ?
+                        release_point, "←"
+                    );
+                    release_point.write_owned(&mut gluon_out)?;
+                    return_callback
+                        .device()
+                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                }
+                _ => {}
+            }
+            Ok(())
+        }
+    }
+}
 pub mod proxied {
     use super::*;
 }

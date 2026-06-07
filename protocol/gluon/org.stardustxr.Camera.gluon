@@ -11,12 +11,12 @@ interface CameraInterface {
 /// Used to render additional views from the server
 interface Camera {
 	/// Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
-	request_draw(render_target: Ref<dmatex::DmatexRef>, acquire_point: u64, release_point: u64, views: Vec<View>)
+	request_draw(render_target: Ref<dmatex::DmatexRef>, acquire_point: u64, release_point: Ref<dmatex::DmatexSubmitRelease>, views: Vec<View>)
 }
 
 /// A single viewpoint for a camera
 struct View {
-	/// Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up
+	/// Right-handed colum major projection matrix with a 1..0 (Reversed Z) depth range, where the Y axis == Up and the X axis == Right
 	projection_matrix: types::Mat4f,
 	/// Transform applied to the view, relative to the camera
 	camera_relative_transform: spatial::Transform,

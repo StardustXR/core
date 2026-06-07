@@ -111,7 +111,7 @@ pub enum MaterialParameter {
         ///After this point is reached the Server may access the texture
         acquire_point: u64,
         ///This point is reached once the Server is done accessing the texture
-        release_point: u64,
+        release_point: super::dmatex::DmatexSubmitRelease,
     },
 }
 impl gluon::Convertable for MaterialParameter {
