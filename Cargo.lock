@@ -66,7 +66,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 [[package]]
 name = "binderbinder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/binderbinder#a65b5913d8373834d0dafa150829c6f2994d0e17"
+source = "git+https://github.com/technobaboo/binderbinder#3960554655d00980856016fa9f550b011874c535"
 dependencies = [
  "bitflags",
  "dashmap",
@@ -161,7 +161,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -344,7 +344,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -403,7 +403,7 @@ checksum = "bda66fc9667c18cb2758a2ac84d1167245054bcf85d5d1aaa6923f45801bdd02"
 [[package]]
 name = "pion-binder"
 version = "0.1.0"
-source = "git+https://github.com/technobaboo/pion#503e94f992dc61dd28bd29cb646de1deedf65cb2"
+source = "git+https://github.com/technobaboo/pion#c11a613d26a493e0da8a1e82ea4c06c350a10a59"
 dependencies = [
  "async-trait",
  "binderbinder",
@@ -504,7 +504,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

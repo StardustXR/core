@@ -14,3 +14,4 @@ pub mod suis;
 pub mod query;
 pub mod spatial_query;
 pub mod tracked;
+pub mod keymap;

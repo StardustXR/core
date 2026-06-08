@@ -1,0 +1,21 @@
+/// A store for keymaps, needed for deduplication
+interface KeymapStore {
+	/// Register a xkbcommon keymap, deduplicates
+	exchange(keymap: XkbcommonKeymapFd) -> (keymap: Result<Ref<Keymap>, KeymapExchangeError>)
+	get(keymap: Ref<Keymap>) -> (keymap: Option<XkbcommonKeymapFd>)
+}
+
+/// A Fd representing an xkbcommon keymap with a null byte
+/// Has the same format as wayland uses
+struct XkbcommonKeymapFd {
+	fd: Fd,
+	size: u32,
+}
+
+/// A reference to a keymap
+interface Keymap {}
+
+/// Error returned by KeymapStore::exchange
+enum KeymapExchangeError {
+	InvalidKeymap,
+}

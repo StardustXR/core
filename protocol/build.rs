@@ -23,6 +23,7 @@ fn main() {
 				Path::new("./gluon/org.stardustxr.SpatialQuery.gluon"),
 			),
 			("tracked", Path::new("./gluon/org.stardustxr.Tracked.gluon")),
+			("keymap", Path::new("./gluon/org.stardustxr.Keymap.gluon")),
 		],
 		&[],
 		Derives::CLONE
