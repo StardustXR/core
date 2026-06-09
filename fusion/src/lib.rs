@@ -3,6 +3,8 @@
 #![allow(dead_code)]
 
 mod error;
+pub mod tracked;
+pub mod keymap;
 pub use error::{Error, Result};
 
 pub mod audio;
