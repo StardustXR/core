@@ -2,10 +2,11 @@
 
 mod protocol;
 
-pub use protocol::{audio, camera, client, keymap, server, sky, text, tracked};
+pub use protocol::{audio, camera, client, server, sky, text, tracked};
 pub mod dir;
 pub mod dmatex;
 pub mod field;
+pub mod keymap;
 pub mod lines;
 pub mod model;
 pub mod query;
