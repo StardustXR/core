@@ -24,6 +24,16 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             proxy: Some("proxies::Vec3F"),
         },
         gluon::ExternalGluonType {
+            name: "Vec2i",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: Some("proxies::Vec2I"),
+        },
+        gluon::ExternalGluonType {
+            name: "Vec3i",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: Some("proxies::Vec3I"),
+        },
+        gluon::ExternalGluonType {
             name: "Vec4f",
             supported_derives: gluon::Derives::from_bits_truncate(779u32),
             proxy: Some("proxies::Vec4F"),
@@ -76,6 +86,8 @@ pub mod proxies {
     pub use crate::types::Size3;
     pub use crate::types::Vec2F;
     pub use crate::types::Vec3F;
+    pub use crate::types::Vec2I;
+    pub use crate::types::Vec3I;
     pub use crate::types::Vec4F;
     pub use crate::types::QuatF;
     pub use crate::types::Mat4F;
@@ -435,6 +447,70 @@ pub mod proxied {
             let y = gluon::Convertable::read(gluon_data)?;
             let z = gluon::Convertable::read(gluon_data)?;
             Ok(Vec3F { x, y, z })
+        }
+        fn write_owned(
+            self,
+            gluon_data: &mut gluon::DataBuilder<'_>,
+        ) -> Result<(), gluon::WriteError> {
+            self.x.write_owned(gluon_data)?;
+            self.y.write_owned(gluon_data)?;
+            self.z.write_owned(gluon_data)?;
+            Ok(())
+        }
+    }
+    ///2D vector
+    #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    pub struct Vec2I {
+        pub x: i32,
+        pub y: i32,
+    }
+    impl gluon::Convertable for Vec2I {
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
+        ) -> Result<(), gluon::WriteError> {
+            self.x.write(gluon_data)?;
+            self.y.write(gluon_data)?;
+            Ok(())
+        }
+        fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+            let x = gluon::Convertable::read(gluon_data)?;
+            let y = gluon::Convertable::read(gluon_data)?;
+            Ok(Vec2I { x, y })
+        }
+        fn write_owned(
+            self,
+            gluon_data: &mut gluon::DataBuilder<'_>,
+        ) -> Result<(), gluon::WriteError> {
+            self.x.write_owned(gluon_data)?;
+            self.y.write_owned(gluon_data)?;
+            Ok(())
+        }
+    }
+    ///3D vector
+    #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    pub struct Vec3I {
+        pub x: i32,
+        pub y: i32,
+        pub z: i32,
+    }
+    impl gluon::Convertable for Vec3I {
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
+        ) -> Result<(), gluon::WriteError> {
+            self.x.write(gluon_data)?;
+            self.y.write(gluon_data)?;
+            self.z.write(gluon_data)?;
+            Ok(())
+        }
+        fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+            let x = gluon::Convertable::read(gluon_data)?;
+            let y = gluon::Convertable::read(gluon_data)?;
+            let z = gluon::Convertable::read(gluon_data)?;
+            Ok(Vec3I { x, y, z })
         }
         fn write_owned(
             self,

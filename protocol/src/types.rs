@@ -3,7 +3,8 @@ use std::fmt::Display;
 
 use crate::protocol::types::proxied::{
 	Mat4F as ProtocolMat4F, Quatf as ProtocolQuatF, Size2 as ProtocolSize2, Size3 as ProtocolSize3,
-	Vec2F as ProtocolVec2F, Vec3F as ProtocolVec3F, Vec4F as ProtocolVec4F,
+	Vec2F as ProtocolVec2F, Vec2I as ProtocolVec2I, Vec3F as ProtocolVec3F, Vec3I as ProtocolVec3I,
+	Vec4F as ProtocolVec4F,
 };
 use crate::protocol::types::{Posef as ProtocolPosef, Timestamp as ProtocolTimestamp};
 use color::{AlphaColor, Rgba, color_space::LinearRgb};
@@ -13,6 +14,8 @@ pub type Size2 = mint::Vector2<u32>;
 pub type Size3 = mint::Vector3<u32>;
 pub type Vec2F = mint::Vector2<f32>;
 pub type Vec3F = mint::Vector3<f32>;
+pub type Vec2I = mint::Vector2<i32>;
+pub type Vec3I = mint::Vector3<i32>;
 pub type Vec4F = mint::Vector4<f32>;
 pub type QuatF = mint::Quaternion<f32>;
 pub type Mat4F = mint::ColumnMatrix4<f32>;
@@ -78,6 +81,38 @@ impl From<Vec3F> for ProtocolVec3F {
 }
 impl From<ProtocolVec3F> for Vec3F {
 	fn from(v: ProtocolVec3F) -> Self {
+		Self {
+			x: v.x,
+			y: v.y,
+			z: v.z,
+		}
+	}
+}
+
+// Vector2
+impl From<Vec2I> for ProtocolVec2I {
+	fn from(v: Vec2I) -> Self {
+		Self { x: v.x, y: v.y }
+	}
+}
+impl From<ProtocolVec2I> for Vec2I {
+	fn from(v: ProtocolVec2I) -> Self {
+		Self { x: v.x, y: v.y }
+	}
+}
+
+// Vector3
+impl From<Vec3I> for ProtocolVec3I {
+	fn from(v: Vec3I) -> Self {
+		Self {
+			x: v.x,
+			y: v.y,
+			z: v.z,
+		}
+	}
+}
+impl From<ProtocolVec3I> for Vec3I {
+	fn from(v: ProtocolVec3I) -> Self {
 		Self {
 			x: v.x,
 			y: v.y,

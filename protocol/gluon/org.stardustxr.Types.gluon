@@ -24,6 +24,19 @@ struct Vec3f {
     z: f32,
 }
 
+/// 2D vector
+struct Vec2i {
+    x: i32,
+    y: i32,
+}
+
+/// 3D vector
+struct Vec3i {
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
 /// 4D vector
 struct Vec4f {
     x: f32,

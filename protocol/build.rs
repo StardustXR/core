@@ -60,6 +60,16 @@ fn main() {
 				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
 			},
 			TypeProxy {
+				protocol_type_name: "types::Vec2i".into(),
+				rust_type: "crate::types::Vec2I".into(),
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
+			},
+			TypeProxy {
+				protocol_type_name: "types::Vec3i".into(),
+				rust_type: "crate::types::Vec3I".into(),
+				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
+			},
+			TypeProxy {
 				protocol_type_name: "types::Vec4f".into(),
 				rust_type: "crate::types::Vec4F".into(),
 				derives: Derives::CLONE | Derives::COPY | Derives::PARTIAL_EQ | Derives::SERDE,
