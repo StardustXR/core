@@ -26,7 +26,7 @@ async fn main() {
 		.await
 		.unwrap();
 	let (spatial, _) =
-		Spatial::create(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
+		Spatial::new(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
 			.await
 			.unwrap();
 
@@ -53,7 +53,7 @@ async fn main() {
 		.await
 		.unwrap();
 
-	let lines = Lines::create(&client, &spatial, vec![]).await.unwrap();
+	let lines = Lines::new(&client, &spatial, vec![]).await.unwrap();
 	let spatial_ref = spatial.spatial_ref().await.unwrap();
 
 	let mut frame_recv = client.frame_receiver();

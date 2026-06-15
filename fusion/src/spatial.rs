@@ -6,14 +6,14 @@ use crate::{Result, client::Client};
 use stardust_xr_protocol::client::ClientHandler;
 
 pub trait SpatialExt {
-	fn create<H: ClientHandler>(
+	fn new<H: ClientHandler>(
 		client: &Client<H>,
 		parent: &SpatialRef,
 		transform: Transform,
 	) -> impl std::future::Future<Output = Result<(Spatial, SpatialRef)>> + Send;
 }
 impl SpatialExt for Spatial {
-	async fn create<H: ClientHandler>(
+	async fn new<H: ClientHandler>(
 		client: &Client<H>,
 		parent: &SpatialRef,
 		transform: Transform,

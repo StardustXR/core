@@ -11,14 +11,14 @@ use crate::{Result, client::Client};
 use stardust_xr_protocol::{client::ClientHandler, spatial::Spatial, types::Resource};
 
 pub trait LinesExt {
-	fn create<H: ClientHandler>(
+	fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
 	) -> impl std::future::Future<Output = Result<Lines>> + Send;
 }
 impl LinesExt for Lines {
-	async fn create<H: ClientHandler>(
+	async fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		lines: Vec<Line>,
@@ -31,14 +31,14 @@ impl LinesExt for Lines {
 }
 
 pub trait ModelExt {
-	fn create<H: ClientHandler>(
+	fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
 	) -> impl std::future::Future<Output = Result<Model>> + Send;
 }
 impl ModelExt for Model {
-	async fn create<H: ClientHandler>(
+	async fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		model: Resource,
@@ -51,7 +51,7 @@ impl ModelExt for Model {
 }
 
 pub trait TextExt {
-	fn create<H: ClientHandler>(
+	fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		text: String,
@@ -59,7 +59,7 @@ pub trait TextExt {
 	) -> impl std::future::Future<Output = Result<Text>> + Send;
 }
 impl TextExt for Text {
-	async fn create<H: ClientHandler>(
+	async fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: &Spatial,
 		text: String,

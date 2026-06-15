@@ -5,15 +5,15 @@ pub use stardust_xr_protocol::query::*;
 use crate::{Result, client::Client};
 use stardust_xr_protocol::{client::ClientHandler, field::Field, spatial::Spatial};
 
-pub trait QueryExt {
-	fn create<H: ClientHandler>(
+pub trait QueryableExt {
+	fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: Spatial,
 		field: Field,
 	) -> impl std::future::Future<Output = Result<QueryableObject>> + Send;
 }
-impl QueryExt for QueryableObject {
-	async fn create<H: ClientHandler>(
+impl QueryableExt for QueryableObject {
+	async fn new<H: ClientHandler>(
 		client: &Client<H>,
 		spatial: Spatial,
 		field: Field,

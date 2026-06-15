@@ -20,10 +20,10 @@ async fn main() {
 		.await
 		.unwrap();
 
-	let (gyro_spatial, _) = Spatial::create(&client, &root, Transform::IDENTITY)
+	let (gyro_spatial, _) = Spatial::new(&client, &root, Transform::IDENTITY)
 		.await
 		.unwrap();
-	let gyro = Model::create(
+	let gyro = Model::new(
 		&client,
 		&gyro_spatial,
 		Resource::Namespaced {

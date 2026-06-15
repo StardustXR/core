@@ -17,13 +17,13 @@ async fn main() {
 		.unwrap();
 
 	let (handler_spatial, handler_spatial_ref) =
-		Spatial::create(&client, &root, Transform::IDENTITY)
+		Spatial::new(&client, &root, Transform::IDENTITY)
 			.await
 			.unwrap();
-	let (field_spatial, _) = Spatial::create(&client, &handler_spatial_ref, Transform::IDENTITY)
+	let (field_spatial, _) = Spatial::new(&client, &handler_spatial_ref, Transform::IDENTITY)
 		.await
 		.unwrap();
-	let (field, _) = Field::create(
+	let (field, _) = Field::new(
 		&client,
 		&field_spatial,
 		Shape::Torus {
