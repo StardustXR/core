@@ -36,6 +36,7 @@ pub struct Client<H: ClientHandler> {
 	handler: Object<H>,
 	server: Server,
 	root: SpatialRef,
+	server_interface: ServerInterface,
 	spatial_interface: SpatialInterface,
 	field_interface: FieldInterface,
 	dmatex_interface: DmatexInterface,
@@ -131,6 +132,7 @@ impl<H: ClientHandler> Client<H> {
 				query_interface: server.query_interface().await?,
 				spatial_query_interface: server.spatial_query_interface().await?,
 				server,
+				server_interface,
 			},
 			root,
 		))
@@ -144,6 +146,14 @@ impl<H: ClientHandler> Client<H> {
 	/// The server proxy for direct access to server methods.
 	pub fn server(&self) -> &Server {
 		&self.server
+	}
+	/// Get a SpatialRef for a specific startup token
+	pub async fn startup_token_spatial(&self, token: impl Into<String>) -> Option<SpatialRef> {
+		self.server_interface
+			.startup_spatial(token)
+			.await
+			.ok()
+			.flatten()
 	}
 
 	pub fn pion_device(&self) -> &PionBinderDevice {
