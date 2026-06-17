@@ -22,6 +22,7 @@ pub type Mat4F = mint::ColumnMatrix4<f32>;
 pub use crate::protocol::types::{
 	CreateError, EXTERNAL_PROTOCOL, Posef, Resource, ResourceLoadError, Timestamp, proxied, proxies,
 };
+pub use color;
 pub use color::rgba_linear;
 pub type Color = color::Rgba<f32, color::color_space::LinearRgb>;
 
