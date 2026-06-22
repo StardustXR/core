@@ -33,6 +33,7 @@ gluon = { git = "https://github.com/technobaboo/gluon", features = [
 ] }
 pion-binder = { git = "https://github.com/technobaboo/pion" }
 xdg = "3.0.0"
+rustix = { version = "1.1.4", features = ["fs"] }
 
 [dev-dependencies]
 tracing-subscriber = "0.3.17"

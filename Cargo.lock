@@ -617,6 +617,7 @@ dependencies = [
  "gluon",
  "parking_lot",
  "pion-binder",
+ "rustix",
  "stardust-xr-protocol",
  "thiserror",
  "tokio",
