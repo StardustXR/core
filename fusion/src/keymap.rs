@@ -47,11 +47,11 @@ impl KeymapStoreExt for KeymapStore {
 			.ok()?;
 		let mut mem = File::from(mem);
 		let keymap = CString::from_str(keymap).ok()?;
-		mem.set_len(keymap.as_bytes().len() as u64).ok()?;
-		mem.write_all(keymap.as_bytes()).ok()?;
+		mem.set_len(keymap.as_bytes_with_nul().len() as u64).ok()?;
+		mem.write_all(keymap.as_bytes_with_nul()).ok()?;
 		self.exchange(XkbcommonKeymapFd {
 			fd: mem.into(),
-			size: keymap.as_bytes().len() as u32,
+			size: keymap.as_bytes_with_nul().len() as u32,
 		})
 		.await
 		.ok()
