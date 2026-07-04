@@ -9,12 +9,52 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
             proxy: None,
         },
         gluon::ExternalGluonType {
+            name: "DmatexFormatInfo",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
             name: "DmatexPlane",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "DisjointDmatexPlane",
             supported_derives: gluon::Derives::from_bits_truncate(0u32),
             proxy: None,
         },
         gluon::ExternalGluonType {
+            name: "YcbcrFormat",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
             name: "DmatexSize",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "DmatexPlanes",
+            supported_derives: gluon::Derives::from_bits_truncate(0u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "AlphaMode",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "YcbcrCoefficients",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "YcbcrChromaLocation",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
+            name: "YcbcrRange",
             supported_derives: gluon::Derives::from_bits_truncate(799u32),
             proxy: None,
         },
@@ -28,13 +68,16 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 pub mod proxies {
     use super::*;
 }
-///Information about a DMA texture format.
+///Representing DMA texture format.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DmatexFormat {
     pub drm_fourcc: u32,
     pub drm_modifier: u64,
     pub is_srgb: bool,
+    pub alpha_mode: AlphaMode,
+    ///Must be Some when using a YCbCr format
+    pub ycbcr_info: Option<YcbcrFormat>,
 }
 impl gluon::Convertable for DmatexFormat {
     fn write<'a, 'b: 'a>(
@@ -44,16 +87,22 @@ impl gluon::Convertable for DmatexFormat {
         self.drm_fourcc.write(gluon_data)?;
         self.drm_modifier.write(gluon_data)?;
         self.is_srgb.write(gluon_data)?;
+        self.alpha_mode.write(gluon_data)?;
+        self.ycbcr_info.write(gluon_data)?;
         Ok(())
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let drm_fourcc = gluon::Convertable::read(gluon_data)?;
         let drm_modifier = gluon::Convertable::read(gluon_data)?;
         let is_srgb = gluon::Convertable::read(gluon_data)?;
+        let alpha_mode = gluon::Convertable::read(gluon_data)?;
+        let ycbcr_info = gluon::Convertable::read(gluon_data)?;
         Ok(DmatexFormat {
             drm_fourcc,
             drm_modifier,
             is_srgb,
+            alpha_mode,
+            ycbcr_info,
         })
     }
     fn write_owned(
@@ -63,13 +112,71 @@ impl gluon::Convertable for DmatexFormat {
         self.drm_fourcc.write_owned(gluon_data)?;
         self.drm_modifier.write_owned(gluon_data)?;
         self.is_srgb.write_owned(gluon_data)?;
+        self.alpha_mode.write_owned(gluon_data)?;
+        self.ycbcr_info.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Queried information about a DMA texture format.
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DmatexFormatInfo {
+    pub drm_fourcc: u32,
+    pub drm_modifier: u64,
+    pub supports_srgb: bool,
+    ///Allows the dmatex to use multiple underlying memory objects
+    pub supports_disjoint: bool,
+    ///A dmatex created with this format may be applied as a texture
+    pub supports_sampling: bool,
+    ///A dmatex created with this format may be used as a render attachment
+    pub supports_rendering: bool,
+}
+impl gluon::Convertable for DmatexFormatInfo {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.drm_fourcc.write(gluon_data)?;
+        self.drm_modifier.write(gluon_data)?;
+        self.supports_srgb.write(gluon_data)?;
+        self.supports_disjoint.write(gluon_data)?;
+        self.supports_sampling.write(gluon_data)?;
+        self.supports_rendering.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let drm_fourcc = gluon::Convertable::read(gluon_data)?;
+        let drm_modifier = gluon::Convertable::read(gluon_data)?;
+        let supports_srgb = gluon::Convertable::read(gluon_data)?;
+        let supports_disjoint = gluon::Convertable::read(gluon_data)?;
+        let supports_sampling = gluon::Convertable::read(gluon_data)?;
+        let supports_rendering = gluon::Convertable::read(gluon_data)?;
+        Ok(DmatexFormatInfo {
+            drm_fourcc,
+            drm_modifier,
+            supports_srgb,
+            supports_disjoint,
+            supports_sampling,
+            supports_rendering,
+        })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.drm_fourcc.write_owned(gluon_data)?;
+        self.drm_modifier.write_owned(gluon_data)?;
+        self.supports_srgb.write_owned(gluon_data)?;
+        self.supports_disjoint.write_owned(gluon_data)?;
+        self.supports_sampling.write_owned(gluon_data)?;
+        self.supports_rendering.write_owned(gluon_data)?;
         Ok(())
     }
 }
 ///Information about a DMA texture plane.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DmatexPlane {
-    pub dmabuf_fd: std::os::fd::OwnedFd,
     pub offset: u64,
     pub row_size: u64,
     pub array_element_size: u64,
@@ -80,7 +187,6 @@ impl gluon::Convertable for DmatexPlane {
         &'b self,
         gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
-        self.dmabuf_fd.write(gluon_data)?;
         self.offset.write(gluon_data)?;
         self.row_size.write(gluon_data)?;
         self.array_element_size.write(gluon_data)?;
@@ -88,13 +194,11 @@ impl gluon::Convertable for DmatexPlane {
         Ok(())
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let dmabuf_fd = gluon::Convertable::read(gluon_data)?;
         let offset = gluon::Convertable::read(gluon_data)?;
         let row_size = gluon::Convertable::read(gluon_data)?;
         let array_element_size = gluon::Convertable::read(gluon_data)?;
         let depth_slice_size = gluon::Convertable::read(gluon_data)?;
         Ok(DmatexPlane {
-            dmabuf_fd,
             offset,
             row_size,
             array_element_size,
@@ -105,11 +209,87 @@ impl gluon::Convertable for DmatexPlane {
         self,
         gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
-        self.dmabuf_fd.write_owned(gluon_data)?;
         self.offset.write_owned(gluon_data)?;
         self.row_size.write_owned(gluon_data)?;
         self.array_element_size.write_owned(gluon_data)?;
         self.depth_slice_size.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///Basically just a tuple of a DmatexPlane and its corresponding dmabuf fd
+#[derive(Debug)]
+pub struct DisjointDmatexPlane {
+    pub dmabuf_fd: std::os::fd::OwnedFd,
+    pub plane: DmatexPlane,
+}
+impl gluon::Convertable for DisjointDmatexPlane {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.dmabuf_fd.write(gluon_data)?;
+        self.plane.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let dmabuf_fd = gluon::Convertable::read(gluon_data)?;
+        let plane = gluon::Convertable::read(gluon_data)?;
+        Ok(DisjointDmatexPlane {
+            dmabuf_fd,
+            plane,
+        })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.dmabuf_fd.write_owned(gluon_data)?;
+        self.plane.write_owned(gluon_data)?;
+        Ok(())
+    }
+}
+///YCbCr specific format information
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct YcbcrFormat {
+    pub coefficients: YcbcrCoefficients,
+    pub range: YcbcrRange,
+    ///needs to be Some when using a format with subsampling on the x axis
+    pub chroma_location_x: Option<YcbcrChromaLocation>,
+    ///needs to be Some when using a format with subsampling on the y axis
+    pub chroma_location_y: Option<YcbcrChromaLocation>,
+}
+impl gluon::Convertable for YcbcrFormat {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        self.coefficients.write(gluon_data)?;
+        self.range.write(gluon_data)?;
+        self.chroma_location_x.write(gluon_data)?;
+        self.chroma_location_y.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let coefficients = gluon::Convertable::read(gluon_data)?;
+        let range = gluon::Convertable::read(gluon_data)?;
+        let chroma_location_x = gluon::Convertable::read(gluon_data)?;
+        let chroma_location_y = gluon::Convertable::read(gluon_data)?;
+        Ok(YcbcrFormat {
+            coefficients,
+            range,
+            chroma_location_x,
+            chroma_location_y,
+        })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        self.coefficients.write_owned(gluon_data)?;
+        self.range.write_owned(gluon_data)?;
+        self.chroma_location_x.write_owned(gluon_data)?;
+        self.chroma_location_y.write_owned(gluon_data)?;
         Ok(())
     }
 }
@@ -199,6 +379,283 @@ impl gluon::Convertable for DmatexSize {
                     let __w: super::types::proxied::Size3 = size.into();
                     __w.write_owned(gluon_data)?;
                 }
+            }
+        };
+        Ok(())
+    }
+}
+///List of dmatex planes
+#[derive(Debug)]
+pub enum DmatexPlanes {
+    Simple { dmabuf_fd: std::os::fd::OwnedFd, planes: Vec<DmatexPlane> },
+    ///Only allowed if the format advertises disjoint support
+    Disjoint { planes: Vec<DisjointDmatexPlane> },
+}
+impl gluon::Convertable for DmatexPlanes {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            DmatexPlanes::Simple { dmabuf_fd, planes } => {
+                gluon_data.write_u16(0u16)?;
+                dmabuf_fd.write(gluon_data)?;
+                planes.write(gluon_data)?;
+            }
+            DmatexPlanes::Disjoint { planes } => {
+                gluon_data.write_u16(1u16)?;
+                planes.write(gluon_data)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => {
+                    let dmabuf_fd = gluon::Convertable::read(gluon_data)?;
+                    let planes = gluon::Convertable::read(gluon_data)?;
+                    DmatexPlanes::Simple {
+                        dmabuf_fd,
+                        planes,
+                    }
+                }
+                1u16 => {
+                    let planes = gluon::Convertable::read(gluon_data)?;
+                    DmatexPlanes::Disjoint { planes }
+                }
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            DmatexPlanes::Simple { dmabuf_fd, planes } => {
+                gluon_data.write_u16(0u16)?;
+                dmabuf_fd.write_owned(gluon_data)?;
+                planes.write_owned(gluon_data)?;
+            }
+            DmatexPlanes::Disjoint { planes } => {
+                gluon_data.write_u16(1u16)?;
+                planes.write_owned(gluon_data)?;
+            }
+        };
+        Ok(())
+    }
+}
+///Alpha mode used by this Dmatex
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum AlphaMode {
+    /**The stored color values are premultiplied instead of being premuliplied in linear light.
+Wayland uses this by default, consider using PremultipliedOptical instead if you can,
+as its the correct solution for blending.*/
+    PremultipliedElectrical,
+    /**The colors where premultiplied in linear light and then encoded into their storage values.
+This is the correct way to handle premultiplication, but may be more expensive if you do everything in electrical values (but blending is only correct in linear anyway)*/
+    PremultipliedOptical,
+}
+impl gluon::Convertable for AlphaMode {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            AlphaMode::PremultipliedElectrical => {
+                gluon_data.write_u16(0u16)?;
+            }
+            AlphaMode::PremultipliedOptical => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => AlphaMode::PremultipliedElectrical,
+                1u16 => AlphaMode::PremultipliedOptical,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            AlphaMode::PremultipliedElectrical => {
+                gluon_data.write_u16(0u16)?;
+            }
+            AlphaMode::PremultipliedOptical => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+}
+///YCbCr Coeficients or YCbCr model in vulkan terms
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum YcbcrCoefficients {
+    ///Maps onto vulkans YCbCr identity
+    Identity,
+    /**The input values are converted according to the
+[ITU-R BT.709](https://en.wikipedia.org/wiki/Rec._709) standard.*/
+    Bt709,
+    /**The input values are converted according to the
+[ITU-R BT.601](https://en.wikipedia.org/wiki/Rec._601) standard.*/
+    Bt601,
+    /**The input values are converted according to the
+[ITU-R BT.2020](https://en.wikipedia.org/wiki/Rec._2020) standard.*/
+    Bt2020,
+}
+impl gluon::Convertable for YcbcrCoefficients {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            YcbcrCoefficients::Identity => {
+                gluon_data.write_u16(0u16)?;
+            }
+            YcbcrCoefficients::Bt709 => {
+                gluon_data.write_u16(1u16)?;
+            }
+            YcbcrCoefficients::Bt601 => {
+                gluon_data.write_u16(2u16)?;
+            }
+            YcbcrCoefficients::Bt2020 => {
+                gluon_data.write_u16(3u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => YcbcrCoefficients::Identity,
+                1u16 => YcbcrCoefficients::Bt709,
+                2u16 => YcbcrCoefficients::Bt601,
+                3u16 => YcbcrCoefficients::Bt2020,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            YcbcrCoefficients::Identity => {
+                gluon_data.write_u16(0u16)?;
+            }
+            YcbcrCoefficients::Bt709 => {
+                gluon_data.write_u16(1u16)?;
+            }
+            YcbcrCoefficients::Bt601 => {
+                gluon_data.write_u16(2u16)?;
+            }
+            YcbcrCoefficients::Bt2020 => {
+                gluon_data.write_u16(3u16)?;
+            }
+        };
+        Ok(())
+    }
+}
+///Only relevant for subsampled YCbCr
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum YcbcrChromaLocation {
+    ///The chroma components are sampled at the even luma coordinate.
+    CositedEven,
+    /**The chroma components are sampled at the midpoint between the even luma coordinate and
+the next higher odd luma coordinate.*/
+    Midpoint,
+}
+impl gluon::Convertable for YcbcrChromaLocation {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            YcbcrChromaLocation::CositedEven => {
+                gluon_data.write_u16(0u16)?;
+            }
+            YcbcrChromaLocation::Midpoint => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => YcbcrChromaLocation::CositedEven,
+                1u16 => YcbcrChromaLocation::Midpoint,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            YcbcrChromaLocation::CositedEven => {
+                gluon_data.write_u16(0u16)?;
+            }
+            YcbcrChromaLocation::Midpoint => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+}
+///The used range of values in a YCbCr Dmatex
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum YcbcrRange {
+    Full,
+    Limited,
+}
+impl gluon::Convertable for YcbcrRange {
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            YcbcrRange::Full => {
+                gluon_data.write_u16(0u16)?;
+            }
+            YcbcrRange::Limited => {
+                gluon_data.write_u16(1u16)?;
+            }
+        };
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        Ok(
+            match gluon_data.read_u16()? {
+                0u16 => YcbcrRange::Full,
+                1u16 => YcbcrRange::Limited,
+                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+            },
+        )
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder<'_>,
+    ) -> Result<(), gluon::WriteError> {
+        match self {
+            YcbcrRange::Full => {
+                gluon_data.write_u16(0u16)?;
+            }
+            YcbcrRange::Limited => {
+                gluon_data.write_u16(1u16)?;
             }
         };
         Ok(())
@@ -386,13 +843,13 @@ impl DmatexInterface {
         size: impl Into<DmatexSize>,
         format: impl Into<DmatexFormat>,
         array_layers: impl Into<u32>,
-        planes: impl Into<Vec<DmatexPlane>>,
+        planes: impl Into<DmatexPlanes>,
         timeline_syncobj_fd: impl Into<std::os::fd::OwnedFd>,
     ) -> Result<Result<DmatexRef, DmatexImportError>, gluon::SendError> {
         let size: DmatexSize = size.into();
         let format: DmatexFormat = format.into();
         let array_layers: u32 = array_layers.into();
-        let planes: Vec<DmatexPlane> = planes.into();
+        let planes: DmatexPlanes = planes.into();
         let timeline_syncobj_fd: std::os::fd::OwnedFd = timeline_syncobj_fd.into();
         tracing::trace!(
             interface = "DmatexInterface", method = "import_dmatex", ? size, ? format, ?
@@ -420,7 +877,7 @@ impl DmatexInterface {
     pub async fn enumerate_formats(
         &self,
         render_node: impl Into<u64>,
-    ) -> Result<Option<Vec<DmatexFormat>>, gluon::SendError> {
+    ) -> Result<Option<Vec<DmatexFormatInfo>>, gluon::SendError> {
         let render_node: u64 = render_node.into();
         tracing::trace!(
             interface = "DmatexInterface", method = "enumerate_formats", ? render_node,
@@ -499,14 +956,14 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         size: DmatexSize,
         format: DmatexFormat,
         array_layers: u32,
-        planes: Vec<DmatexPlane>,
+        planes: DmatexPlanes,
         timeline_syncobj_fd: std::os::fd::OwnedFd,
     ) -> impl Future<Output = Result<DmatexRef, DmatexImportError>> + Send + Sync;
     fn enumerate_formats(
         &self,
         _ctx: gluon::Context,
         render_node: u64,
-    ) -> impl Future<Output = Option<Vec<DmatexFormat>>> + Send + Sync;
+    ) -> impl Future<Output = Option<Vec<DmatexFormatInfo>>> + Send + Sync;
     fn primary_render_node_id(
         &self,
         _ctx: gluon::Context,

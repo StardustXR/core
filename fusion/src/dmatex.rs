@@ -9,7 +9,7 @@ pub trait DmatexExt {
 		size: DmatexSize,
 		format: DmatexFormat,
 		array_layers: u32,
-		planes: Vec<DmatexPlane>,
+		planes: DmatexPlanes,
 		timeline_syncobj_fd: std::os::fd::OwnedFd,
 	) -> impl std::future::Future<Output = Result<DmatexRef>> + Send;
 }
@@ -19,7 +19,7 @@ impl DmatexExt for DmatexRef {
 		size: DmatexSize,
 		format: DmatexFormat,
 		array_layers: u32,
-		planes: Vec<DmatexPlane>,
+		planes: DmatexPlanes,
 		timeline_syncobj_fd: std::os::fd::OwnedFd,
 	) -> Result<DmatexRef> {
 		Ok(client

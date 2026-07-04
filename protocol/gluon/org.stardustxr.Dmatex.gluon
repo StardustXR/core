@@ -7,20 +7,102 @@ enum DmatexSize {
 	Size3D { size: types::Size3 },
 }
 
-/// Information about a DMA texture format.
+/// Representing DMA texture format.
 struct DmatexFormat {
 	drm_fourcc: u32,
 	drm_modifier: u64,
 	is_srgb: bool,
+	alpha_mode: AlphaMode,
+	/// Must be Some when using a YCbCr format
+	ycbcr_info: Option<YcbcrFormat>,
+}
+
+/// Queried information about a DMA texture format.
+struct DmatexFormatInfo {
+	drm_fourcc: u32,
+	drm_modifier: u64,
+	supports_srgb: bool,
+	/// Allows the dmatex to use multiple underlying memory objects
+	supports_disjoint: bool,
+	/// A dmatex created with this format may be applied as a texture
+	supports_sampling: bool,
+	/// A dmatex created with this format may be used as a render attachment
+	supports_rendering: bool,
 }
 
 /// Information about a DMA texture plane.
 struct DmatexPlane {
-	dmabuf_fd: Fd,
 	offset: u64,
 	row_size: u64,
 	array_element_size: u64,
 	depth_slice_size: u64,
+}
+/// Basically just a tuple of a DmatexPlane and its corresponding dmabuf fd
+struct DisjointDmatexPlane {
+	dmabuf_fd: Fd,
+	plane: DmatexPlane,
+}
+/// List of dmatex planes
+enum DmatexPlanes {
+	Simple {
+		dmabuf_fd: Fd,
+		planes: Vec<DmatexPlane>,
+	},
+	/// Only allowed if the format advertises disjoint support
+	Disjoint {
+		planes: Vec<DisjointDmatexPlane>,
+	},
+}
+
+/// Alpha mode used by this Dmatex
+enum AlphaMode {
+	/// The stored color values are premultiplied instead of being premuliplied in linear light.
+	/// Wayland uses this by default, consider using PremultipliedOptical instead if you can,
+	/// as its the correct solution for blending.
+	PremultipliedElectrical,
+	/// The colors where premultiplied in linear light and then encoded into their storage values.
+	/// This is the correct way to handle premultiplication, but may be more expensive if you do everything in electrical values (but blending is only correct in linear anyway)
+	PremultipliedOptical,
+}
+
+/// YCbCr Coeficients or YCbCr model in vulkan terms
+enum YcbcrCoefficients {
+	/// Maps onto vulkans YCbCr identity
+	Identity,
+	/// The input values are converted according to the
+    /// [ITU-R BT.709](https://en.wikipedia.org/wiki/Rec._709) standard.
+    BT709,
+    /// The input values are converted according to the
+    /// [ITU-R BT.601](https://en.wikipedia.org/wiki/Rec._601) standard.
+    BT601,
+    /// The input values are converted according to the
+    /// [ITU-R BT.2020](https://en.wikipedia.org/wiki/Rec._2020) standard.
+    BT2020,
+}
+
+/// Only relevant for subsampled YCbCr
+enum YcbcrChromaLocation {
+    /// The chroma components are sampled at the even luma coordinate.
+    CositedEven,
+    /// The chroma components are sampled at the midpoint between the even luma coordinate and
+    /// the next higher odd luma coordinate.
+    Midpoint,
+}
+
+/// The used range of values in a YCbCr Dmatex
+enum YcbcrRange {
+	Full,
+	Limited,
+}
+
+/// YCbCr specific format information
+struct YcbcrFormat {
+	coefficients: YcbcrCoefficients,
+	range: YcbcrRange,
+	/// needs to be Some when using a format with subsampling on the x axis
+	chroma_location_x: Option<YcbcrChromaLocation>,
+	/// needs to be Some when using a format with subsampling on the y axis
+	chroma_location_y: Option<YcbcrChromaLocation>,
 }
 
 /// Opaque reference to a dmatex. This is so that you can send buffers to other processes without being able to access them directly, for security.
@@ -28,8 +110,8 @@ interface DmatexRef {}
 
 /// Interface to the dmatex system.
 interface DmatexInterface {
-	import_dmatex(size: DmatexSize, format: DmatexFormat, array_layers: u32, planes: Vec<DmatexPlane>, timeline_syncobj_fd: Fd) -> (dmatex: Result<Ref<DmatexRef>, DmatexImportError>)
-	enumerate_formats(render_node: u64) -> (formats: Option<Vec<DmatexFormat>>)
+	import_dmatex(size: DmatexSize, format: DmatexFormat, array_layers: u32, planes: DmatexPlanes, timeline_syncobj_fd: Fd) -> (dmatex: Result<Ref<DmatexRef>, DmatexImportError>)
+	enumerate_formats(render_node: u64) -> (formats: Option<Vec<DmatexFormatInfo>>)
 	primary_render_node_id() -> (drm_render_node_id: u64)
 }
 
