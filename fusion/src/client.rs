@@ -205,6 +205,13 @@ impl<H: ClientHandler> Client<H> {
 	pub fn spatial_query_interface(&self) -> &SpatialQueryInterface {
 		&self.spatial_query_interface
 	}
+
+	pub async fn generate_startup_token(
+		&self,
+		root: impl Into<super::spatial::SpatialRef>,
+	) -> crate::Result<String> {
+		Ok(self.server.generate_startup_token(root).await??)
+	}
 }
 
 #[derive(Debug, gluon::Handler)]
