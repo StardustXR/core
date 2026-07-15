@@ -18,9 +18,9 @@ struct BeamQuery {
 
 /// handle the beam query
 interface BeamQueryHandler {
-  intersected(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, deepest_point_distance: f32, distance: f32)
+  intersected(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::RayMarchResult)
   interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
-  moved(obj: Ref<query::QueryableObjectRef>, deepest_point_distance: f32, distance: f32)
+  moved(obj: Ref<query::QueryableObjectRef>, spatial_info: field::RayMarchResult)
   left(obj: Ref<query::QueryableObjectRef>)
 }
 
@@ -35,9 +35,9 @@ struct ZoneQuery {
 
 /// handle the zone query
 interface ZoneQueryHandler {
-  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, relative_position: types::Vec3f, distance: f32)
+  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, relative_position: types::Vec3f, spatial_info: field::FieldSample)
   interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
-  moved(obj: Ref<query::QueryableObjectRef>, relative_position: types::Vec3f, distance: f32)
+  moved(obj: Ref<query::QueryableObjectRef>, relative_position: types::Vec3f, spatial_info: field::FieldSample)
   left(obj: Ref<query::QueryableObjectRef>)
 }
 
@@ -51,9 +51,9 @@ struct PointsQuery {
 
 /// handle the points query
 interface PointsQueryHandler {
-  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, distance: f32)
+  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::FieldSample)
   interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
-  moved(obj: Ref<query::QueryableObjectRef>, distance: f32)
+  moved(obj: Ref<query::QueryableObjectRef>, spatial_info: field::FieldSample)
   left(obj: Ref<query::QueryableObjectRef>)
 }
 
