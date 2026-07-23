@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Audio",
     types: &[],
@@ -89,12 +90,26 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
                 8u32 => {
                     tracing::trace!(interface = "Sound", method = "play", "dispatching");
                     drop(gluon_data);
-                    self.play(ctx).await;
+                    self.play(ctx)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Sound", method = "play",
+                                method_id = 8u32
+                            ),
+                        )
+                        .await;
                 }
                 9u32 => {
                     tracing::trace!(interface = "Sound", method = "stop", "dispatching");
                     drop(gluon_data);
-                    self.stop(ctx).await;
+                    self.stop(ctx)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Sound", method = "stop",
+                                method_id = 9u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -191,6 +206,19 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<Sound, super::types::ResourceLoadError>,
     > + Send + Sync;
+    ///Dispatched instead of [`Self::create_sound`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_sound` and sends the result through `reply`. Override this method instead of `create_sound` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn create_sound_oneway(
+        &self,
+        _ctx: gluon::Context,
+        spatial: super::spatial::Spatial,
+        sound: super::types::Resource,
+        reply: gluon::ReplySender<Result<Sound, super::types::ResourceLoadError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let sound = self.create_sound(_ctx, spatial, sound).await;
+            reply.send(sound)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -201,25 +229,34 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_sound = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "AudioInterface", method = "create_sound", ?
                         param_spatial, ? param_sound, "dispatching"
                     );
-                    let (sound) = self
-                        .create_sound(ctx, param_spatial, param_sound)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "AudioInterface", method = "create_sound", ? sound,
-                        "←"
+                    let reply: gluon::ReplySender<
+                        Result<Sound, super::types::ResourceLoadError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |sound, gluon_out| {
+                            tracing::trace!(
+                                interface = "AudioInterface", method = "create_sound", ?
+                                sound, "←"
+                            );
+                            sound.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    sound.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.create_sound_oneway(ctx, param_spatial, param_sound, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "AudioInterface", method =
+                                "create_sound", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Tracked",
     types: &[],
@@ -119,12 +120,37 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = (super::spatial::SpatialRef, TrackedGuard, bool),
     > + Send + Sync;
+    ///Dispatched instead of [`Self::get`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get` and sends the result through `reply`. Override this method instead of `get` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_oneway(
+        &self,
+        _ctx: gluon::Context,
+        handler: TrackedStateReceiver,
+        reply: gluon::ReplySender<(super::spatial::SpatialRef, TrackedGuard, bool)>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let (spatial, guard, tracked) = self.get(_ctx, handler).await;
+            reply.send((spatial, guard, tracked))
+        }
+    }
     fn get_pose(
         &self,
         _ctx: gluon::Context,
         at: super::types::Timestamp,
         relative_to: super::spatial::SpatialRef,
     ) -> impl Future<Output = (Option<super::types::Posef>, bool)> + Send + Sync;
+    ///Dispatched instead of [`Self::get_pose`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_pose` and sends the result through `reply`. Override this method instead of `get_pose` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_pose_oneway(
+        &self,
+        _ctx: gluon::Context,
+        at: super::types::Timestamp,
+        relative_to: super::spatial::SpatialRef,
+        reply: gluon::ReplySender<(Option<super::types::Posef>, bool)>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let (pose, tracked) = self.get_pose(_ctx, at, relative_to).await;
+            reply.send((pose, tracked))
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -135,47 +161,65 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Tracked", method = "get", ? param_handler,
                         "dispatching"
                     );
-                    let (spatial, guard, tracked) = self.get(ctx, param_handler).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Tracked", method = "get", ? spatial, ? guard, ?
-                        tracked, "←"
+                    let reply: gluon::ReplySender<
+                        (super::spatial::SpatialRef, TrackedGuard, bool),
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |(spatial, guard, tracked), gluon_out| {
+                            tracing::trace!(
+                                interface = "Tracked", method = "get", ? spatial, ? guard, ?
+                                tracked, "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            guard.write_owned(gluon_out)?;
+                            tracked.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    guard.write_owned(&mut gluon_out)?;
-                    tracked.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_oneway(ctx, param_handler, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Tracked", method = "get",
+                                method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_at = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Tracked", method = "get_pose", ? param_at, ?
                         param_relative_to, "dispatching"
                     );
-                    let (pose, tracked) = self
-                        .get_pose(ctx, param_at, param_relative_to)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Tracked", method = "get_pose", ? pose, ? tracked,
-                        "←"
+                    let reply: gluon::ReplySender<(Option<super::types::Posef>, bool)> = gluon::ReplySender::new(
+                        return_callback,
+                        |(pose, tracked), gluon_out| {
+                            tracing::trace!(
+                                interface = "Tracked", method = "get_pose", ? pose, ?
+                                tracked, "←"
+                            );
+                            pose.write_owned(gluon_out)?;
+                            tracked.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    pose.write_owned(&mut gluon_out)?;
-                    tracked.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_pose_oneway(ctx, param_at, param_relative_to, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Tracked", method = "get_pose",
+                                method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -339,7 +383,14 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
                         param_tracked, "dispatching"
                     );
                     drop(gluon_data);
-                    self.tracked(ctx, param_tracked).await;
+                    self.tracked(ctx, param_tracked)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "TrackedStateReceiver", method =
+                                "tracked", method_id = 8u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }

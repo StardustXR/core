@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Dmatex",
     types: &[
@@ -959,15 +960,63 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         planes: DmatexPlanes,
         timeline_syncobj_fd: std::os::fd::OwnedFd,
     ) -> impl Future<Output = Result<DmatexRef, DmatexImportError>> + Send + Sync;
+    ///Dispatched instead of [`Self::import_dmatex`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `import_dmatex` and sends the result through `reply`. Override this method instead of `import_dmatex` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn import_dmatex_oneway(
+        &self,
+        _ctx: gluon::Context,
+        size: DmatexSize,
+        format: DmatexFormat,
+        array_layers: u32,
+        planes: DmatexPlanes,
+        timeline_syncobj_fd: std::os::fd::OwnedFd,
+        reply: gluon::ReplySender<Result<DmatexRef, DmatexImportError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let dmatex = self
+                .import_dmatex(
+                    _ctx,
+                    size,
+                    format,
+                    array_layers,
+                    planes,
+                    timeline_syncobj_fd,
+                )
+                .await;
+            reply.send(dmatex)
+        }
+    }
     fn enumerate_formats(
         &self,
         _ctx: gluon::Context,
         render_node: u64,
     ) -> impl Future<Output = Option<Vec<DmatexFormatInfo>>> + Send + Sync;
+    ///Dispatched instead of [`Self::enumerate_formats`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `enumerate_formats` and sends the result through `reply`. Override this method instead of `enumerate_formats` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn enumerate_formats_oneway(
+        &self,
+        _ctx: gluon::Context,
+        render_node: u64,
+        reply: gluon::ReplySender<Option<Vec<DmatexFormatInfo>>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let formats = self.enumerate_formats(_ctx, render_node).await;
+            reply.send(formats)
+        }
+    }
     fn primary_render_node_id(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = u64> + Send + Sync;
+    ///Dispatched instead of [`Self::primary_render_node_id`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `primary_render_node_id` and sends the result through `reply`. Override this method instead of `primary_render_node_id` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn primary_render_node_id_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<u64>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let drm_render_node_id = self.primary_render_node_id(_ctx).await;
+            reply.send(drm_render_node_id)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -978,7 +1027,6 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_size = gluon::Convertable::read(&mut gluon_data)?;
                     let param_format = gluon::Convertable::read(&mut gluon_data)?;
                     let param_array_layers = gluon::Convertable::read(&mut gluon_data)?;
@@ -991,62 +1039,91 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         param_size, ? param_format, ? param_array_layers, ? param_planes,
                         ? param_timeline_syncobj_fd, "dispatching"
                     );
-                    let (dmatex) = self
-                        .import_dmatex(
+                    drop(gluon_data);
+                    let reply: gluon::ReplySender<
+                        Result<DmatexRef, DmatexImportError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |dmatex, gluon_out| {
+                            tracing::trace!(
+                                interface = "DmatexInterface", method = "import_dmatex", ?
+                                dmatex, "←"
+                            );
+                            dmatex.write_owned(gluon_out)?;
+                            Ok(())
+                        },
+                    );
+                    self.import_dmatex_oneway(
                             ctx,
                             param_size,
                             param_format,
                             param_array_layers,
                             param_planes,
                             param_timeline_syncobj_fd,
+                            reply,
                         )
-                        .await;
-                    drop(gluon_data);
-                    tracing::trace!(
-                        interface = "DmatexInterface", method = "import_dmatex", ?
-                        dmatex, "←"
-                    );
-                    dmatex.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "DmatexInterface", method =
+                                "import_dmatex", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_render_node = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "DmatexInterface", method = "enumerate_formats", ?
                         param_render_node, "dispatching"
                     );
-                    let (formats) = self.enumerate_formats(ctx, param_render_node).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "DmatexInterface", method = "enumerate_formats", ?
-                        formats, "←"
+                    let reply: gluon::ReplySender<Option<Vec<DmatexFormatInfo>>> = gluon::ReplySender::new(
+                        return_callback,
+                        |formats, gluon_out| {
+                            tracing::trace!(
+                                interface = "DmatexInterface", method = "enumerate_formats",
+                                ? formats, "←"
+                            );
+                            formats.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    formats.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.enumerate_formats_oneway(ctx, param_render_node, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "DmatexInterface", method =
+                                "enumerate_formats", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "DmatexInterface", method = "primary_render_node_id",
                         "dispatching"
                     );
-                    let (drm_render_node_id) = self.primary_render_node_id(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "DmatexInterface", method = "primary_render_node_id",
-                        ? drm_render_node_id, "←"
+                    let reply: gluon::ReplySender<u64> = gluon::ReplySender::new(
+                        return_callback,
+                        |drm_render_node_id, gluon_out| {
+                            tracing::trace!(
+                                interface = "DmatexInterface", method =
+                                "primary_render_node_id", ? drm_render_node_id, "←"
+                            );
+                            drm_render_node_id.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    drm_render_node_id.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.primary_render_node_id_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "DmatexInterface", method =
+                                "primary_render_node_id", method_id = 10u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -1130,6 +1207,17 @@ impl Eq for DmatexSubmitRelease {}
 pub trait DmatexSubmitReleaseHandler: gluon::Handler + Send + Sync + 'static {
     ///Consume the release point, after you get the release point you have to signal it at some point!
     fn consume(&self, _ctx: gluon::Context) -> impl Future<Output = u64> + Send + Sync;
+    ///Dispatched instead of [`Self::consume`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `consume` and sends the result through `reply`. Override this method instead of `consume` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn consume_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<u64>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let release_point = self.consume(_ctx).await;
+            reply.send(release_point)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -1140,21 +1228,30 @@ pub trait DmatexSubmitReleaseHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "DmatexSubmitRelease", method = "consume",
                         "dispatching"
                     );
-                    let (release_point) = self.consume(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "DmatexSubmitRelease", method = "consume", ?
-                        release_point, "←"
+                    let reply: gluon::ReplySender<u64> = gluon::ReplySender::new(
+                        return_callback,
+                        |release_point, gluon_out| {
+                            tracing::trace!(
+                                interface = "DmatexSubmitRelease", method = "consume", ?
+                                release_point, "←"
+                            );
+                            release_point.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    release_point.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.consume_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "DmatexSubmitRelease", method =
+                                "consume", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

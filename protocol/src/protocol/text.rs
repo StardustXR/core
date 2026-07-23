@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Text",
     types: &[
@@ -424,6 +425,20 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<Text, super::types::ResourceLoadError>,
     > + Send + Sync;
+    ///Dispatched instead of [`Self::create_text`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_text` and sends the result through `reply`. Override this method instead of `create_text` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn create_text_oneway(
+        &self,
+        _ctx: gluon::Context,
+        spatial: super::spatial::Spatial,
+        text: String,
+        style: TextStyle,
+        reply: gluon::ReplySender<Result<Text, super::types::ResourceLoadError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let text = self.create_text(_ctx, spatial, text, style).await;
+            reply.send(text)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -434,7 +449,6 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
                     let param_style = gluon::Convertable::read(&mut gluon_data)?;
@@ -442,18 +456,34 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         interface = "TextInterface", method = "create_text", ?
                         param_spatial, ? param_text, ? param_style, "dispatching"
                     );
-                    let (text) = self
-                        .create_text(ctx, param_spatial, param_text, param_style)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "TextInterface", method = "create_text", ? text,
-                        "←"
+                    let reply: gluon::ReplySender<
+                        Result<Text, super::types::ResourceLoadError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |text, gluon_out| {
+                            tracing::trace!(
+                                interface = "TextInterface", method = "create_text", ? text,
+                                "←"
+                            );
+                            text.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    text.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.create_text_oneway(
+                            ctx,
+                            param_spatial,
+                            param_text,
+                            param_style,
+                            reply,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "TextInterface", method =
+                                "create_text", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -564,7 +594,14 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
                         param_height, "dispatching"
                     );
                     drop(gluon_data);
-                    self.set_character_height(ctx, param_height).await;
+                    self.set_character_height(ctx, param_height)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Text", method =
+                                "set_character_height", method_id = 8u32
+                            ),
+                        )
+                        .await;
                 }
                 9u32 => {
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
@@ -573,7 +610,14 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.set_text(ctx, param_text).await;
+                    self.set_text(ctx, param_text)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Text", method = "set_text",
+                                method_id = 9u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }

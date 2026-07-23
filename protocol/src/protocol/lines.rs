@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Lines",
     types: &[
@@ -196,7 +197,14 @@ pub trait LinesHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.set_lines(ctx, param_lines).await;
+                    self.set_lines(ctx, param_lines)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Lines", method = "set_lines",
+                                method_id = 8u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -291,6 +299,19 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         spatial: super::spatial::Spatial,
         lines: Vec<Line>,
     ) -> impl Future<Output = Result<Lines, super::types::CreateError>> + Send + Sync;
+    ///Dispatched instead of [`Self::create_lines`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_lines` and sends the result through `reply`. Override this method instead of `create_lines` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn create_lines_oneway(
+        &self,
+        _ctx: gluon::Context,
+        spatial: super::spatial::Spatial,
+        lines: Vec<Line>,
+        reply: gluon::ReplySender<Result<Lines, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let lines = self.create_lines(_ctx, spatial, lines).await;
+            reply.send(lines)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -301,25 +322,34 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_lines = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "LinesInterface", method = "create_lines", ?
                         param_spatial, ? param_lines, "dispatching"
                     );
-                    let (lines) = self
-                        .create_lines(ctx, param_spatial, param_lines)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "LinesInterface", method = "create_lines", ? lines,
-                        "←"
+                    let reply: gluon::ReplySender<
+                        Result<Lines, super::types::CreateError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |lines, gluon_out| {
+                            tracing::trace!(
+                                interface = "LinesInterface", method = "create_lines", ?
+                                lines, "←"
+                            );
+                            lines.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    lines.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.create_lines_oneway(ctx, param_spatial, param_lines, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "LinesInterface", method =
+                                "create_lines", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

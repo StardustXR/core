@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Sky",
     types: &[],
@@ -190,6 +191,19 @@ Returns None if the sky texture is already set.*/
         tex: super::types::Resource,
         opaque: bool,
     ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
+    ///Dispatched instead of [`Self::set_sky_tex`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `set_sky_tex` and sends the result through `reply`. Override this method instead of `set_sky_tex` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn set_sky_tex_oneway(
+        &self,
+        _ctx: gluon::Context,
+        tex: super::types::Resource,
+        opaque: bool,
+        reply: gluon::ReplySender<Option<SkyGuard>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let guard = self.set_sky_tex(_ctx, tex, opaque).await;
+            reply.send(guard)
+        }
+    }
     /**Set the sky lighting to a given equirectagular texture, supports HDRI images.
 Returns None if the sky lighting is already set.*/
     fn set_sky_light(
@@ -197,6 +211,18 @@ Returns None if the sky lighting is already set.*/
         _ctx: gluon::Context,
         tex: super::types::Resource,
     ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
+    ///Dispatched instead of [`Self::set_sky_light`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `set_sky_light` and sends the result through `reply`. Override this method instead of `set_sky_light` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn set_sky_light_oneway(
+        &self,
+        _ctx: gluon::Context,
+        tex: super::types::Resource,
+        reply: gluon::ReplySender<Option<SkyGuard>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let guard = self.set_sky_light(_ctx, tex).await;
+            reply.send(guard)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -207,42 +233,60 @@ Returns None if the sky lighting is already set.*/
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
                     let param_opaque = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SkyInterface", method = "set_sky_tex", ? param_tex,
                         ? param_opaque, "dispatching"
                     );
-                    let (guard) = self.set_sky_tex(ctx, param_tex, param_opaque).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SkyInterface", method = "set_sky_tex", ? guard,
-                        "←"
+                    let reply: gluon::ReplySender<Option<SkyGuard>> = gluon::ReplySender::new(
+                        return_callback,
+                        |guard, gluon_out| {
+                            tracing::trace!(
+                                interface = "SkyInterface", method = "set_sky_tex", ? guard,
+                                "←"
+                            );
+                            guard.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    guard.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.set_sky_tex_oneway(ctx, param_tex, param_opaque, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SkyInterface", method =
+                                "set_sky_tex", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SkyInterface", method = "set_sky_light", ?
                         param_tex, "dispatching"
                     );
-                    let (guard) = self.set_sky_light(ctx, param_tex).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SkyInterface", method = "set_sky_light", ? guard,
-                        "←"
+                    let reply: gluon::ReplySender<Option<SkyGuard>> = gluon::ReplySender::new(
+                        return_callback,
+                        |guard, gluon_out| {
+                            tracing::trace!(
+                                interface = "SkyInterface", method = "set_sky_light", ?
+                                guard, "←"
+                            );
+                            guard.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    guard.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.set_sky_light_oneway(ctx, param_tex, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SkyInterface", method =
+                                "set_sky_light", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

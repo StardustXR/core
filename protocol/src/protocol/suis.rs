@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.SUIS",
     types: &[
@@ -816,11 +817,33 @@ This is considered static and should not change after handler creation.*/
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::spatial::SpatialRef> + Send + Sync;
+    ///Dispatched instead of [`Self::get_spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_spatial` and sends the result through `reply`. Override this method instead of `get_spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_spatial_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::spatial::SpatialRef>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.get_spatial(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     ///This is considered static and should not change after handler creation.
     fn get_field(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::field::FieldRef> + Send + Sync;
+    ///Dispatched instead of [`Self::get_field`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_field` and sends the result through `reply`. Override this method instead of `get_field` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_field_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::field::FieldRef>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let field = self.get_field(_ctx).await;
+            reply.send(field)
+        }
+    }
     ///An input method just started sending input to this handler.
     fn input_gained(
         &self,
@@ -856,36 +879,55 @@ This is considered static and should not change after handler creation.*/
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "InputHandler", method = "get_spatial", "dispatching"
                     );
-                    let (spatial) = self.get_spatial(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "InputHandler", method = "get_spatial", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::spatial::SpatialRef> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "InputHandler", method = "get_spatial", ?
+                                spatial, "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_spatial_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputHandler", method =
+                                "get_spatial", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "InputHandler", method = "get_field", "dispatching"
                     );
-                    let (field) = self.get_field(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "InputHandler", method = "get_field", ? field, "←"
+                    let reply: gluon::ReplySender<super::field::FieldRef> = gluon::ReplySender::new(
+                        return_callback,
+                        |field, gluon_out| {
+                            tracing::trace!(
+                                interface = "InputHandler", method = "get_field", ? field,
+                                "←"
+                            );
+                            field.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    field.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_field_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputHandler", method =
+                                "get_field", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
@@ -904,6 +946,12 @@ This is considered static and should not change after handler creation.*/
                             param_time,
                             param_spatial,
                             param_semantic,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputHandler", method =
+                                "input_gained", method_id = 10u32
+                            ),
                         )
                         .await;
                 }
@@ -925,6 +973,12 @@ This is considered static and should not change after handler creation.*/
                             param_spatial,
                             param_semantic,
                         )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputHandler", method =
+                                "input_updated", method_id = 11u32
+                            ),
+                        )
                         .await;
                 }
                 12u32 => {
@@ -935,7 +989,14 @@ This is considered static and should not change after handler creation.*/
                         param_method, ? param_time, "dispatching"
                     );
                     drop(gluon_data);
-                    self.input_left(ctx, param_method, param_time).await;
+                    self.input_left(ctx, param_method, param_time)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputHandler", method =
+                                "input_left", method_id = 12u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -1055,6 +1116,18 @@ pub trait InputMethodHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         handler: InputHandler,
     ) -> impl Future<Output = Option<InputMethodCapture>> + Send + Sync;
+    ///Dispatched instead of [`Self::request_capture`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `request_capture` and sends the result through `reply`. Override this method instead of `request_capture` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn request_capture_oneway(
+        &self,
+        _ctx: gluon::Context,
+        handler: InputHandler,
+        reply: gluon::ReplySender<Option<InputMethodCapture>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let capture = self.request_capture(_ctx, handler).await;
+            reply.send(capture)
+        }
+    }
     /**Get spatial data relative to the input handler at a specific point in time.
 Should return None when the InputMethod is captured by another InputHandler.*/
     fn get_spatial_data(
@@ -1063,6 +1136,19 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         handler: InputHandler,
         time: super::types::Timestamp,
     ) -> impl Future<Output = Option<SpatialData>> + Send + Sync;
+    ///Dispatched instead of [`Self::get_spatial_data`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_spatial_data` and sends the result through `reply`. Override this method instead of `get_spatial_data` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_spatial_data_oneway(
+        &self,
+        _ctx: gluon::Context,
+        handler: InputHandler,
+        time: super::types::Timestamp,
+        reply: gluon::ReplySender<Option<SpatialData>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let data = self.get_spatial_data(_ctx, handler, time).await;
+            reply.send(data)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -1073,44 +1159,60 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "InputMethod", method = "request_capture", ?
                         param_handler, "dispatching"
                     );
-                    let (capture) = self.request_capture(ctx, param_handler).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "InputMethod", method = "request_capture", ? capture,
-                        "←"
+                    let reply: gluon::ReplySender<Option<InputMethodCapture>> = gluon::ReplySender::new(
+                        return_callback,
+                        |capture, gluon_out| {
+                            tracing::trace!(
+                                interface = "InputMethod", method = "request_capture", ?
+                                capture, "←"
+                            );
+                            capture.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    capture.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.request_capture_oneway(ctx, param_handler, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputMethod", method =
+                                "request_capture", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "InputMethod", method = "get_spatial_data", ?
                         param_handler, ? param_time, "dispatching"
                     );
-                    let (data) = self
-                        .get_spatial_data(ctx, param_handler, param_time)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "InputMethod", method = "get_spatial_data", ? data,
-                        "←"
+                    let reply: gluon::ReplySender<Option<SpatialData>> = gluon::ReplySender::new(
+                        return_callback,
+                        |data, gluon_out| {
+                            tracing::trace!(
+                                interface = "InputMethod", method = "get_spatial_data", ?
+                                data, "←"
+                            );
+                            data.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    data.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_spatial_data_oneway(ctx, param_handler, param_time, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "InputMethod", method =
+                                "get_spatial_data", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

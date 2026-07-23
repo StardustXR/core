@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Spatial",
     types: &[
@@ -606,11 +607,33 @@ pub trait SpatialHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = SpatialRef> + Send + Sync;
+    ///Dispatched instead of [`Self::spatial_ref`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `spatial_ref` and sends the result through `reply`. Override this method instead of `spatial_ref` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn spatial_ref_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<SpatialRef>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.spatial_ref(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     ///Get the bounding box of this spatial and its children relative to itself
     fn get_local_bounding_box(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = BoundingBox> + Send + Sync;
+    ///Dispatched instead of [`Self::get_local_bounding_box`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_local_bounding_box` and sends the result through `reply`. Override this method instead of `get_local_bounding_box` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_local_bounding_box_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<BoundingBox>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let bounding_box = self.get_local_bounding_box(_ctx).await;
+            reply.send(bounding_box)
+        }
+    }
     ///Get the bounding box of this spatial and its children relative to another spatial.
     fn get_relative_bounding_box(
         &self,
@@ -619,6 +642,18 @@ pub trait SpatialHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<BoundingBox, super::types::CreateError>,
     > + Send + Sync;
+    ///Dispatched instead of [`Self::get_relative_bounding_box`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_relative_bounding_box` and sends the result through `reply`. Override this method instead of `get_relative_bounding_box` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_relative_bounding_box_oneway(
+        &self,
+        _ctx: gluon::Context,
+        relative_to: SpatialRef,
+        reply: gluon::ReplySender<Result<BoundingBox, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let bounding_box = self.get_relative_bounding_box(_ctx, relative_to).await;
+            reply.send(bounding_box)
+        }
+    }
     ///Get the transform of this spatial object.
     fn get_relative_transform(
         &self,
@@ -627,6 +662,18 @@ pub trait SpatialHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<Transform, super::types::CreateError>,
     > + Send + Sync;
+    ///Dispatched instead of [`Self::get_relative_transform`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_relative_transform` and sends the result through `reply`. Override this method instead of `get_relative_transform` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_relative_transform_oneway(
+        &self,
+        _ctx: gluon::Context,
+        relative_to: SpatialRef,
+        reply: gluon::ReplySender<Result<Transform, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let transform = self.get_relative_transform(_ctx, relative_to).await;
+            reply.send(transform)
+        }
+    }
     /**Sets the parent of this spatial object, keeping the local transform.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
     fn set_parent(
@@ -664,79 +711,116 @@ It will silently error and not set the spatial parent if it is to a child of its
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Spatial", method = "spatial_ref", "dispatching"
                     );
-                    let (spatial) = self.spatial_ref(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Spatial", method = "spatial_ref", ? spatial, "←"
+                    let reply: gluon::ReplySender<SpatialRef> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Spatial", method = "spatial_ref", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.spatial_ref_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "spatial_ref", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Spatial", method = "get_local_bounding_box",
                         "dispatching"
                     );
-                    let (bounding_box) = self.get_local_bounding_box(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Spatial", method = "get_local_bounding_box", ?
-                        bounding_box, "←"
+                    let reply: gluon::ReplySender<BoundingBox> = gluon::ReplySender::new(
+                        return_callback,
+                        |bounding_box, gluon_out| {
+                            tracing::trace!(
+                                interface = "Spatial", method = "get_local_bounding_box", ?
+                                bounding_box, "←"
+                            );
+                            bounding_box.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    bounding_box.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_local_bounding_box_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "get_local_bounding_box", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Spatial", method = "get_relative_bounding_box", ?
                         param_relative_to, "dispatching"
                     );
-                    let (bounding_box) = self
-                        .get_relative_bounding_box(ctx, param_relative_to)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Spatial", method = "get_relative_bounding_box", ?
-                        bounding_box, "←"
+                    let reply: gluon::ReplySender<
+                        Result<BoundingBox, super::types::CreateError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |bounding_box, gluon_out| {
+                            tracing::trace!(
+                                interface = "Spatial", method = "get_relative_bounding_box",
+                                ? bounding_box, "←"
+                            );
+                            bounding_box.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    bounding_box.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_relative_bounding_box_oneway(ctx, param_relative_to, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "get_relative_bounding_box", method_id = 10u32
+                            ),
+                        )
+                        .await?;
                 }
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Spatial", method = "get_relative_transform", ?
                         param_relative_to, "dispatching"
                     );
-                    let (transform) = self
-                        .get_relative_transform(ctx, param_relative_to)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Spatial", method = "get_relative_transform", ?
-                        transform, "←"
+                    let reply: gluon::ReplySender<
+                        Result<Transform, super::types::CreateError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |transform, gluon_out| {
+                            tracing::trace!(
+                                interface = "Spatial", method = "get_relative_transform", ?
+                                transform, "←"
+                            );
+                            transform.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    transform.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_relative_transform_oneway(ctx, param_relative_to, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "get_relative_transform", method_id = 11u32
+                            ),
+                        )
+                        .await?;
                 }
                 12u32 => {
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
@@ -745,7 +829,14 @@ It will silently error and not set the spatial parent if it is to a child of its
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.set_parent(ctx, param_parent).await;
+                    self.set_parent(ctx, param_parent)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method = "set_parent",
+                                method_id = 12u32
+                            ),
+                        )
+                        .await;
                 }
                 13u32 => {
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
@@ -754,7 +845,14 @@ It will silently error and not set the spatial parent if it is to a child of its
                         param_parent, "dispatching"
                     );
                     drop(gluon_data);
-                    self.set_parent_in_place(ctx, param_parent).await;
+                    self.set_parent_in_place(ctx, param_parent)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "set_parent_in_place", method_id = 13u32
+                            ),
+                        )
+                        .await;
                 }
                 14u32 => {
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
@@ -763,7 +861,14 @@ It will silently error and not set the spatial parent if it is to a child of its
                         param_transform, "dispatching"
                     );
                     drop(gluon_data);
-                    self.set_local_transform(ctx, param_transform).await;
+                    self.set_local_transform(ctx, param_transform)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "set_local_transform", method_id = 14u32
+                            ),
+                        )
+                        .await;
                 }
                 15u32 => {
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
@@ -774,6 +879,12 @@ It will silently error and not set the spatial parent if it is to a child of its
                     );
                     drop(gluon_data);
                     self.set_relative_transform(ctx, param_relative_to, param_transform)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Spatial", method =
+                                "set_relative_transform", method_id = 15u32
+                            ),
+                        )
                         .await;
                 }
                 _ => {}
@@ -934,6 +1045,19 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<CreatedSpatial, super::types::CreateError>,
     > + Send + Sync;
+    ///Dispatched instead of [`Self::create_spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_spatial` and sends the result through `reply`. Override this method instead of `create_spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn create_spatial_oneway(
+        &self,
+        _ctx: gluon::Context,
+        parent: SpatialRef,
+        transform: Transform,
+        reply: gluon::ReplySender<Result<CreatedSpatial, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.create_spatial(_ctx, parent, transform).await;
+            reply.send(spatial)
+        }
+    }
     ///Get the relative bounding box of a spatial object relative to another spatial.
     fn get_relative_bounding_box(
         &self,
@@ -941,6 +1065,21 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         relative_to: SpatialRef,
         spatial: SpatialRef,
     ) -> impl Future<Output = Result<BoundingBox, SpatialRefOpError>> + Send + Sync;
+    ///Dispatched instead of [`Self::get_relative_bounding_box`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_relative_bounding_box` and sends the result through `reply`. Override this method instead of `get_relative_bounding_box` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_relative_bounding_box_oneway(
+        &self,
+        _ctx: gluon::Context,
+        relative_to: SpatialRef,
+        spatial: SpatialRef,
+        reply: gluon::ReplySender<Result<BoundingBox, SpatialRefOpError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let bounding_box = self
+                .get_relative_bounding_box(_ctx, relative_to, spatial)
+                .await;
+            reply.send(bounding_box)
+        }
+    }
     ///Get the relative transform of a spatial object relative to another spatial.
     fn get_relative_transform(
         &self,
@@ -948,6 +1087,21 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         relative_to: SpatialRef,
         spatial: SpatialRef,
     ) -> impl Future<Output = Result<Transform, SpatialRefOpError>> + Send + Sync;
+    ///Dispatched instead of [`Self::get_relative_transform`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_relative_transform` and sends the result through `reply`. Override this method instead of `get_relative_transform` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_relative_transform_oneway(
+        &self,
+        _ctx: gluon::Context,
+        relative_to: SpatialRef,
+        spatial: SpatialRef,
+        reply: gluon::ReplySender<Result<Transform, SpatialRefOpError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let transform = self
+                .get_relative_transform(_ctx, relative_to, spatial)
+                .await;
+            reply.send(transform)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -958,29 +1112,37 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SpatialInterface", method = "create_spatial", ?
                         param_parent, ? param_transform, "dispatching"
                     );
-                    let (spatial) = self
-                        .create_spatial(ctx, param_parent, param_transform)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SpatialInterface", method = "create_spatial", ?
-                        spatial, "←"
+                    let reply: gluon::ReplySender<
+                        Result<CreatedSpatial, super::types::CreateError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "SpatialInterface", method = "create_spatial", ?
+                                spatial, "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.create_spatial_oneway(ctx, param_parent, param_transform, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SpatialInterface", method =
+                                "create_spatial", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -988,22 +1150,36 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         "get_relative_bounding_box", ? param_relative_to, ?
                         param_spatial, "dispatching"
                     );
-                    let (bounding_box) = self
-                        .get_relative_bounding_box(ctx, param_relative_to, param_spatial)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SpatialInterface", method =
-                        "get_relative_bounding_box", ? bounding_box, "←"
+                    let reply: gluon::ReplySender<
+                        Result<BoundingBox, SpatialRefOpError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |bounding_box, gluon_out| {
+                            tracing::trace!(
+                                interface = "SpatialInterface", method =
+                                "get_relative_bounding_box", ? bounding_box, "←"
+                            );
+                            bounding_box.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    bounding_box.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_relative_bounding_box_oneway(
+                            ctx,
+                            param_relative_to,
+                            param_spatial,
+                            reply,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SpatialInterface", method =
+                                "get_relative_bounding_box", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -1011,18 +1187,33 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         "get_relative_transform", ? param_relative_to, ? param_spatial,
                         "dispatching"
                     );
-                    let (transform) = self
-                        .get_relative_transform(ctx, param_relative_to, param_spatial)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SpatialInterface", method =
-                        "get_relative_transform", ? transform, "←"
+                    let reply: gluon::ReplySender<
+                        Result<Transform, SpatialRefOpError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |transform, gluon_out| {
+                            tracing::trace!(
+                                interface = "SpatialInterface", method =
+                                "get_relative_transform", ? transform, "←"
+                            );
+                            transform.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    transform.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_relative_transform_oneway(
+                            ctx,
+                            param_relative_to,
+                            param_spatial,
+                            reply,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SpatialInterface", method =
+                                "get_relative_transform", method_id = 10u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

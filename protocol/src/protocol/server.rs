@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Server",
     types: &[],
@@ -283,43 +284,153 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::spatial::SpatialInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::spatial_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `spatial_interface` and sends the result through `reply`. Override this method instead of `spatial_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn spatial_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::spatial::SpatialInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.spatial_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn field_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::field::FieldInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::field_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `field_interface` and sends the result through `reply`. Override this method instead of `field_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn field_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::field::FieldInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.field_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     ///Get the dmatex interface node.
     fn dmatex_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::dmatex::DmatexInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::dmatex_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `dmatex_interface` and sends the result through `reply`. Override this method instead of `dmatex_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn dmatex_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::dmatex::DmatexInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.dmatex_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn text_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::text::TextInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::text_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `text_interface` and sends the result through `reply`. Override this method instead of `text_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn text_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::text::TextInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.text_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn model_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::model::ModelInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::model_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `model_interface` and sends the result through `reply`. Override this method instead of `model_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn model_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::model::ModelInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.model_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn lines_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::lines::LinesInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::lines_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `lines_interface` and sends the result through `reply`. Override this method instead of `lines_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn lines_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::lines::LinesInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.lines_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn sky_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::sky::SkyInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::sky_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `sky_interface` and sends the result through `reply`. Override this method instead of `sky_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn sky_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::sky::SkyInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.sky_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn audio_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::audio::AudioInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::audio_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `audio_interface` and sends the result through `reply`. Override this method instead of `audio_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn audio_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::audio::AudioInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.audio_interface(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn query_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::query::QueryInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::query_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `query_interface` and sends the result through `reply`. Override this method instead of `query_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn query_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::query::QueryInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let interface = self.query_interface(_ctx).await;
+            reply.send(interface)
+        }
+    }
     fn spatial_query_interface(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::spatial_query::SpatialQueryInterface> + Send + Sync;
+    ///Dispatched instead of [`Self::spatial_query_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `spatial_query_interface` and sends the result through `reply`. Override this method instead of `spatial_query_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn spatial_query_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::spatial_query::SpatialQueryInterface>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let interface = self.spatial_query_interface(_ctx).await;
+            reply.send(interface)
+        }
+    }
     /**Generate a client state token and return it back.
 
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.*/
@@ -328,6 +439,18 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         _ctx: gluon::Context,
         root: super::spatial::SpatialRef,
     ) -> impl Future<Output = Result<String, super::types::CreateError>> + Send + Sync;
+    ///Dispatched instead of [`Self::generate_startup_token`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `generate_startup_token` and sends the result through `reply`. Override this method instead of `generate_startup_token` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn generate_startup_token_oneway(
+        &self,
+        _ctx: gluon::Context,
+        root: super::spatial::SpatialRef,
+        reply: gluon::ReplySender<Result<String, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let token = self.generate_startup_token(_ctx, root).await;
+            reply.send(token)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -338,191 +461,296 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "spatial_interface", "dispatching"
                     );
-                    let (spatial) = self.spatial_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "spatial_interface", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::spatial::SpatialInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "spatial_interface", ?
+                                spatial, "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.spatial_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "spatial_interface", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "field_interface", "dispatching"
                     );
-                    let (spatial) = self.field_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "field_interface", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::field::FieldInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "field_interface", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.field_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "field_interface", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "dmatex_interface", "dispatching"
                     );
-                    let (spatial) = self.dmatex_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "dmatex_interface", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::dmatex::DmatexInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "dmatex_interface", ?
+                                spatial, "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.dmatex_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "dmatex_interface", method_id = 10u32
+                            ),
+                        )
+                        .await?;
                 }
                 11u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "text_interface", "dispatching"
                     );
-                    let (spatial) = self.text_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "text_interface", ? spatial, "←"
+                    let reply: gluon::ReplySender<super::text::TextInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "text_interface", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.text_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "text_interface", method_id = 11u32
+                            ),
+                        )
+                        .await?;
                 }
                 12u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "model_interface", "dispatching"
                     );
-                    let (spatial) = self.model_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "model_interface", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::model::ModelInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "model_interface", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.model_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "model_interface", method_id = 12u32
+                            ),
+                        )
+                        .await?;
                 }
                 13u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "lines_interface", "dispatching"
                     );
-                    let (spatial) = self.lines_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "lines_interface", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::lines::LinesInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "lines_interface", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.lines_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "lines_interface", method_id = 13u32
+                            ),
+                        )
+                        .await?;
                 }
                 14u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "sky_interface", "dispatching"
                     );
-                    let (spatial) = self.sky_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "sky_interface", ? spatial, "←"
+                    let reply: gluon::ReplySender<super::sky::SkyInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "sky_interface", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.sky_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "sky_interface", method_id = 14u32
+                            ),
+                        )
+                        .await?;
                 }
                 15u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "audio_interface", "dispatching"
                     );
-                    let (spatial) = self.audio_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "audio_interface", ? spatial,
-                        "←"
+                    let reply: gluon::ReplySender<super::audio::AudioInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "audio_interface", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.audio_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "audio_interface", method_id = 15u32
+                            ),
+                        )
+                        .await?;
                 }
                 16u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "query_interface", "dispatching"
                     );
-                    let (interface) = self.query_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "query_interface", ? interface,
-                        "←"
+                    let reply: gluon::ReplySender<super::query::QueryInterface> = gluon::ReplySender::new(
+                        return_callback,
+                        |interface, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "query_interface", ?
+                                interface, "←"
+                            );
+                            interface.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    interface.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.query_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "query_interface", method_id = 16u32
+                            ),
+                        )
+                        .await?;
                 }
                 17u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Server", method = "spatial_query_interface",
                         "dispatching"
                     );
-                    let (interface) = self.spatial_query_interface(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "spatial_query_interface", ?
-                        interface, "←"
+                    let reply: gluon::ReplySender<
+                        super::spatial_query::SpatialQueryInterface,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |interface, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "spatial_query_interface", ?
+                                interface, "←"
+                            );
+                            interface.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    interface.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.spatial_query_interface_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "spatial_query_interface", method_id = 17u32
+                            ),
+                        )
+                        .await?;
                 }
                 18u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_root = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Server", method = "generate_startup_token", ?
                         param_root, "dispatching"
                     );
-                    let (token) = self.generate_startup_token(ctx, param_root).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Server", method = "generate_startup_token", ? token,
-                        "←"
+                    let reply: gluon::ReplySender<
+                        Result<String, super::types::CreateError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |token, gluon_out| {
+                            tracing::trace!(
+                                interface = "Server", method = "generate_startup_token", ?
+                                token, "←"
+                            );
+                            token.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    token.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.generate_startup_token_oneway(ctx, param_root, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Server", method =
+                                "generate_startup_token", method_id = 18u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -649,11 +877,39 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         startup_token: Option<String>,
         resource_prefixes: Vec<String>,
     ) -> impl Future<Output = (Server, super::spatial::SpatialRef)> + Send + Sync;
+    ///Dispatched instead of [`Self::connect`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `connect` and sends the result through `reply`. Override this method instead of `connect` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn connect_oneway(
+        &self,
+        _ctx: gluon::Context,
+        client: super::client::Client,
+        startup_token: Option<String>,
+        resource_prefixes: Vec<String>,
+        reply: gluon::ReplySender<(Server, super::spatial::SpatialRef)>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let (server, root) = self
+                .connect(_ctx, client, startup_token, resource_prefixes)
+                .await;
+            reply.send((server, root))
+        }
+    }
     fn startup_spatial(
         &self,
         _ctx: gluon::Context,
         startup_token: String,
     ) -> impl Future<Output = Option<super::spatial::SpatialRef>> + Send + Sync;
+    ///Dispatched instead of [`Self::startup_spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `startup_spatial` and sends the result through `reply`. Override this method instead of `startup_spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn startup_spatial_oneway(
+        &self,
+        _ctx: gluon::Context,
+        startup_token: String,
+        reply: gluon::ReplySender<Option<super::spatial::SpatialRef>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial_ref = self.startup_spatial(_ctx, startup_token).await;
+            reply.send(spatial_ref)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -664,7 +920,6 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_client = gluon::Convertable::read(&mut gluon_data)?;
                     let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
                     let param_resource_prefixes = gluon::Convertable::read(
@@ -675,45 +930,63 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         param_client, ? param_startup_token, ? param_resource_prefixes,
                         "dispatching"
                     );
-                    let (server, root) = self
-                        .connect(
+                    drop(gluon_data);
+                    let reply: gluon::ReplySender<
+                        (Server, super::spatial::SpatialRef),
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |(server, root), gluon_out| {
+                            tracing::trace!(
+                                interface = "ServerInterface", method = "connect", ? server,
+                                ? root, "←"
+                            );
+                            server.write_owned(gluon_out)?;
+                            root.write_owned(gluon_out)?;
+                            Ok(())
+                        },
+                    );
+                    self.connect_oneway(
                             ctx,
                             param_client,
                             param_startup_token,
                             param_resource_prefixes,
+                            reply,
                         )
-                        .await;
-                    drop(gluon_data);
-                    tracing::trace!(
-                        interface = "ServerInterface", method = "connect", ? server, ?
-                        root, "←"
-                    );
-                    server.write_owned(&mut gluon_out)?;
-                    root.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ServerInterface", method =
+                                "connect", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ServerInterface", method = "startup_spatial", ?
                         param_startup_token, "dispatching"
                     );
-                    let (spatial_ref) = self
-                        .startup_spatial(ctx, param_startup_token)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "ServerInterface", method = "startup_spatial", ?
-                        spatial_ref, "←"
+                    let reply: gluon::ReplySender<Option<super::spatial::SpatialRef>> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial_ref, gluon_out| {
+                            tracing::trace!(
+                                interface = "ServerInterface", method = "startup_spatial", ?
+                                spatial_ref, "←"
+                            );
+                            spatial_ref.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial_ref.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.startup_spatial_oneway(ctx, param_startup_token, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ServerInterface", method =
+                                "startup_spatial", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

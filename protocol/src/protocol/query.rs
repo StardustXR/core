@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Query",
     types: &[
@@ -310,12 +311,36 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = QueryableObjectRef> + Send + Sync;
+    ///Dispatched instead of [`Self::queryable_ref`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `queryable_ref` and sends the result through `reply`. Override this method instead of `queryable_ref` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn queryable_ref_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<QueryableObjectRef>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let queryable = self.queryable_ref(_ctx).await;
+            reply.send(queryable)
+        }
+    }
     fn add_interface(
         &self,
         _ctx: gluon::Context,
         interface: gluon::ObjectOrRef,
         interface_id: String,
     ) -> impl Future<Output = QueryableInterfaceGuard> + Send + Sync;
+    ///Dispatched instead of [`Self::add_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `add_interface` and sends the result through `reply`. Override this method instead of `add_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn add_interface_oneway(
+        &self,
+        _ctx: gluon::Context,
+        interface: gluon::ObjectOrRef,
+        interface_id: String,
+        reply: gluon::ReplySender<QueryableInterfaceGuard>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let guard = self.add_interface(_ctx, interface, interface_id).await;
+            reply.send(guard)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -326,43 +351,64 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "QueryableObject", method = "queryable_ref",
                         "dispatching"
                     );
-                    let (queryable) = self.queryable_ref(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "QueryableObject", method = "queryable_ref", ?
-                        queryable, "←"
+                    let reply: gluon::ReplySender<QueryableObjectRef> = gluon::ReplySender::new(
+                        return_callback,
+                        |queryable, gluon_out| {
+                            tracing::trace!(
+                                interface = "QueryableObject", method = "queryable_ref", ?
+                                queryable, "←"
+                            );
+                            queryable.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    queryable.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.queryable_ref_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "QueryableObject", method =
+                                "queryable_ref", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_interface = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interface_id = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "QueryableObject", method = "add_interface", ?
                         param_interface, ? param_interface_id, "dispatching"
                     );
-                    let (guard) = self
-                        .add_interface(ctx, param_interface, param_interface_id)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "QueryableObject", method = "add_interface", ? guard,
-                        "←"
+                    let reply: gluon::ReplySender<QueryableInterfaceGuard> = gluon::ReplySender::new(
+                        return_callback,
+                        |guard, gluon_out| {
+                            tracing::trace!(
+                                interface = "QueryableObject", method = "add_interface", ?
+                                guard, "←"
+                            );
+                            guard.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    guard.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.add_interface_oneway(
+                            ctx,
+                            param_interface,
+                            param_interface_id,
+                            reply,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "QueryableObject", method =
+                                "add_interface", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -529,6 +575,19 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         spatial: super::spatial::Spatial,
         field: super::field::Field,
     ) -> impl Future<Output = Result<QueryableObject, QueryableError>> + Send + Sync;
+    ///Dispatched instead of [`Self::register_queryable`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `register_queryable` and sends the result through `reply`. Override this method instead of `register_queryable` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn register_queryable_oneway(
+        &self,
+        _ctx: gluon::Context,
+        spatial: super::spatial::Spatial,
+        field: super::field::Field,
+        reply: gluon::ReplySender<Result<QueryableObject, QueryableError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let queryable = self.register_queryable(_ctx, spatial, field).await;
+            reply.send(queryable)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -539,25 +598,39 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "QueryInterface", method = "register_queryable", ?
                         param_spatial, ? param_field, "dispatching"
                     );
-                    let (queryable) = self
-                        .register_queryable(ctx, param_spatial, param_field)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "QueryInterface", method = "register_queryable", ?
-                        queryable, "←"
+                    let reply: gluon::ReplySender<
+                        Result<QueryableObject, QueryableError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |queryable, gluon_out| {
+                            tracing::trace!(
+                                interface = "QueryInterface", method = "register_queryable",
+                                ? queryable, "←"
+                            );
+                            queryable.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    queryable.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.register_queryable_oneway(
+                            ctx,
+                            param_spatial,
+                            param_field,
+                            reply,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "QueryInterface", method =
+                                "register_queryable", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Camera",
     types: &[
@@ -145,6 +146,18 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         spatial: super::spatial::Spatial,
     ) -> impl Future<Output = Result<Camera, super::types::CreateError>> + Send + Sync;
+    ///Dispatched instead of [`Self::create_camera`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_camera` and sends the result through `reply`. Override this method instead of `create_camera` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn create_camera_oneway(
+        &self,
+        _ctx: gluon::Context,
+        spatial: super::spatial::Spatial,
+        reply: gluon::ReplySender<Result<Camera, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let camera = self.create_camera(_ctx, spatial).await;
+            reply.send(camera)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -155,22 +168,33 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "CameraInterface", method = "create_camera", ?
                         param_spatial, "dispatching"
                     );
-                    let (camera) = self.create_camera(ctx, param_spatial).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "CameraInterface", method = "create_camera", ?
-                        camera, "←"
+                    let reply: gluon::ReplySender<
+                        Result<Camera, super::types::CreateError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |camera, gluon_out| {
+                            tracing::trace!(
+                                interface = "CameraInterface", method = "create_camera", ?
+                                camera, "←"
+                            );
+                            camera.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    camera.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.create_camera_oneway(ctx, param_spatial, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "CameraInterface", method =
+                                "create_camera", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -291,6 +315,12 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
                             param_acquire_point,
                             param_release_point,
                             param_views,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Camera", method =
+                                "request_draw", method_id = 8u32
+                            ),
                         )
                         .await;
                 }

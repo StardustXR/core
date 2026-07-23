@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.SpatialQuery",
     types: &[
@@ -310,26 +311,23 @@ impl BeamQueryHandler {
         field: impl Into<super::field::FieldRef>,
         spatial: impl Into<super::spatial::SpatialRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
-        deepest_point_distance: impl Into<f32>,
-        distance: impl Into<f32>,
+        spatial_info: impl Into<super::field::RayMarchResult>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
-        let deepest_point_distance: f32 = deepest_point_distance.into();
-        let distance: f32 = distance.into();
+        let spatial_info: super::field::RayMarchResult = spatial_info.into();
         tracing::trace!(
             interface = "BeamQueryHandler", method = "intersected", ? obj, ? field, ?
-            spatial, ? interfaces, ? deepest_point_distance, ? distance, "→"
+            spatial, ? interfaces, ? spatial_info, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
-        deepest_point_distance.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
+        spatial_info.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
@@ -353,20 +351,17 @@ impl BeamQueryHandler {
     pub fn moved(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
-        deepest_point_distance: impl Into<f32>,
-        distance: impl Into<f32>,
+        spatial_info: impl Into<super::field::RayMarchResult>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
-        let deepest_point_distance: f32 = deepest_point_distance.into();
-        let distance: f32 = distance.into();
+        let spatial_info: super::field::RayMarchResult = spatial_info.into();
         tracing::trace!(
-            interface = "BeamQueryHandler", method = "moved", ? obj, ?
-            deepest_point_distance, ? distance, "→"
+            interface = "BeamQueryHandler", method = "moved", ? obj, ? spatial_info,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
-        deepest_point_distance.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
+        spatial_info.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
@@ -426,8 +421,7 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
         interfaces: Vec<super::query::QueriedInterface>,
-        deepest_point_distance: f32,
-        distance: f32,
+        spatial_info: super::field::RayMarchResult,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
         &self,
@@ -439,8 +433,7 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
-        deepest_point_distance: f32,
-        distance: f32,
+        spatial_info: super::field::RayMarchResult,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
         &self,
@@ -460,14 +453,11 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_deepest_point_distance = gluon::Convertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "BeamQueryHandler", method = "intersected", ?
                         param_obj, ? param_field, ? param_spatial, ? param_interfaces, ?
-                        param_deepest_point_distance, ? param_distance, "dispatching"
+                        param_spatial_info, "dispatching"
                     );
                     drop(gluon_data);
                     self.intersected(
@@ -476,8 +466,13 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                             param_field,
                             param_spatial,
                             param_interfaces,
-                            param_deepest_point_distance,
-                            param_distance,
+                            param_spatial_info,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "BeamQueryHandler", method =
+                                "intersected", method_id = 8u32
+                            ),
                         )
                         .await;
                 }
@@ -489,24 +484,29 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                         param_obj, ? param_interfaces, "dispatching"
                     );
                     drop(gluon_data);
-                    self.interfaces_changed(ctx, param_obj, param_interfaces).await;
+                    self.interfaces_changed(ctx, param_obj, param_interfaces)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "BeamQueryHandler", method =
+                                "interfaces_changed", method_id = 9u32
+                            ),
+                        )
+                        .await;
                 }
                 10u32 => {
                     let param_obj = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_deepest_point_distance = gluon::Convertable::read(
-                        &mut gluon_data,
-                    )?;
-                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "BeamQueryHandler", method = "moved", ? param_obj, ?
-                        param_deepest_point_distance, ? param_distance, "dispatching"
+                        param_spatial_info, "dispatching"
                     );
                     drop(gluon_data);
-                    self.moved(
-                            ctx,
-                            param_obj,
-                            param_deepest_point_distance,
-                            param_distance,
+                    self.moved(ctx, param_obj, param_spatial_info)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "BeamQueryHandler", method =
+                                "moved", method_id = 10u32
+                            ),
                         )
                         .await;
                 }
@@ -517,7 +517,14 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.left(ctx, param_obj).await;
+                    self.left(ctx, param_obj)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "BeamQueryHandler", method =
+                                "left", method_id = 11u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -555,17 +562,17 @@ impl ZoneQueryHandler {
         spatial: impl Into<super::spatial::SpatialRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
         relative_position: crate::types::Vec3F,
-        distance: impl Into<f32>,
+        spatial_info: impl Into<super::field::FieldSample>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
         let relative_position: super::types::proxied::Vec3F = relative_position.into();
-        let distance: f32 = distance.into();
+        let spatial_info: super::field::FieldSample = spatial_info.into();
         tracing::trace!(
             interface = "ZoneQueryHandler", method = "entered", ? obj, ? field, ?
-            spatial, ? interfaces, ? relative_position, ? distance, "→"
+            spatial, ? interfaces, ? relative_position, ? spatial_info, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
@@ -573,7 +580,7 @@ impl ZoneQueryHandler {
         spatial.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
         relative_position.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
+        spatial_info.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
@@ -598,19 +605,19 @@ impl ZoneQueryHandler {
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         relative_position: crate::types::Vec3F,
-        distance: impl Into<f32>,
+        spatial_info: impl Into<super::field::FieldSample>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let relative_position: super::types::proxied::Vec3F = relative_position.into();
-        let distance: f32 = distance.into();
+        let spatial_info: super::field::FieldSample = spatial_info.into();
         tracing::trace!(
             interface = "ZoneQueryHandler", method = "moved", ? obj, ? relative_position,
-            ? distance, "→"
+            ? spatial_info, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         relative_position.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
+        spatial_info.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
@@ -671,7 +678,7 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
         spatial: super::spatial::SpatialRef,
         interfaces: Vec<super::query::QueriedInterface>,
         relative_position: crate::types::Vec3F,
-        distance: f32,
+        spatial_info: super::field::FieldSample,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
         &self,
@@ -684,7 +691,7 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
         relative_position: crate::types::Vec3F,
-        distance: f32,
+        spatial_info: super::field::FieldSample,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
         &self,
@@ -707,12 +714,12 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                     let __wire_param_relative_position: super::types::proxied::Vec3F = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ZoneQueryHandler", method = "entered", ? param_obj,
                         ? param_field, ? param_spatial, ? param_interfaces,
                         param_relative_position = ? __wire_param_relative_position, ?
-                        param_distance, "dispatching"
+                        param_spatial_info, "dispatching"
                     );
                     let param_relative_position: crate::types::Vec3F = {
                         let __w = __wire_param_relative_position;
@@ -726,7 +733,13 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                             param_spatial,
                             param_interfaces,
                             param_relative_position,
-                            param_distance,
+                            param_spatial_info,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ZoneQueryHandler", method =
+                                "entered", method_id = 8u32
+                            ),
                         )
                         .await;
                 }
@@ -738,25 +751,43 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                         param_obj, ? param_interfaces, "dispatching"
                     );
                     drop(gluon_data);
-                    self.interfaces_changed(ctx, param_obj, param_interfaces).await;
+                    self.interfaces_changed(ctx, param_obj, param_interfaces)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ZoneQueryHandler", method =
+                                "interfaces_changed", method_id = 9u32
+                            ),
+                        )
+                        .await;
                 }
                 10u32 => {
                     let param_obj = gluon::Convertable::read(&mut gluon_data)?;
                     let __wire_param_relative_position: super::types::proxied::Vec3F = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ZoneQueryHandler", method = "moved", ? param_obj,
                         param_relative_position = ? __wire_param_relative_position, ?
-                        param_distance, "dispatching"
+                        param_spatial_info, "dispatching"
                     );
                     let param_relative_position: crate::types::Vec3F = {
                         let __w = __wire_param_relative_position;
                         __w.into()
                     };
                     drop(gluon_data);
-                    self.moved(ctx, param_obj, param_relative_position, param_distance)
+                    self.moved(
+                            ctx,
+                            param_obj,
+                            param_relative_position,
+                            param_spatial_info,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ZoneQueryHandler", method =
+                                "moved", method_id = 10u32
+                            ),
+                        )
                         .await;
                 }
                 11u32 => {
@@ -766,7 +797,14 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.left(ctx, param_obj).await;
+                    self.left(ctx, param_obj)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ZoneQueryHandler", method =
+                                "left", method_id = 11u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -803,23 +841,23 @@ impl PointsQueryHandler {
         field: impl Into<super::field::FieldRef>,
         spatial: impl Into<super::spatial::SpatialRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
-        distance: impl Into<f32>,
+        spatial_info: impl Into<super::field::FieldSample>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
         let field: super::field::FieldRef = field.into();
         let spatial: super::spatial::SpatialRef = spatial.into();
         let interfaces: Vec<super::query::QueriedInterface> = interfaces.into();
-        let distance: f32 = distance.into();
+        let spatial_info: super::field::FieldSample = spatial_info.into();
         tracing::trace!(
             interface = "PointsQueryHandler", method = "entered", ? obj, ? field, ?
-            spatial, ? interfaces, ? distance, "→"
+            spatial, ? interfaces, ? spatial_info, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
         interfaces.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
+        spatial_info.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
@@ -843,16 +881,17 @@ impl PointsQueryHandler {
     pub fn moved(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
-        distance: impl Into<f32>,
+        spatial_info: impl Into<super::field::FieldSample>,
     ) -> Result<(), gluon::SendError> {
         let obj: super::query::QueryableObjectRef = obj.into();
-        let distance: f32 = distance.into();
+        let spatial_info: super::field::FieldSample = spatial_info.into();
         tracing::trace!(
-            interface = "PointsQueryHandler", method = "moved", ? obj, ? distance, "→"
+            interface = "PointsQueryHandler", method = "moved", ? obj, ? spatial_info,
+            "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         obj.write(&mut gluon_builder)?;
-        distance.write(&mut gluon_builder)?;
+        spatial_info.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
@@ -912,7 +951,7 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
         field: super::field::FieldRef,
         spatial: super::spatial::SpatialRef,
         interfaces: Vec<super::query::QueriedInterface>,
-        distance: f32,
+        spatial_info: super::field::FieldSample,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn interfaces_changed(
         &self,
@@ -924,7 +963,7 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         obj: super::query::QueryableObjectRef,
-        distance: f32,
+        spatial_info: super::field::FieldSample,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn left(
         &self,
@@ -944,11 +983,11 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interfaces = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "PointsQueryHandler", method = "entered", ?
                         param_obj, ? param_field, ? param_spatial, ? param_interfaces, ?
-                        param_distance, "dispatching"
+                        param_spatial_info, "dispatching"
                     );
                     drop(gluon_data);
                     self.entered(
@@ -957,7 +996,13 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                             param_field,
                             param_spatial,
                             param_interfaces,
-                            param_distance,
+                            param_spatial_info,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "PointsQueryHandler", method =
+                                "entered", method_id = 8u32
+                            ),
                         )
                         .await;
                 }
@@ -969,17 +1014,31 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                         ? param_obj, ? param_interfaces, "dispatching"
                     );
                     drop(gluon_data);
-                    self.interfaces_changed(ctx, param_obj, param_interfaces).await;
+                    self.interfaces_changed(ctx, param_obj, param_interfaces)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "PointsQueryHandler", method =
+                                "interfaces_changed", method_id = 9u32
+                            ),
+                        )
+                        .await;
                 }
                 10u32 => {
                     let param_obj = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_distance = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "PointsQueryHandler", method = "moved", ? param_obj,
-                        ? param_distance, "dispatching"
+                        ? param_spatial_info, "dispatching"
                     );
                     drop(gluon_data);
-                    self.moved(ctx, param_obj, param_distance).await;
+                    self.moved(ctx, param_obj, param_spatial_info)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "PointsQueryHandler", method =
+                                "moved", method_id = 10u32
+                            ),
+                        )
+                        .await;
                 }
                 11u32 => {
                     let param_obj = gluon::Convertable::read(&mut gluon_data)?;
@@ -988,7 +1047,14 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.left(ctx, param_obj).await;
+                    self.left(ctx, param_obj)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "PointsQueryHandler", method =
+                                "left", method_id = 11u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -1129,16 +1195,52 @@ pub trait SpatialQueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         query: BeamQuery,
     ) -> impl Future<Output = Result<SpatialQueryGuard, QueryError>> + Send + Sync;
+    ///Dispatched instead of [`Self::beam_query`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `beam_query` and sends the result through `reply`. Override this method instead of `beam_query` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn beam_query_oneway(
+        &self,
+        _ctx: gluon::Context,
+        query: BeamQuery,
+        reply: gluon::ReplySender<Result<SpatialQueryGuard, QueryError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let guard = self.beam_query(_ctx, query).await;
+            reply.send(guard)
+        }
+    }
     fn zone_query(
         &self,
         _ctx: gluon::Context,
         query: ZoneQuery,
     ) -> impl Future<Output = Result<SpatialQueryGuard, QueryError>> + Send + Sync;
+    ///Dispatched instead of [`Self::zone_query`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `zone_query` and sends the result through `reply`. Override this method instead of `zone_query` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn zone_query_oneway(
+        &self,
+        _ctx: gluon::Context,
+        query: ZoneQuery,
+        reply: gluon::ReplySender<Result<SpatialQueryGuard, QueryError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let guard = self.zone_query(_ctx, query).await;
+            reply.send(guard)
+        }
+    }
     fn points_query(
         &self,
         _ctx: gluon::Context,
         query: PointsQuery,
     ) -> impl Future<Output = Result<PointsQueryHandle, QueryError>> + Send + Sync;
+    ///Dispatched instead of [`Self::points_query`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `points_query` and sends the result through `reply`. Override this method instead of `points_query` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn points_query_oneway(
+        &self,
+        _ctx: gluon::Context,
+        query: PointsQuery,
+        reply: gluon::ReplySender<Result<PointsQueryHandle, QueryError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let handle = self.points_query(_ctx, query).await;
+            reply.send(handle)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -1149,60 +1251,93 @@ pub trait SpatialQueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_query = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SpatialQueryInterface", method = "beam_query", ?
                         param_query, "dispatching"
                     );
-                    let (guard) = self.beam_query(ctx, param_query).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SpatialQueryInterface", method = "beam_query", ?
-                        guard, "←"
+                    let reply: gluon::ReplySender<
+                        Result<SpatialQueryGuard, QueryError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |guard, gluon_out| {
+                            tracing::trace!(
+                                interface = "SpatialQueryInterface", method = "beam_query",
+                                ? guard, "←"
+                            );
+                            guard.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    guard.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.beam_query_oneway(ctx, param_query, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SpatialQueryInterface", method =
+                                "beam_query", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_query = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SpatialQueryInterface", method = "zone_query", ?
                         param_query, "dispatching"
                     );
-                    let (guard) = self.zone_query(ctx, param_query).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SpatialQueryInterface", method = "zone_query", ?
-                        guard, "←"
+                    let reply: gluon::ReplySender<
+                        Result<SpatialQueryGuard, QueryError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |guard, gluon_out| {
+                            tracing::trace!(
+                                interface = "SpatialQueryInterface", method = "zone_query",
+                                ? guard, "←"
+                            );
+                            guard.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    guard.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.zone_query_oneway(ctx, param_query, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SpatialQueryInterface", method =
+                                "zone_query", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_query = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SpatialQueryInterface", method = "points_query", ?
                         param_query, "dispatching"
                     );
-                    let (handle) = self.points_query(ctx, param_query).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "SpatialQueryInterface", method = "points_query", ?
-                        handle, "←"
+                    let reply: gluon::ReplySender<
+                        Result<PointsQueryHandle, QueryError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |handle, gluon_out| {
+                            tracing::trace!(
+                                interface = "SpatialQueryInterface", method =
+                                "points_query", ? handle, "←"
+                            );
+                            handle.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    handle.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.points_query_oneway(ctx, param_query, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "SpatialQueryInterface", method =
+                                "points_query", method_id = 10u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -1300,7 +1435,14 @@ pub trait PointsQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
                         param_points, "dispatching"
                     );
                     drop(gluon_data);
-                    self.update_points(ctx, param_points).await;
+                    self.update_points(ctx, param_points)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "PointsQueryHandle", method =
+                                "update_points", method_id = 8u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }

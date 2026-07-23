@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Client",
     types: &[
@@ -129,7 +130,14 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.frame(ctx, param_info).await;
+                    self.frame(ctx, param_info)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Client", method = "frame",
+                                method_id = 8u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }

@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Keymap",
     types: &[
@@ -188,11 +189,35 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         keymap: XkbcommonKeymapFd,
     ) -> impl Future<Output = Result<Keymap, KeymapExchangeError>> + Send + Sync;
+    ///Dispatched instead of [`Self::exchange`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `exchange` and sends the result through `reply`. Override this method instead of `exchange` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn exchange_oneway(
+        &self,
+        _ctx: gluon::Context,
+        keymap: XkbcommonKeymapFd,
+        reply: gluon::ReplySender<Result<Keymap, KeymapExchangeError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let keymap = self.exchange(_ctx, keymap).await;
+            reply.send(keymap)
+        }
+    }
     fn get(
         &self,
         _ctx: gluon::Context,
         keymap: Keymap,
     ) -> impl Future<Output = Option<XkbcommonKeymapFd>> + Send + Sync;
+    ///Dispatched instead of [`Self::get`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get` and sends the result through `reply`. Override this method instead of `get` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_oneway(
+        &self,
+        _ctx: gluon::Context,
+        keymap: Keymap,
+        reply: gluon::ReplySender<Option<XkbcommonKeymapFd>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let keymap = self.get(_ctx, keymap).await;
+            reply.send(keymap)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -203,39 +228,58 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_keymap = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "KeymapStore", method = "exchange", ? param_keymap,
                         "dispatching"
                     );
-                    let (keymap) = self.exchange(ctx, param_keymap).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "KeymapStore", method = "exchange", ? keymap, "←"
+                    let reply: gluon::ReplySender<Result<Keymap, KeymapExchangeError>> = gluon::ReplySender::new(
+                        return_callback,
+                        |keymap, gluon_out| {
+                            tracing::trace!(
+                                interface = "KeymapStore", method = "exchange", ? keymap,
+                                "←"
+                            );
+                            keymap.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    keymap.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.exchange_oneway(ctx, param_keymap, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "KeymapStore", method =
+                                "exchange", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_keymap = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "KeymapStore", method = "get", ? param_keymap,
                         "dispatching"
                     );
-                    let (keymap) = self.get(ctx, param_keymap).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "KeymapStore", method = "get", ? keymap, "←"
+                    let reply: gluon::ReplySender<Option<XkbcommonKeymapFd>> = gluon::ReplySender::new(
+                        return_callback,
+                        |keymap, gluon_out| {
+                            tracing::trace!(
+                                interface = "KeymapStore", method = "get", ? keymap, "←"
+                            );
+                            keymap.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    keymap.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_oneway(ctx, param_keymap, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "KeymapStore", method = "get",
+                                method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }

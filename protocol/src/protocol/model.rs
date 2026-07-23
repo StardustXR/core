@@ -1,5 +1,6 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable;
+use gluon::Convertable as _;
+use tracing::Instrument as _;
 pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Model",
     types: &[
@@ -383,6 +384,19 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<Model, super::types::ResourceLoadError>,
     > + Send + Sync;
+    ///Dispatched instead of [`Self::load_model`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `load_model` and sends the result through `reply`. Override this method instead of `load_model` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn load_model_oneway(
+        &self,
+        _ctx: gluon::Context,
+        spatial: super::spatial::Spatial,
+        model: super::types::Resource,
+        reply: gluon::ReplySender<Result<Model, super::types::ResourceLoadError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let model = self.load_model(_ctx, spatial, model).await;
+            reply.send(model)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -393,23 +407,34 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_model = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ModelInterface", method = "load_model", ?
                         param_spatial, ? param_model, "dispatching"
                     );
-                    let (model) = self.load_model(ctx, param_spatial, param_model).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "ModelInterface", method = "load_model", ? model,
-                        "←"
+                    let reply: gluon::ReplySender<
+                        Result<Model, super::types::ResourceLoadError>,
+                    > = gluon::ReplySender::new(
+                        return_callback,
+                        |model, gluon_out| {
+                            tracing::trace!(
+                                interface = "ModelInterface", method = "load_model", ?
+                                model, "←"
+                            );
+                            model.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    model.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.load_model_oneway(ctx, param_spatial, param_model, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ModelInterface", method =
+                                "load_model", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -508,10 +533,33 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
         _ctx: gluon::Context,
         path: String,
     ) -> impl Future<Output = Option<ModelPart>> + Send + Sync;
+    ///Dispatched instead of [`Self::get_part`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_part` and sends the result through `reply`. Override this method instead of `get_part` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_part_oneway(
+        &self,
+        _ctx: gluon::Context,
+        path: String,
+        reply: gluon::ReplySender<Option<ModelPart>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let part = self.get_part(_ctx, path).await;
+            reply.send(part)
+        }
+    }
     fn enumerate_parts(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = Vec<ModelPart>> + Send + Sync;
+    ///Dispatched instead of [`Self::enumerate_parts`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `enumerate_parts` and sends the result through `reply`. Override this method instead of `enumerate_parts` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn enumerate_parts_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<Vec<ModelPart>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let parts = self.enumerate_parts(_ctx).await;
+            reply.send(parts)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -522,37 +570,56 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_path = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Model", method = "get_part", ? param_path,
                         "dispatching"
                     );
-                    let (part) = self.get_part(ctx, param_path).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Model", method = "get_part", ? part, "←"
+                    let reply: gluon::ReplySender<Option<ModelPart>> = gluon::ReplySender::new(
+                        return_callback,
+                        |part, gluon_out| {
+                            tracing::trace!(
+                                interface = "Model", method = "get_part", ? part, "←"
+                            );
+                            part.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    part.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_part_oneway(ctx, param_path, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Model", method = "get_part",
+                                method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "Model", method = "enumerate_parts", "dispatching"
                     );
-                    let (parts) = self.enumerate_parts(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "Model", method = "enumerate_parts", ? parts, "←"
+                    let reply: gluon::ReplySender<Vec<ModelPart>> = gluon::ReplySender::new(
+                        return_callback,
+                        |parts, gluon_out| {
+                            tracing::trace!(
+                                interface = "Model", method = "enumerate_parts", ? parts,
+                                "←"
+                            );
+                            parts.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    parts.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.enumerate_parts_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "Model", method =
+                                "enumerate_parts", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 _ => {}
             }
@@ -691,16 +758,51 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = String> + Send + Sync;
+    ///Dispatched instead of [`Self::get_part_path`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_part_path` and sends the result through `reply`. Override this method instead of `get_part_path` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_part_path_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<String>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let path = self.get_part_path(_ctx).await;
+            reply.send(path)
+        }
+    }
     fn get_spatial(
         &self,
         _ctx: gluon::Context,
     ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
+    ///Dispatched instead of [`Self::get_spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_spatial` and sends the result through `reply`. Override this method instead of `get_spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_spatial_oneway(
+        &self,
+        _ctx: gluon::Context,
+        reply: gluon::ReplySender<super::spatial::Spatial>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let spatial = self.get_spatial(_ctx).await;
+            reply.send(spatial)
+        }
+    }
     fn set_material_parameter(
         &self,
         _ctx: gluon::Context,
         parameter_name: String,
         value: MaterialParameter,
     ) -> impl Future<Output = Option<MaterialParamError>> + Send + Sync;
+    ///Dispatched instead of [`Self::set_material_parameter`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `set_material_parameter` and sends the result through `reply`. Override this method instead of `set_material_parameter` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn set_material_parameter_oneway(
+        &self,
+        _ctx: gluon::Context,
+        parameter_name: String,
+        value: MaterialParameter,
+        reply: gluon::ReplySender<Option<MaterialParamError>>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let error = self.set_material_parameter(_ctx, parameter_name, value).await;
+            reply.send(error)
+        }
+    }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
     fn apply_holdout_material(
         &self,
@@ -716,39 +818,58 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "ModelPart", method = "get_part_path", "dispatching"
                     );
-                    let (path) = self.get_part_path(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "ModelPart", method = "get_part_path", ? path, "←"
+                    let reply: gluon::ReplySender<String> = gluon::ReplySender::new(
+                        return_callback,
+                        |path, gluon_out| {
+                            tracing::trace!(
+                                interface = "ModelPart", method = "get_part_path", ? path,
+                                "←"
+                            );
+                            path.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    path.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_part_path_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ModelPart", method =
+                                "get_part_path", method_id = 8u32
+                            ),
+                        )
+                        .await?;
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     tracing::trace!(
                         interface = "ModelPart", method = "get_spatial", "dispatching"
                     );
-                    let (spatial) = self.get_spatial(ctx).await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "ModelPart", method = "get_spatial", ? spatial, "←"
+                    let reply: gluon::ReplySender<super::spatial::Spatial> = gluon::ReplySender::new(
+                        return_callback,
+                        |spatial, gluon_out| {
+                            tracing::trace!(
+                                interface = "ModelPart", method = "get_spatial", ? spatial,
+                                "←"
+                            );
+                            spatial.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    spatial.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.get_spatial_oneway(ctx, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ModelPart", method =
+                                "get_spatial", method_id = 9u32
+                            ),
+                        )
+                        .await?;
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_binder()?;
-                    let mut gluon_out = gluon::DataBuilder::new();
                     let param_parameter_name = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
@@ -757,18 +878,31 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         interface = "ModelPart", method = "set_material_parameter", ?
                         param_parameter_name, ? param_value, "dispatching"
                     );
-                    let (error) = self
-                        .set_material_parameter(ctx, param_parameter_name, param_value)
-                        .await;
                     drop(gluon_data);
-                    tracing::trace!(
-                        interface = "ModelPart", method = "set_material_parameter", ?
-                        error, "←"
+                    let reply: gluon::ReplySender<Option<MaterialParamError>> = gluon::ReplySender::new(
+                        return_callback,
+                        |error, gluon_out| {
+                            tracing::trace!(
+                                interface = "ModelPart", method = "set_material_parameter",
+                                ? error, "←"
+                            );
+                            error.write_owned(gluon_out)?;
+                            Ok(())
+                        },
                     );
-                    error.write_owned(&mut gluon_out)?;
-                    return_callback
-                        .device()
-                        .transact_one_way(&return_callback, 0, gluon_out.to_payload())?;
+                    self.set_material_parameter_oneway(
+                            ctx,
+                            param_parameter_name,
+                            param_value,
+                            reply,
+                        )
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ModelPart", method =
+                                "set_material_parameter", method_id = 10u32
+                            ),
+                        )
+                        .await?;
                 }
                 11u32 => {
                     tracing::trace!(
@@ -776,7 +910,14 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    self.apply_holdout_material(ctx).await;
+                    self.apply_holdout_material(ctx)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "ModelPart", method =
+                                "apply_holdout_material", method_id = 11u32
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
