@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 use stardust_xr_fusion::{
 	client::Client,
 	drawable::LinesExt,
-	fields::FieldRef,
+	fields::{FieldRef, FieldSample},
 	project_local_resources,
 	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
 	spatial_query::{Point, PointsQuery, PointsQueryHandler, PointsQueryHandlerHandler},
@@ -25,10 +25,9 @@ async fn main() {
 	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
-	let (spatial, _) =
-		Spatial::new(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
-			.await
-			.unwrap();
+	let (spatial, _) = Spatial::new(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
+		.await
+		.unwrap();
 
 	let handlers: Arc<Mutex<HashMap<QueryableObjectRef, SpatialRef>>> =
 		Arc::new(Mutex::new(HashMap::new()));
@@ -111,7 +110,7 @@ impl PointsQueryHandlerHandler for Querier {
 		_field: FieldRef,
 		spatial: SpatialRef,
 		_interfaces: Vec<QueriedInterface>,
-		_distance: f32,
+		_sample: FieldSample,
 	) {
 		self.handlers.lock().insert(obj, spatial);
 	}
@@ -123,7 +122,7 @@ impl PointsQueryHandlerHandler for Querier {
 		_interfaces: Vec<QueriedInterface>,
 	) {
 	}
-	async fn moved(&self, _ctx: gluon::Context, _obj: QueryableObjectRef, _distance: f32) {}
+	async fn moved(&self, _ctx: gluon::Context, _obj: QueryableObjectRef, _sample: FieldSample) {}
 
 	async fn left(&self, _ctx: gluon::Context, obj: QueryableObjectRef) {
 		self.handlers.lock().remove(&obj);
