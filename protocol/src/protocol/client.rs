@@ -98,6 +98,16 @@ impl gluon::ToObjectOrRef for Client {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for Client {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for Client {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);

@@ -402,6 +402,16 @@ impl gluon::ToObjectOrRef for BeamQueryHandler {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for BeamQueryHandler {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for BeamQueryHandler {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -656,6 +666,16 @@ impl From<ZoneQueryHandler> for gluon::ObjectOrRef {
 impl gluon::ToObjectOrRef for ZoneQueryHandler {
     fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
+    }
+}
+impl gluon::Liveness for ZoneQueryHandler {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
     }
 }
 impl std::hash::Hash for ZoneQueryHandler {
@@ -932,6 +952,16 @@ impl gluon::ToObjectOrRef for PointsQueryHandler {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for PointsQueryHandler {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for PointsQueryHandler {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -1178,6 +1208,16 @@ impl gluon::ToObjectOrRef for SpatialQueryInterface {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for SpatialQueryInterface {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for SpatialQueryInterface {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -1403,6 +1443,16 @@ impl gluon::ToObjectOrRef for PointsQueryHandle {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for PointsQueryHandle {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for PointsQueryHandle {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -1493,6 +1543,16 @@ impl From<SpatialQueryGuard> for gluon::ObjectOrRef {
 impl gluon::ToObjectOrRef for SpatialQueryGuard {
     fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
+    }
+}
+impl gluon::Liveness for SpatialQueryGuard {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
     }
 }
 impl std::hash::Hash for SpatialQueryGuard {

@@ -165,6 +165,16 @@ impl gluon::ToObjectOrRef for Lines {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for Lines {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for Lines {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -279,6 +289,16 @@ impl From<LinesInterface> for gluon::ObjectOrRef {
 impl gluon::ToObjectOrRef for LinesInterface {
     fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
+    }
+}
+impl gluon::Liveness for LinesInterface {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
     }
 }
 impl std::hash::Hash for LinesInterface {

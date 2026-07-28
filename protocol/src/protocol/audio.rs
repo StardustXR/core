@@ -63,6 +63,16 @@ impl gluon::ToObjectOrRef for Sound {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for Sound {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for Sound {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -184,6 +194,16 @@ impl From<AudioInterface> for gluon::ObjectOrRef {
 impl gluon::ToObjectOrRef for AudioInterface {
     fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
+    }
+}
+impl gluon::Liveness for AudioInterface {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
     }
 }
 impl std::hash::Hash for AudioInterface {

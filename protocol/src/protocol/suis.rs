@@ -799,6 +799,16 @@ impl gluon::ToObjectOrRef for InputHandler {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for InputHandler {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for InputHandler {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -1098,6 +1108,16 @@ impl gluon::ToObjectOrRef for InputMethod {
         self.obj.clone()
     }
 }
+impl gluon::Liveness for InputMethod {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
+    }
+}
 impl std::hash::Hash for InputMethod {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
@@ -1263,6 +1283,16 @@ impl From<InputMethodCapture> for gluon::ObjectOrRef {
 impl gluon::ToObjectOrRef for InputMethodCapture {
     fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
+    }
+}
+impl gluon::Liveness for InputMethodCapture {
+    fn alive(&self) -> bool {
+        gluon::Liveness::alive(&self.obj)
+    }
+    fn death_notification(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        gluon::Liveness::death_notification(&self.obj)
     }
 }
 impl std::hash::Hash for InputMethodCapture {
