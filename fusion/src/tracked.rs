@@ -4,7 +4,7 @@ use crate::{Error, Result};
 use gluon::Handler;
 pub use stardust_xr_protocol::tracked::*;
 use stardust_xr_protocol::{
-	client::ClientHandler, dir, spatial::SpatialRef, types::ResourceLoadError,
+	client::ClientHandler, dir, spatial::SpatialRef, suis::Chirality, types::ResourceLoadError,
 };
 
 use crate::client::Client;
@@ -22,6 +22,14 @@ pub trait TrackedExt {
 	fn stage_spatial(
 		client: &Client<impl ClientHandler>,
 	) -> impl std::future::Future<Output = Result<SpatialRef>> + Send;
+	fn hand(
+		client: &Client<impl ClientHandler>,
+		chirality: Chirality,
+	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
+	fn controller(
+		client: &Client<impl ClientHandler>,
+		chirality: Chirality,
+	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
 }
 impl TrackedExt for Tracked {
 	fn hmd(client: &Client<impl ClientHandler>) -> impl Future<Output = Result<Tracked>> {
@@ -29,6 +37,30 @@ impl TrackedExt for Tracked {
 	}
 	fn stage(client: &Client<impl ClientHandler>) -> impl Future<Output = Result<Tracked>> {
 		get_tracked(client, "stardust-stage")
+	}
+	fn hand(
+		client: &Client<impl ClientHandler>,
+		chirality: Chirality,
+	) -> impl Future<Output = Result<Tracked>> {
+		get_tracked(
+			client,
+			match chirality {
+				Chirality::Left => "stardust-hand/left",
+				Chirality::Right => "stardust-hand/right",
+			},
+		)
+	}
+	fn controller(
+		client: &Client<impl ClientHandler>,
+		chirality: Chirality,
+	) -> impl Future<Output = Result<Tracked>> {
+		get_tracked(
+			client,
+			match chirality {
+				Chirality::Left => "stardust-controller/left",
+				Chirality::Right => "stardust-controller/right",
+			},
+		)
 	}
 
 	fn hmd_spatial(
