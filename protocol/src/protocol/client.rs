@@ -69,6 +69,9 @@ impl gluon::Convertable for Client {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for Client {
+    const ID: &'static str = "org.stardustxr.Client.Client";
+}
 impl Client {
     pub fn frame(&self, info: impl Into<FrameInfo>) -> Result<(), gluon::SendError> {
         let info: FrameInfo = info.into();

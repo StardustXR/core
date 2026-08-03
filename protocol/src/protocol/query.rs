@@ -159,6 +159,9 @@ impl gluon::Convertable for QueryableObjectRef {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for QueryableObjectRef {
+    const ID: &'static str = "org.stardustxr.Query.QueryableObjectRef";
+}
 impl QueryableObjectRef {
     pub fn from_handler<H: QueryableObjectRefHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -239,6 +242,9 @@ impl gluon::Convertable for QueryableObject {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for QueryableObject {
+    const ID: &'static str = "org.stardustxr.Query.QueryableObject";
 }
 impl QueryableObject {
     pub async fn queryable_ref(&self) -> Result<QueryableObjectRef, gluon::SendError> {
@@ -458,6 +464,9 @@ impl gluon::Convertable for QueryableInterfaceGuard {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for QueryableInterfaceGuard {
+    const ID: &'static str = "org.stardustxr.Query.QueryableInterfaceGuard";
+}
 impl QueryableInterfaceGuard {
     pub fn from_handler<H: QueryableInterfaceGuardHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -538,6 +547,9 @@ impl gluon::Convertable for QueryInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for QueryInterface {
+    const ID: &'static str = "org.stardustxr.Query.QueryInterface";
 }
 impl QueryInterface {
     pub async fn register_queryable(

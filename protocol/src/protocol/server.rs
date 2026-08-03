@@ -30,6 +30,9 @@ impl gluon::Convertable for Server {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for Server {
+    const ID: &'static str = "org.stardustxr.Server.Server";
+}
 impl Server {
     ///Get the spatial interface node.
     pub async fn spatial_interface(
@@ -789,6 +792,9 @@ impl gluon::Convertable for ServerInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for ServerInterface {
+    const ID: &'static str = "org.stardustxr.Server.ServerInterface";
 }
 impl ServerInterface {
     ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.

@@ -30,6 +30,9 @@ impl gluon::Convertable for Tracked {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for Tracked {
+    const ID: &'static str = "org.stardustxr.Tracked.Tracked";
+}
 impl Tracked {
     pub async fn get(
         &self,
@@ -259,6 +262,9 @@ impl gluon::Convertable for TrackedGuard {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for TrackedGuard {
+    const ID: &'static str = "org.stardustxr.Tracked.TrackedGuard";
+}
 impl TrackedGuard {
     pub fn from_handler<H: TrackedGuardHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -337,6 +343,9 @@ impl gluon::Convertable for TrackedStateReceiver {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for TrackedStateReceiver {
+    const ID: &'static str = "org.stardustxr.Tracked.TrackedStateReceiver";
 }
 impl TrackedStateReceiver {
     pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {

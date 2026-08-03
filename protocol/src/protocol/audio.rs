@@ -30,6 +30,9 @@ impl gluon::Convertable for Sound {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for Sound {
+    const ID: &'static str = "org.stardustxr.Audio.Sound";
+}
 impl Sound {
     ///Play sound effect
     pub fn play(&self) -> Result<(), gluon::SendError> {
@@ -148,6 +151,9 @@ impl gluon::Convertable for AudioInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for AudioInterface {
+    const ID: &'static str = "org.stardustxr.Audio.AudioInterface";
 }
 impl AudioInterface {
     pub async fn create_sound(

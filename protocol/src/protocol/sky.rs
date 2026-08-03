@@ -30,6 +30,9 @@ impl gluon::Convertable for SkyGuard {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for SkyGuard {
+    const ID: &'static str = "org.stardustxr.Sky.SkyGuard";
+}
 impl SkyGuard {
     pub fn from_handler<H: SkyGuardHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -108,6 +111,9 @@ impl gluon::Convertable for SkyInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for SkyInterface {
+    const ID: &'static str = "org.stardustxr.Sky.SkyInterface";
 }
 impl SkyInterface {
     /**Set the sky texture to a given equirectagular texture.

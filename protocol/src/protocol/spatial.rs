@@ -345,6 +345,9 @@ impl gluon::Convertable for SpatialRef {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for SpatialRef {
+    const ID: &'static str = "org.stardustxr.Spatial.SpatialRef";
+}
 impl SpatialRef {
     pub fn from_handler<H: SpatialRefHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -423,6 +426,9 @@ impl gluon::Convertable for Spatial {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for Spatial {
+    const ID: &'static str = "org.stardustxr.Spatial.Spatial";
 }
 impl Spatial {
     ///Get the spatial ref for this spatial object.
@@ -934,6 +940,9 @@ impl gluon::Convertable for SpatialInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for SpatialInterface {
+    const ID: &'static str = "org.stardustxr.Spatial.SpatialInterface";
 }
 impl SpatialInterface {
     ///Create a new spatial object.

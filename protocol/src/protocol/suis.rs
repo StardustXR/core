@@ -672,6 +672,9 @@ impl gluon::Convertable for InputHandler {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for InputHandler {
+    const ID: &'static str = "org.stardustxr.SUIS.InputHandler";
+}
 impl InputHandler {
     /**All input coordinates will be relative to this
 This is considered static and should not change after handler creation.*/
@@ -1036,6 +1039,9 @@ impl gluon::Convertable for InputMethod {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for InputMethod {
+    const ID: &'static str = "org.stardustxr.SUIS.InputMethod";
+}
 impl InputMethod {
     ///Request to capture the input method with the given handler.
     pub async fn request_capture(
@@ -1261,6 +1267,9 @@ impl gluon::Convertable for InputMethodCapture {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for InputMethodCapture {
+    const ID: &'static str = "org.stardustxr.SUIS.InputMethodCapture";
 }
 impl InputMethodCapture {
     pub fn from_handler<H: InputMethodCaptureHandler>(

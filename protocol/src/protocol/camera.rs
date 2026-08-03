@@ -85,6 +85,9 @@ impl gluon::Convertable for CameraInterface {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for CameraInterface {
+    const ID: &'static str = "org.stardustxr.Camera.CameraInterface";
+}
 impl CameraInterface {
     pub async fn create_camera(
         &self,
@@ -233,6 +236,9 @@ impl gluon::Convertable for Camera {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for Camera {
+    const ID: &'static str = "org.stardustxr.Camera.Camera";
 }
 impl Camera {
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers

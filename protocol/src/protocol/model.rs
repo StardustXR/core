@@ -315,6 +315,9 @@ impl gluon::Convertable for ModelInterface {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for ModelInterface {
+    const ID: &'static str = "org.stardustxr.Model.ModelInterface";
+}
 impl ModelInterface {
     ///Load a GLTF model into a Model
     pub async fn load_model(
@@ -473,6 +476,9 @@ impl gluon::Convertable for Model {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for Model {
+    const ID: &'static str = "org.stardustxr.Model.Model";
 }
 impl Model {
     pub async fn get_part(
@@ -668,6 +674,9 @@ impl gluon::Convertable for ModelPart {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for ModelPart {
+    const ID: &'static str = "org.stardustxr.Model.ModelPart";
 }
 impl ModelPart {
     pub async fn get_part_path(&self) -> Result<String, gluon::SendError> {

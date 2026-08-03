@@ -506,6 +506,9 @@ impl gluon::Convertable for FieldRef {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for FieldRef {
+    const ID: &'static str = "org.stardustxr.Field.FieldRef";
+}
 impl FieldRef {
     pub fn from_handler<H: FieldRefHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -584,6 +587,9 @@ impl gluon::Convertable for Field {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for Field {
+    const ID: &'static str = "org.stardustxr.Field.Field";
 }
 impl Field {
     pub async fn field_ref(&self) -> Result<FieldRef, gluon::SendError> {
@@ -983,6 +989,9 @@ impl gluon::Convertable for FieldInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for FieldInterface {
+    const ID: &'static str = "org.stardustxr.Field.FieldInterface";
 }
 impl FieldInterface {
     pub async fn sample(

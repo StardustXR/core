@@ -354,6 +354,9 @@ impl gluon::Convertable for TextInterface {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for TextInterface {
+    const ID: &'static str = "org.stardustxr.Text.TextInterface";
+}
 impl TextInterface {
     pub async fn create_text(
         &self,
@@ -522,6 +525,9 @@ impl gluon::Convertable for Text {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for Text {
+    const ID: &'static str = "org.stardustxr.Text.Text";
 }
 impl Text {
     ///Set the character height in meters

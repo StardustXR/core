@@ -135,6 +135,9 @@ impl gluon::Convertable for Lines {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for Lines {
+    const ID: &'static str = "org.stardustxr.Lines.Lines";
+}
 impl Lines {
     pub fn set_lines(
         &self,
@@ -243,6 +246,9 @@ impl gluon::Convertable for LinesInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for LinesInterface {
+    const ID: &'static str = "org.stardustxr.Lines.LinesInterface";
 }
 impl LinesInterface {
     pub async fn create_lines(

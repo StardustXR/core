@@ -304,6 +304,9 @@ impl gluon::Convertable for BeamQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for BeamQueryHandler {
+    const ID: &'static str = "org.stardustxr.SpatialQuery.BeamQueryHandler";
+}
 impl BeamQueryHandler {
     pub fn intersected(
         &self,
@@ -563,6 +566,9 @@ impl gluon::Convertable for ZoneQueryHandler {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for ZoneQueryHandler {
+    const ID: &'static str = "org.stardustxr.SpatialQuery.ZoneQueryHandler";
 }
 impl ZoneQueryHandler {
     pub fn entered(
@@ -854,6 +860,9 @@ impl gluon::Convertable for PointsQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for PointsQueryHandler {
+    const ID: &'static str = "org.stardustxr.SpatialQuery.PointsQueryHandler";
+}
 impl PointsQueryHandler {
     pub fn entered(
         &self,
@@ -1113,6 +1122,9 @@ impl gluon::Convertable for SpatialQueryInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for SpatialQueryInterface {
+    const ID: &'static str = "org.stardustxr.SpatialQuery.SpatialQueryInterface";
 }
 impl SpatialQueryInterface {
     pub async fn beam_query(
@@ -1407,6 +1419,9 @@ impl gluon::Convertable for PointsQueryHandle {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for PointsQueryHandle {
+    const ID: &'static str = "org.stardustxr.SpatialQuery.PointsQueryHandle";
+}
 impl PointsQueryHandle {
     pub fn update_points(
         &self,
@@ -1521,6 +1536,9 @@ impl gluon::Convertable for SpatialQueryGuard {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for SpatialQueryGuard {
+    const ID: &'static str = "org.stardustxr.SpatialQuery.SpatialQueryGuard";
 }
 impl SpatialQueryGuard {
     pub fn from_handler<H: SpatialQueryGuardHandler>(

@@ -109,6 +109,9 @@ impl gluon::Convertable for KeymapStore {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for KeymapStore {
+    const ID: &'static str = "org.stardustxr.Keymap.KeymapStore";
+}
 impl KeymapStore {
     ///Register a xkbcommon keymap, deduplicates
     pub async fn exchange(
@@ -318,6 +321,9 @@ impl gluon::Convertable for Keymap {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for Keymap {
+    const ID: &'static str = "org.stardustxr.Keymap.Keymap";
 }
 impl Keymap {
     pub fn from_handler<H: KeymapHandler>(

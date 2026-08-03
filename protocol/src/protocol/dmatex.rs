@@ -769,6 +769,9 @@ impl gluon::Convertable for DmatexRef {
         self.obj.write_owned(gluon_data)
     }
 }
+impl gluon::Interface for DmatexRef {
+    const ID: &'static str = "org.stardustxr.Dmatex.DmatexRef";
+}
 impl DmatexRef {
     pub fn from_handler<H: DmatexRefHandler>(
         obj: &impl gluon::OwnedObjectRef<H>,
@@ -847,6 +850,9 @@ impl gluon::Convertable for DmatexInterface {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for DmatexInterface {
+    const ID: &'static str = "org.stardustxr.Dmatex.DmatexInterface";
 }
 impl DmatexInterface {
     pub async fn import_dmatex(
@@ -1172,6 +1178,9 @@ impl gluon::Convertable for DmatexSubmitRelease {
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
+}
+impl gluon::Interface for DmatexSubmitRelease {
+    const ID: &'static str = "org.stardustxr.Dmatex.DmatexSubmitRelease";
 }
 impl DmatexSubmitRelease {
     ///Consume the release point, after you get the release point you have to signal it at some point!
