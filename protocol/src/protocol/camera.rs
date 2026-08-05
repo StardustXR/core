@@ -248,6 +248,54 @@ impl Camera {
         acquire_point: impl Into<u64>,
         release_point: impl Into<super::dmatex::DmatexSubmitRelease>,
         views: impl Into<Vec<View>>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let render_target: super::dmatex::DmatexRef = render_target.into();
+        let acquire_point: u64 = acquire_point.into();
+        let release_point: super::dmatex::DmatexSubmitRelease = release_point.into();
+        let views: Vec<View> = views.into();
+        tracing::trace!(
+            interface = "Camera", method = "request_draw", ? render_target, ?
+            acquire_point, ? release_point, ? views, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = render_target.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = acquire_point.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = release_point.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = views.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn request_draw_event(
+        &self,
+        render_target: impl Into<super::dmatex::DmatexRef>,
+        acquire_point: impl Into<u64>,
+        release_point: impl Into<super::dmatex::DmatexSubmitRelease>,
+        views: impl Into<Vec<View>>,
     ) -> Result<(), gluon::SendError> {
         let render_target: super::dmatex::DmatexRef = render_target.into();
         let acquire_point: u64 = acquire_point.into();
@@ -258,6 +306,8 @@ impl Camera {
             acquire_point, ? release_point, ? views, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         render_target.write(&mut gluon_builder)?;
         acquire_point.write(&mut gluon_builder)?;
         release_point.write(&mut gluon_builder)?;
@@ -325,6 +375,9 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_render_target = gluon::Convertable::read(&mut gluon_data)?;
                     let param_acquire_point = gluon::Convertable::read(&mut gluon_data)?;
                     let param_release_point = gluon::Convertable::read(&mut gluon_data)?;
@@ -349,6 +402,14 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

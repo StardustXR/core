@@ -741,11 +741,38 @@ impl ModelPart {
         Ok(__ret_error)
     }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
-    pub fn apply_holdout_material(&self) -> Result<(), gluon::SendError> {
+    pub fn apply_holdout_material(&self) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         tracing::trace!(
             interface = "ModelPart", method = "apply_holdout_material", "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn apply_holdout_material_event(&self) -> Result<(), gluon::SendError> {
+        tracing::trace!(
+            interface = "ModelPart", method = "apply_holdout_material", "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         self.obj
             .device()
             .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
@@ -944,6 +971,9 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 11u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     tracing::trace!(
                         interface = "ModelPart", method = "apply_holdout_material",
                         "dispatching"
@@ -957,6 +987,14 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

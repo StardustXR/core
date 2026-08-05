@@ -718,6 +718,54 @@ This is considered static and should not change after handler creation.*/
         time: impl Into<super::types::Timestamp>,
         spatial: impl Into<SpatialData>,
         semantic: impl Into<SemanticData>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let method: InputMethod = method.into();
+        let time: super::types::Timestamp = time.into();
+        let spatial: SpatialData = spatial.into();
+        let semantic: SemanticData = semantic.into();
+        tracing::trace!(
+            interface = "InputHandler", method = "input_gained", ? method, ? time, ?
+            spatial, ? semantic, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = method.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = time.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = spatial.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = semantic.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///An input method just started sending input to this handler.
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn input_gained_event(
+        &self,
+        method: impl Into<InputMethod>,
+        time: impl Into<super::types::Timestamp>,
+        spatial: impl Into<SpatialData>,
+        semantic: impl Into<SemanticData>,
     ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
@@ -728,6 +776,8 @@ This is considered static and should not change after handler creation.*/
             spatial, ? semantic, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -744,6 +794,54 @@ This is considered static and should not change after handler creation.*/
         time: impl Into<super::types::Timestamp>,
         spatial: impl Into<SpatialData>,
         semantic: impl Into<SemanticData>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let method: InputMethod = method.into();
+        let time: super::types::Timestamp = time.into();
+        let spatial: SpatialData = spatial.into();
+        let semantic: SemanticData = semantic.into();
+        tracing::trace!(
+            interface = "InputHandler", method = "input_updated", ? method, ? time, ?
+            spatial, ? semantic, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = method.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = time.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = spatial.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = semantic.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///An input method's data has been updated.
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn input_updated_event(
+        &self,
+        method: impl Into<InputMethod>,
+        time: impl Into<super::types::Timestamp>,
+        spatial: impl Into<SpatialData>,
+        semantic: impl Into<SemanticData>,
     ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
@@ -754,6 +852,8 @@ This is considered static and should not change after handler creation.*/
             spatial, ? semantic, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
@@ -768,6 +868,43 @@ This is considered static and should not change after handler creation.*/
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let method: InputMethod = method.into();
+        let time: super::types::Timestamp = time.into();
+        tracing::trace!(
+            interface = "InputHandler", method = "input_left", ? method, ? time, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = method.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = time.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///An input method just stopped sending input to this handler.
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn input_left_event(
+        &self,
+        method: impl Into<InputMethod>,
+        time: impl Into<super::types::Timestamp>,
     ) -> Result<(), gluon::SendError> {
         let method: InputMethod = method.into();
         let time: super::types::Timestamp = time.into();
@@ -775,6 +912,8 @@ This is considered static and should not change after handler creation.*/
             interface = "InputHandler", method = "input_left", ? method, ? time, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         self.obj
@@ -943,6 +1082,9 @@ This is considered static and should not change after handler creation.*/
                         .await?;
                 }
                 10u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
@@ -967,8 +1109,19 @@ This is considered static and should not change after handler creation.*/
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 11u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
@@ -993,8 +1146,19 @@ This is considered static and should not change after handler creation.*/
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 12u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_method = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -1010,6 +1174,14 @@ This is considered static and should not change after handler creation.*/
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

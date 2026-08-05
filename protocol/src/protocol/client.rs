@@ -73,10 +73,41 @@ impl gluon::Interface for Client {
     const ID: &'static str = "org.stardustxr.Client.Client";
 }
 impl Client {
-    pub fn frame(&self, info: impl Into<FrameInfo>) -> Result<(), gluon::SendError> {
+    pub fn frame(&self, info: impl Into<FrameInfo>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         let info: FrameInfo = info.into();
         tracing::trace!(interface = "Client", method = "frame", ? info, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = info.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn frame_event(
+        &self,
+        info: impl Into<FrameInfo>,
+    ) -> Result<(), gluon::SendError> {
+        let info: FrameInfo = info.into();
+        tracing::trace!(interface = "Client", method = "frame", ? info, "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         info.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -137,6 +168,9 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Client", method = "frame", ? param_info,
@@ -151,6 +185,14 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

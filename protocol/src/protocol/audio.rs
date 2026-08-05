@@ -35,16 +35,66 @@ impl gluon::Interface for Sound {
 }
 impl Sound {
     ///Play sound effect
-    pub fn play(&self) -> Result<(), gluon::SendError> {
+    pub fn play(&self) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         tracing::trace!(interface = "Sound", method = "play", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Play sound effect
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn play_event(&self) -> Result<(), gluon::SendError> {
+        tracing::trace!(interface = "Sound", method = "play", "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Stop sound effect
-    pub fn stop(&self) -> Result<(), gluon::SendError> {
+    pub fn stop(&self) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         tracing::trace!(interface = "Sound", method = "stop", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Stop sound effect
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn stop_event(&self) -> Result<(), gluon::SendError> {
+        tracing::trace!(interface = "Sound", method = "stop", "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
@@ -101,6 +151,9 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     tracing::trace!(interface = "Sound", method = "play", "dispatching");
                     drop(gluon_data);
                     self.play(ctx)
@@ -111,8 +164,19 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 9u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     tracing::trace!(interface = "Sound", method = "stop", "dispatching");
                     drop(gluon_data);
                     self.stop(ctx)
@@ -123,6 +187,14 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

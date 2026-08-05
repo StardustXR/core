@@ -348,12 +348,45 @@ impl gluon::Interface for TrackedStateReceiver {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedStateReceiver";
 }
 impl TrackedStateReceiver {
-    pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {
+    pub fn tracked(&self, tracked: impl Into<bool>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         let tracked: bool = tracked.into();
         tracing::trace!(
             interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = tracked.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn tracked_event(
+        &self,
+        tracked: impl Into<bool>,
+    ) -> Result<(), gluon::SendError> {
+        let tracked: bool = tracked.into();
+        tracing::trace!(
+            interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         tracked.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
@@ -416,6 +449,9 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_tracked = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "TrackedStateReceiver", method = "tracked", ?
@@ -430,6 +466,14 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

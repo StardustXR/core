@@ -531,7 +531,36 @@ impl gluon::Interface for Text {
 }
 impl Text {
     ///Set the character height in meters
-    pub fn set_character_height(
+    pub fn set_character_height(&self, height: impl Into<f32>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let height: f32 = height.into();
+        tracing::trace!(
+            interface = "Text", method = "set_character_height", ? height, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = height.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Set the character height in meters
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_character_height_event(
         &self,
         height: impl Into<f32>,
     ) -> Result<(), gluon::SendError> {
@@ -540,15 +569,49 @@ impl Text {
             interface = "Text", method = "set_character_height", ? height, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         height.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
     ///Set the text content
-    pub fn set_text(&self, text: impl Into<String>) -> Result<(), gluon::SendError> {
+    pub fn set_text(&self, text: impl Into<String>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         let text: String = text.into();
         tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = text.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Set the text content
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_text_event(
+        &self,
+        text: impl Into<String>,
+    ) -> Result<(), gluon::SendError> {
+        let text: String = text.into();
+        tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         text.write(&mut gluon_builder)?;
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
@@ -614,6 +677,9 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_height = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Text", method = "set_character_height", ?
@@ -628,8 +694,19 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 9u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Text", method = "set_text", ? param_text,
@@ -644,6 +721,14 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

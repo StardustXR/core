@@ -520,13 +520,43 @@ impl Spatial {
     }
     /**Sets the parent of this spatial object, keeping the local transform.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
-    pub fn set_parent(
+    pub fn set_parent(&self, parent: impl Into<SpatialRef>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let parent: SpatialRef = parent.into();
+        tracing::trace!(interface = "Spatial", method = "set_parent", ? parent, "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = parent.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    /**Sets the parent of this spatial object, keeping the local transform.
+It will silently error and not set the spatial parent if it is to a child of itself.*/
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_parent_event(
         &self,
         parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon::SendError> {
         let parent: SpatialRef = parent.into();
         tracing::trace!(interface = "Spatial", method = "set_parent", ? parent, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         parent.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -538,12 +568,47 @@ It will silently error and not set the spatial parent if it is to a child of its
     pub fn set_parent_in_place(
         &self,
         parent: impl Into<SpatialRef>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let parent: SpatialRef = parent.into();
+        tracing::trace!(
+            interface = "Spatial", method = "set_parent_in_place", ? parent, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = parent.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    /**Sets the parent of this spatial object, keeping its position in space.
+It will silently error and not set the spatial parent if it is to a child of itself.*/
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_parent_in_place_event(
+        &self,
+        parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon::SendError> {
         let parent: SpatialRef = parent.into();
         tracing::trace!(
             interface = "Spatial", method = "set_parent_in_place", ? parent, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         parent.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -554,12 +619,46 @@ It will silently error and not set the spatial parent if it is to a child of its
     pub fn set_local_transform(
         &self,
         transform: impl Into<PartialTransform>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let transform: PartialTransform = transform.into();
+        tracing::trace!(
+            interface = "Spatial", method = "set_local_transform", ? transform, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = transform.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Set the transform of this spatial relative to its spatial parent.
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_local_transform_event(
+        &self,
+        transform: impl Into<PartialTransform>,
     ) -> Result<(), gluon::SendError> {
         let transform: PartialTransform = transform.into();
         tracing::trace!(
             interface = "Spatial", method = "set_local_transform", ? transform, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         transform.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -571,6 +670,44 @@ It will silently error and not set the spatial parent if it is to a child of its
         &self,
         relative_to: impl Into<SpatialRef>,
         transform: impl Into<PartialTransform>,
+    ) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let relative_to: SpatialRef = relative_to.into();
+        let transform: PartialTransform = transform.into();
+        tracing::trace!(
+            interface = "Spatial", method = "set_relative_transform", ? relative_to, ?
+            transform, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = relative_to.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = transform.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 15u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Set the transform of this spatial relative to another spatial.
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_relative_transform_event(
+        &self,
+        relative_to: impl Into<SpatialRef>,
+        transform: impl Into<PartialTransform>,
     ) -> Result<(), gluon::SendError> {
         let relative_to: SpatialRef = relative_to.into();
         let transform: PartialTransform = transform.into();
@@ -579,6 +716,8 @@ It will silently error and not set the spatial parent if it is to a child of its
             transform, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         relative_to.write(&mut gluon_builder)?;
         transform.write(&mut gluon_builder)?;
         self.obj
@@ -849,6 +988,9 @@ It will silently error and not set the spatial parent if it is to a child of its
                         .await?;
                 }
                 12u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Spatial", method = "set_parent", ? param_parent,
@@ -863,8 +1005,19 @@ It will silently error and not set the spatial parent if it is to a child of its
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 13u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_parent = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Spatial", method = "set_parent_in_place", ?
@@ -879,8 +1032,19 @@ It will silently error and not set the spatial parent if it is to a child of its
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 14u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Spatial", method = "set_local_transform", ?
@@ -895,8 +1059,19 @@ It will silently error and not set the spatial parent if it is to a child of its
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 15u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     let param_transform = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -912,6 +1087,14 @@ It will silently error and not set the spatial parent if it is to a child of its
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

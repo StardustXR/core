@@ -674,10 +674,41 @@ impl Field {
         );
         Ok(__ret_result)
     }
-    pub fn set_shape(&self, shape: impl Into<Shape>) -> Result<(), gluon::SendError> {
+    pub fn set_shape(&self, shape: impl Into<Shape>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
         let shape: Shape = shape.into();
         tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = shape.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Fire and Forget, events sent to different objects may not be handled in order
+    pub fn set_shape_event(
+        &self,
+        shape: impl Into<Shape>,
+    ) -> Result<(), gluon::SendError> {
+        let shape: Shape = shape.into();
+        tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         shape.write(&mut gluon_builder)?;
         self.obj
             .device()
@@ -947,6 +978,9 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 12u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Field", method = "set_shape", ? param_shape,
@@ -961,6 +995,14 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }
