@@ -35,7 +35,7 @@ impl gluon::Interface for Sound {
 }
 impl Sound {
     ///Play sound effect
-    pub fn play(&self) -> gluon::OnewayFuture {
+    pub fn play_waiting(&self) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         tracing::trace!(interface = "Sound", method = "play", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -58,7 +58,7 @@ impl Sound {
     }
     ///Play sound effect
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn play_event(&self) -> Result<(), gluon::SendError> {
+    pub fn play(&self) -> Result<(), gluon::SendError> {
         tracing::trace!(interface = "Sound", method = "play", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let gluon_ret: Option<gluon::ObjectOrRef> = None;
@@ -67,7 +67,7 @@ impl Sound {
         Ok(())
     }
     ///Stop sound effect
-    pub fn stop(&self) -> gluon::OnewayFuture {
+    pub fn stop_waiting(&self) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         tracing::trace!(interface = "Sound", method = "stop", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
@@ -90,7 +90,7 @@ impl Sound {
     }
     ///Stop sound effect
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn stop_event(&self) -> Result<(), gluon::SendError> {
+    pub fn stop(&self) -> Result<(), gluon::SendError> {
         tracing::trace!(interface = "Sound", method = "stop", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let gluon_ret: Option<gluon::ObjectOrRef> = None;

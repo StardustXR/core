@@ -348,7 +348,7 @@ impl gluon::Interface for TrackedStateReceiver {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedStateReceiver";
 }
 impl TrackedStateReceiver {
-    pub fn tracked(&self, tracked: impl Into<bool>) -> gluon::OnewayFuture {
+    pub fn tracked_waiting(&self, tracked: impl Into<bool>) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let tracked: bool = tracked.into();
         tracing::trace!(
@@ -376,10 +376,7 @@ impl TrackedStateReceiver {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn tracked_event(
-        &self,
-        tracked: impl Into<bool>,
-    ) -> Result<(), gluon::SendError> {
+    pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {
         let tracked: bool = tracked.into();
         tracing::trace!(
             interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"

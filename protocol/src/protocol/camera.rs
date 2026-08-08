@@ -242,7 +242,7 @@ impl gluon::Interface for Camera {
 }
 impl Camera {
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
-    pub fn request_draw(
+    pub fn request_draw_waiting(
         &self,
         render_target: impl Into<super::dmatex::DmatexRef>,
         acquire_point: impl Into<u64>,
@@ -290,7 +290,7 @@ impl Camera {
     }
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn request_draw_event(
+    pub fn request_draw(
         &self,
         render_target: impl Into<super::dmatex::DmatexRef>,
         acquire_point: impl Into<u64>,

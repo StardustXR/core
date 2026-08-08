@@ -520,7 +520,10 @@ impl Spatial {
     }
     /**Sets the parent of this spatial object, keeping the local transform.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
-    pub fn set_parent(&self, parent: impl Into<SpatialRef>) -> gluon::OnewayFuture {
+    pub fn set_parent_waiting(
+        &self,
+        parent: impl Into<SpatialRef>,
+    ) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let parent: SpatialRef = parent.into();
         tracing::trace!(interface = "Spatial", method = "set_parent", ? parent, "→");
@@ -548,7 +551,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     /**Sets the parent of this spatial object, keeping the local transform.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_parent_event(
+    pub fn set_parent(
         &self,
         parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon::SendError> {
@@ -565,7 +568,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     }
     /**Sets the parent of this spatial object, keeping its position in space.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
-    pub fn set_parent_in_place(
+    pub fn set_parent_in_place_waiting(
         &self,
         parent: impl Into<SpatialRef>,
     ) -> gluon::OnewayFuture {
@@ -598,7 +601,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     /**Sets the parent of this spatial object, keeping its position in space.
 It will silently error and not set the spatial parent if it is to a child of itself.*/
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_parent_in_place_event(
+    pub fn set_parent_in_place(
         &self,
         parent: impl Into<SpatialRef>,
     ) -> Result<(), gluon::SendError> {
@@ -616,7 +619,7 @@ It will silently error and not set the spatial parent if it is to a child of its
         Ok(())
     }
     ///Set the transform of this spatial relative to its spatial parent.
-    pub fn set_local_transform(
+    pub fn set_local_transform_waiting(
         &self,
         transform: impl Into<PartialTransform>,
     ) -> gluon::OnewayFuture {
@@ -648,7 +651,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     }
     ///Set the transform of this spatial relative to its spatial parent.
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_local_transform_event(
+    pub fn set_local_transform(
         &self,
         transform: impl Into<PartialTransform>,
     ) -> Result<(), gluon::SendError> {
@@ -666,7 +669,7 @@ It will silently error and not set the spatial parent if it is to a child of its
         Ok(())
     }
     ///Set the transform of this spatial relative to another spatial.
-    pub fn set_relative_transform(
+    pub fn set_relative_transform_waiting(
         &self,
         relative_to: impl Into<SpatialRef>,
         transform: impl Into<PartialTransform>,
@@ -704,7 +707,7 @@ It will silently error and not set the spatial parent if it is to a child of its
     }
     ///Set the transform of this spatial relative to another spatial.
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_relative_transform_event(
+    pub fn set_relative_transform(
         &self,
         relative_to: impl Into<SpatialRef>,
         transform: impl Into<PartialTransform>,

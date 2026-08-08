@@ -73,7 +73,7 @@ impl gluon::Interface for Client {
     const ID: &'static str = "org.stardustxr.Client.Client";
 }
 impl Client {
-    pub fn frame(&self, info: impl Into<FrameInfo>) -> gluon::OnewayFuture {
+    pub fn frame_waiting(&self, info: impl Into<FrameInfo>) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let info: FrameInfo = info.into();
         tracing::trace!(interface = "Client", method = "frame", ? info, "→");
@@ -99,10 +99,7 @@ impl Client {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn frame_event(
-        &self,
-        info: impl Into<FrameInfo>,
-    ) -> Result<(), gluon::SendError> {
+    pub fn frame(&self, info: impl Into<FrameInfo>) -> Result<(), gluon::SendError> {
         let info: FrameInfo = info.into();
         tracing::trace!(interface = "Client", method = "frame", ? info, "→");
         let mut gluon_builder = gluon::DataBuilder::new();

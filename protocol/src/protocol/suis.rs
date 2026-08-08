@@ -712,7 +712,7 @@ This is considered static and should not change after handler creation.*/
         Ok(__ret_field)
     }
     ///An input method just started sending input to this handler.
-    pub fn input_gained(
+    pub fn input_gained_waiting(
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
@@ -760,7 +760,7 @@ This is considered static and should not change after handler creation.*/
     }
     ///An input method just started sending input to this handler.
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn input_gained_event(
+    pub fn input_gained(
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
@@ -788,7 +788,7 @@ This is considered static and should not change after handler creation.*/
         Ok(())
     }
     ///An input method's data has been updated.
-    pub fn input_updated(
+    pub fn input_updated_waiting(
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
@@ -836,7 +836,7 @@ This is considered static and should not change after handler creation.*/
     }
     ///An input method's data has been updated.
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn input_updated_event(
+    pub fn input_updated(
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
@@ -864,7 +864,7 @@ This is considered static and should not change after handler creation.*/
         Ok(())
     }
     ///An input method just stopped sending input to this handler.
-    pub fn input_left(
+    pub fn input_left_waiting(
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,
@@ -901,7 +901,7 @@ This is considered static and should not change after handler creation.*/
     }
     ///An input method just stopped sending input to this handler.
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn input_left_event(
+    pub fn input_left(
         &self,
         method: impl Into<InputMethod>,
         time: impl Into<super::types::Timestamp>,

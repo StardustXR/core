@@ -531,7 +531,10 @@ impl gluon::Interface for Text {
 }
 impl Text {
     ///Set the character height in meters
-    pub fn set_character_height(&self, height: impl Into<f32>) -> gluon::OnewayFuture {
+    pub fn set_character_height_waiting(
+        &self,
+        height: impl Into<f32>,
+    ) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let height: f32 = height.into();
         tracing::trace!(
@@ -560,7 +563,7 @@ impl Text {
     }
     ///Set the character height in meters
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_character_height_event(
+    pub fn set_character_height(
         &self,
         height: impl Into<f32>,
     ) -> Result<(), gluon::SendError> {
@@ -576,7 +579,7 @@ impl Text {
         Ok(())
     }
     ///Set the text content
-    pub fn set_text(&self, text: impl Into<String>) -> gluon::OnewayFuture {
+    pub fn set_text_waiting(&self, text: impl Into<String>) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let text: String = text.into();
         tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
@@ -603,10 +606,7 @@ impl Text {
     }
     ///Set the text content
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_text_event(
-        &self,
-        text: impl Into<String>,
-    ) -> Result<(), gluon::SendError> {
+    pub fn set_text(&self, text: impl Into<String>) -> Result<(), gluon::SendError> {
         let text: String = text.into();
         tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
         let mut gluon_builder = gluon::DataBuilder::new();

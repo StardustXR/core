@@ -674,7 +674,7 @@ impl Field {
         );
         Ok(__ret_result)
     }
-    pub fn set_shape(&self, shape: impl Into<Shape>) -> gluon::OnewayFuture {
+    pub fn set_shape_waiting(&self, shape: impl Into<Shape>) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let shape: Shape = shape.into();
         tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
@@ -700,10 +700,7 @@ impl Field {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_shape_event(
-        &self,
-        shape: impl Into<Shape>,
-    ) -> Result<(), gluon::SendError> {
+    pub fn set_shape(&self, shape: impl Into<Shape>) -> Result<(), gluon::SendError> {
         let shape: Shape = shape.into();
         tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
         let mut gluon_builder = gluon::DataBuilder::new();

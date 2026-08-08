@@ -308,7 +308,7 @@ impl gluon::Interface for BeamQueryHandler {
     const ID: &'static str = "org.stardustxr.SpatialQuery.BeamQueryHandler";
 }
 impl BeamQueryHandler {
-    pub fn intersected(
+    pub fn intersected_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         field: impl Into<super::field::FieldRef>,
@@ -360,7 +360,7 @@ impl BeamQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn intersected_event(
+    pub fn intersected(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         field: impl Into<super::field::FieldRef>,
@@ -388,7 +388,7 @@ impl BeamQueryHandler {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn interfaces_changed(
+    pub fn interfaces_changed_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
@@ -425,7 +425,7 @@ impl BeamQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn interfaces_changed_event(
+    pub fn interfaces_changed(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
@@ -444,7 +444,7 @@ impl BeamQueryHandler {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn moved(
+    pub fn moved_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         spatial_info: impl Into<super::field::RayMarchResult>,
@@ -481,7 +481,7 @@ impl BeamQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn moved_event(
+    pub fn moved(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         spatial_info: impl Into<super::field::RayMarchResult>,
@@ -502,7 +502,7 @@ impl BeamQueryHandler {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn left(
+    pub fn left_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
     ) -> gluon::OnewayFuture {
@@ -531,7 +531,7 @@ impl BeamQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn left_event(
+    pub fn left(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
     ) -> Result<(), gluon::SendError> {
@@ -778,7 +778,7 @@ impl gluon::Interface for ZoneQueryHandler {
     const ID: &'static str = "org.stardustxr.SpatialQuery.ZoneQueryHandler";
 }
 impl ZoneQueryHandler {
-    pub fn entered(
+    pub fn entered_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         field: impl Into<super::field::FieldRef>,
@@ -835,7 +835,7 @@ impl ZoneQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn entered_event(
+    pub fn entered(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         field: impl Into<super::field::FieldRef>,
@@ -866,7 +866,7 @@ impl ZoneQueryHandler {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn interfaces_changed(
+    pub fn interfaces_changed_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
@@ -903,7 +903,7 @@ impl ZoneQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn interfaces_changed_event(
+    pub fn interfaces_changed(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
@@ -922,7 +922,7 @@ impl ZoneQueryHandler {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn moved(
+    pub fn moved_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         relative_position: crate::types::Vec3F,
@@ -964,7 +964,7 @@ impl ZoneQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn moved_event(
+    pub fn moved(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         relative_position: crate::types::Vec3F,
@@ -988,7 +988,7 @@ impl ZoneQueryHandler {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn left(
+    pub fn left_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
     ) -> gluon::OnewayFuture {
@@ -1017,7 +1017,7 @@ impl ZoneQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn left_event(
+    pub fn left(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
     ) -> Result<(), gluon::SendError> {
@@ -1288,7 +1288,7 @@ impl gluon::Interface for PointsQueryHandler {
     const ID: &'static str = "org.stardustxr.SpatialQuery.PointsQueryHandler";
 }
 impl PointsQueryHandler {
-    pub fn entered(
+    pub fn entered_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         field: impl Into<super::field::FieldRef>,
@@ -1340,7 +1340,7 @@ impl PointsQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn entered_event(
+    pub fn entered(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         field: impl Into<super::field::FieldRef>,
@@ -1368,7 +1368,7 @@ impl PointsQueryHandler {
         self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn interfaces_changed(
+    pub fn interfaces_changed_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
@@ -1405,7 +1405,7 @@ impl PointsQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn interfaces_changed_event(
+    pub fn interfaces_changed(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         interfaces: impl Into<Vec<super::query::QueriedInterface>>,
@@ -1424,7 +1424,7 @@ impl PointsQueryHandler {
         self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn moved(
+    pub fn moved_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         spatial_info: impl Into<super::field::FieldSample>,
@@ -1461,7 +1461,7 @@ impl PointsQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn moved_event(
+    pub fn moved(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
         spatial_info: impl Into<super::field::FieldSample>,
@@ -1482,7 +1482,7 @@ impl PointsQueryHandler {
             .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    pub fn left(
+    pub fn left_waiting(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
     ) -> gluon::OnewayFuture {
@@ -1511,7 +1511,7 @@ impl PointsQueryHandler {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn left_event(
+    pub fn left(
         &self,
         obj: impl Into<super::query::QueryableObjectRef>,
     ) -> Result<(), gluon::SendError> {
@@ -2054,7 +2054,10 @@ impl gluon::Interface for PointsQueryHandle {
     const ID: &'static str = "org.stardustxr.SpatialQuery.PointsQueryHandle";
 }
 impl PointsQueryHandle {
-    pub fn update_points(&self, points: impl Into<Vec<Point>>) -> gluon::OnewayFuture {
+    pub fn update_points_waiting(
+        &self,
+        points: impl Into<Vec<Point>>,
+    ) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let points: Vec<Point> = points.into();
         tracing::trace!(
@@ -2082,7 +2085,7 @@ impl PointsQueryHandle {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn update_points_event(
+    pub fn update_points(
         &self,
         points: impl Into<Vec<Point>>,
     ) -> Result<(), gluon::SendError> {

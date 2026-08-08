@@ -741,7 +741,7 @@ impl ModelPart {
         Ok(__ret_error)
     }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
-    pub fn apply_holdout_material(&self) -> gluon::OnewayFuture {
+    pub fn apply_holdout_material_waiting(&self) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         tracing::trace!(
             interface = "ModelPart", method = "apply_holdout_material", "→"
@@ -766,7 +766,7 @@ impl ModelPart {
     }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn apply_holdout_material_event(&self) -> Result<(), gluon::SendError> {
+    pub fn apply_holdout_material(&self) -> Result<(), gluon::SendError> {
         tracing::trace!(
             interface = "ModelPart", method = "apply_holdout_material", "→"
         );

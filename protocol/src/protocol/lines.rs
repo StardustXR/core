@@ -139,7 +139,7 @@ impl gluon::Interface for Lines {
     const ID: &'static str = "org.stardustxr.Lines.Lines";
 }
 impl Lines {
-    pub fn set_lines(&self, lines: impl Into<Vec<Line>>) -> gluon::OnewayFuture {
+    pub fn set_lines_waiting(&self, lines: impl Into<Vec<Line>>) -> gluon::OnewayFuture {
         use gluon::ToObjectOrRef as _;
         let lines: Vec<Line> = lines.into();
         tracing::trace!(interface = "Lines", method = "set_lines", ? lines, "→");
@@ -165,7 +165,7 @@ impl Lines {
         gluon_recv.into()
     }
     ///Fire and Forget, events sent to different objects may not be handled in order
-    pub fn set_lines_event(
+    pub fn set_lines(
         &self,
         lines: impl Into<Vec<Line>>,
     ) -> Result<(), gluon::SendError> {
