@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc, vec};
 
-use gluon::Handler;
+use gluon::{Handler, RefExt};
 use parking_lot::Mutex;
 use stardust_xr_fusion::{
 	client::Client,
@@ -22,7 +22,7 @@ use tracing::warn;
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
+	let (client, root) = Client::connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 	let (spatial, _) = Spatial::new(&client, &root, Transform::from_translation([0.0, 0.1, 0.0]))
@@ -31,14 +31,15 @@ async fn main() {
 
 	let handlers: Arc<Mutex<HashMap<QueryableObjectRef, SpatialRef>>> =
 		Arc::new(Mutex::new(HashMap::new()));
-	let points_query_handler = client.pion_device().register_object(Querier {
+	let points_query_handler = PointsQueryHandler::new_service(Querier {
 		handlers: handlers.clone(),
-	});
+	})
+	.unwrap();
 
 	let _points_query_handle = client
 		.spatial_query_interface()
 		.points_query(PointsQuery {
-			handler: PointsQueryHandler::from_handler(&points_query_handler),
+			handler: points_query_handler,
 			interfaces: vec![InterfaceDependency {
 				id: InputHandler::QUERY_INTERFACE.into(),
 				optional: false,

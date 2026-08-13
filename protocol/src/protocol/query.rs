@@ -32,9 +32,9 @@ pub struct InterfaceDependency {
     pub optional: bool,
 }
 impl gluon::Convertable for InterfaceDependency {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.id.write(gluon_data)?;
         self.optional.write(gluon_data)?;
@@ -50,7 +50,7 @@ impl gluon::Convertable for InterfaceDependency {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.id.write_owned(gluon_data)?;
         self.optional.write_owned(gluon_data)?;
@@ -61,12 +61,12 @@ impl gluon::Convertable for InterfaceDependency {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct QueriedInterface {
     pub interface_id: String,
-    pub interface: gluon::ObjectOrRef,
+    pub interface: gluon::Ref,
 }
 impl gluon::Convertable for QueriedInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.interface_id.write(gluon_data)?;
         self.interface.write(gluon_data)?;
@@ -82,7 +82,7 @@ impl gluon::Convertable for QueriedInterface {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.interface_id.write_owned(gluon_data)?;
         self.interface.write_owned(gluon_data)?;
@@ -99,9 +99,9 @@ pub enum QueryableError {
     NotOwnedField,
 }
 impl gluon::Convertable for QueryableError {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             QueryableError::NotOwnedSpatial => {
@@ -124,7 +124,7 @@ impl gluon::Convertable for QueryableError {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             QueryableError::NotOwnedSpatial => {
@@ -139,22 +139,22 @@ impl gluon::Convertable for QueryableError {
 }
 #[derive(Debug, Clone)]
 pub struct QueryableObjectRef {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for QueryableObjectRef {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(QueryableObjectRef::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(QueryableObjectRef::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -162,26 +162,26 @@ impl gluon::Convertable for QueryableObjectRef {
 impl gluon::Interface for QueryableObjectRef {
     const ID: &'static str = "org.stardustxr.Query.QueryableObjectRef";
 }
-impl QueryableObjectRef {
-    pub fn from_handler<H: QueryableObjectRefHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> QueryableObjectRef {
-        QueryableObjectRef::from_object_or_ref(
-            gluon::OwnedObjectRef::to_object_or_ref(obj),
-        )
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryableObjectRef {
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: QueryableObjectRefHandler> gluon::HandledBy<H> for QueryableObjectRef {}
+impl gluon::RefExt for QueryableObjectRef {
+    fn from_ref(obj: gluon::Ref) -> QueryableObjectRef {
         QueryableObjectRef { obj }
     }
 }
-impl From<QueryableObjectRef> for gluon::ObjectOrRef {
+impl QueryableObjectRef {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> QueryableObjectRef {
+        QueryableObjectRef { obj }
+    }
+}
+impl From<QueryableObjectRef> for gluon::Ref {
     fn from(value: QueryableObjectRef) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for QueryableObjectRef {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for QueryableObjectRef {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -223,22 +223,22 @@ pub trait QueryableObjectRefHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct QueryableObject {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for QueryableObject {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(QueryableObject::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(QueryableObject::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -246,16 +246,23 @@ impl gluon::Convertable for QueryableObject {
 impl gluon::Interface for QueryableObject {
     const ID: &'static str = "org.stardustxr.Query.QueryableObject";
 }
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: QueryableObjectHandler> gluon::HandledBy<H> for QueryableObject {}
+impl gluon::RefExt for QueryableObject {
+    fn from_ref(obj: gluon::Ref) -> QueryableObject {
+        QueryableObject { obj }
+    }
+}
 impl QueryableObject {
     pub async fn queryable_ref(&self) -> Result<QueryableObjectRef, gluon::SendError> {
         tracing::trace!(interface = "QueryableObject", method = "queryable_ref", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_queryable = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "QueryableObject", method = "queryable_ref", ? __ret_queryable,
@@ -265,12 +272,10 @@ impl QueryableObject {
     }
     pub async fn add_interface(
         &self,
-        interface: &impl gluon::ToObjectOrRef,
+        interface: &impl gluon::ToRef,
         interface_id: impl Into<String>,
     ) -> Result<QueryableInterfaceGuard, gluon::SendError> {
-        let interface: gluon::ObjectOrRef = gluon::ToObjectOrRef::to_binder_object_or_ref(
-            interface,
-        );
+        let interface: gluon::Ref = gluon::ToRef::to_ref(interface);
         let interface_id: String = interface_id.into();
         tracing::trace!(
             interface = "QueryableObject", method = "add_interface", ? interface, ?
@@ -278,36 +283,31 @@ impl QueryableObject {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         interface.write(&mut gluon_builder)?;
         interface_id.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "QueryableObject", method = "add_interface", ? __ret_guard, "←"
         );
         Ok(__ret_guard)
     }
-    pub fn from_handler<H: QueryableObjectHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> QueryableObject {
-        QueryableObject::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryableObject {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> QueryableObject {
         QueryableObject { obj }
     }
 }
-impl From<QueryableObject> for gluon::ObjectOrRef {
+impl From<QueryableObject> for gluon::Ref {
     fn from(value: QueryableObject) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for QueryableObject {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for QueryableObject {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -351,14 +351,14 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
     fn add_interface(
         &self,
         _ctx: gluon::Context,
-        interface: gluon::ObjectOrRef,
+        interface: gluon::Ref,
         interface_id: String,
     ) -> impl Future<Output = QueryableInterfaceGuard> + Send + Sync;
     ///Dispatched instead of [`Self::add_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `add_interface` and sends the result through `reply`. Override this method instead of `add_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn add_interface_oneway(
         &self,
         _ctx: gluon::Context,
-        interface: gluon::ObjectOrRef,
+        interface: gluon::Ref,
         interface_id: String,
         reply: gluon::ReplySender<QueryableInterfaceGuard>,
     ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
@@ -376,7 +376,7 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "QueryableObject", method = "queryable_ref",
                         "dispatching"
@@ -403,7 +403,7 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_interface = gluon::Convertable::read(&mut gluon_data)?;
                     let param_interface_id = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -444,22 +444,22 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct QueryableInterfaceGuard {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for QueryableInterfaceGuard {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(QueryableInterfaceGuard::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(QueryableInterfaceGuard::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -467,26 +467,26 @@ impl gluon::Convertable for QueryableInterfaceGuard {
 impl gluon::Interface for QueryableInterfaceGuard {
     const ID: &'static str = "org.stardustxr.Query.QueryableInterfaceGuard";
 }
-impl QueryableInterfaceGuard {
-    pub fn from_handler<H: QueryableInterfaceGuardHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> QueryableInterfaceGuard {
-        QueryableInterfaceGuard::from_object_or_ref(
-            gluon::OwnedObjectRef::to_object_or_ref(obj),
-        )
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryableInterfaceGuard {
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: QueryableInterfaceGuardHandler> gluon::HandledBy<H> for QueryableInterfaceGuard {}
+impl gluon::RefExt for QueryableInterfaceGuard {
+    fn from_ref(obj: gluon::Ref) -> QueryableInterfaceGuard {
         QueryableInterfaceGuard { obj }
     }
 }
-impl From<QueryableInterfaceGuard> for gluon::ObjectOrRef {
+impl QueryableInterfaceGuard {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> QueryableInterfaceGuard {
+        QueryableInterfaceGuard { obj }
+    }
+}
+impl From<QueryableInterfaceGuard> for gluon::Ref {
     fn from(value: QueryableInterfaceGuard) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for QueryableInterfaceGuard {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for QueryableInterfaceGuard {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -528,28 +528,35 @@ pub trait QueryableInterfaceGuardHandler: gluon::Handler + Send + Sync + 'static
 }
 #[derive(Debug, Clone)]
 pub struct QueryInterface {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for QueryInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(QueryInterface::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(QueryInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for QueryInterface {
     const ID: &'static str = "org.stardustxr.Query.QueryInterface";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: QueryInterfaceHandler> gluon::HandledBy<H> for QueryInterface {}
+impl gluon::RefExt for QueryInterface {
+    fn from_ref(obj: gluon::Ref) -> QueryInterface {
+        QueryInterface { obj }
+    }
 }
 impl QueryInterface {
     pub async fn register_queryable(
@@ -565,13 +572,13 @@ impl QueryInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_queryable = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "QueryInterface", method = "register_queryable", ?
@@ -579,23 +586,18 @@ impl QueryInterface {
         );
         Ok(__ret_queryable)
     }
-    pub fn from_handler<H: QueryInterfaceHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> QueryInterface {
-        QueryInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> QueryInterface {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> QueryInterface {
         QueryInterface { obj }
     }
 }
-impl From<QueryInterface> for gluon::ObjectOrRef {
+impl From<QueryInterface> for gluon::Ref {
     fn from(value: QueryInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for QueryInterface {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for QueryInterface {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -649,7 +651,7 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(

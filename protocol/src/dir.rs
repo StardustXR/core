@@ -1,5 +1,16 @@
 use std::fs::{self, File};
+use std::os::unix::fs::FileTypeExt;
 use std::path::{Path, PathBuf};
+
+/// Is there a listening socket at this path?
+///
+/// Since gluon, a service's pion path *is* the socket clients connect to, rather than a
+/// regular file with a ref written into it. Checking the type rather than mere existence
+/// is what stops a leftover regular file from an older server being handed back as
+/// something connectable.
+fn is_socket(path: &Path) -> bool {
+	fs::metadata(path).is_ok_and(|meta| meta.file_type().is_socket())
+}
 
 fn lock_path(dir: &Path) -> PathBuf {
 	let mut lock = dir.as_os_str().to_owned();
@@ -26,44 +37,53 @@ fn acquire_lock(dir: &Path) -> Option<File> {
 	Some(file)
 }
 
-/// Find the pion path for Stardust XR related services.
-/// First check if a file at $XDG_RUNTIME_DIR/{service}/$STARDUST_INSTANCE exists and isn't lockable
+/// Find the socket path for Stardust XR related services.
+/// First check if a socket at $XDG_RUNTIME_DIR/{service}/$STARDUST_INSTANCE exists and isn't lockable
 /// else try $XDG_RUNTIME_DIR/{service}/stardust-0
-pub fn find_pion_file(service: &str) -> Option<PathBuf> {
+///
+/// Both conditions earn their keep: the lock says a server is *alive*, and the socket type
+/// says there is something there to connect to. A crashed server leaves the socket behind
+/// with the lock released, and an old enough one leaves a regular file.
+pub fn find_ref_file(service: &str) -> Option<PathBuf> {
 	let service_dir = xdg::BaseDirectories::new().runtime_dir?.join(service);
 
 	if let Ok(instance) = std::env::var("STARDUST_INSTANCE") {
-		let file = service_dir.join(&instance);
-		if file.is_file() && is_locked(&file) {
-			return Some(file);
+		let socket = service_dir.join(&instance);
+		if is_socket(&socket) && is_locked(&socket) {
+			return Some(socket);
 		}
 	}
 
-	let file = service_dir.join("stardust-0");
-	if file.is_file() && is_locked(&file) {
-		return Some(file);
+	let socket = service_dir.join("stardust-0");
+	if is_socket(&socket) && is_locked(&socket) {
+		return Some(socket);
 	}
 
 	None
 }
 
-/// Make a runtime directory for Stardust XR and hold its lockfile.
-/// First check if a file at $XDG_RUNTIME_DIR/{service}/$STARDUST_INSTANCE exists that has an inert lockfile next to it
-/// then try to make it if it doesn't exist, if it does increment up to $XDG_RUNTIME_DIR/stardust-0 and try again over and over until you find a free one and make the directory.
+/// Claim $XDG_RUNTIME_DIR/{service}/{instance} for this process to listen on.
 ///
-/// Returns the path and the held lockfile. Drop the `File` to release the lock.
-pub fn create_pion_file(service: &str, instance: &str) -> Option<(PathBuf, File)> {
+/// Makes the service directory if it isn't there, then takes the lockfile beside the path.
+/// Failing to take the lock means another process holds this instance, and the caller
+/// should pick a different one — see [`find_free_instace`].
+///
+/// Clears anything already sitting at the path, which the lock makes safe: holding it means
+/// nothing else is alive here, so whatever is there is a socket a crashed predecessor left
+/// behind. Binding refuses to clobber an existing path — correctly, since it cannot know
+/// that — so this is where the corpse gets cleared.
+///
+/// Returns the path to bind and the held lockfile. Drop the `File` to release the lock.
+pub fn create_server_file(service: &str, instance: &str) -> Option<(PathBuf, File)> {
 	let service_dir = xdg::BaseDirectories::new().runtime_dir?.join(service);
 	if !service_dir.is_dir() {
 		fs::create_dir_all(&service_dir).ok()?;
 	}
 
-	let file = service_dir.join(instance);
-	if let Some(lock) = acquire_lock(&file) {
-		return Some((file, lock));
-	}
-
-	None
+	let path = service_dir.join(instance);
+	let lock = acquire_lock(&path)?;
+	let _ = fs::remove_file(&path);
+	Some((path, lock))
 }
 
 /// Find a free STARDUST_INSTANCE

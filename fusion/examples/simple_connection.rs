@@ -4,7 +4,7 @@ use tokio::sync::broadcast::error::RecvError;
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, _) = Client::auto_connect(&[&project_local_resources!("res")])
+	let (client, _) = Client::connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 

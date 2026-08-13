@@ -1,14 +1,13 @@
 //! Your connection to the Stardust server and other essentials.
 
+use gluon::{Node, Ref, RefExt};
 pub use stardust_xr_protocol::client::{ClientHandler, FrameInfo};
 
 use crate::error::Error;
-use gluon::Object;
-use pion_binder::PionBinderDevice;
 use stardust_xr_protocol::{
 	audio::AudioInterface,
 	client::Client as ProtocolClient,
-	dir::find_pion_file,
+	dir::find_ref_file,
 	dmatex::DmatexInterface,
 	field::FieldInterface,
 	lines::LinesInterface,
@@ -20,7 +19,7 @@ use stardust_xr_protocol::{
 	spatial_query::SpatialQueryInterface,
 	text::TextInterface,
 };
-use std::{env, fs, path::Path, sync::Arc};
+use std::{env, path::Path, sync::Arc};
 use tokio::sync::broadcast;
 
 #[macro_export]
@@ -32,8 +31,7 @@ macro_rules! project_local_resources {
 
 /// Your connection to the Stardust server.
 pub struct Client<H: ClientHandler> {
-	pion_dev: PionBinderDevice,
-	handler: Object<H>,
+	handler: Node<H>,
 	server: Server,
 	root: SpatialRef,
 	server_interface: ServerInterface,
@@ -50,19 +48,13 @@ pub struct Client<H: ClientHandler> {
 }
 
 impl Client<DefaultHandler> {
-	pub async fn auto_connect(resource_prefixes: &[&Path]) -> Result<(Self, SpatialRef), Error> {
-		let dev = PionBinderDevice::default();
-		Self::manual_connect(&dev, resource_prefixes).await
-	}
-	pub async fn manual_connect(
-		pion_device: &PionBinderDevice,
-		resource_prefixes: &[&Path],
-	) -> Result<(Self, SpatialRef), Error> {
+	pub async fn connect(resource_prefixes: &[&Path]) -> Result<(Self, SpatialRef), Error> {
 		// TODO: do proper checks to make sure this is actually a server interface
-		let handler = pion_device.register_object(DefaultHandler {
+		let (handler, handler_ref) = Node::new(DefaultHandler {
 			frame_sender: broadcast::channel(8).0,
-		});
-		Self::manual_connect_with_handler(pion_device, handler, resource_prefixes).await
+		})
+		.unwrap();
+		Self::connect_with_handler(handler, handler_ref, resource_prefixes).await
 	}
 	pub fn frame_receiver(&self) -> broadcast::Receiver<FrameInfo> {
 		self.handler().frame_sender.subscribe()
@@ -70,20 +62,12 @@ impl Client<DefaultHandler> {
 }
 
 impl<H: ClientHandler> Client<H> {
-	pub async fn auto_connect_with_handler(
-		handler: Object<H>,
-		resource_prefixes: &[&Path],
-	) -> Result<(Self, SpatialRef), Error> {
-		let dev = PionBinderDevice::default();
-		Self::manual_connect_with_handler(&dev, handler, resource_prefixes).await
-	}
-
-	pub async fn manual_connect_with_handler(
-		pion_device: &PionBinderDevice,
-		handler: Object<H>,
+	pub async fn connect_with_handler(
+		handler: Node<H>,
+		handler_ref: Ref,
 		resource_prefixes: &[&Path],
 	) -> Result<(Client<H>, SpatialRef), Error> {
-		let server_path = find_pion_file("stardust-server").ok_or(Error::NoServerFile)?;
+		let server_path = find_ref_file("stardust-server").ok_or(Error::NoServerFile)?;
 
 		let paths = resource_prefixes
 			.iter()
@@ -98,19 +82,11 @@ impl<H: ClientHandler> Client<H> {
 
 		let prefixes = env_prefixes.chain(paths).collect::<Vec<String>>();
 
-		let file = fs::OpenOptions::new()
-			.read(true)
-			.write(true)
-			.create(false)
-			.open(&server_path)
-			.map_err(Error::PionFile)?;
-		let interface = pion_device
-			.get_binder_ref_from_file(file)
+		// TODO: do proper checks to make sure this is actually a server interface
+		let server_interface = <ServerInterface as RefExt>::connect(server_path)
 			.await
 			.map_err(|_| Error::ConnectionFailure)?;
-		// TODO: do proper checks to make sure this is actually a server interface
-		let server_interface = ServerInterface::from_object_or_ref(interface);
-		let client = ProtocolClient::from_handler(&handler);
+		let client = ProtocolClient::from_ref(handler_ref);
 		let state_token = env::var("STARDUST_STARTUP_TOKEN").ok();
 		let (server, root) = server_interface
 			.connect(client, state_token, prefixes)
@@ -118,7 +94,6 @@ impl<H: ClientHandler> Client<H> {
 			.map_err(Error::Gluon)?;
 		Ok((
 			Client {
-				pion_dev: pion_device.clone(),
 				root: root.clone(),
 				handler,
 				spatial_interface: server.spatial_interface().await?,
@@ -156,12 +131,8 @@ impl<H: ClientHandler> Client<H> {
 			.flatten()
 	}
 
-	pub fn pion_device(&self) -> &PionBinderDevice {
-		&self.pion_dev
-	}
-
 	pub fn handler(&self) -> &Arc<H> {
-		self.handler.handler_arc()
+		self.handler.handler()
 	}
 
 	// --- Interface accessors (cached) ---

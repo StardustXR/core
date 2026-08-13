@@ -10,22 +10,22 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct Sound {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for Sound {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(Sound::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(Sound::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -33,36 +33,40 @@ impl gluon::Convertable for Sound {
 impl gluon::Interface for Sound {
     const ID: &'static str = "org.stardustxr.Audio.Sound";
 }
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: SoundHandler> gluon::HandledBy<H> for Sound {}
+impl gluon::RefExt for Sound {
+    fn from_ref(obj: gluon::Ref) -> Sound {
+        Sound { obj }
+    }
+}
 impl Sound {
     ///Play sound effect
     pub fn play(&self) -> Result<(), gluon::SendError> {
         tracing::trace!(interface = "Sound", method = "play", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
         Ok(())
     }
     ///Stop sound effect
     pub fn stop(&self) -> Result<(), gluon::SendError> {
         tracing::trace!(interface = "Sound", method = "stop", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
         Ok(())
     }
-    pub fn from_handler<H: SoundHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Sound {
-        Sound::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Sound {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> Sound {
         Sound { obj }
     }
 }
-impl From<Sound> for gluon::ObjectOrRef {
+impl From<Sound> for gluon::Ref {
     fn from(value: Sound) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for Sound {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for Sound {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -132,28 +136,35 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct AudioInterface {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for AudioInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(AudioInterface::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(AudioInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for AudioInterface {
     const ID: &'static str = "org.stardustxr.Audio.AudioInterface";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: AudioInterfaceHandler> gluon::HandledBy<H> for AudioInterface {}
+impl gluon::RefExt for AudioInterface {
+    fn from_ref(obj: gluon::Ref) -> AudioInterface {
+        AudioInterface { obj }
+    }
 }
 impl AudioInterface {
     pub async fn create_sound(
@@ -169,36 +180,31 @@ impl AudioInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         sound.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_sound = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "AudioInterface", method = "create_sound", ? __ret_sound, "←"
         );
         Ok(__ret_sound)
     }
-    pub fn from_handler<H: AudioInterfaceHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> AudioInterface {
-        AudioInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> AudioInterface {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> AudioInterface {
         AudioInterface { obj }
     }
 }
-impl From<AudioInterface> for gluon::ObjectOrRef {
+impl From<AudioInterface> for gluon::Ref {
     fn from(value: AudioInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for AudioInterface {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for AudioInterface {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -254,7 +260,7 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_sound = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(

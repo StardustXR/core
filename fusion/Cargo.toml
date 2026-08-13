@@ -17,7 +17,7 @@ serde = ["stardust-xr-protocol/serde"]
 glam = { version = "0.30.0", features = ["mint"] }
 parking_lot = "0.12.1"
 thiserror = "2.0.16"
-tokio = { version = "1.38.0", features = [
+tokio = { version = "1.53.1", features = [
 	"sync",
 	"macros",
 	"rt",

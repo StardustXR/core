@@ -76,9 +76,9 @@ pub struct Joint {
     pub distance: f32,
 }
 impl gluon::Convertable for Joint {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.pose.write(gluon_data)?;
         self.radius.write(gluon_data)?;
@@ -93,7 +93,7 @@ impl gluon::Convertable for Joint {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.pose.write_owned(gluon_data)?;
         self.radius.write_owned(gluon_data)?;
@@ -112,9 +112,9 @@ pub struct Finger {
     pub metacarpal: Joint,
 }
 impl gluon::Convertable for Finger {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.tip.write(gluon_data)?;
         self.distal.write(gluon_data)?;
@@ -139,7 +139,7 @@ impl gluon::Convertable for Finger {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.tip.write_owned(gluon_data)?;
         self.distal.write_owned(gluon_data)?;
@@ -159,9 +159,9 @@ pub struct Thumb {
     pub metacarpal: Joint,
 }
 impl gluon::Convertable for Thumb {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.tip.write(gluon_data)?;
         self.distal.write(gluon_data)?;
@@ -183,7 +183,7 @@ impl gluon::Convertable for Thumb {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.tip.write_owned(gluon_data)?;
         self.distal.write_owned(gluon_data)?;
@@ -207,9 +207,9 @@ pub struct Hand {
     pub elbow: Option<Joint>,
 }
 impl gluon::Convertable for Hand {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.chirality.write(gluon_data)?;
         self.thumb.write(gluon_data)?;
@@ -246,7 +246,7 @@ impl gluon::Convertable for Hand {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.chirality.write_owned(gluon_data)?;
         self.thumb.write_owned(gluon_data)?;
@@ -271,9 +271,9 @@ Useful for telling how close to the center it's pointing or for thin objects can
     pub deepest_point: f32,
 }
 impl gluon::Convertable for Pointer {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.pose.write(gluon_data)?;
         self.deepest_point.write(gluon_data)?;
@@ -286,7 +286,7 @@ impl gluon::Convertable for Pointer {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.pose.write_owned(gluon_data)?;
         self.deepest_point.write_owned(gluon_data)?;
@@ -309,9 +309,9 @@ pub struct Tip {
     pub simulated_hand: Option<Hand>,
 }
 impl gluon::Convertable for Tip {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.pose.write(gluon_data)?;
         self.chirality.write(gluon_data)?;
@@ -336,7 +336,7 @@ impl gluon::Convertable for Tip {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.pose.write_owned(gluon_data)?;
         self.chirality.write_owned(gluon_data)?;
@@ -357,9 +357,9 @@ pub struct SemanticData {
     pub captured: bool,
 }
 impl gluon::Convertable for SemanticData {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.datamap.write(gluon_data)?;
         self.order.write(gluon_data)?;
@@ -378,7 +378,7 @@ impl gluon::Convertable for SemanticData {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.datamap.write_owned(gluon_data)?;
         self.order.write_owned(gluon_data)?;
@@ -396,9 +396,9 @@ pub struct SpatialData {
     pub distance: f32,
 }
 impl gluon::Convertable for SpatialData {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.input.write(gluon_data)?;
         self.distance.write(gluon_data)?;
@@ -411,7 +411,7 @@ impl gluon::Convertable for SpatialData {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.input.write_owned(gluon_data)?;
         self.distance.write_owned(gluon_data)?;
@@ -426,9 +426,9 @@ pub enum Chirality {
     Right,
 }
 impl gluon::Convertable for Chirality {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             Chirality::Left => {
@@ -451,7 +451,7 @@ impl gluon::Convertable for Chirality {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             Chirality::Left => {
@@ -473,9 +473,9 @@ pub enum InputDataType {
     Tip { data: Tip },
 }
 impl gluon::Convertable for InputDataType {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             InputDataType::Pointer { data } => {
@@ -514,7 +514,7 @@ impl gluon::Convertable for InputDataType {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             InputDataType::Pointer { data } => {
@@ -544,9 +544,9 @@ pub enum DatamapData {
     String { value: String },
 }
 impl gluon::Convertable for DatamapData {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             DatamapData::Bool { value } => {
@@ -617,7 +617,7 @@ impl gluon::Convertable for DatamapData {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             DatamapData::Bool { value } => {
@@ -652,28 +652,35 @@ impl gluon::Convertable for DatamapData {
 }
 #[derive(Debug, Clone)]
 pub struct InputHandler {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for InputHandler {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(InputHandler::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(InputHandler::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for InputHandler {
     const ID: &'static str = "org.stardustxr.SUIS.InputHandler";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: InputHandlerHandler> gluon::HandledBy<H> for InputHandler {}
+impl gluon::RefExt for InputHandler {
+    fn from_ref(obj: gluon::Ref) -> InputHandler {
+        InputHandler { obj }
+    }
 }
 impl InputHandler {
     /**All input coordinates will be relative to this
@@ -684,11 +691,11 @@ This is considered static and should not change after handler creation.*/
         tracing::trace!(interface = "InputHandler", method = "get_spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputHandler", method = "get_spatial", ? __ret_spatial, "←"
@@ -700,11 +707,11 @@ This is considered static and should not change after handler creation.*/
         tracing::trace!(interface = "InputHandler", method = "get_field", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_field = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputHandler", method = "get_field", ? __ret_field, "←"
@@ -732,9 +739,7 @@ This is considered static and should not change after handler creation.*/
         time.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
         semantic.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 10u32, gluon_builder)?;
         Ok(())
     }
     ///An input method's data has been updated.
@@ -758,9 +763,7 @@ This is considered static and should not change after handler creation.*/
         time.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
         semantic.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 11u32, gluon_builder)?;
         Ok(())
     }
     ///An input method just stopped sending input to this handler.
@@ -777,28 +780,21 @@ This is considered static and should not change after handler creation.*/
         let mut gluon_builder = gluon::DataBuilder::new();
         method.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 12u32, gluon_builder)?;
         Ok(())
     }
-    pub fn from_handler<H: InputHandlerHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> InputHandler {
-        InputHandler::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> InputHandler {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> InputHandler {
         InputHandler { obj }
     }
 }
-impl From<InputHandler> for gluon::ObjectOrRef {
+impl From<InputHandler> for gluon::Ref {
     fn from(value: InputHandler) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for InputHandler {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for InputHandler {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -891,7 +887,7 @@ This is considered static and should not change after handler creation.*/
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "InputHandler", method = "get_spatial", "dispatching"
                     );
@@ -917,7 +913,7 @@ This is considered static and should not change after handler creation.*/
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "InputHandler", method = "get_field", "dispatching"
                     );
@@ -1019,28 +1015,35 @@ This is considered static and should not change after handler creation.*/
 }
 #[derive(Debug, Clone)]
 pub struct InputMethod {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for InputMethod {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(InputMethod::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(InputMethod::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for InputMethod {
     const ID: &'static str = "org.stardustxr.SUIS.InputMethod";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: InputMethodHandler> gluon::HandledBy<H> for InputMethod {}
+impl gluon::RefExt for InputMethod {
+    fn from_ref(obj: gluon::Ref) -> InputMethod {
+        InputMethod { obj }
+    }
 }
 impl InputMethod {
     ///Request to capture the input method with the given handler.
@@ -1054,12 +1057,12 @@ impl InputMethod {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_capture = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputMethod", method = "request_capture", ? __ret_capture, "←"
@@ -1081,36 +1084,31 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_data = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputMethod", method = "get_spatial_data", ? __ret_data, "←"
         );
         Ok(__ret_data)
     }
-    pub fn from_handler<H: InputMethodHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> InputMethod {
-        InputMethod::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> InputMethod {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> InputMethod {
         InputMethod { obj }
     }
 }
-impl From<InputMethod> for gluon::ObjectOrRef {
+impl From<InputMethod> for gluon::Ref {
     fn from(value: InputMethod) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for InputMethod {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for InputMethod {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -1184,7 +1182,7 @@ Should return None when the InputMethod is captured by another InputHandler.*/
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "InputMethod", method = "request_capture", ?
@@ -1212,7 +1210,7 @@ Should return None when the InputMethod is captured by another InputHandler.*/
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     let param_time = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -1248,22 +1246,22 @@ Should return None when the InputMethod is captured by another InputHandler.*/
 }
 #[derive(Debug, Clone)]
 pub struct InputMethodCapture {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for InputMethodCapture {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(InputMethodCapture::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(InputMethodCapture::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -1271,26 +1269,26 @@ impl gluon::Convertable for InputMethodCapture {
 impl gluon::Interface for InputMethodCapture {
     const ID: &'static str = "org.stardustxr.SUIS.InputMethodCapture";
 }
-impl InputMethodCapture {
-    pub fn from_handler<H: InputMethodCaptureHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> InputMethodCapture {
-        InputMethodCapture::from_object_or_ref(
-            gluon::OwnedObjectRef::to_object_or_ref(obj),
-        )
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> InputMethodCapture {
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: InputMethodCaptureHandler> gluon::HandledBy<H> for InputMethodCapture {}
+impl gluon::RefExt for InputMethodCapture {
+    fn from_ref(obj: gluon::Ref) -> InputMethodCapture {
         InputMethodCapture { obj }
     }
 }
-impl From<InputMethodCapture> for gluon::ObjectOrRef {
+impl InputMethodCapture {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> InputMethodCapture {
+        InputMethodCapture { obj }
+    }
+}
+impl From<InputMethodCapture> for gluon::Ref {
     fn from(value: InputMethodCapture) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for InputMethodCapture {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for InputMethodCapture {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }

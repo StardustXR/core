@@ -1,25 +1,28 @@
+use gluon::RefExt;
 use stardust_xr_fusion::{
 	client::Client,
 	fields::{Field, FieldExt, FieldRef, Shape},
 	project_local_resources,
 	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
-	suis::{InputHandlerHandler, InputMethod, SemanticData, SpatialData},
+	suis::{
+		InputHandler as InputHandlerProxy, InputHandlerHandler, InputMethod, SemanticData,
+		SpatialData,
+	},
+	types::Timestamp,
 };
-use stardust_xr_protocol::{suis::InputHandler as InputHandlerProxy, types::Timestamp};
 use std::collections::HashSet;
 use tokio::sync::{RwLock, broadcast::error::RecvError};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
+	let (client, root) = Client::connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 
-	let (handler_spatial, handler_spatial_ref) =
-		Spatial::new(&client, &root, Transform::IDENTITY)
-			.await
-			.unwrap();
+	let (handler_spatial, handler_spatial_ref) = Spatial::new(&client, &root, Transform::IDENTITY)
+		.await
+		.unwrap();
 	let (field_spatial, _) = Spatial::new(&client, &handler_spatial_ref, Transform::IDENTITY)
 		.await
 		.unwrap();
@@ -34,11 +37,12 @@ async fn main() {
 	.await
 	.unwrap();
 
-	let input_handler = client.pion_device().register_object(InputHandler {
+	let (input_handler, handler_proxy) = InputHandlerProxy::new_node(InputHandler {
 		field: field.clone(),
 		spatial: handler_spatial,
 		methods: RwLock::default(),
-	});
+	})
+	.unwrap();
 	let queryable = client
 		.query_interface()
 		.register_queryable(field_spatial, field)
@@ -46,10 +50,9 @@ async fn main() {
 		.unwrap()
 		.unwrap();
 	let _guard = queryable
-		.add_interface(&input_handler, InputHandlerProxy::QUERY_INTERFACE)
+		.add_interface(&handler_proxy, InputHandlerProxy::QUERY_INTERFACE)
 		.await
 		.unwrap();
-	let handler_proxy = InputHandlerProxy::from_handler(&input_handler);
 	let mut frame_recv = client.frame_receiver();
 	loop {
 		let info = match frame_recv.recv().await {
@@ -62,7 +65,7 @@ async fn main() {
 				break;
 			}
 		};
-		for method in input_handler.methods.read().await.iter() {
+		for method in input_handler.handler().methods.read().await.iter() {
 			let spatial_data = method
 				.get_spatial_data(handler_proxy.clone(), info.predicted_display_time)
 				.await

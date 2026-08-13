@@ -16,7 +16,7 @@ use tracing::warn;
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
 	tracing_subscriber::fmt::init();
-	let (client, root) = Client::auto_connect(&[&project_local_resources!("res")])
+	let (client, root) = Client::connect(&[&project_local_resources!("res")])
 		.await
 		.unwrap();
 
