@@ -6,9 +6,6 @@ package.repository = "https://github.com/StardustXR/core/"
 package.homepage = "https://stardustxr.org"
 package.license = "MIT"
 
-# [patch."https://github.com/technobaboo/binderbinder"]
-# binderbinder.path = "../binderbinder"
-
-[patch."https://github.com/technobaboo/gluon"]
-gluon.path = "../gluon/wire"
-gluon-codegen.path = "../gluon/codegen-rust"
+# [patch."https://github.com/technobaboo/gluon"]
+# gluon.path = "../gluon/wire"
+# gluon-codegen.path = "../gluon/codegen-rust"

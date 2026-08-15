@@ -10,35 +10,28 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct Tracked {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Tracked {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(Tracked::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(Tracked::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for Tracked {
     const ID: &'static str = "org.stardustxr.Tracked.Tracked";
-}
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: TrackedHandler> gluon::HandledBy<H> for Tracked {}
-impl gluon::RefExt for Tracked {
-    fn from_ref(obj: gluon::Ref) -> Tracked {
-        Tracked { obj }
-    }
 }
 impl Tracked {
     pub async fn get(
@@ -49,12 +42,12 @@ impl Tracked {
         tracing::trace!(interface = "Tracked", method = "get", ? handler, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         let __ret_tracked = gluon::Convertable::read(&mut reader)?;
@@ -76,13 +69,13 @@ impl Tracked {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         at.write(&mut gluon_builder)?;
         relative_to.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_pose = gluon::Convertable::read(&mut reader)?;
         let __ret_tracked = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
@@ -91,18 +84,23 @@ impl Tracked {
         );
         Ok((__ret_pose, __ret_tracked))
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Tracked {
+    pub fn from_handler<H: TrackedHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Tracked {
+        Tracked::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Tracked {
         Tracked { obj }
     }
 }
-impl From<Tracked> for gluon::Ref {
+impl From<Tracked> for gluon::ObjectOrRef {
     fn from(value: Tracked) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Tracked {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for Tracked {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -175,7 +173,7 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_handler = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Tracked", method = "get", ? param_handler,
@@ -207,7 +205,7 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_at = gluon::Convertable::read(&mut gluon_data)?;
                     let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -244,22 +242,22 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct TrackedGuard {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for TrackedGuard {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(TrackedGuard::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(TrackedGuard::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -267,26 +265,24 @@ impl gluon::Convertable for TrackedGuard {
 impl gluon::Interface for TrackedGuard {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedGuard";
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: TrackedGuardHandler> gluon::HandledBy<H> for TrackedGuard {}
-impl gluon::RefExt for TrackedGuard {
-    fn from_ref(obj: gluon::Ref) -> TrackedGuard {
-        TrackedGuard { obj }
-    }
-}
 impl TrackedGuard {
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> TrackedGuard {
+    pub fn from_handler<H: TrackedGuardHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> TrackedGuard {
+        TrackedGuard::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> TrackedGuard {
         TrackedGuard { obj }
     }
 }
-impl From<TrackedGuard> for gluon::Ref {
+impl From<TrackedGuard> for gluon::ObjectOrRef {
     fn from(value: TrackedGuard) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for TrackedGuard {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for TrackedGuard {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -328,22 +324,22 @@ pub trait TrackedGuardHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct TrackedStateReceiver {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for TrackedStateReceiver {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(TrackedStateReceiver::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(TrackedStateReceiver::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -351,36 +347,66 @@ impl gluon::Convertable for TrackedStateReceiver {
 impl gluon::Interface for TrackedStateReceiver {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedStateReceiver";
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: TrackedStateReceiverHandler> gluon::HandledBy<H> for TrackedStateReceiver {}
-impl gluon::RefExt for TrackedStateReceiver {
-    fn from_ref(obj: gluon::Ref) -> TrackedStateReceiver {
-        TrackedStateReceiver { obj }
-    }
-}
 impl TrackedStateReceiver {
+    pub fn tracked_waiting(&self, tracked: impl Into<bool>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let tracked: bool = tracked.into();
+        tracing::trace!(
+            interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = tracked.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {
         let tracked: bool = tracked.into();
         tracing::trace!(
             interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         tracked.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> TrackedStateReceiver {
+    pub fn from_handler<H: TrackedStateReceiverHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> TrackedStateReceiver {
+        TrackedStateReceiver::from_object_or_ref(
+            gluon::OwnedObjectRef::to_object_or_ref(obj),
+        )
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> TrackedStateReceiver {
         TrackedStateReceiver { obj }
     }
 }
-impl From<TrackedStateReceiver> for gluon::Ref {
+impl From<TrackedStateReceiver> for gluon::ObjectOrRef {
     fn from(value: TrackedStateReceiver) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for TrackedStateReceiver {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for TrackedStateReceiver {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -420,6 +446,9 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_tracked = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "TrackedStateReceiver", method = "tracked", ?
@@ -434,6 +463,14 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

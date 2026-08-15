@@ -22,9 +22,9 @@ pub struct FrameInfo {
     pub predicted_display_time: super::types::Timestamp,
 }
 impl gluon::Convertable for FrameInfo {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.delta.write(gluon_data)?;
         self.predicted_display_time.write(gluon_data)?;
@@ -40,7 +40,7 @@ impl gluon::Convertable for FrameInfo {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.delta.write_owned(gluon_data)?;
         self.predicted_display_time.write_owned(gluon_data)?;
@@ -49,22 +49,22 @@ impl gluon::Convertable for FrameInfo {
 }
 #[derive(Debug, Clone)]
 pub struct Client {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Client {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(Client::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(Client::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -72,34 +72,60 @@ impl gluon::Convertable for Client {
 impl gluon::Interface for Client {
     const ID: &'static str = "org.stardustxr.Client.Client";
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ClientHandler> gluon::HandledBy<H> for Client {}
-impl gluon::RefExt for Client {
-    fn from_ref(obj: gluon::Ref) -> Client {
-        Client { obj }
-    }
-}
 impl Client {
+    pub fn frame_waiting(&self, info: impl Into<FrameInfo>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let info: FrameInfo = info.into();
+        tracing::trace!(interface = "Client", method = "frame", ? info, "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = info.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn frame(&self, info: impl Into<FrameInfo>) -> Result<(), gluon::SendError> {
         let info: FrameInfo = info.into();
         tracing::trace!(interface = "Client", method = "frame", ? info, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         info.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Client {
+    pub fn from_handler<H: ClientHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Client {
+        Client::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Client {
         Client { obj }
     }
 }
-impl From<Client> for gluon::Ref {
+impl From<Client> for gluon::ObjectOrRef {
     fn from(value: Client) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Client {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for Client {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -139,6 +165,9 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_info = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Client", method = "frame", ? param_info,
@@ -153,6 +182,14 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }

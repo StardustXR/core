@@ -10,22 +10,22 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct SkyGuard {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SkyGuard {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(SkyGuard::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(SkyGuard::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -33,26 +33,24 @@ impl gluon::Convertable for SkyGuard {
 impl gluon::Interface for SkyGuard {
     const ID: &'static str = "org.stardustxr.Sky.SkyGuard";
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: SkyGuardHandler> gluon::HandledBy<H> for SkyGuard {}
-impl gluon::RefExt for SkyGuard {
-    fn from_ref(obj: gluon::Ref) -> SkyGuard {
-        SkyGuard { obj }
-    }
-}
 impl SkyGuard {
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> SkyGuard {
+    pub fn from_handler<H: SkyGuardHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SkyGuard {
+        SkyGuard::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SkyGuard {
         SkyGuard { obj }
     }
 }
-impl From<SkyGuard> for gluon::Ref {
+impl From<SkyGuard> for gluon::ObjectOrRef {
     fn from(value: SkyGuard) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for SkyGuard {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for SkyGuard {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -94,35 +92,28 @@ pub trait SkyGuardHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct SkyInterface {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for SkyInterface {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(SkyInterface::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(SkyInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for SkyInterface {
     const ID: &'static str = "org.stardustxr.Sky.SkyInterface";
-}
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: SkyInterfaceHandler> gluon::HandledBy<H> for SkyInterface {}
-impl gluon::RefExt for SkyInterface {
-    fn from_ref(obj: gluon::Ref) -> SkyInterface {
-        SkyInterface { obj }
-    }
 }
 impl SkyInterface {
     /**Set the sky texture to a given equirectagular texture.
@@ -139,13 +130,13 @@ Returns None if the sky texture is already set.*/
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
         opaque.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_tex", ? __ret_guard, "←"
@@ -164,30 +155,35 @@ Returns None if the sky lighting is already set.*/
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_light", ? __ret_guard, "←"
         );
         Ok(__ret_guard)
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> SkyInterface {
+    pub fn from_handler<H: SkyInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> SkyInterface {
+        SkyInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> SkyInterface {
         SkyInterface { obj }
     }
 }
-impl From<SkyInterface> for gluon::Ref {
+impl From<SkyInterface> for gluon::ObjectOrRef {
     fn from(value: SkyInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for SkyInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for SkyInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -262,7 +258,7 @@ Returns None if the sky lighting is already set.*/
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
                     let param_opaque = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -291,7 +287,7 @@ Returns None if the sky lighting is already set.*/
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_tex = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SkyInterface", method = "set_sky_light", ?

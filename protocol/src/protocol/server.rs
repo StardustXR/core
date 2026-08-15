@@ -10,35 +10,28 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct Server {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Server {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(Server::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(Server::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for Server {
     const ID: &'static str = "org.stardustxr.Server.Server";
-}
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ServerHandler> gluon::HandledBy<H> for Server {}
-impl gluon::RefExt for Server {
-    fn from_ref(obj: gluon::Ref) -> Server {
-        Server { obj }
-    }
 }
 impl Server {
     ///Get the spatial interface node.
@@ -48,11 +41,11 @@ impl Server {
         tracing::trace!(interface = "Server", method = "spatial_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "spatial_interface", ? __ret_spatial, "←"
@@ -65,11 +58,11 @@ impl Server {
         tracing::trace!(interface = "Server", method = "field_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "field_interface", ? __ret_spatial, "←"
@@ -83,11 +76,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "dmatex_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 10u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "dmatex_interface", ? __ret_spatial, "←"
@@ -100,11 +95,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "text_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 11u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "text_interface", ? __ret_spatial, "←"
@@ -117,11 +114,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "model_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 12u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "model_interface", ? __ret_spatial, "←"
@@ -134,11 +133,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "lines_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 13u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 13u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "lines_interface", ? __ret_spatial, "←"
@@ -151,11 +152,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "sky_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 14u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 14u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "sky_interface", ? __ret_spatial, "←"
@@ -168,11 +171,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "audio_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 15u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 15u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "audio_interface", ? __ret_spatial, "←"
@@ -185,11 +190,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "query_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 16u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 16u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_interface = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "query_interface", ? __ret_interface, "←"
@@ -202,11 +209,13 @@ impl Server {
         tracing::trace!(interface = "Server", method = "spatial_query_interface", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 17u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 17u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_interface = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "spatial_query_interface", ? __ret_interface,
@@ -227,30 +236,37 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         root.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 18u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj
+            .device()
+            .transact_one_way(&self.obj, 18u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_token = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "generate_startup_token", ? __ret_token, "←"
         );
         Ok(__ret_token)
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Server {
+    pub fn from_handler<H: ServerHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> Server {
+        Server::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Server {
         Server { obj }
     }
 }
-impl From<Server> for gluon::Ref {
+impl From<Server> for gluon::ObjectOrRef {
     fn from(value: Server) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Server {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for Server {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -457,7 +473,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "spatial_interface", "dispatching"
                     );
@@ -483,7 +499,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "field_interface", "dispatching"
                     );
@@ -509,7 +525,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 10u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "dmatex_interface", "dispatching"
                     );
@@ -535,7 +551,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 11u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "text_interface", "dispatching"
                     );
@@ -561,7 +577,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 12u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "model_interface", "dispatching"
                     );
@@ -587,7 +603,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 13u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "lines_interface", "dispatching"
                     );
@@ -613,7 +629,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 14u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "sky_interface", "dispatching"
                     );
@@ -639,7 +655,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 15u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "audio_interface", "dispatching"
                     );
@@ -665,7 +681,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 16u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "query_interface", "dispatching"
                     );
@@ -691,7 +707,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 17u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     tracing::trace!(
                         interface = "Server", method = "spatial_query_interface",
                         "dispatching"
@@ -720,7 +736,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         .await?;
                 }
                 18u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_root = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Server", method = "generate_startup_token", ?
@@ -757,35 +773,28 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
 }
 #[derive(Debug, Clone)]
 pub struct ServerInterface {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for ServerInterface {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(ServerInterface::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(ServerInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for ServerInterface {
     const ID: &'static str = "org.stardustxr.Server.ServerInterface";
-}
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ServerInterfaceHandler> gluon::HandledBy<H> for ServerInterface {}
-impl gluon::RefExt for ServerInterface {
-    fn from_ref(obj: gluon::Ref) -> ServerInterface {
-        ServerInterface { obj }
-    }
 }
 impl ServerInterface {
     ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
@@ -804,14 +813,14 @@ impl ServerInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         client.write(&mut gluon_builder)?;
         startup_token.write(&mut gluon_builder)?;
         resource_prefixes.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_server = gluon::Convertable::read(&mut reader)?;
         let __ret_root = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
@@ -831,12 +840,12 @@ impl ServerInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         startup_token.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_spatial_ref = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ServerInterface", method = "startup_spatial", ?
@@ -844,18 +853,23 @@ impl ServerInterface {
         );
         Ok(__ret_spatial_ref)
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> ServerInterface {
+    pub fn from_handler<H: ServerInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> ServerInterface {
+        ServerInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ServerInterface {
         ServerInterface { obj }
     }
 }
-impl From<ServerInterface> for gluon::Ref {
+impl From<ServerInterface> for gluon::ObjectOrRef {
     fn from(value: ServerInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for ServerInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for ServerInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -931,7 +945,7 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_client = gluon::Convertable::read(&mut gluon_data)?;
                     let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
                     let param_resource_prefixes = gluon::Convertable::read(
@@ -973,7 +987,7 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ServerInterface", method = "startup_spatial", ?

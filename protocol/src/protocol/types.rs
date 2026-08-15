@@ -102,9 +102,9 @@ pub struct Posef {
     pub orientation: crate::types::QuatF,
 }
 impl gluon::Convertable for Posef {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: proxied::Vec3F = self.position.clone().into();
@@ -129,7 +129,7 @@ impl gluon::Convertable for Posef {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: proxied::Vec3F = self.position.into();
@@ -150,9 +150,9 @@ pub struct Timestamp {
     pub nanoseconds: i64,
 }
 impl gluon::Convertable for Timestamp {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.seconds.write(gluon_data)?;
         self.nanoseconds.write(gluon_data)?;
@@ -165,7 +165,7 @@ impl gluon::Convertable for Timestamp {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.seconds.write_owned(gluon_data)?;
         self.nanoseconds.write_owned(gluon_data)?;
@@ -189,9 +189,9 @@ Allows switching of prefix by the server as well to theme clients.*/
     },
 }
 impl gluon::Convertable for Resource {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         match self {
             Resource::Direct { path } => {
@@ -227,7 +227,7 @@ impl gluon::Convertable for Resource {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         match self {
             Resource::Direct { path } => {
@@ -252,9 +252,9 @@ pub enum ResourceLoadError {
     NotFound,
 }
 impl gluon::Convertable for ResourceLoadError {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         match self {
             ResourceLoadError::InvalidRef => {
@@ -277,7 +277,7 @@ impl gluon::Convertable for ResourceLoadError {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         match self {
             ResourceLoadError::InvalidRef => {
@@ -298,9 +298,9 @@ pub enum CreateError {
     InvalidRef,
 }
 impl gluon::Convertable for CreateError {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         match self {
             CreateError::InvalidRef => {
@@ -319,7 +319,7 @@ impl gluon::Convertable for CreateError {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         match self {
             CreateError::InvalidRef => {
@@ -339,9 +339,9 @@ pub mod proxied {
         pub y: u32,
     }
     impl gluon::Convertable for Size2 {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -354,7 +354,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -370,9 +370,9 @@ pub mod proxied {
         pub z: u32,
     }
     impl gluon::Convertable for Size3 {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -387,7 +387,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -403,9 +403,9 @@ pub mod proxied {
         pub y: f32,
     }
     impl gluon::Convertable for Vec2F {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -418,7 +418,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -434,9 +434,9 @@ pub mod proxied {
         pub z: f32,
     }
     impl gluon::Convertable for Vec3F {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -451,7 +451,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -467,9 +467,9 @@ pub mod proxied {
         pub y: i32,
     }
     impl gluon::Convertable for Vec2I {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -482,7 +482,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -498,9 +498,9 @@ pub mod proxied {
         pub z: i32,
     }
     impl gluon::Convertable for Vec3I {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -515,7 +515,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -533,9 +533,9 @@ pub mod proxied {
         pub w: f32,
     }
     impl gluon::Convertable for Vec4F {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -552,7 +552,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -571,9 +571,9 @@ pub mod proxied {
         pub w: f32,
     }
     impl gluon::Convertable for Quatf {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write(gluon_data)?;
             self.y.write(gluon_data)?;
@@ -590,7 +590,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.x.write_owned(gluon_data)?;
             self.y.write_owned(gluon_data)?;
@@ -609,9 +609,9 @@ pub mod proxied {
         pub w: crate::types::Vec4F,
     }
     impl gluon::Convertable for Mat4F {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             {
                 let __w: proxied::Vec4F = self.x.clone().into();
@@ -652,7 +652,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             {
                 let __w: proxied::Vec4F = self.x.into();
@@ -683,9 +683,9 @@ pub mod proxied {
         pub a: f32,
     }
     impl gluon::Convertable for Color {
-        fn write(
-            &self,
-            gluon_data: &mut gluon::DataBuilder,
+        fn write<'a, 'b: 'a>(
+            &'b self,
+            gluon_data: &mut gluon::DataBuilder<'a>,
         ) -> Result<(), gluon::WriteError> {
             self.r.write(gluon_data)?;
             self.g.write(gluon_data)?;
@@ -702,7 +702,7 @@ pub mod proxied {
         }
         fn write_owned(
             self,
-            gluon_data: &mut gluon::DataBuilder,
+            gluon_data: &mut gluon::DataBuilder<'_>,
         ) -> Result<(), gluon::WriteError> {
             self.r.write_owned(gluon_data)?;
             self.g.write_owned(gluon_data)?;

@@ -28,9 +28,9 @@ pub struct Line {
     pub cyclic: bool,
 }
 impl gluon::Convertable for Line {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.points.write(gluon_data)?;
         self.cyclic.write(gluon_data)?;
@@ -43,7 +43,7 @@ impl gluon::Convertable for Line {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.points.write_owned(gluon_data)?;
         self.cyclic.write_owned(gluon_data)?;
@@ -62,9 +62,9 @@ pub struct LinePoint {
     pub color: crate::types::Color,
 }
 impl gluon::Convertable for LinePoint {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::proxied::Vec3F = self.point.clone().into();
@@ -99,7 +99,7 @@ impl gluon::Convertable for LinePoint {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::proxied::Vec3F = self.point.into();
@@ -115,22 +115,22 @@ impl gluon::Convertable for LinePoint {
 }
 #[derive(Debug, Clone)]
 pub struct Lines {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for Lines {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(Lines::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(Lines::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -138,14 +138,33 @@ impl gluon::Convertable for Lines {
 impl gluon::Interface for Lines {
     const ID: &'static str = "org.stardustxr.Lines.Lines";
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: LinesHandler> gluon::HandledBy<H> for Lines {}
-impl gluon::RefExt for Lines {
-    fn from_ref(obj: gluon::Ref) -> Lines {
-        Lines { obj }
-    }
-}
 impl Lines {
+    pub fn set_lines_waiting(&self, lines: impl Into<Vec<Line>>) -> gluon::OnewayFuture {
+        use gluon::ToObjectOrRef as _;
+        let lines: Vec<Line> = lines.into();
+        tracing::trace!(interface = "Lines", method = "set_lines", ? lines, "→");
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
+            gluon_ret.to_binder_object_or_ref(),
+        );
+        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = lines.write(&mut gluon_builder) {
+            return err.into();
+        }
+        if let Err(err) = self
+            .obj
+            .device()
+            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
+        {
+            return err.into();
+        }
+        gluon_recv.into()
+    }
+    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn set_lines(
         &self,
         lines: impl Into<Vec<Line>>,
@@ -153,22 +172,27 @@ impl Lines {
         let lines: Vec<Line> = lines.into();
         tracing::trace!(interface = "Lines", method = "set_lines", ? lines, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
+        let gluon_ret: Option<gluon::ObjectOrRef> = None;
+        gluon_ret.write(&mut gluon_builder)?;
         lines.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
         Ok(())
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Lines {
+    pub fn from_handler<H: LinesHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Lines {
+        Lines::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Lines {
         Lines { obj }
     }
 }
-impl From<Lines> for gluon::Ref {
+impl From<Lines> for gluon::ObjectOrRef {
     fn from(value: Lines) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Lines {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for Lines {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -208,6 +232,9 @@ pub trait LinesHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
+                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_lines = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Lines", method = "set_lines", ? param_lines,
@@ -222,6 +249,14 @@ pub trait LinesHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
+                    if let Some(obj) = gluon_ret {
+                        obj.device()
+                            .transact_one_way(
+                                &obj,
+                                0,
+                                gluon::DataBuilder::new().to_payload(),
+                            )?;
+                    }
                 }
                 _ => {}
             }
@@ -231,35 +266,28 @@ pub trait LinesHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct LinesInterface {
-    obj: gluon::Ref,
+    obj: gluon::ObjectOrRef,
 }
 impl gluon::Convertable for LinesInterface {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
+    fn write<'a, 'b: 'a>(
+        &'b self,
+        gluon_data: &mut gluon::DataBuilder<'a>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(LinesInterface::from_ref(obj))
+        let obj = gluon::ObjectOrRef::read(gluon_data)?;
+        Ok(LinesInterface::from_object_or_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
+        gluon_data: &mut gluon::DataBuilder<'_>,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for LinesInterface {
     const ID: &'static str = "org.stardustxr.Lines.LinesInterface";
-}
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: LinesInterfaceHandler> gluon::HandledBy<H> for LinesInterface {}
-impl gluon::RefExt for LinesInterface {
-    fn from_ref(obj: gluon::Ref) -> LinesInterface {
-        LinesInterface { obj }
-    }
 }
 impl LinesInterface {
     pub async fn create_lines(
@@ -275,31 +303,36 @@ impl LinesInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
+        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
+        gluon_builder.write_binder(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         lines.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
+        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        let transaction = gluon_recv.recv().await.unwrap();
+        let mut reader = gluon::DataReader::from_payload(transaction.payload);
         let __ret_lines = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "LinesInterface", method = "create_lines", ? __ret_lines, "←"
         );
         Ok(__ret_lines)
     }
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> LinesInterface {
+    pub fn from_handler<H: LinesInterfaceHandler>(
+        obj: &impl gluon::OwnedObjectRef<H>,
+    ) -> LinesInterface {
+        LinesInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
+    }
+    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
+    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> LinesInterface {
         LinesInterface { obj }
     }
 }
-impl From<LinesInterface> for gluon::Ref {
+impl From<LinesInterface> for gluon::ObjectOrRef {
     fn from(value: LinesInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for LinesInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon::ToObjectOrRef for LinesInterface {
+    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
         self.obj.clone()
     }
 }
@@ -353,7 +386,7 @@ pub trait LinesInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_ref()?;
+                    let return_callback = gluon_data.read_binder()?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_lines = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(

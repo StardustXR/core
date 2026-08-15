@@ -190,40 +190,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92d699e522242e69e3003b94ecc1f960f3a5e015aa7c5d7486e65ad01dd94f5e"
 
 [[package]]
-name = "futures-macro"
-version = "0.3.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.3",
-]
-
-[[package]]
 name = "futures-sink"
 version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e34418ac499d6305c2fb5ad0ed2f6ac998c5f8ca209b4510f7f94242c647e307"
-
-[[package]]
-name = "futures-task"
-version = "0.3.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd417de3d1d015fc3bfd2b1ea46dfc7bab72ef86f1cc7cc9c78e728b34a6d1fd"
-
-[[package]]
-name = "futures-util"
-version = "0.3.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc"
-dependencies = [
- "futures-core",
- "futures-macro",
- "futures-task",
- "pin-project-lite",
- "slab",
-]
 
 [[package]]
 name = "glam"
@@ -246,11 +216,12 @@ dependencies = [
 [[package]]
 name = "gluon"
 version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#bf2e7a3ceee788a347c56e18010ff79ef71a6950"
 dependencies = [
+ "binderbinder",
  "bitflags",
  "gluon-derive",
  "rustix",
- "strong-ipc",
  "thiserror",
  "tokio",
 ]
@@ -258,6 +229,7 @@ dependencies = [
 [[package]]
 name = "gluon-codegen"
 version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#bf2e7a3ceee788a347c56e18010ff79ef71a6950"
 dependencies = [
  "convert_case",
  "gluon",
@@ -271,6 +243,7 @@ dependencies = [
 [[package]]
 name = "gluon-derive"
 version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#bf2e7a3ceee788a347c56e18010ff79ef71a6950"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -279,6 +252,7 @@ dependencies = [
 [[package]]
 name = "gluon-parser"
 version = "0.1.0"
+source = "git+https://github.com/technobaboo/gluon#bf2e7a3ceee788a347c56e18010ff79ef71a6950"
 dependencies = [
  "ansi_term",
  "chumsky",
@@ -619,12 +593,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "slab"
-version = "0.4.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
-
-[[package]]
 name = "smallvec"
 version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -688,17 +656,6 @@ dependencies = [
  "tokio",
  "tracing",
  "xdg",
-]
-
-[[package]]
-name = "strong-ipc"
-version = "0.1.0"
-dependencies = [
- "dashmap",
- "rustix",
- "smallvec",
- "tokio",
- "tokio-util",
 ]
 
 [[package]]
@@ -790,7 +747,6 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
- "futures-util",
  "pin-project-lite",
  "tokio",
 ]
