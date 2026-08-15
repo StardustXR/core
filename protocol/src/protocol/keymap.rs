@@ -27,9 +27,9 @@ pub struct XkbcommonKeymapFd {
     pub size: u32,
 }
 impl gluon::Convertable for XkbcommonKeymapFd {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.fd.write(gluon_data)?;
         self.size.write(gluon_data)?;
@@ -42,7 +42,7 @@ impl gluon::Convertable for XkbcommonKeymapFd {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.fd.write_owned(gluon_data)?;
         self.size.write_owned(gluon_data)?;
@@ -56,9 +56,9 @@ pub enum KeymapExchangeError {
     InvalidKeymap,
 }
 impl gluon::Convertable for KeymapExchangeError {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             KeymapExchangeError::InvalidKeymap => {
@@ -77,7 +77,7 @@ impl gluon::Convertable for KeymapExchangeError {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             KeymapExchangeError::InvalidKeymap => {
@@ -89,28 +89,35 @@ impl gluon::Convertable for KeymapExchangeError {
 }
 #[derive(Debug, Clone)]
 pub struct KeymapStore {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for KeymapStore {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(KeymapStore::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(KeymapStore::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for KeymapStore {
     const ID: &'static str = "org.stardustxr.Keymap.KeymapStore";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: KeymapStoreHandler> gluon::HandledBy<H> for KeymapStore {}
+impl gluon::RefExt for KeymapStore {
+    fn from_ref(obj: gluon::Ref) -> KeymapStore {
+        KeymapStore { obj }
+    }
 }
 impl KeymapStore {
     ///Register a xkbcommon keymap, deduplicates
@@ -122,12 +129,12 @@ impl KeymapStore {
         tracing::trace!(interface = "KeymapStore", method = "exchange", ? keymap, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         keymap.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_keymap = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "KeymapStore", method = "exchange", ? __ret_keymap, "←"
@@ -142,35 +149,30 @@ impl KeymapStore {
         tracing::trace!(interface = "KeymapStore", method = "get", ? keymap, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         keymap.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_keymap = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "KeymapStore", method = "get", ? __ret_keymap, "←"
         );
         Ok(__ret_keymap)
     }
-    pub fn from_handler<H: KeymapStoreHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> KeymapStore {
-        KeymapStore::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> KeymapStore {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> KeymapStore {
         KeymapStore { obj }
     }
 }
-impl From<KeymapStore> for gluon::ObjectOrRef {
+impl From<KeymapStore> for gluon::Ref {
     fn from(value: KeymapStore) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for KeymapStore {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for KeymapStore {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -240,7 +242,7 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_keymap = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "KeymapStore", method = "exchange", ? param_keymap,
@@ -268,7 +270,7 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_keymap = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "KeymapStore", method = "get", ? param_keymap,
@@ -302,22 +304,22 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct Keymap {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for Keymap {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(Keymap::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(Keymap::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -325,24 +327,26 @@ impl gluon::Convertable for Keymap {
 impl gluon::Interface for Keymap {
     const ID: &'static str = "org.stardustxr.Keymap.Keymap";
 }
-impl Keymap {
-    pub fn from_handler<H: KeymapHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> Keymap {
-        Keymap::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Keymap {
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: KeymapHandler> gluon::HandledBy<H> for Keymap {}
+impl gluon::RefExt for Keymap {
+    fn from_ref(obj: gluon::Ref) -> Keymap {
         Keymap { obj }
     }
 }
-impl From<Keymap> for gluon::ObjectOrRef {
+impl Keymap {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> Keymap {
+        Keymap { obj }
+    }
+}
+impl From<Keymap> for gluon::Ref {
     fn from(value: Keymap) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for Keymap {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for Keymap {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }

@@ -30,9 +30,9 @@ pub enum MaterialParamError {
     InvalidValue,
 }
 impl gluon::Convertable for MaterialParamError {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             MaterialParamError::ParamNotFound { known_params } => {
@@ -75,7 +75,7 @@ impl gluon::Convertable for MaterialParamError {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             MaterialParamError::ParamNotFound { known_params } => {
@@ -116,9 +116,9 @@ pub enum MaterialParameter {
     },
 }
 impl gluon::Convertable for MaterialParameter {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             MaterialParameter::Bool { value } => {
@@ -239,7 +239,7 @@ impl gluon::Convertable for MaterialParameter {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             MaterialParameter::Bool { value } => {
@@ -295,28 +295,35 @@ impl gluon::Convertable for MaterialParameter {
 }
 #[derive(Debug, Clone)]
 pub struct ModelInterface {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for ModelInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(ModelInterface::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(ModelInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for ModelInterface {
     const ID: &'static str = "org.stardustxr.Model.ModelInterface";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ModelInterfaceHandler> gluon::HandledBy<H> for ModelInterface {}
+impl gluon::RefExt for ModelInterface {
+    fn from_ref(obj: gluon::Ref) -> ModelInterface {
+        ModelInterface { obj }
+    }
 }
 impl ModelInterface {
     ///Load a GLTF model into a Model
@@ -333,36 +340,31 @@ impl ModelInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         model.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_model = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelInterface", method = "load_model", ? __ret_model, "←"
         );
         Ok(__ret_model)
     }
-    pub fn from_handler<H: ModelInterfaceHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> ModelInterface {
-        ModelInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ModelInterface {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> ModelInterface {
         ModelInterface { obj }
     }
 }
-impl From<ModelInterface> for gluon::ObjectOrRef {
+impl From<ModelInterface> for gluon::Ref {
     fn from(value: ModelInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for ModelInterface {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for ModelInterface {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -419,7 +421,7 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_model = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
@@ -457,28 +459,35 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct Model {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for Model {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(Model::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(Model::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for Model {
     const ID: &'static str = "org.stardustxr.Model.Model";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ModelHandler> gluon::HandledBy<H> for Model {}
+impl gluon::RefExt for Model {
+    fn from_ref(obj: gluon::Ref) -> Model {
+        Model { obj }
+    }
 }
 impl Model {
     pub async fn get_part(
@@ -489,12 +498,12 @@ impl Model {
         tracing::trace!(interface = "Model", method = "get_part", ? path, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         path.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_part = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Model", method = "get_part", ? __ret_part, "←");
         Ok(__ret_part)
@@ -503,32 +512,29 @@ impl Model {
         tracing::trace!(interface = "Model", method = "enumerate_parts", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_parts = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Model", method = "enumerate_parts", ? __ret_parts, "←"
         );
         Ok(__ret_parts)
     }
-    pub fn from_handler<H: ModelHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Model {
-        Model::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Model {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> Model {
         Model { obj }
     }
 }
-impl From<Model> for gluon::ObjectOrRef {
+impl From<Model> for gluon::Ref {
     fn from(value: Model) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for Model {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for Model {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -595,7 +601,7 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_path = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Model", method = "get_part", ? param_path,
@@ -622,7 +628,7 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "Model", method = "enumerate_parts", "dispatching"
                     );
@@ -655,22 +661,22 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct ModelPart {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for ModelPart {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(ModelPart::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(ModelPart::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -678,16 +684,23 @@ impl gluon::Convertable for ModelPart {
 impl gluon::Interface for ModelPart {
     const ID: &'static str = "org.stardustxr.Model.ModelPart";
 }
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ModelPartHandler> gluon::HandledBy<H> for ModelPart {}
+impl gluon::RefExt for ModelPart {
+    fn from_ref(obj: gluon::Ref) -> ModelPart {
+        ModelPart { obj }
+    }
+}
 impl ModelPart {
     pub async fn get_part_path(&self) -> Result<String, gluon::SendError> {
         tracing::trace!(interface = "ModelPart", method = "get_part_path", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_path = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "get_part_path", ? __ret_path, "←"
@@ -700,11 +713,11 @@ impl ModelPart {
         tracing::trace!(interface = "ModelPart", method = "get_spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "get_spatial", ? __ret_spatial, "←"
@@ -724,15 +737,13 @@ impl ModelPart {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         parameter_name.write(&mut gluon_builder)?;
         value.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_error = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "set_material_parameter", ? __ret_error,
@@ -741,60 +752,26 @@ impl ModelPart {
         Ok(__ret_error)
     }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
-    pub fn apply_holdout_material_waiting(&self) -> gluon::OnewayFuture {
-        use gluon::ToObjectOrRef as _;
-        tracing::trace!(
-            interface = "ModelPart", method = "apply_holdout_material", "→"
-        );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
-            gluon_ret.to_binder_object_or_ref(),
-        );
-        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = self
-            .obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())
-        {
-            return err.into();
-        }
-        gluon_recv.into()
-    }
-    ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
-    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn apply_holdout_material(&self) -> Result<(), gluon::SendError> {
         tracing::trace!(
             interface = "ModelPart", method = "apply_holdout_material", "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let gluon_ret: Option<gluon::ObjectOrRef> = None;
-        gluon_ret.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 11u32, gluon_builder)?;
         Ok(())
     }
-    pub fn from_handler<H: ModelPartHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> ModelPart {
-        ModelPart::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> ModelPart {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> ModelPart {
         ModelPart { obj }
     }
 }
-impl From<ModelPart> for gluon::ObjectOrRef {
+impl From<ModelPart> for gluon::Ref {
     fn from(value: ModelPart) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for ModelPart {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for ModelPart {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -883,7 +860,7 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "ModelPart", method = "get_part_path", "dispatching"
                     );
@@ -909,7 +886,7 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "ModelPart", method = "get_spatial", "dispatching"
                     );
@@ -935,7 +912,7 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 10u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_parameter_name = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
@@ -971,9 +948,6 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 11u32 => {
-                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
-                        &mut gluon_data,
-                    )?;
                     tracing::trace!(
                         interface = "ModelPart", method = "apply_holdout_material",
                         "dispatching"
@@ -987,14 +961,6 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
-                    if let Some(obj) = gluon_ret {
-                        obj.device()
-                            .transact_one_way(
-                                &obj,
-                                0,
-                                gluon::DataBuilder::new().to_payload(),
-                            )?;
-                    }
                 }
                 _ => {}
             }

@@ -48,9 +48,9 @@ query point is inside or outside.*/
     pub closest_point: crate::types::Vec3F,
 }
 impl gluon::Convertable for FieldSample {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.distance.write(gluon_data)?;
         {
@@ -85,7 +85,7 @@ impl gluon::Convertable for FieldSample {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.distance.write_owned(gluon_data)?;
         {
@@ -113,9 +113,9 @@ pub struct RayMarchResult {
     pub ray_steps: u32,
 }
 impl gluon::Convertable for RayMarchResult {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.min_distance.write(gluon_data)?;
         self.deepest_point_distance.write(gluon_data)?;
@@ -137,7 +137,7 @@ impl gluon::Convertable for RayMarchResult {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.min_distance.write_owned(gluon_data)?;
         self.deepest_point_distance.write_owned(gluon_data)?;
@@ -157,9 +157,9 @@ pub struct CubicBezierControlPoint {
     pub thickness: f32,
 }
 impl gluon::Convertable for CubicBezierControlPoint {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::proxied::Vec3F = self.handle_in.clone().into();
@@ -205,7 +205,7 @@ impl gluon::Convertable for CubicBezierControlPoint {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::proxied::Vec3F = self.handle_in.into();
@@ -230,9 +230,9 @@ pub struct CreatedField {
     pub field_ref: FieldRef,
 }
 impl gluon::Convertable for CreatedField {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.field.write(gluon_data)?;
         self.field_ref.write(gluon_data)?;
@@ -245,7 +245,7 @@ impl gluon::Convertable for CreatedField {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.field.write_owned(gluon_data)?;
         self.field_ref.write_owned(gluon_data)?;
@@ -285,9 +285,9 @@ Typical use: `Sweep { surface: Box, sweeper: Sphere }` = rounded box.*/
     Sweep { surface: Box<Shape>, sweeper: Box<Shape> },
 }
 impl gluon::Convertable for Shape {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             Shape::Box { size } => {
@@ -424,7 +424,7 @@ impl gluon::Convertable for Shape {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             Shape::Box { size } => {
@@ -486,22 +486,22 @@ impl gluon::Convertable for Shape {
 }
 #[derive(Debug, Clone)]
 pub struct FieldRef {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for FieldRef {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(FieldRef::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(FieldRef::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -509,24 +509,26 @@ impl gluon::Convertable for FieldRef {
 impl gluon::Interface for FieldRef {
     const ID: &'static str = "org.stardustxr.Field.FieldRef";
 }
-impl FieldRef {
-    pub fn from_handler<H: FieldRefHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> FieldRef {
-        FieldRef::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> FieldRef {
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: FieldRefHandler> gluon::HandledBy<H> for FieldRef {}
+impl gluon::RefExt for FieldRef {
+    fn from_ref(obj: gluon::Ref) -> FieldRef {
         FieldRef { obj }
     }
 }
-impl From<FieldRef> for gluon::ObjectOrRef {
+impl FieldRef {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> FieldRef {
+        FieldRef { obj }
+    }
+}
+impl From<FieldRef> for gluon::Ref {
     fn from(value: FieldRef) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for FieldRef {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for FieldRef {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -568,22 +570,22 @@ pub trait FieldRefHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct Field {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for Field {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(Field::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(Field::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -591,16 +593,23 @@ impl gluon::Convertable for Field {
 impl gluon::Interface for Field {
     const ID: &'static str = "org.stardustxr.Field.Field";
 }
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: FieldHandler> gluon::HandledBy<H> for Field {}
+impl gluon::RefExt for Field {
+    fn from_ref(obj: gluon::Ref) -> Field {
+        Field { obj }
+    }
+}
 impl Field {
     pub async fn field_ref(&self) -> Result<FieldRef, gluon::SendError> {
         tracing::trace!(interface = "Field", method = "field_ref", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_field = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "field_ref", ? __ret_field, "←");
         Ok(__ret_field)
@@ -609,11 +618,11 @@ impl Field {
         tracing::trace!(interface = "Field", method = "spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "spatial", ? __ret_spatial, "←");
         Ok(__ret_spatial)
@@ -630,15 +639,13 @@ impl Field {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "sample", ? __ret_result, "←");
         Ok(__ret_result)
@@ -658,75 +665,40 @@ impl Field {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 11u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 11u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Field", method = "ray_march", ? __ret_result, "←"
         );
         Ok(__ret_result)
     }
-    pub fn set_shape_waiting(&self, shape: impl Into<Shape>) -> gluon::OnewayFuture {
-        use gluon::ToObjectOrRef as _;
-        let shape: Shape = shape.into();
-        tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
-            gluon_ret.to_binder_object_or_ref(),
-        );
-        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = shape.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = self
-            .obj
-            .device()
-            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())
-        {
-            return err.into();
-        }
-        gluon_recv.into()
-    }
-    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn set_shape(&self, shape: impl Into<Shape>) -> Result<(), gluon::SendError> {
         let shape: Shape = shape.into();
         tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let gluon_ret: Option<gluon::ObjectOrRef> = None;
-        gluon_ret.write(&mut gluon_builder)?;
         shape.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 12u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 12u32, gluon_builder)?;
         Ok(())
     }
-    pub fn from_handler<H: FieldHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Field {
-        Field::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Field {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> Field {
         Field { obj }
     }
 }
-impl From<Field> for gluon::ObjectOrRef {
+impl From<Field> for gluon::Ref {
     fn from(value: Field) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for Field {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for Field {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -838,7 +810,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "Field", method = "field_ref", "dispatching"
                     );
@@ -863,7 +835,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
                         interface = "Field", method = "spatial", "dispatching"
                     );
@@ -888,7 +860,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 10u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_reference_space = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
@@ -924,7 +896,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 11u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_reference_space = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
@@ -975,9 +947,6 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 12u32 => {
-                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
-                        &mut gluon_data,
-                    )?;
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Field", method = "set_shape", ? param_shape,
@@ -992,14 +961,6 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
-                    if let Some(obj) = gluon_ret {
-                        obj.device()
-                            .transact_one_way(
-                                &obj,
-                                0,
-                                gluon::DataBuilder::new().to_payload(),
-                            )?;
-                    }
                 }
                 _ => {}
             }
@@ -1009,28 +970,35 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct FieldInterface {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for FieldInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(FieldInterface::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(FieldInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for FieldInterface {
     const ID: &'static str = "org.stardustxr.Field.FieldInterface";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: FieldInterfaceHandler> gluon::HandledBy<H> for FieldInterface {}
+impl gluon::RefExt for FieldInterface {
+    fn from_ref(obj: gluon::Ref) -> FieldInterface {
+        FieldInterface { obj }
+    }
 }
 impl FieldInterface {
     pub async fn sample(
@@ -1048,14 +1016,14 @@ impl FieldInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         field.write(&mut gluon_builder)?;
         space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "sample", ? __ret_result, "←"
@@ -1079,15 +1047,15 @@ impl FieldInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         field.write(&mut gluon_builder)?;
         space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "ray_march", ? __ret_result, "←"
@@ -1107,38 +1075,31 @@ impl FieldInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         shape.write(&mut gluon_builder)?;
-        self.obj
-            .device()
-            .transact_one_way(&self.obj, 10u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_field = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "create_field", ? __ret_field, "←"
         );
         Ok(__ret_field)
     }
-    pub fn from_handler<H: FieldInterfaceHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> FieldInterface {
-        FieldInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> FieldInterface {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> FieldInterface {
         FieldInterface { obj }
     }
 }
-impl From<FieldInterface> for gluon::ObjectOrRef {
+impl From<FieldInterface> for gluon::Ref {
     fn from(value: FieldInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for FieldInterface {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for FieldInterface {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -1240,7 +1201,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_space = gluon::Convertable::read(&mut gluon_data)?;
                     let __wire_param_point: super::types::proxied::Vec3F = gluon::Convertable::read(
@@ -1276,7 +1237,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 9u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_field = gluon::Convertable::read(&mut gluon_data)?;
                     let param_space = gluon::Convertable::read(&mut gluon_data)?;
                     let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon::Convertable::read(
@@ -1328,7 +1289,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 10u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(

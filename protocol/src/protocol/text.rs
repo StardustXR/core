@@ -45,9 +45,9 @@ pub struct TextBounds {
     pub anchor_align_y: YAlign,
 }
 impl gluon::Convertable for TextBounds {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::proxied::Vec2F = self.bounds.clone().into();
@@ -77,7 +77,7 @@ impl gluon::Convertable for TextBounds {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         {
             let __w: super::types::proxied::Vec2F = self.bounds.into();
@@ -102,9 +102,9 @@ pub struct TextStyle {
     pub bounds: Option<TextBounds>,
 }
 impl gluon::Convertable for TextStyle {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.character_height.write(gluon_data)?;
         {
@@ -140,7 +140,7 @@ impl gluon::Convertable for TextStyle {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.character_height.write_owned(gluon_data)?;
         {
@@ -163,9 +163,9 @@ pub enum XAlign {
     Right,
 }
 impl gluon::Convertable for XAlign {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             XAlign::Left => {
@@ -192,7 +192,7 @@ impl gluon::Convertable for XAlign {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             XAlign::Left => {
@@ -217,9 +217,9 @@ pub enum YAlign {
     Bottom,
 }
 impl gluon::Convertable for YAlign {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             YAlign::Top => {
@@ -246,7 +246,7 @@ impl gluon::Convertable for YAlign {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             YAlign::Top => {
@@ -273,9 +273,9 @@ pub enum TextFit {
     Overflow,
 }
 impl gluon::Convertable for TextFit {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             TextFit::Wrap => {
@@ -310,7 +310,7 @@ impl gluon::Convertable for TextFit {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         match self {
             TextFit::Wrap => {
@@ -334,28 +334,35 @@ impl gluon::Convertable for TextFit {
 }
 #[derive(Debug, Clone)]
 pub struct TextInterface {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for TextInterface {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(TextInterface::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(TextInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl gluon::Interface for TextInterface {
     const ID: &'static str = "org.stardustxr.Text.TextInterface";
+}
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: TextInterfaceHandler> gluon::HandledBy<H> for TextInterface {}
+impl gluon::RefExt for TextInterface {
+    fn from_ref(obj: gluon::Ref) -> TextInterface {
+        TextInterface { obj }
+    }
 }
 impl TextInterface {
     pub async fn create_text(
@@ -373,37 +380,32 @@ impl TextInterface {
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        gluon_builder.write_binder(&gluon_ret)?;
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         text.write(&mut gluon_builder)?;
         style.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
-        let transaction = gluon_recv.recv().await.unwrap();
-        let mut reader = gluon::DataReader::from_payload(transaction.payload);
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
         let __ret_text = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "TextInterface", method = "create_text", ? __ret_text, "←"
         );
         Ok(__ret_text)
     }
-    pub fn from_handler<H: TextInterfaceHandler>(
-        obj: &impl gluon::OwnedObjectRef<H>,
-    ) -> TextInterface {
-        TextInterface::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> TextInterface {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> TextInterface {
         TextInterface { obj }
     }
 }
-impl From<TextInterface> for gluon::ObjectOrRef {
+impl From<TextInterface> for gluon::Ref {
     fn from(value: TextInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for TextInterface {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for TextInterface {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -461,7 +463,7 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let return_callback = gluon_data.read_binder()?;
+                    let return_callback = gluon_data.read_ref()?;
                     let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
                     let param_style = gluon::Convertable::read(&mut gluon_data)?;
@@ -506,22 +508,22 @@ pub trait TextInterfaceHandler: gluon::Handler + Send + Sync + 'static {
 }
 #[derive(Debug, Clone)]
 pub struct Text {
-    obj: gluon::ObjectOrRef,
+    obj: gluon::Ref,
 }
 impl gluon::Convertable for Text {
-    fn write<'a, 'b: 'a>(
-        &'b self,
-        gluon_data: &mut gluon::DataBuilder<'a>,
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write(gluon_data)
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::ObjectOrRef::read(gluon_data)?;
-        Ok(Text::from_object_or_ref(obj))
+        let obj = gluon::Ref::read(gluon_data)?;
+        Ok(Text::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder<'_>,
+        gluon_data: &mut gluon::DataBuilder,
     ) -> Result<(), gluon::WriteError> {
         self.obj.write_owned(gluon_data)
     }
@@ -529,40 +531,15 @@ impl gluon::Convertable for Text {
 impl gluon::Interface for Text {
     const ID: &'static str = "org.stardustxr.Text.Text";
 }
+///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: TextHandler> gluon::HandledBy<H> for Text {}
+impl gluon::RefExt for Text {
+    fn from_ref(obj: gluon::Ref) -> Text {
+        Text { obj }
+    }
+}
 impl Text {
     ///Set the character height in meters
-    pub fn set_character_height_waiting(
-        &self,
-        height: impl Into<f32>,
-    ) -> gluon::OnewayFuture {
-        use gluon::ToObjectOrRef as _;
-        let height: f32 = height.into();
-        tracing::trace!(
-            interface = "Text", method = "set_character_height", ? height, "→"
-        );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
-            gluon_ret.to_binder_object_or_ref(),
-        );
-        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = height.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = self
-            .obj
-            .device()
-            .transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())
-        {
-            return err.into();
-        }
-        gluon_recv.into()
-    }
-    ///Set the character height in meters
-    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn set_character_height(
         &self,
         height: impl Into<f32>,
@@ -572,65 +549,31 @@ impl Text {
             interface = "Text", method = "set_character_height", ? height, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let gluon_ret: Option<gluon::ObjectOrRef> = None;
-        gluon_ret.write(&mut gluon_builder)?;
         height.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 8u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 8u32, gluon_builder)?;
         Ok(())
     }
     ///Set the text content
-    pub fn set_text_waiting(&self, text: impl Into<String>) -> gluon::OnewayFuture {
-        use gluon::ToObjectOrRef as _;
-        let text: String = text.into();
-        tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let gluon_ret = self.obj.device().register_object(gluon_ret_handler);
-        let gluon_ret: Option<gluon::ObjectOrRef> = Some(
-            gluon_ret.to_binder_object_or_ref(),
-        );
-        if let Err(err) = gluon_ret.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = text.write(&mut gluon_builder) {
-            return err.into();
-        }
-        if let Err(err) = self
-            .obj
-            .device()
-            .transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())
-        {
-            return err.into();
-        }
-        gluon_recv.into()
-    }
-    ///Set the text content
-    ///Fire and Forget, events sent to different objects may not be handled in order
     pub fn set_text(&self, text: impl Into<String>) -> Result<(), gluon::SendError> {
         let text: String = text.into();
         tracing::trace!(interface = "Text", method = "set_text", ? text, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let gluon_ret: Option<gluon::ObjectOrRef> = None;
-        gluon_ret.write(&mut gluon_builder)?;
         text.write(&mut gluon_builder)?;
-        self.obj.device().transact_one_way(&self.obj, 9u32, gluon_builder.to_payload())?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
         Ok(())
     }
-    pub fn from_handler<H: TextHandler>(obj: &impl gluon::OwnedObjectRef<H>) -> Text {
-        Text::from_object_or_ref(gluon::OwnedObjectRef::to_object_or_ref(obj))
-    }
-    ///only use this when you know the binder ref implements this interface, else the consquences are for you to find out
-    pub fn from_object_or_ref(obj: gluon::ObjectOrRef) -> Text {
+    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
+    pub fn from_ref(obj: gluon::Ref) -> Text {
         Text { obj }
     }
 }
-impl From<Text> for gluon::ObjectOrRef {
+impl From<Text> for gluon::Ref {
     fn from(value: Text) -> Self {
         value.obj
     }
 }
-impl gluon::ToObjectOrRef for Text {
-    fn to_binder_object_or_ref(&self) -> gluon::ObjectOrRef {
+impl gluon::ToRef for Text {
+    fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
@@ -677,9 +620,6 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             match transaction_code {
                 8u32 => {
-                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
-                        &mut gluon_data,
-                    )?;
                     let param_height = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Text", method = "set_character_height", ?
@@ -694,19 +634,8 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
-                    if let Some(obj) = gluon_ret {
-                        obj.device()
-                            .transact_one_way(
-                                &obj,
-                                0,
-                                gluon::DataBuilder::new().to_payload(),
-                            )?;
-                    }
                 }
                 9u32 => {
-                    let gluon_ret: Option<gluon::ObjectOrRef> = gluon::Convertable::read(
-                        &mut gluon_data,
-                    )?;
                     let param_text = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Text", method = "set_text", ? param_text,
@@ -721,14 +650,6 @@ pub trait TextHandler: gluon::Handler + Send + Sync + 'static {
                             ),
                         )
                         .await;
-                    if let Some(obj) = gluon_ret {
-                        obj.device()
-                            .transact_one_way(
-                                &obj,
-                                0,
-                                gluon::DataBuilder::new().to_payload(),
-                            )?;
-                    }
                 }
                 _ => {}
             }
