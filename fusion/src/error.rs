@@ -14,10 +14,13 @@ pub enum Error {
 	NoServerFile,
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
+
 	#[error("Gluon send error: {0}")]
-	GluonSendError(#[from] gluon::SendError),
+	GluonSend(#[from] gluon::SendError),
 	#[error("Gluon read error: {0}")]
-	GluonReadError(#[from] gluon::ReadError),
+	GluonRead(#[from] gluon::ReadError),
+	#[error("Gluon node error: {0}")]
+	GluonNode(#[from] gluon::NodeError),
 
 	#[error("Create error: {0}")]
 	Create(#[from] CreateError),
