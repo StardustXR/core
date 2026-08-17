@@ -90,8 +90,7 @@ impl<H: ClientHandler> Client<H> {
 		let state_token = env::var("STARDUST_STARTUP_TOKEN").ok();
 		let (server, root) = server_interface
 			.connect(client, state_token, prefixes)
-			.await
-			.map_err(Error::Gluon)?;
+			.await?;
 		Ok((
 			Client {
 				root: root.clone(),

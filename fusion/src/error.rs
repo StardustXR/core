@@ -10,14 +10,14 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
-	#[error("Unable to open servers pion file: {0}")]
-	PionFile(std::io::Error),
 	#[error("Could not find the stardust server instance")]
 	NoServerFile,
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
-	#[error("Gluon error: {0}")]
-	Gluon(#[from] gluon::SendError),
+	#[error("Gluon send error: {0}")]
+	GluonSendError(#[from] gluon::SendError),
+	#[error("Gluon read error: {0}")]
+	GluonReadError(#[from] gluon::ReadError),
 
 	#[error("Create error: {0}")]
 	Create(#[from] CreateError),
