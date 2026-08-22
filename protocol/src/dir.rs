@@ -86,6 +86,22 @@ pub fn create_server_file(service: &str, instance: &str) -> Option<(PathBuf, Fil
 	Some((path, lock))
 }
 
+/// The path $XDG_RUNTIME_DIR/{service}/{instance} for a service to listen on, creating the
+/// service directory if it isn't there.
+///
+/// Unlike [`create_server_file`] this takes no lock and clears nothing: it is for callers
+/// whose binding layer owns the lockfile itself (`strong_ipc::RefFsBinding` does), where
+/// taking it here as well would deadlock the process against its own flock — flock is per
+/// open file description, so a second handle on the same lock in the same process is still
+/// a conflict.
+pub fn server_file_path(service: &str, instance: &str) -> Option<PathBuf> {
+	let service_dir = xdg::BaseDirectories::new().runtime_dir?.join(service);
+	if !service_dir.is_dir() {
+		fs::create_dir_all(&service_dir).ok()?;
+	}
+	Some(service_dir.join(instance))
+}
+
 /// Find a free STARDUST_INSTANCE
 /// This is done by searching for the first file at $XDG_RUNTIME_DIR/stardust-server/stardust-{n}
 /// that either doesn't exist or doesn't have a valid lock
