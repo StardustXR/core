@@ -774,6 +774,14 @@ impl gluon::Interface for DmatexRef {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: DmatexRefHandler> gluon::HandledBy<H> for DmatexRef {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type DmatexRefLocal<H> = gluon::LocalRef<DmatexRef, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: DmatexRefHandler> From<DmatexRefLocal<H>> for DmatexRef {
+    fn from(value: DmatexRefLocal<H>) -> DmatexRef {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for DmatexRef {
     fn from_ref(obj: gluon::Ref) -> DmatexRef {
         DmatexRef { obj }
@@ -858,6 +866,14 @@ impl gluon::Interface for DmatexInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: DmatexInterfaceHandler> gluon::HandledBy<H> for DmatexInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type DmatexInterfaceLocal<H> = gluon::LocalRef<DmatexInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: DmatexInterfaceHandler> From<DmatexInterfaceLocal<H>> for DmatexInterface {
+    fn from(value: DmatexInterfaceLocal<H>) -> DmatexInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for DmatexInterface {
     fn from_ref(obj: gluon::Ref) -> DmatexInterface {
         DmatexInterface { obj }
@@ -1186,6 +1202,15 @@ impl gluon::Interface for DmatexSubmitRelease {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: DmatexSubmitReleaseHandler> gluon::HandledBy<H> for DmatexSubmitRelease {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type DmatexSubmitReleaseLocal<H> = gluon::LocalRef<DmatexSubmitRelease, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: DmatexSubmitReleaseHandler> From<DmatexSubmitReleaseLocal<H>>
+for DmatexSubmitRelease {
+    fn from(value: DmatexSubmitReleaseLocal<H>) -> DmatexSubmitRelease {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for DmatexSubmitRelease {
     fn from_ref(obj: gluon::Ref) -> DmatexSubmitRelease {
         DmatexSubmitRelease { obj }

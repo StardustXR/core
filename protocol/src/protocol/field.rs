@@ -511,6 +511,14 @@ impl gluon::Interface for FieldRef {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: FieldRefHandler> gluon::HandledBy<H> for FieldRef {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type FieldRefLocal<H> = gluon::LocalRef<FieldRef, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: FieldRefHandler> From<FieldRefLocal<H>> for FieldRef {
+    fn from(value: FieldRefLocal<H>) -> FieldRef {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for FieldRef {
     fn from_ref(obj: gluon::Ref) -> FieldRef {
         FieldRef { obj }
@@ -595,6 +603,14 @@ impl gluon::Interface for Field {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: FieldHandler> gluon::HandledBy<H> for Field {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type FieldLocal<H> = gluon::LocalRef<Field, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: FieldHandler> From<FieldLocal<H>> for Field {
+    fn from(value: FieldLocal<H>) -> Field {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Field {
     fn from_ref(obj: gluon::Ref) -> Field {
         Field { obj }
@@ -995,6 +1011,14 @@ impl gluon::Interface for FieldInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: FieldInterfaceHandler> gluon::HandledBy<H> for FieldInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type FieldInterfaceLocal<H> = gluon::LocalRef<FieldInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: FieldInterfaceHandler> From<FieldInterfaceLocal<H>> for FieldInterface {
+    fn from(value: FieldInterfaceLocal<H>) -> FieldInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for FieldInterface {
     fn from_ref(obj: gluon::Ref) -> FieldInterface {
         FieldInterface { obj }

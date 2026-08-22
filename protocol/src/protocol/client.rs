@@ -74,6 +74,14 @@ impl gluon::Interface for Client {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ClientHandler> gluon::HandledBy<H> for Client {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type ClientLocal<H> = gluon::LocalRef<Client, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: ClientHandler> From<ClientLocal<H>> for Client {
+    fn from(value: ClientLocal<H>) -> Client {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Client {
     fn from_ref(obj: gluon::Ref) -> Client {
         Client { obj }

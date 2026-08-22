@@ -309,6 +309,14 @@ impl gluon::Interface for BeamQueryHandler {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: BeamQueryHandlerHandler> gluon::HandledBy<H> for BeamQueryHandler {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type BeamQueryHandlerLocal<H> = gluon::LocalRef<BeamQueryHandler, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: BeamQueryHandlerHandler> From<BeamQueryHandlerLocal<H>> for BeamQueryHandler {
+    fn from(value: BeamQueryHandlerLocal<H>) -> BeamQueryHandler {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for BeamQueryHandler {
     fn from_ref(obj: gluon::Ref) -> BeamQueryHandler {
         BeamQueryHandler { obj }
@@ -570,6 +578,14 @@ impl gluon::Interface for BeamQueryHandle {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: BeamQueryHandleHandler> gluon::HandledBy<H> for BeamQueryHandle {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type BeamQueryHandleLocal<H> = gluon::LocalRef<BeamQueryHandle, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: BeamQueryHandleHandler> From<BeamQueryHandleLocal<H>> for BeamQueryHandle {
+    fn from(value: BeamQueryHandleLocal<H>) -> BeamQueryHandle {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for BeamQueryHandle {
     fn from_ref(obj: gluon::Ref) -> BeamQueryHandle {
         BeamQueryHandle { obj }
@@ -712,6 +728,14 @@ impl gluon::Interface for ZoneQueryHandler {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ZoneQueryHandlerHandler> gluon::HandledBy<H> for ZoneQueryHandler {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type ZoneQueryHandlerLocal<H> = gluon::LocalRef<ZoneQueryHandler, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: ZoneQueryHandlerHandler> From<ZoneQueryHandlerLocal<H>> for ZoneQueryHandler {
+    fn from(value: ZoneQueryHandlerLocal<H>) -> ZoneQueryHandler {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for ZoneQueryHandler {
     fn from_ref(obj: gluon::Ref) -> ZoneQueryHandler {
         ZoneQueryHandler { obj }
@@ -1003,6 +1027,14 @@ impl gluon::Interface for ZoneQueryHandle {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ZoneQueryHandleHandler> gluon::HandledBy<H> for ZoneQueryHandle {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type ZoneQueryHandleLocal<H> = gluon::LocalRef<ZoneQueryHandle, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: ZoneQueryHandleHandler> From<ZoneQueryHandleLocal<H>> for ZoneQueryHandle {
+    fn from(value: ZoneQueryHandleLocal<H>) -> ZoneQueryHandle {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for ZoneQueryHandle {
     fn from_ref(obj: gluon::Ref) -> ZoneQueryHandle {
         ZoneQueryHandle { obj }
@@ -1118,6 +1150,15 @@ impl gluon::Interface for PointsQueryHandler {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: PointsQueryHandlerHandler> gluon::HandledBy<H> for PointsQueryHandler {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type PointsQueryHandlerLocal<H> = gluon::LocalRef<PointsQueryHandler, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: PointsQueryHandlerHandler> From<PointsQueryHandlerLocal<H>>
+for PointsQueryHandler {
+    fn from(value: PointsQueryHandlerLocal<H>) -> PointsQueryHandler {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for PointsQueryHandler {
     fn from_ref(obj: gluon::Ref) -> PointsQueryHandler {
         PointsQueryHandler { obj }
@@ -1379,6 +1420,14 @@ impl gluon::Interface for PointsQueryHandle {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: PointsQueryHandleHandler> gluon::HandledBy<H> for PointsQueryHandle {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type PointsQueryHandleLocal<H> = gluon::LocalRef<PointsQueryHandle, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: PointsQueryHandleHandler> From<PointsQueryHandleLocal<H>> for PointsQueryHandle {
+    fn from(value: PointsQueryHandleLocal<H>) -> PointsQueryHandle {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for PointsQueryHandle {
     fn from_ref(obj: gluon::Ref) -> PointsQueryHandle {
         PointsQueryHandle { obj }
@@ -1494,6 +1543,15 @@ impl gluon::Interface for SpatialQueryInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialQueryInterfaceHandler> gluon::HandledBy<H> for SpatialQueryInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SpatialQueryInterfaceLocal<H> = gluon::LocalRef<SpatialQueryInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SpatialQueryInterfaceHandler> From<SpatialQueryInterfaceLocal<H>>
+for SpatialQueryInterface {
+    fn from(value: SpatialQueryInterfaceLocal<H>) -> SpatialQueryInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for SpatialQueryInterface {
     fn from_ref(obj: gluon::Ref) -> SpatialQueryInterface {
         SpatialQueryInterface { obj }

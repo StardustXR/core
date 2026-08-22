@@ -350,6 +350,14 @@ impl gluon::Interface for SpatialRef {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialRefHandler> gluon::HandledBy<H> for SpatialRef {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SpatialRefLocal<H> = gluon::LocalRef<SpatialRef, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SpatialRefHandler> From<SpatialRefLocal<H>> for SpatialRef {
+    fn from(value: SpatialRefLocal<H>) -> SpatialRef {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for SpatialRef {
     fn from_ref(obj: gluon::Ref) -> SpatialRef {
         SpatialRef { obj }
@@ -434,6 +442,14 @@ impl gluon::Interface for Spatial {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialHandler> gluon::HandledBy<H> for Spatial {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SpatialLocal<H> = gluon::LocalRef<Spatial, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SpatialHandler> From<SpatialLocal<H>> for Spatial {
+    fn from(value: SpatialLocal<H>) -> Spatial {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Spatial {
     fn from_ref(obj: gluon::Ref) -> Spatial {
         Spatial { obj }
@@ -938,6 +954,14 @@ impl gluon::Interface for SpatialInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialInterfaceHandler> gluon::HandledBy<H> for SpatialInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SpatialInterfaceLocal<H> = gluon::LocalRef<SpatialInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SpatialInterfaceHandler> From<SpatialInterfaceLocal<H>> for SpatialInterface {
+    fn from(value: SpatialInterfaceLocal<H>) -> SpatialInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for SpatialInterface {
     fn from_ref(obj: gluon::Ref) -> SpatialInterface {
         SpatialInterface { obj }

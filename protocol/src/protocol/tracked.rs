@@ -35,6 +35,14 @@ impl gluon::Interface for Tracked {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TrackedHandler> gluon::HandledBy<H> for Tracked {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type TrackedLocal<H> = gluon::LocalRef<Tracked, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: TrackedHandler> From<TrackedLocal<H>> for Tracked {
+    fn from(value: TrackedLocal<H>) -> Tracked {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Tracked {
     fn from_ref(obj: gluon::Ref) -> Tracked {
         Tracked { obj }
@@ -269,6 +277,14 @@ impl gluon::Interface for TrackedGuard {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TrackedGuardHandler> gluon::HandledBy<H> for TrackedGuard {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type TrackedGuardLocal<H> = gluon::LocalRef<TrackedGuard, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: TrackedGuardHandler> From<TrackedGuardLocal<H>> for TrackedGuard {
+    fn from(value: TrackedGuardLocal<H>) -> TrackedGuard {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for TrackedGuard {
     fn from_ref(obj: gluon::Ref) -> TrackedGuard {
         TrackedGuard { obj }
@@ -353,6 +369,15 @@ impl gluon::Interface for TrackedStateReceiver {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TrackedStateReceiverHandler> gluon::HandledBy<H> for TrackedStateReceiver {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type TrackedStateReceiverLocal<H> = gluon::LocalRef<TrackedStateReceiver, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: TrackedStateReceiverHandler> From<TrackedStateReceiverLocal<H>>
+for TrackedStateReceiver {
+    fn from(value: TrackedStateReceiverLocal<H>) -> TrackedStateReceiver {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for TrackedStateReceiver {
     fn from_ref(obj: gluon::Ref) -> TrackedStateReceiver {
         TrackedStateReceiver { obj }

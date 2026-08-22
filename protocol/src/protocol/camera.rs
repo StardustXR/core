@@ -90,6 +90,14 @@ impl gluon::Interface for CameraInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: CameraInterfaceHandler> gluon::HandledBy<H> for CameraInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type CameraInterfaceLocal<H> = gluon::LocalRef<CameraInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: CameraInterfaceHandler> From<CameraInterfaceLocal<H>> for CameraInterface {
+    fn from(value: CameraInterfaceLocal<H>) -> CameraInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for CameraInterface {
     fn from_ref(obj: gluon::Ref) -> CameraInterface {
         CameraInterface { obj }
@@ -244,6 +252,14 @@ impl gluon::Interface for Camera {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: CameraHandler> gluon::HandledBy<H> for Camera {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type CameraLocal<H> = gluon::LocalRef<Camera, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: CameraHandler> From<CameraLocal<H>> for Camera {
+    fn from(value: CameraLocal<H>) -> Camera {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Camera {
     fn from_ref(obj: gluon::Ref) -> Camera {
         Camera { obj }

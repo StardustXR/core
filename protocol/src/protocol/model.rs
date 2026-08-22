@@ -320,6 +320,14 @@ impl gluon::Interface for ModelInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ModelInterfaceHandler> gluon::HandledBy<H> for ModelInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type ModelInterfaceLocal<H> = gluon::LocalRef<ModelInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: ModelInterfaceHandler> From<ModelInterfaceLocal<H>> for ModelInterface {
+    fn from(value: ModelInterfaceLocal<H>) -> ModelInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for ModelInterface {
     fn from_ref(obj: gluon::Ref) -> ModelInterface {
         ModelInterface { obj }
@@ -484,6 +492,14 @@ impl gluon::Interface for Model {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ModelHandler> gluon::HandledBy<H> for Model {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type ModelLocal<H> = gluon::LocalRef<Model, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: ModelHandler> From<ModelLocal<H>> for Model {
+    fn from(value: ModelLocal<H>) -> Model {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Model {
     fn from_ref(obj: gluon::Ref) -> Model {
         Model { obj }
@@ -686,6 +702,14 @@ impl gluon::Interface for ModelPart {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ModelPartHandler> gluon::HandledBy<H> for ModelPart {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type ModelPartLocal<H> = gluon::LocalRef<ModelPart, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: ModelPartHandler> From<ModelPartLocal<H>> for ModelPart {
+    fn from(value: ModelPartLocal<H>) -> ModelPart {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for ModelPart {
     fn from_ref(obj: gluon::Ref) -> ModelPart {
         ModelPart { obj }

@@ -677,6 +677,14 @@ impl gluon::Interface for InputHandler {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: InputHandlerHandler> gluon::HandledBy<H> for InputHandler {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type InputHandlerLocal<H> = gluon::LocalRef<InputHandler, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: InputHandlerHandler> From<InputHandlerLocal<H>> for InputHandler {
+    fn from(value: InputHandlerLocal<H>) -> InputHandler {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for InputHandler {
     fn from_ref(obj: gluon::Ref) -> InputHandler {
         InputHandler { obj }
@@ -1040,6 +1048,14 @@ impl gluon::Interface for InputMethod {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: InputMethodHandler> gluon::HandledBy<H> for InputMethod {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type InputMethodLocal<H> = gluon::LocalRef<InputMethod, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: InputMethodHandler> From<InputMethodLocal<H>> for InputMethod {
+    fn from(value: InputMethodLocal<H>) -> InputMethod {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for InputMethod {
     fn from_ref(obj: gluon::Ref) -> InputMethod {
         InputMethod { obj }
@@ -1271,6 +1287,15 @@ impl gluon::Interface for InputMethodCapture {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: InputMethodCaptureHandler> gluon::HandledBy<H> for InputMethodCapture {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type InputMethodCaptureLocal<H> = gluon::LocalRef<InputMethodCapture, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: InputMethodCaptureHandler> From<InputMethodCaptureLocal<H>>
+for InputMethodCapture {
+    fn from(value: InputMethodCaptureLocal<H>) -> InputMethodCapture {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for InputMethodCapture {
     fn from_ref(obj: gluon::Ref) -> InputMethodCapture {
         InputMethodCapture { obj }

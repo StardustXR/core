@@ -35,6 +35,14 @@ impl gluon::Interface for Sound {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SoundHandler> gluon::HandledBy<H> for Sound {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SoundLocal<H> = gluon::LocalRef<Sound, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SoundHandler> From<SoundLocal<H>> for Sound {
+    fn from(value: SoundLocal<H>) -> Sound {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Sound {
     fn from_ref(obj: gluon::Ref) -> Sound {
         Sound { obj }
@@ -161,6 +169,14 @@ impl gluon::Interface for AudioInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: AudioInterfaceHandler> gluon::HandledBy<H> for AudioInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type AudioInterfaceLocal<H> = gluon::LocalRef<AudioInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: AudioInterfaceHandler> From<AudioInterfaceLocal<H>> for AudioInterface {
+    fn from(value: AudioInterfaceLocal<H>) -> AudioInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for AudioInterface {
     fn from_ref(obj: gluon::Ref) -> AudioInterface {
         AudioInterface { obj }

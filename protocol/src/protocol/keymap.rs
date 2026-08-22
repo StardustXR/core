@@ -114,6 +114,14 @@ impl gluon::Interface for KeymapStore {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: KeymapStoreHandler> gluon::HandledBy<H> for KeymapStore {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type KeymapStoreLocal<H> = gluon::LocalRef<KeymapStore, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: KeymapStoreHandler> From<KeymapStoreLocal<H>> for KeymapStore {
+    fn from(value: KeymapStoreLocal<H>) -> KeymapStore {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for KeymapStore {
     fn from_ref(obj: gluon::Ref) -> KeymapStore {
         KeymapStore { obj }
@@ -329,6 +337,14 @@ impl gluon::Interface for Keymap {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: KeymapHandler> gluon::HandledBy<H> for Keymap {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type KeymapLocal<H> = gluon::LocalRef<Keymap, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: KeymapHandler> From<KeymapLocal<H>> for Keymap {
+    fn from(value: KeymapLocal<H>) -> Keymap {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Keymap {
     fn from_ref(obj: gluon::Ref) -> Keymap {
         Keymap { obj }

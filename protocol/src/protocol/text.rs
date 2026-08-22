@@ -359,6 +359,14 @@ impl gluon::Interface for TextInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TextInterfaceHandler> gluon::HandledBy<H> for TextInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type TextInterfaceLocal<H> = gluon::LocalRef<TextInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: TextInterfaceHandler> From<TextInterfaceLocal<H>> for TextInterface {
+    fn from(value: TextInterfaceLocal<H>) -> TextInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for TextInterface {
     fn from_ref(obj: gluon::Ref) -> TextInterface {
         TextInterface { obj }
@@ -533,6 +541,14 @@ impl gluon::Interface for Text {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TextHandler> gluon::HandledBy<H> for Text {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type TextLocal<H> = gluon::LocalRef<Text, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: TextHandler> From<TextLocal<H>> for Text {
+    fn from(value: TextLocal<H>) -> Text {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for Text {
     fn from_ref(obj: gluon::Ref) -> Text {
         Text { obj }

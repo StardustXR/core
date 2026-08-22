@@ -35,6 +35,14 @@ impl gluon::Interface for SkyGuard {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SkyGuardHandler> gluon::HandledBy<H> for SkyGuard {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SkyGuardLocal<H> = gluon::LocalRef<SkyGuard, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SkyGuardHandler> From<SkyGuardLocal<H>> for SkyGuard {
+    fn from(value: SkyGuardLocal<H>) -> SkyGuard {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for SkyGuard {
     fn from_ref(obj: gluon::Ref) -> SkyGuard {
         SkyGuard { obj }
@@ -119,6 +127,14 @@ impl gluon::Interface for SkyInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SkyInterfaceHandler> gluon::HandledBy<H> for SkyInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type SkyInterfaceLocal<H> = gluon::LocalRef<SkyInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: SkyInterfaceHandler> From<SkyInterfaceLocal<H>> for SkyInterface {
+    fn from(value: SkyInterfaceLocal<H>) -> SkyInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for SkyInterface {
     fn from_ref(obj: gluon::Ref) -> SkyInterface {
         SkyInterface { obj }

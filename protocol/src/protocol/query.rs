@@ -209,6 +209,14 @@ impl gluon::Interface for QueryableObject {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: QueryableObjectHandler> gluon::HandledBy<H> for QueryableObject {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type QueryableObjectLocal<H> = gluon::LocalRef<QueryableObject, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: QueryableObjectHandler> From<QueryableObjectLocal<H>> for QueryableObject {
+    fn from(value: QueryableObjectLocal<H>) -> QueryableObject {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for QueryableObject {
     fn from_ref(obj: gluon::Ref) -> QueryableObject {
         QueryableObject { obj }
@@ -442,6 +450,15 @@ impl gluon::Interface for QueryableInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: QueryableInterfaceHandler> gluon::HandledBy<H> for QueryableInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type QueryableInterfaceLocal<H> = gluon::LocalRef<QueryableInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: QueryableInterfaceHandler> From<QueryableInterfaceLocal<H>>
+for QueryableInterface {
+    fn from(value: QueryableInterfaceLocal<H>) -> QueryableInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for QueryableInterface {
     fn from_ref(obj: gluon::Ref) -> QueryableInterface {
         QueryableInterface { obj }
@@ -526,6 +543,14 @@ impl gluon::Interface for QueryInterface {
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: QueryInterfaceHandler> gluon::HandledBy<H> for QueryInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
+pub type QueryInterfaceLocal<H> = gluon::LocalRef<QueryInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+impl<H: QueryInterfaceHandler> From<QueryInterfaceLocal<H>> for QueryInterface {
+    fn from(value: QueryInterfaceLocal<H>) -> QueryInterface {
+        value.into_proxy()
+    }
+}
 impl gluon::RefExt for QueryInterface {
     fn from_ref(obj: gluon::Ref) -> QueryInterface {
         QueryInterface { obj }
