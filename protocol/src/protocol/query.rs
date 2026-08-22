@@ -5,6 +5,11 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
     protocol_name: "org.stardustxr.Query",
     types: &[
         gluon::ExternalGluonType {
+            name: "QueryableId",
+            supported_derives: gluon::Derives::from_bits_truncate(799u32),
+            proxy: None,
+        },
+        gluon::ExternalGluonType {
             name: "InterfaceDependency",
             supported_derives: gluon::Derives::from_bits_truncate(798u32),
             proxy: None,
@@ -23,6 +28,37 @@ pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
 };
 pub mod proxies {
     use super::*;
+}
+/**identifies one queryable across a stream of query events
+
+correlation, not authority: `moved`, `interfaces_changed` and `left` arrive after the
+`entered` that introduced the object, and this is what ties them to the entry you made
+then. Unique per server and never reused, so it is safe as a map key for as long as you
+care about the object; meaningless to anyone but the query stream it came from.*/
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct QueryableId {
+    pub id: u64,
+}
+impl gluon::Convertable for QueryableId {
+    fn write(
+        &self,
+        gluon_data: &mut gluon::DataBuilder,
+    ) -> Result<(), gluon::WriteError> {
+        self.id.write(gluon_data)?;
+        Ok(())
+    }
+    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+        let id = gluon::Convertable::read(gluon_data)?;
+        Ok(QueryableId { id })
+    }
+    fn write_owned(
+        self,
+        gluon_data: &mut gluon::DataBuilder,
+    ) -> Result<(), gluon::WriteError> {
+        self.id.write_owned(gluon_data)?;
+        Ok(())
+    }
 }
 ///Dependency on an interface in query
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -89,7 +125,7 @@ impl gluon::Convertable for QueriedInterface {
         Ok(())
     }
 }
-///error returned from QueryInterface::register_queryable
+///error returned from QueryInterface::register_queryable and QueryableObject::add_interface
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum QueryableError {
@@ -97,6 +133,8 @@ pub enum QueryableError {
     NotOwnedSpatial,
     ///You don't own this field or it didn't come from the right stardust server!
     NotOwnedField,
+    ///This queryable already advertises an interface with that id, drop that advertisement first!
+    DuplicateInterface,
 }
 impl gluon::Convertable for QueryableError {
     fn write(
@@ -110,6 +148,9 @@ impl gluon::Convertable for QueryableError {
             QueryableError::NotOwnedField => {
                 gluon_data.write_u16(1u16)?;
             }
+            QueryableError::DuplicateInterface => {
+                gluon_data.write_u16(2u16)?;
+            }
         };
         Ok(())
     }
@@ -118,6 +159,7 @@ impl gluon::Convertable for QueryableError {
             match gluon_data.read_u16()? {
                 0u16 => QueryableError::NotOwnedSpatial,
                 1u16 => QueryableError::NotOwnedField,
+                2u16 => QueryableError::DuplicateInterface,
                 v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
             },
         )
@@ -133,92 +175,11 @@ impl gluon::Convertable for QueryableError {
             QueryableError::NotOwnedField => {
                 gluon_data.write_u16(1u16)?;
             }
+            QueryableError::DuplicateInterface => {
+                gluon_data.write_u16(2u16)?;
+            }
         };
         Ok(())
-    }
-}
-#[derive(Debug, Clone)]
-pub struct QueryableObjectRef {
-    obj: gluon::Ref,
-}
-impl gluon::Convertable for QueryableObjectRef {
-    fn write(
-        &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
-        self.obj.write(gluon_data)
-    }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
-        Ok(QueryableObjectRef::from_ref(obj))
-    }
-    fn write_owned(
-        self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
-        self.obj.write_owned(gluon_data)
-    }
-}
-impl gluon::Interface for QueryableObjectRef {
-    const ID: &'static str = "org.stardustxr.Query.QueryableObjectRef";
-}
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: QueryableObjectRefHandler> gluon::HandledBy<H> for QueryableObjectRef {}
-impl gluon::RefExt for QueryableObjectRef {
-    fn from_ref(obj: gluon::Ref) -> QueryableObjectRef {
-        QueryableObjectRef { obj }
-    }
-}
-impl QueryableObjectRef {
-    ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> QueryableObjectRef {
-        QueryableObjectRef { obj }
-    }
-}
-impl From<QueryableObjectRef> for gluon::Ref {
-    fn from(value: QueryableObjectRef) -> Self {
-        value.obj
-    }
-}
-impl gluon::ToRef for QueryableObjectRef {
-    fn to_ref(&self) -> gluon::Ref {
-        self.obj.clone()
-    }
-}
-impl gluon::Liveness for QueryableObjectRef {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
-    }
-}
-impl std::hash::Hash for QueryableObjectRef {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.obj.hash(state);
-    }
-}
-impl PartialEq for QueryableObjectRef {
-    fn eq(&self, other: &Self) -> bool {
-        self.obj == other.obj
-    }
-}
-impl Eq for QueryableObjectRef {}
-pub trait QueryableObjectRefHandler: gluon::Handler + Send + Sync + 'static {
-    fn dispatch_one_way(
-        &self,
-        transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
-        async move {
-            match transaction_code {
-                _ => {}
-            }
-            Ok(())
-        }
     }
 }
 #[derive(Debug, Clone)]
@@ -254,8 +215,9 @@ impl gluon::RefExt for QueryableObject {
     }
 }
 impl QueryableObject {
-    pub async fn queryable_ref(&self) -> Result<QueryableObjectRef, gluon::SendError> {
-        tracing::trace!(interface = "QueryableObject", method = "queryable_ref", "→");
+    ///this queryable's id, as querying clients see it
+    pub async fn id(&self) -> Result<QueryableId, gluon::SendError> {
+        tracing::trace!(interface = "QueryableObject", method = "id", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
         let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
@@ -263,18 +225,21 @@ impl QueryableObject {
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
         drop(gluon_ret_node);
-        let __ret_queryable = gluon::Convertable::read(&mut reader)?;
-        tracing::trace!(
-            interface = "QueryableObject", method = "queryable_ref", ? __ret_queryable,
-            "←"
-        );
-        Ok(__ret_queryable)
+        let __ret_id = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(interface = "QueryableObject", method = "id", ? __ret_id, "←");
+        Ok(__ret_id)
     }
+    /**advertise `interface` under `interface_id` so queries depending on that id find it
+
+the returned advertisement is what keeps it listed: drop it to stop advertising
+without taking down the node that serves the interface. That node dying withdraws
+the advertisement too — a ref going dead always means the object behind it is gone,
+never that someone revoked it.*/
     pub async fn add_interface(
         &self,
         interface: &impl gluon::ToRef,
         interface_id: impl Into<String>,
-    ) -> Result<QueryableInterfaceGuard, gluon::SendError> {
+    ) -> Result<Result<QueryableInterface, QueryableError>, gluon::SendError> {
         let interface: gluon::Ref = gluon::ToRef::to_ref(interface);
         let interface_id: String = interface_id.into();
         tracing::trace!(
@@ -290,11 +255,12 @@ impl QueryableObject {
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
         drop(gluon_ret_node);
-        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        let __ret_advertisement = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
-            interface = "QueryableObject", method = "add_interface", ? __ret_guard, "←"
+            interface = "QueryableObject", method = "add_interface", ?
+            __ret_advertisement, "←"
         );
-        Ok(__ret_guard)
+        Ok(__ret_advertisement)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
     pub fn from_ref(obj: gluon::Ref) -> QueryableObject {
@@ -333,38 +299,45 @@ impl PartialEq for QueryableObject {
 }
 impl Eq for QueryableObject {}
 pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
-    fn queryable_ref(
+    ///this queryable's id, as querying clients see it
+    fn id(
         &self,
         _ctx: gluon::Context,
-    ) -> impl Future<Output = QueryableObjectRef> + Send + Sync;
-    ///Dispatched instead of [`Self::queryable_ref`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `queryable_ref` and sends the result through `reply`. Override this method instead of `queryable_ref` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
-    fn queryable_ref_oneway(
+    ) -> impl Future<Output = QueryableId> + Send + Sync;
+    ///Dispatched instead of [`Self::id`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `id` and sends the result through `reply`. Override this method instead of `id` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn id_oneway(
         &self,
         _ctx: gluon::Context,
-        reply: gluon::ReplySender<QueryableObjectRef>,
+        reply: gluon::ReplySender<QueryableId>,
     ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
-            let queryable = self.queryable_ref(_ctx).await;
-            reply.send(queryable)
+            let id = self.id(_ctx).await;
+            reply.send(id)
         }
     }
+    /**advertise `interface` under `interface_id` so queries depending on that id find it
+
+the returned advertisement is what keeps it listed: drop it to stop advertising
+without taking down the node that serves the interface. That node dying withdraws
+the advertisement too — a ref going dead always means the object behind it is gone,
+never that someone revoked it.*/
     fn add_interface(
         &self,
         _ctx: gluon::Context,
         interface: gluon::Ref,
         interface_id: String,
-    ) -> impl Future<Output = QueryableInterfaceGuard> + Send + Sync;
+    ) -> impl Future<Output = Result<QueryableInterface, QueryableError>> + Send + Sync;
     ///Dispatched instead of [`Self::add_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `add_interface` and sends the result through `reply`. Override this method instead of `add_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn add_interface_oneway(
         &self,
         _ctx: gluon::Context,
         interface: gluon::Ref,
         interface_id: String,
-        reply: gluon::ReplySender<QueryableInterfaceGuard>,
+        reply: gluon::ReplySender<Result<QueryableInterface, QueryableError>>,
     ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
-            let guard = self.add_interface(_ctx, interface, interface_id).await;
-            reply.send(guard)
+            let advertisement = self.add_interface(_ctx, interface, interface_id).await;
+            reply.send(advertisement)
         }
     }
     fn dispatch_one_way(
@@ -378,26 +351,24 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
                     tracing::trace!(
-                        interface = "QueryableObject", method = "queryable_ref",
-                        "dispatching"
+                        interface = "QueryableObject", method = "id", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<QueryableObjectRef> = gluon::ReplySender::new(
+                    let reply: gluon::ReplySender<QueryableId> = gluon::ReplySender::new(
                         return_callback,
-                        |queryable, gluon_out| {
+                        |id, gluon_out| {
                             tracing::trace!(
-                                interface = "QueryableObject", method = "queryable_ref", ?
-                                queryable, "←"
+                                interface = "QueryableObject", method = "id", ? id, "←"
                             );
-                            queryable.write_owned(gluon_out)?;
+                            id.write_owned(gluon_out)?;
                             Ok(())
                         },
                     );
-                    self.queryable_ref_oneway(ctx, reply)
+                    self.id_oneway(ctx, reply)
                         .instrument(
                             tracing::trace_span!(
-                                "dispatching", interface = "QueryableObject", method =
-                                "queryable_ref", method_id = 8u32
+                                "dispatching", interface = "QueryableObject", method = "id",
+                                method_id = 8u32
                             ),
                         )
                         .await?;
@@ -411,14 +382,16 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
                         param_interface, ? param_interface_id, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<QueryableInterfaceGuard> = gluon::ReplySender::new(
+                    let reply: gluon::ReplySender<
+                        Result<QueryableInterface, QueryableError>,
+                    > = gluon::ReplySender::new(
                         return_callback,
-                        |guard, gluon_out| {
+                        |advertisement, gluon_out| {
                             tracing::trace!(
                                 interface = "QueryableObject", method = "add_interface", ?
-                                guard, "←"
+                                advertisement, "←"
                             );
-                            guard.write_owned(gluon_out)?;
+                            advertisement.write_owned(gluon_out)?;
                             Ok(())
                         },
                     );
@@ -443,10 +416,10 @@ pub trait QueryableObjectHandler: gluon::Handler + Send + Sync + 'static {
     }
 }
 #[derive(Debug, Clone)]
-pub struct QueryableInterfaceGuard {
+pub struct QueryableInterface {
     obj: gluon::Ref,
 }
-impl gluon::Convertable for QueryableInterfaceGuard {
+impl gluon::Convertable for QueryableInterface {
     fn write(
         &self,
         gluon_data: &mut gluon::DataBuilder,
@@ -455,7 +428,7 @@ impl gluon::Convertable for QueryableInterfaceGuard {
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
         let obj = gluon::Ref::read(gluon_data)?;
-        Ok(QueryableInterfaceGuard::from_ref(obj))
+        Ok(QueryableInterface::from_ref(obj))
     }
     fn write_owned(
         self,
@@ -464,33 +437,33 @@ impl gluon::Convertable for QueryableInterfaceGuard {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for QueryableInterfaceGuard {
-    const ID: &'static str = "org.stardustxr.Query.QueryableInterfaceGuard";
+impl gluon::Interface for QueryableInterface {
+    const ID: &'static str = "org.stardustxr.Query.QueryableInterface";
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: QueryableInterfaceGuardHandler> gluon::HandledBy<H> for QueryableInterfaceGuard {}
-impl gluon::RefExt for QueryableInterfaceGuard {
-    fn from_ref(obj: gluon::Ref) -> QueryableInterfaceGuard {
-        QueryableInterfaceGuard { obj }
+impl<H: QueryableInterfaceHandler> gluon::HandledBy<H> for QueryableInterface {}
+impl gluon::RefExt for QueryableInterface {
+    fn from_ref(obj: gluon::Ref) -> QueryableInterface {
+        QueryableInterface { obj }
     }
 }
-impl QueryableInterfaceGuard {
+impl QueryableInterface {
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> QueryableInterfaceGuard {
-        QueryableInterfaceGuard { obj }
+    pub fn from_ref(obj: gluon::Ref) -> QueryableInterface {
+        QueryableInterface { obj }
     }
 }
-impl From<QueryableInterfaceGuard> for gluon::Ref {
-    fn from(value: QueryableInterfaceGuard) -> Self {
+impl From<QueryableInterface> for gluon::Ref {
+    fn from(value: QueryableInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for QueryableInterfaceGuard {
+impl gluon::ToRef for QueryableInterface {
     fn to_ref(&self) -> gluon::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for QueryableInterfaceGuard {
+impl gluon::Liveness for QueryableInterface {
     fn alive(&self) -> bool {
         gluon::Liveness::alive(&self.obj)
     }
@@ -500,18 +473,18 @@ impl gluon::Liveness for QueryableInterfaceGuard {
         gluon::Liveness::death_notification(&self.obj)
     }
 }
-impl std::hash::Hash for QueryableInterfaceGuard {
+impl std::hash::Hash for QueryableInterface {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.obj.hash(state);
     }
 }
-impl PartialEq for QueryableInterfaceGuard {
+impl PartialEq for QueryableInterface {
     fn eq(&self, other: &Self) -> bool {
         self.obj == other.obj
     }
 }
-impl Eq for QueryableInterfaceGuard {}
-pub trait QueryableInterfaceGuardHandler: gluon::Handler + Send + Sync + 'static {
+impl Eq for QueryableInterface {}
+pub trait QueryableInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,

@@ -2,28 +2,49 @@ import "org.stardustxr.Spatial" as spatial
 import "org.stardustxr.Field" as field
 import "org.stardustxr.Types" as types
 
-/// shareable ref used to give querying clients a static object id
-interface QueryableObjectRef {}
-/// Object used to expose interfaces to the query system
-interface QueryableObject {
-	queryable_ref() -> (queryable: Ref<QueryableObjectRef>)
-	add_interface(interface: Ref, interface_id: String) -> (guard: Ref<QueryableInterfaceGuard>)
+/// identifies one queryable across a stream of query events
+///
+/// correlation, not authority: `moved`, `interfaces_changed` and `left` arrive after the
+/// `entered` that introduced the object, and this is what ties them to the entry you made
+/// then. Unique per server and never reused, so it is safe as a map key for as long as you
+/// care about the object; meaningless to anyone but the query stream it came from.
+struct QueryableId {
+	id: u64,
 }
 
-/// interface that handles removing interfaces from the object
-interface QueryableInterfaceGuard {}
+/// Object used to expose interfaces to the query system
+///
+/// this node *is* the queryable: drop it to destroy it, which is what tells the server the
+/// owner is done. Querying clients never receive this — they get a [QueryableId] — so its
+/// refs are yours alone and dropping the last one is unambiguous.
+interface QueryableObject {
+	/// this queryable's id, as querying clients see it
+	id() -> (id: QueryableId)
+	/// advertise `interface` under `interface_id` so queries depending on that id find it
+	///
+	/// the returned advertisement is what keeps it listed: drop it to stop advertising
+	/// without taking down the node that serves the interface. That node dying withdraws
+	/// the advertisement too — a ref going dead always means the object behind it is gone,
+	/// never that someone revoked it.
+	add_interface(interface: Ref, interface_id: String) -> (advertisement: Result<Ref<QueryableInterface>, QueryableError>)
+}
+
+/// a live advertisement of one interface on a queryable; drop it to stop advertising
+interface QueryableInterface {}
 
 /// interface to register queryable objects
 interface QueryInterface {
 	register_queryable(spatial: Ref<spatial::Spatial>, field: Ref<field::Field>) -> (queryable: Result<Ref<QueryableObject>, QueryableError>)
 }
 
-/// error returned from QueryInterface::register_queryable
+/// error returned from QueryInterface::register_queryable and QueryableObject::add_interface
 enum QueryableError {
 	/// You don't own this spatial or it didn't come from the right stardust server!
 	NotOwnedSpatial,
 	/// You don't own this field or it didn't come from the right stardust server!
 	NotOwnedField,
+	/// This queryable already advertises an interface with that id, drop that advertisement first!
+	DuplicateInterface,
 }
 
 /// Dependency on an interface in query

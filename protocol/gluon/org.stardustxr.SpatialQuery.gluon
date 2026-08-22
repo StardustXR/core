@@ -17,11 +17,24 @@ struct BeamQuery {
 }
 
 /// handle the beam query
+///
+/// this node is the query's lifetime: drop it to stop querying. Everything else it hands
+/// you (the handle, the object refs) is yours to drop whenever you like.
 interface BeamQueryHandler {
-  intersected(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::RayMarchResult)
-  interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
-  moved(obj: Ref<query::QueryableObjectRef>, spatial_info: field::RayMarchResult)
-  left(obj: Ref<query::QueryableObjectRef>)
+  intersected(obj: query::QueryableId, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::RayMarchResult)
+  interfaces_changed(obj: query::QueryableId, interfaces: Vec<query::QueriedInterface>)
+  moved(obj: query::QueryableId, spatial_info: field::RayMarchResult)
+  /// stop caring about this object: it left the beam, or it was destroyed
+  left(obj: query::QueryableId)
+}
+
+/// retarget a live beam query without re-entering everything it already hit
+///
+/// only the data is editable — `reference_spatial` is fixed for the query's life, so to
+/// aim the beam somewhere else, move that spatial. Dropping this handle just gives up the
+/// ability to edit; the query lives as long as its handler does.
+interface BeamQueryHandle {
+  update(origin: types::Vec3f, direction: types::Vec3f, max_length: f32)
 }
 
 /// Get interfaces intersecting this field
@@ -34,11 +47,22 @@ struct ZoneQuery {
 }
 
 /// handle the zone query
+///
+/// this node is the query's lifetime: drop it to stop querying.
 interface ZoneQueryHandler {
-  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, relative_position: types::Vec3f, spatial_info: field::FieldSample)
-  interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
-  moved(obj: Ref<query::QueryableObjectRef>, relative_position: types::Vec3f, spatial_info: field::FieldSample)
-  left(obj: Ref<query::QueryableObjectRef>)
+  entered(obj: query::QueryableId, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, relative_position: types::Vec3f, spatial_info: field::FieldSample)
+  interfaces_changed(obj: query::QueryableId, interfaces: Vec<query::QueriedInterface>)
+  moved(obj: query::QueryableId, relative_position: types::Vec3f, spatial_info: field::FieldSample)
+  /// stop caring about this object: it left the zone, or it was destroyed
+  left(obj: query::QueryableId)
+}
+
+/// resize a live zone query
+///
+/// `zone_field` is fixed for the query's life — reshape or move that field to change what
+/// the zone covers, both of which re-run the query on their own.
+interface ZoneQueryHandle {
+  update(margin: f32)
 }
 
 /// Get interfaces of fields containing any points
@@ -50,17 +74,33 @@ struct PointsQuery {
 }
 
 /// handle the points query
+///
+/// this node is the query's lifetime: drop it to stop querying.
 interface PointsQueryHandler {
-  entered(obj: Ref<query::QueryableObjectRef>, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::FieldSample)
-  interfaces_changed(obj: Ref<query::QueryableObjectRef>, interfaces: Vec<query::QueriedInterface>)
-  moved(obj: Ref<query::QueryableObjectRef>, spatial_info: field::FieldSample)
-  left(obj: Ref<query::QueryableObjectRef>)
+  entered(obj: query::QueryableId, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::FieldSample)
+  interfaces_changed(obj: query::QueryableId, interfaces: Vec<query::QueriedInterface>)
+  moved(obj: query::QueryableId, spatial_info: field::FieldSample)
+  /// stop caring about this object: no point is in range of it any more, or it was destroyed
+  left(obj: query::QueryableId)
+}
+
+/// move the points of a live query
+///
+/// the one set of query parameters no spatial can express: each point carries its own
+/// margin and they move relative to each other, so hand them over per frame.
+/// `reference_spatial` they're relative to is fixed for the query's life.
+interface PointsQueryHandle {
+  update(points: Vec<Point>)
 }
 
 /// main spatial query service
+///
+/// every query lives exactly as long as the `handler` node passed in with it. The handle
+/// each of these returns edits the query's data; it owns nothing, so dropping it leaves
+/// the query running.
 interface SpatialQueryInterface {
-  beam_query(query: BeamQuery) -> (guard: Result<Ref<SpatialQueryGuard>, QueryError>)
-  zone_query(query: ZoneQuery) -> (guard: Result<Ref<SpatialQueryGuard>, QueryError>)
+  beam_query(query: BeamQuery) -> (handle: Result<Ref<BeamQueryHandle>, QueryError>)
+  zone_query(query: ZoneQuery) -> (handle: Result<Ref<ZoneQueryHandle>, QueryError>)
   points_query(query: PointsQuery) -> (handle: Result<Ref<PointsQueryHandle>, QueryError>)
 }
 
@@ -78,9 +118,3 @@ struct Point {
   // the distance from a field to match in meters
   margin: f32,
 }
-/// handle to a points query
-interface PointsQueryHandle {
-  update_points(points: Vec<Point>)
-}
-/// guard for spatial queries
-interface SpatialQueryGuard {}

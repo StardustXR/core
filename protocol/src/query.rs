@@ -10,6 +10,9 @@ impl Display for QueryableError {
 				f.write_str("This server doesn't own this SpatialRef!")
 			}
 			QueryableError::NotOwnedField => f.write_str("This server doesn't own this FieldRef!"),
+			QueryableError::DuplicateInterface => {
+				f.write_str("This queryable already advertises an interface with that id!")
+			}
 		}
 	}
 }
