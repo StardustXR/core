@@ -7,6 +7,7 @@ use stardust_xr_fusion::{
 	drawable::LinesExt,
 	fields::{FieldRef, FieldSample},
 	project_local_resources,
+	query::QueryableId,
 	spatial::{Spatial, SpatialExt, SpatialRef, Transform},
 	spatial_query::{Point, PointsQuery, PointsQueryHandler, PointsQueryHandlerHandler},
 	suis::InputHandler,
@@ -14,7 +15,7 @@ use stardust_xr_fusion::{
 };
 use stardust_xr_protocol::{
 	lines::{Line, LinePoint, Lines},
-	query::{InterfaceDependency, QueriedInterface, QueryableObjectRef},
+	query::{InterfaceDependency, QueriedInterface},
 };
 use tokio::sync::broadcast::error::RecvError;
 use tracing::warn;
@@ -29,7 +30,7 @@ async fn main() {
 		.await
 		.unwrap();
 
-	let handlers: Arc<Mutex<HashMap<QueryableObjectRef, SpatialRef>>> =
+	let handlers: Arc<Mutex<HashMap<QueryableId, SpatialRef>>> =
 		Arc::new(Mutex::new(HashMap::new()));
 	let points_query_handler = PointsQueryHandler::new_service(Querier {
 		handlers: handlers.clone(),
@@ -39,7 +40,7 @@ async fn main() {
 	let _points_query_handle = client
 		.spatial_query_interface()
 		.points_query(PointsQuery {
-			handler: points_query_handler,
+			handler: points_query_handler.into_proxy(),
 			interfaces: vec![InterfaceDependency {
 				id: InputHandler::QUERY_INTERFACE.into(),
 				optional: false,
@@ -101,13 +102,13 @@ async fn main() {
 
 #[derive(Debug, Handler)]
 struct Querier {
-	handlers: Arc<Mutex<HashMap<QueryableObjectRef, SpatialRef>>>,
+	handlers: Arc<Mutex<HashMap<QueryableId, SpatialRef>>>,
 }
 impl PointsQueryHandlerHandler for Querier {
 	async fn entered(
 		&self,
 		_ctx: gluon::Context,
-		obj: QueryableObjectRef,
+		obj: QueryableId,
 		_field: FieldRef,
 		spatial: SpatialRef,
 		_interfaces: Vec<QueriedInterface>,
@@ -119,13 +120,13 @@ impl PointsQueryHandlerHandler for Querier {
 	async fn interfaces_changed(
 		&self,
 		_ctx: gluon::Context,
-		_obj: QueryableObjectRef,
+		_obj: QueryableId,
 		_interfaces: Vec<QueriedInterface>,
 	) {
 	}
-	async fn moved(&self, _ctx: gluon::Context, _obj: QueryableObjectRef, _sample: FieldSample) {}
+	async fn moved(&self, _ctx: gluon::Context, _obj: QueryableId, _sample: FieldSample) {}
 
-	async fn left(&self, _ctx: gluon::Context, obj: QueryableObjectRef) {
+	async fn left(&self, _ctx: gluon::Context, obj: QueryableId) {
 		self.handlers.lock().remove(&obj);
 	}
 }

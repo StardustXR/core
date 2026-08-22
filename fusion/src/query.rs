@@ -16,7 +16,7 @@ pub trait QueryableExt {
 	fn add_interface<I: Interface>(
 		&self,
 		interface: &I,
-	) -> impl std::future::Future<Output = Result<QueryableInterfaceGuard>> + Send;
+	) -> impl std::future::Future<Output = Result<QueryableInterface>> + Send;
 }
 impl QueryableExt for QueryableObject {
 	async fn new<H: ClientHandler>(
@@ -31,7 +31,7 @@ impl QueryableExt for QueryableObject {
 			.await??)
 	}
 
-	async fn add_interface<I: Interface>(&self, interface: &I) -> Result<QueryableInterfaceGuard> {
-		Ok(self.add_interface(interface, I::ID).await?)
+	async fn add_interface<I: Interface>(&self, interface: &I) -> Result<QueryableInterface> {
+		Ok(self.add_interface(interface, I::ID).await??)
 	}
 }
