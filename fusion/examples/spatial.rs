@@ -53,9 +53,19 @@ async fn main() {
 	let ring_outer_spatial = ring_outer.get_spatial().await.unwrap();
 
 	let mut elapsed = 0f32;
+	let server = client.server();
 	let mut frame_recv = client.frame_receiver();
 	loop {
-		let info = match frame_recv.recv().await {
+		let frame_info = tokio::select! {
+			e = frame_recv.recv() => {
+				e
+			}
+			_ = server.death_notification() => {
+				break;
+			}
+		};
+
+		let info = match frame_info {
 			Ok(v) => v,
 			Err(RecvError::Lagged(n)) => {
 				warn!("lost {n} frame events");
@@ -88,9 +98,5 @@ async fn main() {
 		ring_outer_spatial
 			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_x(elapsed)))
 			.unwrap();
-
-		if !client.server().alive() {
-			break;
-		}
 	}
 }
