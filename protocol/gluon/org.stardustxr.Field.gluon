@@ -89,7 +89,6 @@ interface FieldRef {}
 /// A signed distance field with adjustable shape.
 interface Field {
 	field_ref() -> (field: Ref<FieldRef>)
-	spatial() -> (spatial: Ref<spatial::Spatial>)
 
 	sample(reference_space: Ref<spatial::SpatialRef>, point: types::Vec3f) -> (result: FieldSample)
 	ray_march(reference_space: Ref<spatial::SpatialRef>, ray_origin: types::Vec3f, ray_direction: types::Vec3f) -> (result: Option<RayMarchResult>)
