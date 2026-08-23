@@ -1,4 +1,5 @@
 use glam::Quat;
+use gluon::Liveness;
 use stardust_xr_fusion::{
 	client::Client,
 	drawable::ModelExt,
@@ -87,5 +88,9 @@ async fn main() {
 		ring_outer_spatial
 			.set_local_transform(PartTransform::from_rotation(Quat::from_rotation_x(elapsed)))
 			.unwrap();
+
+		if !client.server().alive() {
+			break;
+		}
 	}
 }
