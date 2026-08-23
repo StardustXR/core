@@ -3,6 +3,8 @@ interface KeymapStore {
 	/// Register a xkbcommon keymap, deduplicates
 	exchange(keymap: XkbcommonKeymapFd) -> (keymap: Result<Ref<Keymap>, KeymapExchangeError>)
 	get(keymap: Ref<Keymap>) -> (keymap: Option<XkbcommonKeymapFd>)
+	/// returns a unique and opaque id for the keymap
+	get_keymap_id(keymap: Ref<Keymap>) -> (id: u64)
 }
 
 /// A Fd representing an xkbcommon keymap with a null byte
@@ -12,7 +14,7 @@ struct XkbcommonKeymapFd {
 	size: u32,
 }
 
-/// A reference to a keymap
+/// A reference to a keymap, multiple unique Refs may point to the same underlying keymap
 interface Keymap {}
 
 /// Error returned by KeymapStore::exchange
