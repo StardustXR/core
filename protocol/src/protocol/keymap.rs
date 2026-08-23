@@ -169,6 +169,29 @@ impl KeymapStore {
         );
         Ok(__ret_keymap)
     }
+    ///returns a unique and opaque id for the keymap
+    pub async fn get_keymap_id(
+        &self,
+        keymap: impl Into<Keymap>,
+    ) -> Result<u64, gluon::SendError> {
+        let keymap: Keymap = keymap.into();
+        tracing::trace!(
+            interface = "KeymapStore", method = "get_keymap_id", ? keymap, "→"
+        );
+        let mut gluon_builder = gluon::DataBuilder::new();
+        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
+        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        gluon_builder.write_ref(&gluon_ret)?;
+        keymap.write(&mut gluon_builder)?;
+        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        let mut reader = gluon_recv.recv().await.unwrap();
+        drop(gluon_ret_node);
+        let __ret_id = gluon::Convertable::read(&mut reader)?;
+        tracing::trace!(
+            interface = "KeymapStore", method = "get_keymap_id", ? __ret_id, "←"
+        );
+        Ok(__ret_id)
+    }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
     pub fn from_ref(obj: gluon::Ref) -> KeymapStore {
         KeymapStore { obj }
@@ -241,6 +264,24 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
             reply.send(keymap)
         }
     }
+    ///returns a unique and opaque id for the keymap
+    fn get_keymap_id(
+        &self,
+        _ctx: gluon::Context,
+        keymap: Keymap,
+    ) -> impl Future<Output = u64> + Send + Sync;
+    ///Dispatched instead of [`Self::get_keymap_id`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_keymap_id` and sends the result through `reply`. Override this method instead of `get_keymap_id` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
+    fn get_keymap_id_oneway(
+        &self,
+        _ctx: gluon::Context,
+        keymap: Keymap,
+        reply: gluon::ReplySender<u64>,
+    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        async move {
+            let id = self.get_keymap_id(_ctx, keymap).await;
+            reply.send(id)
+        }
+    }
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
@@ -300,6 +341,34 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
                             tracing::trace_span!(
                                 "dispatching", interface = "KeymapStore", method = "get",
                                 method_id = 9u32
+                            ),
+                        )
+                        .await?;
+                }
+                10u32 => {
+                    let return_callback = gluon_data.read_ref()?;
+                    let param_keymap = gluon::Convertable::read(&mut gluon_data)?;
+                    tracing::trace!(
+                        interface = "KeymapStore", method = "get_keymap_id", ?
+                        param_keymap, "dispatching"
+                    );
+                    drop(gluon_data);
+                    let reply: gluon::ReplySender<u64> = gluon::ReplySender::new(
+                        return_callback,
+                        |id, gluon_out| {
+                            tracing::trace!(
+                                interface = "KeymapStore", method = "get_keymap_id", ? id,
+                                "←"
+                            );
+                            id.write_owned(gluon_out)?;
+                            Ok(())
+                        },
+                    );
+                    self.get_keymap_id_oneway(ctx, param_keymap, reply)
+                        .instrument(
+                            tracing::trace_span!(
+                                "dispatching", interface = "KeymapStore", method =
+                                "get_keymap_id", method_id = 10u32
                             ),
                         )
                         .await?;

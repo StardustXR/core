@@ -630,19 +630,6 @@ impl Field {
         tracing::trace!(interface = "Field", method = "field_ref", ? __ret_field, "←");
         Ok(__ret_field)
     }
-    pub async fn spatial(&self) -> Result<super::spatial::Spatial, gluon::SendError> {
-        tracing::trace!(interface = "Field", method = "spatial", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
-        gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
-        let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
-        tracing::trace!(interface = "Field", method = "spatial", ? __ret_spatial, "←");
-        Ok(__ret_spatial)
-    }
     pub async fn sample(
         &self,
         reference_space: impl Into<super::spatial::SpatialRef>,
@@ -659,7 +646,7 @@ impl Field {
         gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
         drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
@@ -686,7 +673,7 @@ impl Field {
         reference_space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 11u32, gluon_builder)?;
+        gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
         drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
@@ -700,7 +687,7 @@ impl Field {
         tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
         shape.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 12u32, gluon_builder)?;
+        gluon::transact(&self.obj, 11u32, gluon_builder)?;
         Ok(())
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
@@ -753,21 +740,6 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
         async move {
             let field = self.field_ref(_ctx).await;
             reply.send(field)
-        }
-    }
-    fn spatial(
-        &self,
-        _ctx: gluon::Context,
-    ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
-    ///Dispatched instead of [`Self::spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `spatial` and sends the result through `reply`. Override this method instead of `spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
-    fn spatial_oneway(
-        &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::spatial::Spatial>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
-        async move {
-            let spatial = self.spatial(_ctx).await;
-            reply.send(spatial)
         }
     }
     fn sample(
@@ -852,31 +824,6 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    tracing::trace!(
-                        interface = "Field", method = "spatial", "dispatching"
-                    );
-                    drop(gluon_data);
-                    let reply: gluon::ReplySender<super::spatial::Spatial> = gluon::ReplySender::new(
-                        return_callback,
-                        |spatial, gluon_out| {
-                            tracing::trace!(
-                                interface = "Field", method = "spatial", ? spatial, "←"
-                            );
-                            spatial.write_owned(gluon_out)?;
-                            Ok(())
-                        },
-                    );
-                    self.spatial_oneway(ctx, reply)
-                        .instrument(
-                            tracing::trace_span!(
-                                "dispatching", interface = "Field", method = "spatial",
-                                method_id = 9u32
-                            ),
-                        )
-                        .await?;
-                }
-                10u32 => {
-                    let return_callback = gluon_data.read_ref()?;
                     let param_reference_space = gluon::Convertable::read(
                         &mut gluon_data,
                     )?;
@@ -906,12 +853,12 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .instrument(
                             tracing::trace_span!(
                                 "dispatching", interface = "Field", method = "sample",
-                                method_id = 10u32
+                                method_id = 9u32
                             ),
                         )
                         .await?;
                 }
-                11u32 => {
+                10u32 => {
                     let return_callback = gluon_data.read_ref()?;
                     let param_reference_space = gluon::Convertable::read(
                         &mut gluon_data,
@@ -957,12 +904,12 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .instrument(
                             tracing::trace_span!(
                                 "dispatching", interface = "Field", method = "ray_march",
-                                method_id = 11u32
+                                method_id = 10u32
                             ),
                         )
                         .await?;
                 }
-                12u32 => {
+                11u32 => {
                     let param_shape = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Field", method = "set_shape", ? param_shape,
@@ -973,7 +920,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .instrument(
                             tracing::trace_span!(
                                 "dispatching", interface = "Field", method = "set_shape",
-                                method_id = 12u32
+                                method_id = 11u32
                             ),
                         )
                         .await;
