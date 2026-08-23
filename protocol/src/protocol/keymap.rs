@@ -173,7 +173,7 @@ impl KeymapStore {
     pub async fn get_keymap_id(
         &self,
         keymap: impl Into<Keymap>,
-    ) -> Result<u64, gluon::SendError> {
+    ) -> Result<Option<u64>, gluon::SendError> {
         let keymap: Keymap = keymap.into();
         tracing::trace!(
             interface = "KeymapStore", method = "get_keymap_id", ? keymap, "→"
@@ -269,13 +269,13 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
         &self,
         _ctx: gluon::Context,
         keymap: Keymap,
-    ) -> impl Future<Output = u64> + Send + Sync;
+    ) -> impl Future<Output = Option<u64>> + Send + Sync;
     ///Dispatched instead of [`Self::get_keymap_id`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_keymap_id` and sends the result through `reply`. Override this method instead of `get_keymap_id` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn get_keymap_id_oneway(
         &self,
         _ctx: gluon::Context,
         keymap: Keymap,
-        reply: gluon::ReplySender<u64>,
+        reply: gluon::ReplySender<Option<u64>>,
     ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
         async move {
             let id = self.get_keymap_id(_ctx, keymap).await;
@@ -353,7 +353,7 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
                         param_keymap, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<u64> = gluon::ReplySender::new(
+                    let reply: gluon::ReplySender<Option<u64>> = gluon::ReplySender::new(
                         return_callback,
                         |id, gluon_out| {
                             tracing::trace!(

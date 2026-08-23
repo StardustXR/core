@@ -4,7 +4,7 @@ interface KeymapStore {
 	exchange(keymap: XkbcommonKeymapFd) -> (keymap: Result<Ref<Keymap>, KeymapExchangeError>)
 	get(keymap: Ref<Keymap>) -> (keymap: Option<XkbcommonKeymapFd>)
 	/// returns a unique and opaque id for the keymap
-	get_keymap_id(keymap: Ref<Keymap>) -> (id: u64)
+	get_keymap_id(keymap: Ref<Keymap>) -> (id: Option<u64>)
 }
 
 /// A Fd representing an xkbcommon keymap with a null byte
