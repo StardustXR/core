@@ -804,13 +804,8 @@ impl gluon::ToRef for DmatexRef {
     }
 }
 impl gluon::Liveness for DmatexRef {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for DmatexRef {
@@ -974,13 +969,8 @@ impl gluon::ToRef for DmatexInterface {
     }
 }
 impl gluon::Liveness for DmatexInterface {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for DmatexInterface {
@@ -1250,13 +1240,8 @@ impl gluon::ToRef for DmatexSubmitRelease {
     }
 }
 impl gluon::Liveness for DmatexSubmitRelease {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for DmatexSubmitRelease {

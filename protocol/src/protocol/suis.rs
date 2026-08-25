@@ -807,13 +807,8 @@ impl gluon::ToRef for InputHandler {
     }
 }
 impl gluon::Liveness for InputHandler {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for InputHandler {
@@ -1129,13 +1124,8 @@ impl gluon::ToRef for InputMethod {
     }
 }
 impl gluon::Liveness for InputMethod {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for InputMethod {
@@ -1318,13 +1308,8 @@ impl gluon::ToRef for InputMethodCapture {
     }
 }
 impl gluon::Liveness for InputMethodCapture {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for InputMethodCapture {

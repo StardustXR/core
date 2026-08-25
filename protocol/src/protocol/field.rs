@@ -541,13 +541,8 @@ impl gluon::ToRef for FieldRef {
     }
 }
 impl gluon::Liveness for FieldRef {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for FieldRef {
@@ -706,13 +701,8 @@ impl gluon::ToRef for Field {
     }
 }
 impl gluon::Liveness for Field {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Field {
@@ -1075,13 +1065,8 @@ impl gluon::ToRef for FieldInterface {
     }
 }
 impl gluon::Liveness for FieldInterface {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for FieldInterface {

@@ -286,13 +286,8 @@ impl gluon::ToRef for QueryableObject {
     }
 }
 impl gluon::Liveness for QueryableObject {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for QueryableObject {
@@ -481,13 +476,8 @@ impl gluon::ToRef for QueryableInterface {
     }
 }
 impl gluon::Liveness for QueryableInterface {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for QueryableInterface {
@@ -600,13 +590,8 @@ impl gluon::ToRef for QueryInterface {
     }
 }
 impl gluon::Liveness for QueryInterface {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for QueryInterface {

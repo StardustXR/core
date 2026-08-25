@@ -380,13 +380,8 @@ impl gluon::ToRef for SpatialRef {
     }
 }
 impl gluon::Liveness for SpatialRef {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for SpatialRef {
@@ -615,13 +610,8 @@ impl gluon::ToRef for Spatial {
     }
 }
 impl gluon::Liveness for Spatial {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Spatial {
@@ -1068,13 +1058,8 @@ impl gluon::ToRef for SpatialInterface {
     }
 }
 impl gluon::Liveness for SpatialInterface {
-    fn alive(&self) -> bool {
-        gluon::Liveness::alive(&self.obj)
-    }
-    fn death_notification(
-        &self,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        gluon::Liveness::death_notification(&self.obj)
+    fn death_notifier(&self) -> gluon::DeathNotifier {
+        gluon::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for SpatialInterface {
