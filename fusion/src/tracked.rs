@@ -12,6 +12,7 @@ pub trait TrackedExt {
 	fn controller(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
+	fn binding(name: &str) -> impl std::future::Future<Output = Result<Tracked>> + Send;
 }
 impl TrackedExt for Tracked {
 	fn hmd() -> impl Future<Output = Result<Tracked>> {
@@ -39,6 +40,10 @@ impl TrackedExt for Tracked {
 
 	fn stage_spatial() -> impl std::future::Future<Output = Result<SpatialRef>> + Send {
 		get_tracked_spatial("stardust-stage")
+	}
+
+	fn binding(name: &str) -> impl std::future::Future<Output = Result<Tracked>> + Send {
+		get_tracked(name)
 	}
 }
 
