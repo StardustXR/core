@@ -2,6 +2,7 @@ use stardust_xr_protocol::{
 	dmatex::DmatexImportError,
 	model::MaterialParamError,
 	query::QueryableError,
+	spatial_query::QueryError,
 	types::{CreateError, ResourceLoadError},
 };
 use thiserror::Error;
@@ -32,4 +33,6 @@ pub enum Error {
 	ResourceLoad(#[from] ResourceLoadError),
 	#[error("Queryable error: {0}")]
 	Queryable(#[from] QueryableError),
+	#[error("Query error: {0}")]
+	Query(#[from] QueryError),
 }
