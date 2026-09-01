@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::Display;
+use std::ops::Mul;
 
 use crate::protocol::types::proxied::{
 	Mat4F as ProtocolMat4F, Quatf as ProtocolQuatF, Size2 as ProtocolSize2, Size3 as ProtocolSize3,
@@ -7,7 +8,9 @@ use crate::protocol::types::proxied::{
 	Vec4F as ProtocolVec4F,
 };
 use crate::protocol::types::{Posef as ProtocolPosef, Timestamp as ProtocolTimestamp};
+use crate::spatial::{PartialTransform, Transform};
 use color::{AlphaColor, Rgba, color_space::LinearRgb};
+use glam::Quat;
 use rustix::time::ClockId;
 
 pub type Size2 = mint::Vector2<u32>;
@@ -217,6 +220,77 @@ impl From<Color> for crate::protocol::types::proxied::Color {
 impl From<crate::protocol::types::proxied::Color> for Color {
 	fn from(value: crate::protocol::types::proxied::Color) -> Self {
 		color::rgba_linear!(value.r, value.g, value.b, value.a)
+	}
+}
+
+impl Mul for Transform {
+	type Output = Self;
+
+	fn mul(self, rhs: Self) -> Self::Output {
+		Self {
+			translation: (glam::Vec3::from(self.translation)
+				+ glam::Quat::from(self.rotation)
+					* (glam::Vec3::from(self.scale) * glam::Vec3::from(rhs.translation)))
+			.into(),
+			rotation: (glam::Quat::from(self.rotation) * glam::Quat::from(rhs.rotation)).into(),
+			scale: (glam::Vec3::from(self.scale) * glam::Vec3::from(rhs.scale)).into(),
+		}
+	}
+}
+impl Mul<PartialTransform> for Transform {
+	type Output = Self;
+
+	fn mul(self, rhs: PartialTransform) -> Self::Output {
+		Self {
+			translation: (glam::Vec3::from(self.translation)
+				+ glam::Quat::from(self.rotation)
+					* (glam::Vec3::from(self.scale)
+						* rhs
+							.translation
+							.map(glam::Vec3::from)
+							.unwrap_or(glam::Vec3::ZERO)))
+			.into(),
+			rotation: (glam::Quat::from(self.rotation)
+				* rhs
+					.rotation
+					.map(glam::Quat::from)
+					.unwrap_or(glam::Quat::IDENTITY))
+			.into(),
+			scale: (glam::Vec3::from(self.scale)
+				* rhs.scale.map(glam::Vec3::from).unwrap_or(glam::Vec3::ONE))
+			.into(),
+		}
+	}
+}
+impl PartialTransform {
+	pub fn inverse(&self) -> Self {
+		let inv_rot = self.rotation.map(|v| glam::Quat::from(v).inverse());
+		let inv_scale = self
+			.scale
+			.map(glam::Vec3::from)
+			.map(|v| glam::Vec3::ONE / v);
+		Self {
+			translation: self
+				.translation
+				.map(glam::Vec3::from)
+				.map(|v| {
+					-(inv_rot.unwrap_or(Quat::IDENTITY) * v * inv_scale.unwrap_or(glam::Vec3::ONE))
+				})
+				.map(Into::into),
+			rotation: inv_rot.map(Into::into),
+			scale: inv_scale.map(Into::into),
+		}
+	}
+}
+impl Transform {
+	pub fn inverse(&self) -> Self {
+		let inv_rot = glam::Quat::from(self.rotation).inverse();
+		let inv_scale = glam::Vec3::ONE / glam::Vec3::from(self.scale);
+		Self {
+			translation: (-(inv_rot * glam::Vec3::from(self.translation) * inv_scale)).into(),
+			rotation: inv_rot.into(),
+			scale: inv_scale.into(),
+		}
 	}
 }
 
