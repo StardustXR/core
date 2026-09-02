@@ -30,8 +30,11 @@ impl gluon::Convertable for SkyGuard {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for SkyGuard {
+impl SkyGuard {
     const ID: &'static str = "org.stardustxr.Sky.SkyGuard";
+}
+impl gluon::Interface for SkyGuard {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SkyGuardHandler> gluon::HandledBy<H> for SkyGuard {}
@@ -94,6 +97,22 @@ pub trait SkyGuardHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<SkyGuard, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SkyGuard::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<SkyGuard, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SkyGuard::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct SkyInterface {
@@ -117,8 +136,11 @@ impl gluon::Convertable for SkyInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for SkyInterface {
+impl SkyInterface {
     const ID: &'static str = "org.stardustxr.Sky.SkyInterface";
+}
+impl gluon::Interface for SkyInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SkyInterfaceHandler> gluon::HandledBy<H> for SkyInterface {}
@@ -149,14 +171,12 @@ Returns None if the sky texture is already set.*/
             interface = "SkyInterface", method = "set_sky_tex", ? tex, ? opaque, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
         opaque.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_tex", ? __ret_guard, "←"
@@ -174,13 +194,11 @@ Returns None if the sky lighting is already set.*/
             interface = "SkyInterface", method = "set_sky_light", ? tex, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_light", ? __ret_guard, "←"
@@ -328,6 +346,25 @@ Returns None if the sky lighting is already set.*/
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<SkyInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SkyInterface::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<SkyInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SkyInterface::new_service(self)
     }
 }
 pub mod proxied {

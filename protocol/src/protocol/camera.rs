@@ -85,8 +85,11 @@ impl gluon::Convertable for CameraInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for CameraInterface {
+impl CameraInterface {
     const ID: &'static str = "org.stardustxr.Camera.CameraInterface";
+}
+impl gluon::Interface for CameraInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: CameraInterfaceHandler> gluon::HandledBy<H> for CameraInterface {}
@@ -113,13 +116,11 @@ impl CameraInterface {
             interface = "CameraInterface", method = "create_camera", ? spatial, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_camera = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "CameraInterface", method = "create_camera", ? __ret_camera,
@@ -219,6 +220,27 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<CameraInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        CameraInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<CameraInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        CameraInterface::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Camera {
@@ -242,8 +264,11 @@ impl gluon::Convertable for Camera {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Camera {
+impl Camera {
     const ID: &'static str = "org.stardustxr.Camera.Camera";
+}
+impl gluon::Interface for Camera {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: CameraHandler> gluon::HandledBy<H> for Camera {}
@@ -364,6 +389,22 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Camera, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Camera::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Camera, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Camera::new_service(self)
     }
 }
 pub mod proxied {

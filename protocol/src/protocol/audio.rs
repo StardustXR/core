@@ -30,8 +30,11 @@ impl gluon::Convertable for Sound {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Sound {
+impl Sound {
     const ID: &'static str = "org.stardustxr.Audio.Sound";
+}
+impl gluon::Interface for Sound {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SoundHandler> gluon::HandledBy<H> for Sound {}
@@ -136,6 +139,22 @@ pub trait SoundHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Sound, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Sound::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Sound, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Sound::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct AudioInterface {
@@ -159,8 +178,11 @@ impl gluon::Convertable for AudioInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for AudioInterface {
+impl AudioInterface {
     const ID: &'static str = "org.stardustxr.Audio.AudioInterface";
+}
+impl gluon::Interface for AudioInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: AudioInterfaceHandler> gluon::HandledBy<H> for AudioInterface {}
@@ -190,14 +212,12 @@ impl AudioInterface {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         sound.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_sound = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "AudioInterface", method = "create_sound", ? __ret_sound, "←"
@@ -300,6 +320,27 @@ pub trait AudioInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<AudioInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        AudioInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<AudioInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        AudioInterface::new_service(self)
     }
 }
 pub mod proxied {

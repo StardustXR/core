@@ -69,8 +69,11 @@ impl gluon::Convertable for Client {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Client {
+impl Client {
     const ID: &'static str = "org.stardustxr.Client.Client";
+}
+impl gluon::Interface for Client {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ClientHandler> gluon::HandledBy<H> for Client {}
@@ -161,6 +164,22 @@ pub trait ClientHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Client, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Client::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Client, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Client::new_service(self)
     }
 }
 pub mod proxied {

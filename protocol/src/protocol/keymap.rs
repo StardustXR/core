@@ -109,8 +109,11 @@ impl gluon::Convertable for KeymapStore {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for KeymapStore {
+impl KeymapStore {
     const ID: &'static str = "org.stardustxr.Keymap.KeymapStore";
+}
+impl gluon::Interface for KeymapStore {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: KeymapStoreHandler> gluon::HandledBy<H> for KeymapStore {}
@@ -136,13 +139,11 @@ impl KeymapStore {
         let keymap: XkbcommonKeymapFd = keymap.into();
         tracing::trace!(interface = "KeymapStore", method = "exchange", ? keymap, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         keymap.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_keymap = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "KeymapStore", method = "exchange", ? __ret_keymap, "←"
@@ -156,13 +157,11 @@ impl KeymapStore {
         let keymap: Keymap = keymap.into();
         tracing::trace!(interface = "KeymapStore", method = "get", ? keymap, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         keymap.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_keymap = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "KeymapStore", method = "get", ? __ret_keymap, "←"
@@ -179,13 +178,11 @@ impl KeymapStore {
             interface = "KeymapStore", method = "get_keymap_id", ? keymap, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         keymap.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_id = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "KeymapStore", method = "get_keymap_id", ? __ret_id, "←"
@@ -373,6 +370,25 @@ pub trait KeymapStoreHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<KeymapStore, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        KeymapStore::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<KeymapStore, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        KeymapStore::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Keymap {
@@ -396,8 +412,11 @@ impl gluon::Convertable for Keymap {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Keymap {
+impl Keymap {
     const ID: &'static str = "org.stardustxr.Keymap.Keymap";
+}
+impl gluon::Interface for Keymap {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: KeymapHandler> gluon::HandledBy<H> for Keymap {}
@@ -459,6 +478,22 @@ pub trait KeymapHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Keymap, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Keymap::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Keymap, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Keymap::new_service(self)
     }
 }
 pub mod proxied {

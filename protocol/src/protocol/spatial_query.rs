@@ -304,8 +304,11 @@ impl gluon::Convertable for BeamQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for BeamQueryHandler {
+impl BeamQueryHandler {
     const ID: &'static str = "org.stardustxr.SpatialQuery.BeamQueryHandler";
+}
+impl gluon::Interface for BeamQueryHandler {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: BeamQueryHandlerHandler> gluon::HandledBy<H> for BeamQueryHandler {}
@@ -545,6 +548,27 @@ pub trait BeamQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<BeamQueryHandler, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        BeamQueryHandler::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<BeamQueryHandler, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        BeamQueryHandler::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct BeamQueryHandle {
@@ -568,8 +592,11 @@ impl gluon::Convertable for BeamQueryHandle {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for BeamQueryHandle {
+impl BeamQueryHandle {
     const ID: &'static str = "org.stardustxr.SpatialQuery.BeamQueryHandle";
+}
+impl gluon::Interface for BeamQueryHandle {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: BeamQueryHandleHandler> gluon::HandledBy<H> for BeamQueryHandle {}
@@ -690,6 +717,27 @@ pub trait BeamQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<BeamQueryHandle, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        BeamQueryHandle::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<BeamQueryHandle, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        BeamQueryHandle::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct ZoneQueryHandler {
@@ -713,8 +761,11 @@ impl gluon::Convertable for ZoneQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for ZoneQueryHandler {
+impl ZoneQueryHandler {
     const ID: &'static str = "org.stardustxr.SpatialQuery.ZoneQueryHandler";
+}
+impl gluon::Interface for ZoneQueryHandler {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ZoneQueryHandlerHandler> gluon::HandledBy<H> for ZoneQueryHandler {}
@@ -984,6 +1035,27 @@ pub trait ZoneQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<ZoneQueryHandler, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ZoneQueryHandler::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<ZoneQueryHandler, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ZoneQueryHandler::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct ZoneQueryHandle {
@@ -1007,8 +1079,11 @@ impl gluon::Convertable for ZoneQueryHandle {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for ZoneQueryHandle {
+impl ZoneQueryHandle {
     const ID: &'static str = "org.stardustxr.SpatialQuery.ZoneQueryHandle";
+}
+impl gluon::Interface for ZoneQueryHandle {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ZoneQueryHandleHandler> gluon::HandledBy<H> for ZoneQueryHandle {}
@@ -1102,6 +1177,27 @@ pub trait ZoneQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<ZoneQueryHandle, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ZoneQueryHandle::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<ZoneQueryHandle, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ZoneQueryHandle::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct PointsQueryHandler {
@@ -1125,8 +1221,11 @@ impl gluon::Convertable for PointsQueryHandler {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for PointsQueryHandler {
+impl PointsQueryHandler {
     const ID: &'static str = "org.stardustxr.SpatialQuery.PointsQueryHandler";
+}
+impl gluon::Interface for PointsQueryHandler {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: PointsQueryHandlerHandler> gluon::HandledBy<H> for PointsQueryHandler {}
@@ -1367,6 +1466,27 @@ pub trait PointsQueryHandlerHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<PointsQueryHandler, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        PointsQueryHandler::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<PointsQueryHandler, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        PointsQueryHandler::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct PointsQueryHandle {
@@ -1390,8 +1510,11 @@ impl gluon::Convertable for PointsQueryHandle {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for PointsQueryHandle {
+impl PointsQueryHandle {
     const ID: &'static str = "org.stardustxr.SpatialQuery.PointsQueryHandle";
+}
+impl gluon::Interface for PointsQueryHandle {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: PointsQueryHandleHandler> gluon::HandledBy<H> for PointsQueryHandle {}
@@ -1485,6 +1608,27 @@ pub trait PointsQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<PointsQueryHandle, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        PointsQueryHandle::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<PointsQueryHandle, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        PointsQueryHandle::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct SpatialQueryInterface {
@@ -1508,8 +1652,11 @@ impl gluon::Convertable for SpatialQueryInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for SpatialQueryInterface {
+impl SpatialQueryInterface {
     const ID: &'static str = "org.stardustxr.SpatialQuery.SpatialQueryInterface";
+}
+impl gluon::Interface for SpatialQueryInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialQueryInterfaceHandler> gluon::HandledBy<H> for SpatialQueryInterface {}
@@ -1537,13 +1684,11 @@ impl SpatialQueryInterface {
             interface = "SpatialQueryInterface", method = "beam_query", ? query, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         query.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_handle = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SpatialQueryInterface", method = "beam_query", ? __ret_handle,
@@ -1560,13 +1705,11 @@ impl SpatialQueryInterface {
             interface = "SpatialQueryInterface", method = "zone_query", ? query, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         query.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_handle = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SpatialQueryInterface", method = "zone_query", ? __ret_handle,
@@ -1583,13 +1726,11 @@ impl SpatialQueryInterface {
             interface = "SpatialQueryInterface", method = "points_query", ? query, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         query.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_handle = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SpatialQueryInterface", method = "points_query", ? __ret_handle,
@@ -1778,6 +1919,27 @@ pub trait SpatialQueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<SpatialQueryInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SpatialQueryInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<SpatialQueryInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SpatialQueryInterface::new_service(self)
     }
 }
 pub mod proxied {

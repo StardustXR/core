@@ -506,8 +506,11 @@ impl gluon::Convertable for FieldRef {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for FieldRef {
+impl FieldRef {
     const ID: &'static str = "org.stardustxr.Field.FieldRef";
+}
+impl gluon::Interface for FieldRef {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: FieldRefHandler> gluon::HandledBy<H> for FieldRef {}
@@ -570,6 +573,22 @@ pub trait FieldRefHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<FieldRef, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        FieldRef::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<FieldRef, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        FieldRef::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Field {
@@ -593,8 +612,11 @@ impl gluon::Convertable for Field {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Field {
+impl Field {
     const ID: &'static str = "org.stardustxr.Field.Field";
+}
+impl gluon::Interface for Field {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: FieldHandler> gluon::HandledBy<H> for Field {}
@@ -615,12 +637,10 @@ impl Field {
     pub async fn field_ref(&self) -> Result<FieldRef, gluon::SendError> {
         tracing::trace!(interface = "Field", method = "field_ref", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_field = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "field_ref", ? __ret_field, "←");
         Ok(__ret_field)
@@ -636,14 +656,12 @@ impl Field {
             interface = "Field", method = "sample", ? reference_space, ? point, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "sample", ? __ret_result, "←");
         Ok(__ret_result)
@@ -662,15 +680,13 @@ impl Field {
             ray_direction, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Field", method = "ray_march", ? __ret_result, "←"
@@ -920,6 +936,22 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Field, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Field::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Field, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Field::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct FieldInterface {
@@ -943,8 +975,11 @@ impl gluon::Convertable for FieldInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for FieldInterface {
+impl FieldInterface {
     const ID: &'static str = "org.stardustxr.Field.FieldInterface";
+}
+impl gluon::Interface for FieldInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: FieldInterfaceHandler> gluon::HandledBy<H> for FieldInterface {}
@@ -976,15 +1011,13 @@ impl FieldInterface {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         field.write(&mut gluon_builder)?;
         space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "sample", ? __ret_result, "←"
@@ -1007,8 +1040,7 @@ impl FieldInterface {
             ray_origin, ? ray_direction, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         field.write(&mut gluon_builder)?;
         space.write(&mut gluon_builder)?;
@@ -1016,7 +1048,6 @@ impl FieldInterface {
         ray_direction.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_result = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "ray_march", ? __ret_result, "←"
@@ -1035,14 +1066,12 @@ impl FieldInterface {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         shape.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_field = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "create_field", ? __ret_field, "←"
@@ -1279,6 +1308,27 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<FieldInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        FieldInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<FieldInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        FieldInterface::new_service(self)
     }
 }
 pub mod proxied {

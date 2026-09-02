@@ -345,8 +345,11 @@ impl gluon::Convertable for SpatialRef {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for SpatialRef {
+impl SpatialRef {
     const ID: &'static str = "org.stardustxr.Spatial.SpatialRef";
+}
+impl gluon::Interface for SpatialRef {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialRefHandler> gluon::HandledBy<H> for SpatialRef {}
@@ -409,6 +412,22 @@ pub trait SpatialRefHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<SpatialRef, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SpatialRef::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<SpatialRef, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SpatialRef::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Spatial {
@@ -432,8 +451,11 @@ impl gluon::Convertable for Spatial {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Spatial {
+impl Spatial {
     const ID: &'static str = "org.stardustxr.Spatial.Spatial";
+}
+impl gluon::Interface for Spatial {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialHandler> gluon::HandledBy<H> for Spatial {}
@@ -455,12 +477,10 @@ impl Spatial {
     pub async fn spatial_ref(&self) -> Result<SpatialRef, gluon::SendError> {
         tracing::trace!(interface = "Spatial", method = "spatial_ref", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Spatial", method = "spatial_ref", ? __ret_spatial, "←"
@@ -471,12 +491,10 @@ impl Spatial {
     pub async fn get_local_bounding_box(&self) -> Result<BoundingBox, gluon::SendError> {
         tracing::trace!(interface = "Spatial", method = "get_local_bounding_box", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_bounding_box = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Spatial", method = "get_local_bounding_box", ?
@@ -495,13 +513,11 @@ impl Spatial {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_bounding_box = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Spatial", method = "get_relative_bounding_box", ?
@@ -520,13 +536,11 @@ impl Spatial {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 11u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_transform = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Spatial", method = "get_relative_transform", ? __ret_transform,
@@ -916,6 +930,22 @@ It will silently error and not set the spatial parent if it is to a child of its
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Spatial, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Spatial::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Spatial, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Spatial::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct SpatialInterface {
@@ -939,8 +969,11 @@ impl gluon::Convertable for SpatialInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for SpatialInterface {
+impl SpatialInterface {
     const ID: &'static str = "org.stardustxr.Spatial.SpatialInterface";
+}
+impl gluon::Interface for SpatialInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: SpatialInterfaceHandler> gluon::HandledBy<H> for SpatialInterface {}
@@ -971,14 +1004,12 @@ impl SpatialInterface {
             transform, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         parent.write(&mut gluon_builder)?;
         transform.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SpatialInterface", method = "create_spatial", ? __ret_spatial,
@@ -999,14 +1030,12 @@ impl SpatialInterface {
             relative_to, ? spatial, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_bounding_box = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SpatialInterface", method = "get_relative_bounding_box", ?
@@ -1027,14 +1056,12 @@ impl SpatialInterface {
             relative_to, ? spatial, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         relative_to.write(&mut gluon_builder)?;
         spatial.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_transform = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SpatialInterface", method = "get_relative_transform", ?
@@ -1257,6 +1284,27 @@ pub trait SpatialInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<SpatialInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SpatialInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<SpatialInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        SpatialInterface::new_service(self)
     }
 }
 pub mod proxied {

@@ -672,8 +672,11 @@ impl gluon::Convertable for InputHandler {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for InputHandler {
+impl InputHandler {
     const ID: &'static str = "org.stardustxr.SUIS.InputHandler";
+}
+impl gluon::Interface for InputHandler {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: InputHandlerHandler> gluon::HandledBy<H> for InputHandler {}
@@ -698,12 +701,10 @@ This is considered static and should not change after handler creation.*/
     ) -> Result<super::spatial::SpatialRef, gluon::SendError> {
         tracing::trace!(interface = "InputHandler", method = "get_spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputHandler", method = "get_spatial", ? __ret_spatial, "←"
@@ -714,12 +715,10 @@ This is considered static and should not change after handler creation.*/
     pub async fn get_field(&self) -> Result<super::field::FieldRef, gluon::SendError> {
         tracing::trace!(interface = "InputHandler", method = "get_field", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_field = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputHandler", method = "get_field", ? __ret_field, "←"
@@ -1015,6 +1014,25 @@ This is considered static and should not change after handler creation.*/
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<InputHandler, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        InputHandler::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<InputHandler, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        InputHandler::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct InputMethod {
@@ -1038,8 +1056,11 @@ impl gluon::Convertable for InputMethod {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for InputMethod {
+impl InputMethod {
     const ID: &'static str = "org.stardustxr.SUIS.InputMethod";
+}
+impl gluon::Interface for InputMethod {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: InputMethodHandler> gluon::HandledBy<H> for InputMethod {}
@@ -1067,13 +1088,11 @@ impl InputMethod {
             interface = "InputMethod", method = "request_capture", ? handler, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_capture = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputMethod", method = "request_capture", ? __ret_capture, "←"
@@ -1094,14 +1113,12 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         time.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_data = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "InputMethod", method = "get_spatial_data", ? __ret_data, "←"
@@ -1249,6 +1266,25 @@ Should return None when the InputMethod is captured by another InputHandler.*/
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<InputMethod, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        InputMethod::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<InputMethod, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        InputMethod::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct InputMethodCapture {
@@ -1272,8 +1308,11 @@ impl gluon::Convertable for InputMethodCapture {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for InputMethodCapture {
+impl InputMethodCapture {
     const ID: &'static str = "org.stardustxr.SUIS.InputMethodCapture";
+}
+impl gluon::Interface for InputMethodCapture {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: InputMethodCaptureHandler> gluon::HandledBy<H> for InputMethodCapture {}
@@ -1336,6 +1375,27 @@ pub trait InputMethodCaptureHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<InputMethodCapture, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        InputMethodCapture::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<InputMethodCapture, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        InputMethodCapture::new_service(self)
     }
 }
 pub mod proxied {

@@ -204,8 +204,11 @@ impl gluon::Convertable for QueryableObject {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for QueryableObject {
+impl QueryableObject {
     const ID: &'static str = "org.stardustxr.Query.QueryableObject";
+}
+impl gluon::Interface for QueryableObject {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: QueryableObjectHandler> gluon::HandledBy<H> for QueryableObject {}
@@ -227,12 +230,10 @@ impl QueryableObject {
     pub async fn id(&self) -> Result<QueryableId, gluon::SendError> {
         tracing::trace!(interface = "QueryableObject", method = "id", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_id = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "QueryableObject", method = "id", ? __ret_id, "←");
         Ok(__ret_id)
@@ -255,14 +256,12 @@ never that someone revoked it.*/
             interface_id, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         interface.write(&mut gluon_builder)?;
         interface_id.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_advertisement = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "QueryableObject", method = "add_interface", ?
@@ -417,6 +416,27 @@ never that someone revoked it.*/
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<QueryableObject, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        QueryableObject::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<QueryableObject, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        QueryableObject::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct QueryableInterface {
@@ -440,8 +460,11 @@ impl gluon::Convertable for QueryableInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for QueryableInterface {
+impl QueryableInterface {
     const ID: &'static str = "org.stardustxr.Query.QueryableInterface";
+}
+impl gluon::Interface for QueryableInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: QueryableInterfaceHandler> gluon::HandledBy<H> for QueryableInterface {}
@@ -505,6 +528,27 @@ pub trait QueryableInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<QueryableInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        QueryableInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<QueryableInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        QueryableInterface::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct QueryInterface {
@@ -528,8 +572,11 @@ impl gluon::Convertable for QueryInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for QueryInterface {
+impl QueryInterface {
     const ID: &'static str = "org.stardustxr.Query.QueryInterface";
+}
+impl gluon::Interface for QueryInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: QueryInterfaceHandler> gluon::HandledBy<H> for QueryInterface {}
@@ -559,14 +606,12 @@ impl QueryInterface {
             field, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         field.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_queryable = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "QueryInterface", method = "register_queryable", ?
@@ -673,6 +718,27 @@ pub trait QueryInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<QueryInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        QueryInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<QueryInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        QueryInterface::new_service(self)
     }
 }
 pub mod proxied {

@@ -769,8 +769,11 @@ impl gluon::Convertable for DmatexRef {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for DmatexRef {
+impl DmatexRef {
     const ID: &'static str = "org.stardustxr.Dmatex.DmatexRef";
+}
+impl gluon::Interface for DmatexRef {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: DmatexRefHandler> gluon::HandledBy<H> for DmatexRef {}
@@ -833,6 +836,22 @@ pub trait DmatexRefHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<DmatexRef, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        DmatexRef::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<DmatexRef, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        DmatexRef::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct DmatexInterface {
@@ -856,8 +875,11 @@ impl gluon::Convertable for DmatexInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for DmatexInterface {
+impl DmatexInterface {
     const ID: &'static str = "org.stardustxr.Dmatex.DmatexInterface";
+}
+impl gluon::Interface for DmatexInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: DmatexInterfaceHandler> gluon::HandledBy<H> for DmatexInterface {}
@@ -893,8 +915,7 @@ impl DmatexInterface {
             array_layers, ? planes, ? timeline_syncobj_fd, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         size.write(&mut gluon_builder)?;
         format.write(&mut gluon_builder)?;
@@ -903,7 +924,6 @@ impl DmatexInterface {
         timeline_syncobj_fd.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_dmatex = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "DmatexInterface", method = "import_dmatex", ? __ret_dmatex,
@@ -921,13 +941,11 @@ impl DmatexInterface {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         render_node.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_formats = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "DmatexInterface", method = "enumerate_formats", ? __ret_formats,
@@ -940,12 +958,10 @@ impl DmatexInterface {
             interface = "DmatexInterface", method = "primary_render_node_id", "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_drm_render_node_id = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "DmatexInterface", method = "primary_render_node_id", ?
@@ -1164,6 +1180,27 @@ pub trait DmatexInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<DmatexInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        DmatexInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<DmatexInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        DmatexInterface::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct DmatexSubmitRelease {
@@ -1187,8 +1224,11 @@ impl gluon::Convertable for DmatexSubmitRelease {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for DmatexSubmitRelease {
+impl DmatexSubmitRelease {
     const ID: &'static str = "org.stardustxr.Dmatex.DmatexSubmitRelease";
+}
+impl gluon::Interface for DmatexSubmitRelease {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: DmatexSubmitReleaseHandler> gluon::HandledBy<H> for DmatexSubmitRelease {}
@@ -1211,12 +1251,10 @@ impl DmatexSubmitRelease {
     pub async fn consume(&self) -> Result<u64, gluon::SendError> {
         tracing::trace!(interface = "DmatexSubmitRelease", method = "consume", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_release_point = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "DmatexSubmitRelease", method = "consume", ? __ret_release_point,
@@ -1308,6 +1346,27 @@ pub trait DmatexSubmitReleaseHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<DmatexSubmitRelease, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        DmatexSubmitRelease::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<DmatexSubmitRelease, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        DmatexSubmitRelease::new_service(self)
     }
 }
 pub mod proxied {

@@ -315,8 +315,11 @@ impl gluon::Convertable for ModelInterface {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for ModelInterface {
+impl ModelInterface {
     const ID: &'static str = "org.stardustxr.Model.ModelInterface";
+}
+impl gluon::Interface for ModelInterface {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ModelInterfaceHandler> gluon::HandledBy<H> for ModelInterface {}
@@ -347,14 +350,12 @@ impl ModelInterface {
             "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         model.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_model = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelInterface", method = "load_model", ? __ret_model, "←"
@@ -459,6 +460,27 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<ModelInterface, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ModelInterface::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<ModelInterface, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ModelInterface::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Model {
@@ -482,8 +504,11 @@ impl gluon::Convertable for Model {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Model {
+impl Model {
     const ID: &'static str = "org.stardustxr.Model.Model";
+}
+impl gluon::Interface for Model {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ModelHandler> gluon::HandledBy<H> for Model {}
@@ -508,13 +533,11 @@ impl Model {
         let path: String = path.into();
         tracing::trace!(interface = "Model", method = "get_part", ? path, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         path.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_part = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Model", method = "get_part", ? __ret_part, "←");
         Ok(__ret_part)
@@ -522,12 +545,10 @@ impl Model {
     pub async fn enumerate_parts(&self) -> Result<Vec<ModelPart>, gluon::SendError> {
         tracing::trace!(interface = "Model", method = "enumerate_parts", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_parts = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Model", method = "enumerate_parts", ? __ret_parts, "←"
@@ -664,6 +685,22 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Model, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Model::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Model, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Model::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct ModelPart {
@@ -687,8 +724,11 @@ impl gluon::Convertable for ModelPart {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for ModelPart {
+impl ModelPart {
     const ID: &'static str = "org.stardustxr.Model.ModelPart";
+}
+impl gluon::Interface for ModelPart {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: ModelPartHandler> gluon::HandledBy<H> for ModelPart {}
@@ -709,12 +749,10 @@ impl ModelPart {
     pub async fn get_part_path(&self) -> Result<String, gluon::SendError> {
         tracing::trace!(interface = "ModelPart", method = "get_part_path", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_path = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "get_part_path", ? __ret_path, "←"
@@ -726,12 +764,10 @@ impl ModelPart {
     ) -> Result<super::spatial::Spatial, gluon::SendError> {
         tracing::trace!(interface = "ModelPart", method = "get_spatial", "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "get_spatial", ? __ret_spatial, "←"
@@ -750,14 +786,12 @@ impl ModelPart {
             ? value, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         parameter_name.write(&mut gluon_builder)?;
         value.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_error = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "set_material_parameter", ? __ret_error,
@@ -975,6 +1009,22 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<ModelPart, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ModelPart::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<ModelPart, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        ModelPart::new_service(self)
     }
 }
 pub mod proxied {

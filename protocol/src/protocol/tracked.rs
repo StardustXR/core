@@ -30,8 +30,11 @@ impl gluon::Convertable for Tracked {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for Tracked {
+impl Tracked {
     const ID: &'static str = "org.stardustxr.Tracked.Tracked";
+}
+impl gluon::Interface for Tracked {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TrackedHandler> gluon::HandledBy<H> for Tracked {}
@@ -56,13 +59,11 @@ impl Tracked {
         let handler: TrackedStateReceiver = handler.into();
         tracing::trace!(interface = "Tracked", method = "get", ? handler, "→");
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_spatial = gluon::Convertable::read(&mut reader)?;
         let __ret_guard = gluon::Convertable::read(&mut reader)?;
         let __ret_tracked = gluon::Convertable::read(&mut reader)?;
@@ -83,14 +84,12 @@ impl Tracked {
             interface = "Tracked", method = "get_pose", ? at, ? relative_to, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
-        let (gluon_ret_handler, mut gluon_recv) = gluon::ReturnHandler::new();
-        let (gluon_ret_node, gluon_ret) = gluon::Node::new(gluon_ret_handler)?;
+        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         at.write(&mut gluon_builder)?;
         relative_to.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        drop(gluon_ret_node);
         let __ret_pose = gluon::Convertable::read(&mut reader)?;
         let __ret_tracked = gluon::Convertable::read(&mut reader)?;
         tracing::trace!(
@@ -244,6 +243,22 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Tracked, Self>), gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Tracked::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<Tracked, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        Tracked::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct TrackedGuard {
@@ -267,8 +282,11 @@ impl gluon::Convertable for TrackedGuard {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for TrackedGuard {
+impl TrackedGuard {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedGuard";
+}
+impl gluon::Interface for TrackedGuard {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TrackedGuardHandler> gluon::HandledBy<H> for TrackedGuard {}
@@ -331,6 +349,25 @@ pub trait TrackedGuardHandler: gluon::Handler + Send + Sync + 'static {
             Ok(())
         }
     }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<TrackedGuard, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        TrackedGuard::new_node(self)
+    }
+    fn to_service(self) -> Result<gluon::LocalRef<TrackedGuard, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        TrackedGuard::new_service(self)
+    }
 }
 #[derive(Debug, Clone)]
 pub struct TrackedStateReceiver {
@@ -354,8 +391,11 @@ impl gluon::Convertable for TrackedStateReceiver {
         self.obj.write_owned(gluon_data)
     }
 }
-impl gluon::Interface for TrackedStateReceiver {
+impl TrackedStateReceiver {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedStateReceiver";
+}
+impl gluon::Interface for TrackedStateReceiver {
+    const ID: &'static str = Self::ID;
 }
 ///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
 impl<H: TrackedStateReceiverHandler> gluon::HandledBy<H> for TrackedStateReceiver {}
@@ -449,6 +489,27 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
             }
             Ok(())
         }
+    }
+    fn to_node(
+        self,
+    ) -> Result<
+        (gluon::Node<Self>, gluon::LocalRef<TrackedStateReceiver, Self>),
+        gluon::NodeError,
+    >
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        TrackedStateReceiver::new_node(self)
+    }
+    fn to_service(
+        self,
+    ) -> Result<gluon::LocalRef<TrackedStateReceiver, Self>, gluon::NodeError>
+    where
+        Self: Sized,
+    {
+        use gluon::RefExt;
+        TrackedStateReceiver::new_service(self)
     }
 }
 pub mod proxied {
