@@ -17,9 +17,6 @@ struct BeamQuery {
 }
 
 /// handle the beam query
-///
-/// this node is the query's lifetime: drop it to stop querying. Everything else it hands
-/// you (the handle, the object refs) is yours to drop whenever you like.
 interface BeamQueryHandler {
   intersected(obj: query::QueryableId, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::RayMarchResult)
   interfaces_changed(obj: query::QueryableId, interfaces: Vec<query::QueriedInterface>)
@@ -29,6 +26,8 @@ interface BeamQueryHandler {
 }
 
 /// retarget a live beam query without re-entering everything it already hit
+///
+/// this node is the query's lifetime: drop it to stop querying.
 ///
 /// only the data is editable — `reference_spatial` is fixed for the query's life, so to
 /// aim the beam somewhere else, move that spatial. Dropping this handle just gives up the
@@ -47,8 +46,6 @@ struct ZoneQuery {
 }
 
 /// handle the zone query
-///
-/// this node is the query's lifetime: drop it to stop querying.
 interface ZoneQueryHandler {
   entered(obj: query::QueryableId, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, relative_position: types::Vec3f, spatial_info: field::FieldSample)
   interfaces_changed(obj: query::QueryableId, interfaces: Vec<query::QueriedInterface>)
@@ -58,6 +55,8 @@ interface ZoneQueryHandler {
 }
 
 /// resize a live zone query
+///
+/// this node is the query's lifetime: drop it to stop querying.
 ///
 /// `zone_field` is fixed for the query's life — reshape or move that field to change what
 /// the zone covers, both of which re-run the query on their own.
@@ -74,8 +73,6 @@ struct PointsQuery {
 }
 
 /// handle the points query
-///
-/// this node is the query's lifetime: drop it to stop querying.
 interface PointsQueryHandler {
   entered(obj: query::QueryableId, field: Ref<field::FieldRef>, spatial: Ref<spatial::SpatialRef>, interfaces: Vec<query::QueriedInterface>, spatial_info: field::FieldSample)
   interfaces_changed(obj: query::QueryableId, interfaces: Vec<query::QueriedInterface>)
@@ -85,6 +82,8 @@ interface PointsQueryHandler {
 }
 
 /// move the points of a live query
+///
+/// this node is the query's lifetime: drop it to stop querying.
 ///
 /// the one set of query parameters no spatial can express: each point carries its own
 /// margin and they move relative to each other, so hand them over per frame.
