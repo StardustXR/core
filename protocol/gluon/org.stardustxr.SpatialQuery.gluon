@@ -14,6 +14,8 @@ struct BeamQuery {
   direction: types::Vec3f,
   /// Maximum length of the beam in meters, can be the max f32 value
   max_length: f32,
+  /// Maximum distance the ray can be from a queryable's field, accounts for near misses
+  margin: f32,
 }
 
 /// handle the beam query

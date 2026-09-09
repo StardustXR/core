@@ -44,6 +44,8 @@ pub struct BeamQuery {
     pub direction: crate::types::Vec3F,
     ///Maximum length of the beam in meters, can be the max f32 value
     pub max_length: f32,
+    ///Maximum distance the ray can be from a queryable's field, accounts for near misses
+    pub margin: f32,
 }
 impl gluon::Convertable for BeamQuery {
     fn write(
@@ -62,6 +64,7 @@ impl gluon::Convertable for BeamQuery {
             __w.write_owned(gluon_data)?;
         }
         self.max_length.write(gluon_data)?;
+        self.margin.write(gluon_data)?;
         Ok(())
     }
     fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
@@ -81,6 +84,7 @@ impl gluon::Convertable for BeamQuery {
             __w.into()
         };
         let max_length = gluon::Convertable::read(gluon_data)?;
+        let margin = gluon::Convertable::read(gluon_data)?;
         Ok(BeamQuery {
             handler,
             interfaces,
@@ -88,6 +92,7 @@ impl gluon::Convertable for BeamQuery {
             origin,
             direction,
             max_length,
+            margin,
         })
     }
     fn write_owned(
@@ -106,6 +111,7 @@ impl gluon::Convertable for BeamQuery {
             __w.write_owned(gluon_data)?;
         }
         self.max_length.write_owned(gluon_data)?;
+        self.margin.write_owned(gluon_data)?;
         Ok(())
     }
 }
