@@ -625,18 +625,21 @@ impl BeamQueryHandle {
         origin: crate::types::Vec3F,
         direction: crate::types::Vec3F,
         max_length: impl Into<f32>,
+        margin: impl Into<f32>,
     ) -> Result<(), gluon::SendError> {
         let origin: super::types::proxied::Vec3F = origin.into();
         let direction: super::types::proxied::Vec3F = direction.into();
         let max_length: f32 = max_length.into();
+        let margin: f32 = margin.into();
         tracing::trace!(
             interface = "BeamQueryHandle", method = "update", ? origin, ? direction, ?
-            max_length, "→"
+            max_length, ? margin, "→"
         );
         let mut gluon_builder = gluon::DataBuilder::new();
         origin.write(&mut gluon_builder)?;
         direction.write(&mut gluon_builder)?;
         max_length.write(&mut gluon_builder)?;
+        margin.write(&mut gluon_builder)?;
         gluon::transact(&self.obj, 8u32, gluon_builder)?;
         Ok(())
     }
@@ -678,6 +681,7 @@ pub trait BeamQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
         origin: crate::types::Vec3F,
         direction: crate::types::Vec3F,
         max_length: f32,
+        margin: f32,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
@@ -695,10 +699,12 @@ pub trait BeamQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
                         &mut gluon_data,
                     )?;
                     let param_max_length = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_margin = gluon::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "BeamQueryHandle", method = "update", param_origin =
                         ? __wire_param_origin, param_direction = ?
-                        __wire_param_direction, ? param_max_length, "dispatching"
+                        __wire_param_direction, ? param_max_length, ? param_margin,
+                        "dispatching"
                     );
                     let param_origin: crate::types::Vec3F = {
                         let __w = __wire_param_origin;
@@ -709,7 +715,13 @@ pub trait BeamQueryHandleHandler: gluon::Handler + Send + Sync + 'static {
                         __w.into()
                     };
                     drop(gluon_data);
-                    self.update(ctx, param_origin, param_direction, param_max_length)
+                    self.update(
+                            ctx,
+                            param_origin,
+                            param_direction,
+                            param_max_length,
+                            param_margin,
+                        )
                         .instrument(
                             tracing::trace_span!(
                                 "dispatching", interface = "BeamQueryHandle", method =

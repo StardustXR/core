@@ -35,7 +35,7 @@ interface BeamQueryHandler {
 /// aim the beam somewhere else, move that spatial. Dropping this handle just gives up the
 /// ability to edit; the query lives as long as its handler does.
 interface BeamQueryHandle {
-  update(origin: types::Vec3f, direction: types::Vec3f, max_length: f32)
+  update(origin: types::Vec3f, direction: types::Vec3f, max_length: f32, margin: f32)
 }
 
 /// Get interfaces intersecting this field
