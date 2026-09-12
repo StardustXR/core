@@ -589,7 +589,7 @@ dependencies = [
 
 [[package]]
 name = "stardust-xr-fusion"
-version = "0.52.0"
+version = "0.52.1"
 dependencies = [
  "glam",
  "gluon-ipc",
@@ -605,7 +605,7 @@ dependencies = [
 
 [[package]]
 name = "stardust-xr-protocol"
-version = "0.52.0"
+version = "0.52.1"
 dependencies = [
  "fnv",
  "glam",
