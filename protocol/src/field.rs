@@ -34,7 +34,10 @@
 //! to your existing code.
 //!
 
-use crate::protocol::lines::{Line, LinePoint};
+use crate::{
+	protocol::lines::{Line, LinePoint},
+	types::Vec3F,
+};
 use color::rgba_linear;
 use glam::{Mat4, Vec3, Vec3A, vec3, vec3a};
 
@@ -137,7 +140,8 @@ impl Shape {
 	///
 	/// Pass world-space coordinates; [`Shape::Transform`] nodes handle the
 	/// world→local→world conversion internally.
-	pub fn sample(&self, point: Vec3A) -> FieldSample {
+	pub fn sample(&self, point: impl Into<Vec3F>) -> FieldSample {
+		let point = Vec3A::from(point.into());
 		match self {
 			Shape::Box { size } => box_sample(point, vec3a(size.x, size.y, size.z) * 0.5),
 			Shape::Sphere { radius } => sphere_sample(point, *radius),
@@ -487,7 +491,7 @@ fn union_sample(p: Vec3A, shapes: &[Shape]) -> FieldSample {
 			}
 			// A small negative tolerance avoids numerical rejection at
 			// near-tangent intersections.
-			shapes[j].sample(cp.into()).distance >= -1e-3
+			shapes[j].sample(cp).distance >= -1e-3
 		});
 
 		if on_boundary {
