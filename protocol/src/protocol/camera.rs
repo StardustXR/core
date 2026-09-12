@@ -1,12 +1,12 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable as _;
+use gluon_ipc::Convertable as _;
 use tracing::Instrument as _;
-pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
+pub const EXTERNAL_PROTOCOL: gluon_ipc::ExternalProtocol = gluon_ipc::ExternalProtocol {
     protocol_name: "org.stardustxr.Camera",
     types: &[
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "View",
-            supported_derives: gluon::Derives::from_bits_truncate(779u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
     ],
@@ -23,11 +23,11 @@ pub struct View {
     ///Transform applied to the view, relative to the camera
     pub camera_relative_transform: super::spatial::Transform,
 }
-impl gluon::Convertable for View {
+impl gluon_ipc::Convertable for View {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         {
             let __w: super::types::proxied::Mat4F = self
                 .projection_matrix
@@ -38,14 +38,16 @@ impl gluon::Convertable for View {
         self.camera_relative_transform.write(gluon_data)?;
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
         let projection_matrix: crate::types::Mat4F = {
-            let __w: super::types::proxied::Mat4F = gluon::Convertable::read(
+            let __w: super::types::proxied::Mat4F = gluon_ipc::Convertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let camera_relative_transform = gluon::Convertable::read(gluon_data)?;
+        let camera_relative_transform = gluon_ipc::Convertable::read(gluon_data)?;
         Ok(View {
             projection_matrix,
             camera_relative_transform,
@@ -53,8 +55,8 @@ impl gluon::Convertable for View {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         {
             let __w: super::types::proxied::Mat4F = self.projection_matrix.into();
             __w.write_owned(gluon_data)?;
@@ -65,44 +67,46 @@ impl gluon::Convertable for View {
 }
 #[derive(Debug, Clone)]
 pub struct CameraInterface {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for CameraInterface {
+impl gluon_ipc::Convertable for CameraInterface {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(CameraInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl CameraInterface {
     const ID: &'static str = "org.stardustxr.Camera.CameraInterface";
 }
-impl gluon::Interface for CameraInterface {
+impl gluon_ipc::Interface for CameraInterface {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: CameraInterfaceHandler> gluon::HandledBy<H> for CameraInterface {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type CameraInterfaceLocal<H> = gluon::LocalRef<CameraInterface, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: CameraInterfaceHandler> gluon_ipc::HandledBy<H> for CameraInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type CameraInterfaceLocal<H> = gluon_ipc::LocalRef<CameraInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: CameraInterfaceHandler> From<CameraInterfaceLocal<H>> for CameraInterface {
     fn from(value: CameraInterfaceLocal<H>) -> CameraInterface {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for CameraInterface {
-    fn from_ref(obj: gluon::Ref) -> CameraInterface {
+impl gluon_ipc::RefExt for CameraInterface {
+    fn from_ref(obj: gluon_ipc::Ref) -> CameraInterface {
         CameraInterface { obj }
     }
 }
@@ -110,18 +114,18 @@ impl CameraInterface {
     pub async fn create_camera(
         &self,
         spatial: impl Into<super::spatial::Spatial>,
-    ) -> Result<Result<Camera, super::types::CreateError>, gluon::SendError> {
+    ) -> Result<Result<Camera, super::types::CreateError>, gluon_ipc::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         tracing::trace!(
             interface = "CameraInterface", method = "create_camera", ? spatial, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_camera = gluon::Convertable::read(&mut reader)?;
+        let __ret_camera = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "CameraInterface", method = "create_camera", ? __ret_camera,
             "←"
@@ -129,23 +133,23 @@ impl CameraInterface {
         Ok(__ret_camera)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> CameraInterface {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> CameraInterface {
         CameraInterface { obj }
     }
 }
-impl From<CameraInterface> for gluon::Ref {
+impl From<CameraInterface> for gluon_ipc::Ref {
     fn from(value: CameraInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for CameraInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for CameraInterface {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for CameraInterface {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for CameraInterface {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for CameraInterface {
@@ -159,19 +163,19 @@ impl PartialEq for CameraInterface {
     }
 }
 impl Eq for CameraInterface {}
-pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
+pub trait CameraInterfaceHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn create_camera(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         spatial: super::spatial::Spatial,
     ) -> impl Future<Output = Result<Camera, super::types::CreateError>> + Send + Sync;
     ///Dispatched instead of [`Self::create_camera`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_camera` and sends the result through `reply`. Override this method instead of `create_camera` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn create_camera_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         spatial: super::spatial::Spatial,
-        reply: gluon::ReplySender<Result<Camera, super::types::CreateError>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Result<Camera, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let camera = self.create_camera(_ctx, spatial).await;
             reply.send(camera)
@@ -180,22 +184,22 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "CameraInterface", method = "create_camera", ?
                         param_spatial, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         Result<Camera, super::types::CreateError>,
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |camera, gluon_out| {
                             tracing::trace!(
@@ -223,65 +227,67 @@ pub trait CameraInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<CameraInterface, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<CameraInterface, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         CameraInterface::new_node(self)
     }
     fn to_service(
         self,
-    ) -> Result<gluon::LocalRef<CameraInterface, Self>, gluon::NodeError>
+    ) -> Result<gluon_ipc::LocalRef<CameraInterface, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         CameraInterface::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct Camera {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for Camera {
+impl gluon_ipc::Convertable for Camera {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(Camera::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl Camera {
     const ID: &'static str = "org.stardustxr.Camera.Camera";
 }
-impl gluon::Interface for Camera {
+impl gluon_ipc::Interface for Camera {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: CameraHandler> gluon::HandledBy<H> for Camera {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type CameraLocal<H> = gluon::LocalRef<Camera, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: CameraHandler> gluon_ipc::HandledBy<H> for Camera {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type CameraLocal<H> = gluon_ipc::LocalRef<Camera, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: CameraHandler> From<CameraLocal<H>> for Camera {
     fn from(value: CameraLocal<H>) -> Camera {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for Camera {
-    fn from_ref(obj: gluon::Ref) -> Camera {
+impl gluon_ipc::RefExt for Camera {
+    fn from_ref(obj: gluon_ipc::Ref) -> Camera {
         Camera { obj }
     }
 }
@@ -293,7 +299,7 @@ impl Camera {
         acquire_point: impl Into<u64>,
         release_point: impl Into<super::dmatex::DmatexSubmitRelease>,
         views: impl Into<Vec<View>>,
-    ) -> Result<(), gluon::SendError> {
+    ) -> Result<(), gluon_ipc::SendError> {
         let render_target: super::dmatex::DmatexRef = render_target.into();
         let acquire_point: u64 = acquire_point.into();
         let release_point: super::dmatex::DmatexSubmitRelease = release_point.into();
@@ -302,32 +308,32 @@ impl Camera {
             interface = "Camera", method = "request_draw", ? render_target, ?
             acquire_point, ? release_point, ? views, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
         render_target.write(&mut gluon_builder)?;
         acquire_point.write(&mut gluon_builder)?;
         release_point.write(&mut gluon_builder)?;
         views.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         Ok(())
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Camera {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> Camera {
         Camera { obj }
     }
 }
-impl From<Camera> for gluon::Ref {
+impl From<Camera> for gluon_ipc::Ref {
     fn from(value: Camera) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Camera {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for Camera {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for Camera {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for Camera {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Camera {
@@ -341,11 +347,11 @@ impl PartialEq for Camera {
     }
 }
 impl Eq for Camera {}
-pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
+pub trait CameraHandler: gluon_ipc::Handler + Send + Sync + 'static {
     ///Request that the server renders this camera, the number of views has to match the array layer count in the dmatex, or one view if the dmatex has no array layers
     fn request_draw(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         render_target: super::dmatex::DmatexRef,
         acquire_point: u64,
         release_point: super::dmatex::DmatexSubmitRelease,
@@ -354,16 +360,22 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_render_target = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_acquire_point = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_release_point = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_views = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_render_target = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_acquire_point = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_release_point = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_views = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Camera", method = "request_draw", ?
                         param_render_target, ? param_acquire_point, ?
@@ -392,18 +404,23 @@ pub trait CameraHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Camera, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<Camera, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Camera::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<Camera, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<Camera, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Camera::new_service(self)
     }
 }

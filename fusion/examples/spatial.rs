@@ -1,5 +1,5 @@
 use glam::Quat;
-use gluon::Liveness;
+use gluon_ipc::Liveness;
 use stardust_xr_fusion::{
 	client::Client,
 	drawable::ModelExt,

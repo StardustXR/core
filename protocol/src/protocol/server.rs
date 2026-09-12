@@ -1,7 +1,7 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable as _;
+use gluon_ipc::Convertable as _;
 use tracing::Instrument as _;
-pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
+pub const EXTERNAL_PROTOCOL: gluon_ipc::ExternalProtocol = gluon_ipc::ExternalProtocol {
     protocol_name: "org.stardustxr.Server",
     types: &[],
 };
@@ -10,44 +10,46 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct Server {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for Server {
+impl gluon_ipc::Convertable for Server {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(Server::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl Server {
     const ID: &'static str = "org.stardustxr.Server.Server";
 }
-impl gluon::Interface for Server {
+impl gluon_ipc::Interface for Server {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ServerHandler> gluon::HandledBy<H> for Server {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type ServerLocal<H> = gluon::LocalRef<Server, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ServerHandler> gluon_ipc::HandledBy<H> for Server {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type ServerLocal<H> = gluon_ipc::LocalRef<Server, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: ServerHandler> From<ServerLocal<H>> for Server {
     fn from(value: ServerLocal<H>) -> Server {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for Server {
-    fn from_ref(obj: gluon::Ref) -> Server {
+impl gluon_ipc::RefExt for Server {
+    fn from_ref(obj: gluon_ipc::Ref) -> Server {
         Server { obj }
     }
 }
@@ -55,14 +57,14 @@ impl Server {
     ///Get the spatial interface node.
     pub async fn spatial_interface(
         &self,
-    ) -> Result<super::spatial::SpatialInterface, gluon::SendError> {
+    ) -> Result<super::spatial::SpatialInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "spatial_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "spatial_interface", ? __ret_spatial, "←"
         );
@@ -70,14 +72,14 @@ impl Server {
     }
     pub async fn field_interface(
         &self,
-    ) -> Result<super::field::FieldInterface, gluon::SendError> {
+    ) -> Result<super::field::FieldInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "field_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "field_interface", ? __ret_spatial, "←"
         );
@@ -86,14 +88,14 @@ impl Server {
     ///Get the dmatex interface node.
     pub async fn dmatex_interface(
         &self,
-    ) -> Result<super::dmatex::DmatexInterface, gluon::SendError> {
+    ) -> Result<super::dmatex::DmatexInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "dmatex_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "dmatex_interface", ? __ret_spatial, "←"
         );
@@ -101,14 +103,14 @@ impl Server {
     }
     pub async fn text_interface(
         &self,
-    ) -> Result<super::text::TextInterface, gluon::SendError> {
+    ) -> Result<super::text::TextInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "text_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 11u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 11u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "text_interface", ? __ret_spatial, "←"
         );
@@ -116,14 +118,14 @@ impl Server {
     }
     pub async fn model_interface(
         &self,
-    ) -> Result<super::model::ModelInterface, gluon::SendError> {
+    ) -> Result<super::model::ModelInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "model_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 12u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 12u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "model_interface", ? __ret_spatial, "←"
         );
@@ -131,14 +133,14 @@ impl Server {
     }
     pub async fn lines_interface(
         &self,
-    ) -> Result<super::lines::LinesInterface, gluon::SendError> {
+    ) -> Result<super::lines::LinesInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "lines_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 13u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 13u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "lines_interface", ? __ret_spatial, "←"
         );
@@ -146,14 +148,14 @@ impl Server {
     }
     pub async fn sky_interface(
         &self,
-    ) -> Result<super::sky::SkyInterface, gluon::SendError> {
+    ) -> Result<super::sky::SkyInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "sky_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 14u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 14u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "sky_interface", ? __ret_spatial, "←"
         );
@@ -161,14 +163,14 @@ impl Server {
     }
     pub async fn audio_interface(
         &self,
-    ) -> Result<super::audio::AudioInterface, gluon::SendError> {
+    ) -> Result<super::audio::AudioInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "audio_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 15u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 15u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "audio_interface", ? __ret_spatial, "←"
         );
@@ -176,14 +178,14 @@ impl Server {
     }
     pub async fn query_interface(
         &self,
-    ) -> Result<super::query::QueryInterface, gluon::SendError> {
+    ) -> Result<super::query::QueryInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "query_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 16u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 16u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_interface = gluon::Convertable::read(&mut reader)?;
+        let __ret_interface = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "query_interface", ? __ret_interface, "←"
         );
@@ -191,14 +193,14 @@ impl Server {
     }
     pub async fn spatial_query_interface(
         &self,
-    ) -> Result<super::spatial_query::SpatialQueryInterface, gluon::SendError> {
+    ) -> Result<super::spatial_query::SpatialQueryInterface, gluon_ipc::SendError> {
         tracing::trace!(interface = "Server", method = "spatial_query_interface", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 17u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 17u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_interface = gluon::Convertable::read(&mut reader)?;
+        let __ret_interface = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "spatial_query_interface", ? __ret_interface,
             "←"
@@ -211,41 +213,41 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
     pub async fn generate_startup_token(
         &self,
         root: impl Into<super::spatial::SpatialRef>,
-    ) -> Result<Result<String, super::types::CreateError>, gluon::SendError> {
+    ) -> Result<Result<String, super::types::CreateError>, gluon_ipc::SendError> {
         let root: super::spatial::SpatialRef = root.into();
         tracing::trace!(
             interface = "Server", method = "generate_startup_token", ? root, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         root.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 18u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 18u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_token = gluon::Convertable::read(&mut reader)?;
+        let __ret_token = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Server", method = "generate_startup_token", ? __ret_token, "←"
         );
         Ok(__ret_token)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Server {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> Server {
         Server { obj }
     }
 }
-impl From<Server> for gluon::Ref {
+impl From<Server> for gluon_ipc::Ref {
     fn from(value: Server) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Server {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for Server {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for Server {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for Server {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Server {
@@ -259,18 +261,18 @@ impl PartialEq for Server {
     }
 }
 impl Eq for Server {}
-pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
+pub trait ServerHandler: gluon_ipc::Handler + Send + Sync + 'static {
     ///Get the spatial interface node.
     fn spatial_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::spatial::SpatialInterface> + Send + Sync;
     ///Dispatched instead of [`Self::spatial_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `spatial_interface` and sends the result through `reply`. Override this method instead of `spatial_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn spatial_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::spatial::SpatialInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::spatial::SpatialInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.spatial_interface(_ctx).await;
             reply.send(spatial)
@@ -278,14 +280,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn field_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::field::FieldInterface> + Send + Sync;
     ///Dispatched instead of [`Self::field_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `field_interface` and sends the result through `reply`. Override this method instead of `field_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn field_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::field::FieldInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::field::FieldInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.field_interface(_ctx).await;
             reply.send(spatial)
@@ -294,14 +296,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     ///Get the dmatex interface node.
     fn dmatex_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::dmatex::DmatexInterface> + Send + Sync;
     ///Dispatched instead of [`Self::dmatex_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `dmatex_interface` and sends the result through `reply`. Override this method instead of `dmatex_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn dmatex_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::dmatex::DmatexInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::dmatex::DmatexInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.dmatex_interface(_ctx).await;
             reply.send(spatial)
@@ -309,14 +311,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn text_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::text::TextInterface> + Send + Sync;
     ///Dispatched instead of [`Self::text_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `text_interface` and sends the result through `reply`. Override this method instead of `text_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn text_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::text::TextInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::text::TextInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.text_interface(_ctx).await;
             reply.send(spatial)
@@ -324,14 +326,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn model_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::model::ModelInterface> + Send + Sync;
     ///Dispatched instead of [`Self::model_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `model_interface` and sends the result through `reply`. Override this method instead of `model_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn model_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::model::ModelInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::model::ModelInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.model_interface(_ctx).await;
             reply.send(spatial)
@@ -339,14 +341,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn lines_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::lines::LinesInterface> + Send + Sync;
     ///Dispatched instead of [`Self::lines_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `lines_interface` and sends the result through `reply`. Override this method instead of `lines_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn lines_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::lines::LinesInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::lines::LinesInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.lines_interface(_ctx).await;
             reply.send(spatial)
@@ -354,14 +356,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn sky_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::sky::SkyInterface> + Send + Sync;
     ///Dispatched instead of [`Self::sky_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `sky_interface` and sends the result through `reply`. Override this method instead of `sky_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn sky_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::sky::SkyInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::sky::SkyInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.sky_interface(_ctx).await;
             reply.send(spatial)
@@ -369,14 +371,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn audio_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::audio::AudioInterface> + Send + Sync;
     ///Dispatched instead of [`Self::audio_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `audio_interface` and sends the result through `reply`. Override this method instead of `audio_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn audio_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::audio::AudioInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::audio::AudioInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.audio_interface(_ctx).await;
             reply.send(spatial)
@@ -384,14 +386,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn query_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::query::QueryInterface> + Send + Sync;
     ///Dispatched instead of [`Self::query_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `query_interface` and sends the result through `reply`. Override this method instead of `query_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn query_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::query::QueryInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::query::QueryInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let interface = self.query_interface(_ctx).await;
             reply.send(interface)
@@ -399,14 +401,14 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn spatial_query_interface(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::spatial_query::SpatialQueryInterface> + Send + Sync;
     ///Dispatched instead of [`Self::spatial_query_interface`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `spatial_query_interface` and sends the result through `reply`. Override this method instead of `spatial_query_interface` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn spatial_query_interface_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::spatial_query::SpatialQueryInterface>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::spatial_query::SpatialQueryInterface>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let interface = self.spatial_query_interface(_ctx).await;
             reply.send(interface)
@@ -417,16 +419,16 @@ pub trait ServerHandler: gluon::Handler + Send + Sync + 'static {
 When launching a new client, set the environment variable `STARDUST_STARTUP_TOKEN` to the returned string.*/
     fn generate_startup_token(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         root: super::spatial::SpatialRef,
     ) -> impl Future<Output = Result<String, super::types::CreateError>> + Send + Sync;
     ///Dispatched instead of [`Self::generate_startup_token`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `generate_startup_token` and sends the result through `reply`. Override this method instead of `generate_startup_token` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn generate_startup_token_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         root: super::spatial::SpatialRef,
-        reply: gluon::ReplySender<Result<String, super::types::CreateError>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Result<String, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let token = self.generate_startup_token(_ctx, root).await;
             reply.send(token)
@@ -435,9 +437,9 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
@@ -446,7 +448,9 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "spatial_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::spatial::SpatialInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<
+                        super::spatial::SpatialInterface,
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -472,7 +476,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "field_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::field::FieldInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::field::FieldInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -498,7 +502,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "dmatex_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::dmatex::DmatexInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::dmatex::DmatexInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -524,7 +528,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "text_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::text::TextInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::text::TextInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -550,7 +554,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "model_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::model::ModelInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::model::ModelInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -576,7 +580,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "lines_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::lines::LinesInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::lines::LinesInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -602,7 +606,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "sky_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::sky::SkyInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::sky::SkyInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -628,7 +632,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "audio_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::audio::AudioInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::audio::AudioInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -654,7 +658,7 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         interface = "Server", method = "query_interface", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::query::QueryInterface> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::query::QueryInterface> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |interface, gluon_out| {
                             tracing::trace!(
@@ -681,9 +685,9 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                         "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         super::spatial_query::SpatialQueryInterface,
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |interface, gluon_out| {
                             tracing::trace!(
@@ -705,15 +709,15 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
                 }
                 18u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_root = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_root = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Server", method = "generate_startup_token", ?
                         param_root, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         Result<String, super::types::CreateError>,
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |token, gluon_out| {
                             tracing::trace!(
@@ -740,61 +744,68 @@ When launching a new client, set the environment variable `STARDUST_STARTUP_TOKE
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Server, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<Server, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Server::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<Server, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<Server, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Server::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct ServerInterface {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for ServerInterface {
+impl gluon_ipc::Convertable for ServerInterface {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(ServerInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl ServerInterface {
     const ID: &'static str = "org.stardustxr.Server.ServerInterface";
 }
-impl gluon::Interface for ServerInterface {
+impl gluon_ipc::Interface for ServerInterface {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ServerInterfaceHandler> gluon::HandledBy<H> for ServerInterface {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type ServerInterfaceLocal<H> = gluon::LocalRef<ServerInterface, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ServerInterfaceHandler> gluon_ipc::HandledBy<H> for ServerInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type ServerInterfaceLocal<H> = gluon_ipc::LocalRef<ServerInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: ServerInterfaceHandler> From<ServerInterfaceLocal<H>> for ServerInterface {
     fn from(value: ServerInterfaceLocal<H>) -> ServerInterface {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for ServerInterface {
-    fn from_ref(obj: gluon::Ref) -> ServerInterface {
+impl gluon_ipc::RefExt for ServerInterface {
+    fn from_ref(obj: gluon_ipc::Ref) -> ServerInterface {
         ServerInterface { obj }
     }
 }
@@ -805,7 +816,7 @@ impl ServerInterface {
         client: impl Into<super::client::Client>,
         startup_token: impl Into<Option<String>>,
         resource_prefixes: impl Into<Vec<String>>,
-    ) -> Result<(Server, super::spatial::SpatialRef), gluon::SendError> {
+    ) -> Result<(Server, super::spatial::SpatialRef), gluon_ipc::SendError> {
         let client: super::client::Client = client.into();
         let startup_token: Option<String> = startup_token.into();
         let resource_prefixes: Vec<String> = resource_prefixes.into();
@@ -813,16 +824,16 @@ impl ServerInterface {
             interface = "ServerInterface", method = "connect", ? client, ? startup_token,
             ? resource_prefixes, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         client.write(&mut gluon_builder)?;
         startup_token.write(&mut gluon_builder)?;
         resource_prefixes.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_server = gluon::Convertable::read(&mut reader)?;
-        let __ret_root = gluon::Convertable::read(&mut reader)?;
+        let __ret_server = gluon_ipc::Convertable::read(&mut reader)?;
+        let __ret_root = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ServerInterface", method = "connect", ? __ret_server, ?
             __ret_root, "←"
@@ -832,19 +843,19 @@ impl ServerInterface {
     pub async fn startup_spatial(
         &self,
         startup_token: impl Into<String>,
-    ) -> Result<Option<super::spatial::SpatialRef>, gluon::SendError> {
+    ) -> Result<Option<super::spatial::SpatialRef>, gluon_ipc::SendError> {
         let startup_token: String = startup_token.into();
         tracing::trace!(
             interface = "ServerInterface", method = "startup_spatial", ? startup_token,
             "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         startup_token.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial_ref = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial_ref = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ServerInterface", method = "startup_spatial", ?
             __ret_spatial_ref, "←"
@@ -852,23 +863,23 @@ impl ServerInterface {
         Ok(__ret_spatial_ref)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> ServerInterface {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> ServerInterface {
         ServerInterface { obj }
     }
 }
-impl From<ServerInterface> for gluon::Ref {
+impl From<ServerInterface> for gluon_ipc::Ref {
     fn from(value: ServerInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for ServerInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for ServerInterface {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for ServerInterface {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for ServerInterface {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for ServerInterface {
@@ -882,11 +893,11 @@ impl PartialEq for ServerInterface {
     }
 }
 impl Eq for ServerInterface {}
-pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
+pub trait ServerInterfaceHandler: gluon_ipc::Handler + Send + Sync + 'static {
     ///The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
     fn connect(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         client: super::client::Client,
         startup_token: Option<String>,
         resource_prefixes: Vec<String>,
@@ -894,12 +905,12 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::connect`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `connect` and sends the result through `reply`. Override this method instead of `connect` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn connect_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         client: super::client::Client,
         startup_token: Option<String>,
         resource_prefixes: Vec<String>,
-        reply: gluon::ReplySender<(Server, super::spatial::SpatialRef)>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<(Server, super::spatial::SpatialRef)>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let (server, root) = self
                 .connect(_ctx, client, startup_token, resource_prefixes)
@@ -909,16 +920,16 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn startup_spatial(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         startup_token: String,
     ) -> impl Future<Output = Option<super::spatial::SpatialRef>> + Send + Sync;
     ///Dispatched instead of [`Self::startup_spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `startup_spatial` and sends the result through `reply`. Override this method instead of `startup_spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn startup_spatial_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         startup_token: String,
-        reply: gluon::ReplySender<Option<super::spatial::SpatialRef>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<super::spatial::SpatialRef>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial_ref = self.startup_spatial(_ctx, startup_token).await;
             reply.send(spatial_ref)
@@ -927,16 +938,18 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_client = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_resource_prefixes = gluon::Convertable::read(
+                    let param_client = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_startup_token = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
+                    let param_resource_prefixes = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
                     tracing::trace!(
@@ -945,9 +958,9 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         (Server, super::spatial::SpatialRef),
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |(server, root), gluon_out| {
                             tracing::trace!(
@@ -976,13 +989,17 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_startup_token = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_startup_token = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     tracing::trace!(
                         interface = "ServerInterface", method = "startup_spatial", ?
                         param_startup_token, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<super::spatial::SpatialRef>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<
+                        Option<super::spatial::SpatialRef>,
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial_ref, gluon_out| {
                             tracing::trace!(
@@ -1010,22 +1027,22 @@ pub trait ServerInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<ServerInterface, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<ServerInterface, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         ServerInterface::new_node(self)
     }
     fn to_service(
         self,
-    ) -> Result<gluon::LocalRef<ServerInterface, Self>, gluon::NodeError>
+    ) -> Result<gluon_ipc::LocalRef<ServerInterface, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         ServerInterface::new_service(self)
     }
 }

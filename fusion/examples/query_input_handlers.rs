@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc, vec};
 
-use gluon::{Handler, RefExt};
+use gluon_ipc::{Handler, RefExt};
 use parking_lot::Mutex;
 use stardust_xr_fusion::{
 	client::Client,
@@ -107,7 +107,7 @@ struct Querier {
 impl PointsQueryHandlerHandler for Querier {
 	async fn entered(
 		&self,
-		_ctx: gluon::Context,
+		_ctx: gluon_ipc::Context,
 		obj: QueryableId,
 		_field: FieldRef,
 		spatial: SpatialRef,
@@ -119,14 +119,14 @@ impl PointsQueryHandlerHandler for Querier {
 
 	async fn interfaces_changed(
 		&self,
-		_ctx: gluon::Context,
+		_ctx: gluon_ipc::Context,
 		_obj: QueryableId,
 		_interfaces: Vec<QueriedInterface>,
 	) {
 	}
-	async fn moved(&self, _ctx: gluon::Context, _obj: QueryableId, _sample: FieldSample) {}
+	async fn moved(&self, _ctx: gluon_ipc::Context, _obj: QueryableId, _sample: FieldSample) {}
 
-	async fn left(&self, _ctx: gluon::Context, obj: QueryableId) {
+	async fn left(&self, _ctx: gluon_ipc::Context, obj: QueryableId) {
 		self.handlers.lock().remove(&obj);
 	}
 }

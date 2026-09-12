@@ -1,6 +1,6 @@
 //! Spatial query system
 
-use gluon::Interface;
+use gluon_ipc::Interface;
 pub use stardust_xr_protocol::query::*;
 
 use crate::{Result, client::Client};

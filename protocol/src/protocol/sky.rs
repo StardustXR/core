@@ -1,7 +1,7 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable as _;
+use gluon_ipc::Convertable as _;
 use tracing::Instrument as _;
-pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
+pub const EXTERNAL_PROTOCOL: gluon_ipc::ExternalProtocol = gluon_ipc::ExternalProtocol {
     protocol_name: "org.stardustxr.Sky",
     types: &[],
 };
@@ -10,66 +10,68 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct SkyGuard {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for SkyGuard {
+impl gluon_ipc::Convertable for SkyGuard {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(SkyGuard::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl SkyGuard {
     const ID: &'static str = "org.stardustxr.Sky.SkyGuard";
 }
-impl gluon::Interface for SkyGuard {
+impl gluon_ipc::Interface for SkyGuard {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: SkyGuardHandler> gluon::HandledBy<H> for SkyGuard {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type SkyGuardLocal<H> = gluon::LocalRef<SkyGuard, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: SkyGuardHandler> gluon_ipc::HandledBy<H> for SkyGuard {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type SkyGuardLocal<H> = gluon_ipc::LocalRef<SkyGuard, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: SkyGuardHandler> From<SkyGuardLocal<H>> for SkyGuard {
     fn from(value: SkyGuardLocal<H>) -> SkyGuard {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for SkyGuard {
-    fn from_ref(obj: gluon::Ref) -> SkyGuard {
+impl gluon_ipc::RefExt for SkyGuard {
+    fn from_ref(obj: gluon_ipc::Ref) -> SkyGuard {
         SkyGuard { obj }
     }
 }
 impl SkyGuard {
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> SkyGuard {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> SkyGuard {
         SkyGuard { obj }
     }
 }
-impl From<SkyGuard> for gluon::Ref {
+impl From<SkyGuard> for gluon_ipc::Ref {
     fn from(value: SkyGuard) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for SkyGuard {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for SkyGuard {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for SkyGuard {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for SkyGuard {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for SkyGuard {
@@ -83,13 +85,13 @@ impl PartialEq for SkyGuard {
     }
 }
 impl Eq for SkyGuard {}
-pub trait SkyGuardHandler: gluon::Handler + Send + Sync + 'static {
+pub trait SkyGuardHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 _ => {}
@@ -99,61 +101,68 @@ pub trait SkyGuardHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<SkyGuard, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<SkyGuard, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         SkyGuard::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<SkyGuard, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<SkyGuard, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         SkyGuard::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct SkyInterface {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for SkyInterface {
+impl gluon_ipc::Convertable for SkyInterface {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(SkyInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl SkyInterface {
     const ID: &'static str = "org.stardustxr.Sky.SkyInterface";
 }
-impl gluon::Interface for SkyInterface {
+impl gluon_ipc::Interface for SkyInterface {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: SkyInterfaceHandler> gluon::HandledBy<H> for SkyInterface {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type SkyInterfaceLocal<H> = gluon::LocalRef<SkyInterface, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: SkyInterfaceHandler> gluon_ipc::HandledBy<H> for SkyInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type SkyInterfaceLocal<H> = gluon_ipc::LocalRef<SkyInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: SkyInterfaceHandler> From<SkyInterfaceLocal<H>> for SkyInterface {
     fn from(value: SkyInterfaceLocal<H>) -> SkyInterface {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for SkyInterface {
-    fn from_ref(obj: gluon::Ref) -> SkyInterface {
+impl gluon_ipc::RefExt for SkyInterface {
+    fn from_ref(obj: gluon_ipc::Ref) -> SkyInterface {
         SkyInterface { obj }
     }
 }
@@ -164,20 +173,20 @@ Returns None if the sky texture is already set.*/
         &self,
         tex: impl Into<super::types::Resource>,
         opaque: impl Into<bool>,
-    ) -> Result<Option<SkyGuard>, gluon::SendError> {
+    ) -> Result<Option<SkyGuard>, gluon_ipc::SendError> {
         let tex: super::types::Resource = tex.into();
         let opaque: bool = opaque.into();
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_tex", ? tex, ? opaque, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
         opaque.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        let __ret_guard = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_tex", ? __ret_guard, "←"
         );
@@ -188,41 +197,41 @@ Returns None if the sky lighting is already set.*/
     pub async fn set_sky_light(
         &self,
         tex: impl Into<super::types::Resource>,
-    ) -> Result<Option<SkyGuard>, gluon::SendError> {
+    ) -> Result<Option<SkyGuard>, gluon_ipc::SendError> {
         let tex: super::types::Resource = tex.into();
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_light", ? tex, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         tex.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_guard = gluon::Convertable::read(&mut reader)?;
+        let __ret_guard = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "SkyInterface", method = "set_sky_light", ? __ret_guard, "←"
         );
         Ok(__ret_guard)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> SkyInterface {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> SkyInterface {
         SkyInterface { obj }
     }
 }
-impl From<SkyInterface> for gluon::Ref {
+impl From<SkyInterface> for gluon_ipc::Ref {
     fn from(value: SkyInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for SkyInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for SkyInterface {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for SkyInterface {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for SkyInterface {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for SkyInterface {
@@ -236,23 +245,23 @@ impl PartialEq for SkyInterface {
     }
 }
 impl Eq for SkyInterface {}
-pub trait SkyInterfaceHandler: gluon::Handler + Send + Sync + 'static {
+pub trait SkyInterfaceHandler: gluon_ipc::Handler + Send + Sync + 'static {
     /**Set the sky texture to a given equirectagular texture.
 Returns None if the sky texture is already set.*/
     fn set_sky_tex(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         tex: super::types::Resource,
         opaque: bool,
     ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
     ///Dispatched instead of [`Self::set_sky_tex`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `set_sky_tex` and sends the result through `reply`. Override this method instead of `set_sky_tex` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn set_sky_tex_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         tex: super::types::Resource,
         opaque: bool,
-        reply: gluon::ReplySender<Option<SkyGuard>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<SkyGuard>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let guard = self.set_sky_tex(_ctx, tex, opaque).await;
             reply.send(guard)
@@ -262,16 +271,16 @@ Returns None if the sky texture is already set.*/
 Returns None if the sky lighting is already set.*/
     fn set_sky_light(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         tex: super::types::Resource,
     ) -> impl Future<Output = Option<SkyGuard>> + Send + Sync;
     ///Dispatched instead of [`Self::set_sky_light`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `set_sky_light` and sends the result through `reply`. Override this method instead of `set_sky_light` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn set_sky_light_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         tex: super::types::Resource,
-        reply: gluon::ReplySender<Option<SkyGuard>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<SkyGuard>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let guard = self.set_sky_light(_ctx, tex).await;
             reply.send(guard)
@@ -280,21 +289,21 @@ Returns None if the sky lighting is already set.*/
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_tex = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_opaque = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_tex = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_opaque = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SkyInterface", method = "set_sky_tex", ? param_tex,
                         ? param_opaque, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<SkyGuard>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Option<SkyGuard>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |guard, gluon_out| {
                             tracing::trace!(
@@ -316,13 +325,13 @@ Returns None if the sky lighting is already set.*/
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_tex = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_tex = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "SkyInterface", method = "set_sky_light", ?
                         param_tex, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<SkyGuard>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Option<SkyGuard>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |guard, gluon_out| {
                             tracing::trace!(
@@ -350,20 +359,22 @@ Returns None if the sky lighting is already set.*/
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<SkyInterface, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<SkyInterface, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         SkyInterface::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<SkyInterface, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<SkyInterface, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         SkyInterface::new_service(self)
     }
 }

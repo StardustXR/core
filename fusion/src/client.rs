@@ -1,6 +1,6 @@
 //! Your connection to the Stardust server and other essentials.
 
-use gluon::{Node, Ref, RefExt};
+use gluon_ipc::{Node, Ref, RefExt};
 pub use stardust_xr_protocol::client::{ClientHandler, FrameInfo};
 
 use crate::error::Error;
@@ -184,12 +184,12 @@ impl<H: ClientHandler> Client<H> {
 	}
 }
 
-#[derive(Debug, gluon::Handler)]
+#[derive(Debug, gluon_ipc::Handler)]
 pub struct DefaultHandler {
 	frame_sender: broadcast::Sender<FrameInfo>,
 }
 impl ClientHandler for DefaultHandler {
-	async fn frame(&self, _ctx: gluon::Context, info: FrameInfo) {
+	async fn frame(&self, _ctx: gluon_ipc::Context, info: FrameInfo) {
 		_ = self.frame_sender.send(info);
 	}
 }

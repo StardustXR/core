@@ -1,4 +1,4 @@
-use gluon::RefExt;
+use gluon_ipc::RefExt;
 use stardust_xr_fusion::{
 	client::Client,
 	fields::{Field, FieldExt, FieldRef, Shape},
@@ -75,24 +75,24 @@ async fn main() {
 	}
 }
 
-#[derive(Debug, gluon::Handler)]
+#[derive(Debug, gluon_ipc::Handler)]
 struct InputHandler {
 	field: Field,
 	spatial: Spatial,
 	methods: RwLock<HashSet<InputMethod>>,
 }
 impl InputHandlerHandler for InputHandler {
-	async fn get_spatial(&self, _ctx: gluon::Context) -> SpatialRef {
+	async fn get_spatial(&self, _ctx: gluon_ipc::Context) -> SpatialRef {
 		self.spatial.spatial_ref().await.unwrap()
 	}
 
-	async fn get_field(&self, _ctx: gluon::Context) -> FieldRef {
+	async fn get_field(&self, _ctx: gluon_ipc::Context) -> FieldRef {
 		self.field.field_ref().await.unwrap()
 	}
 
 	async fn input_gained(
 		&self,
-		_ctx: gluon::Context,
+		_ctx: gluon_ipc::Context,
 		method: InputMethod,
 		time: Timestamp,
 		spatial: SpatialData,
@@ -104,7 +104,7 @@ impl InputHandlerHandler for InputHandler {
 
 	async fn input_updated(
 		&self,
-		_ctx: gluon::Context,
+		_ctx: gluon_ipc::Context,
 		method: InputMethod,
 		time: Timestamp,
 		spatial: SpatialData,
@@ -113,7 +113,7 @@ impl InputHandlerHandler for InputHandler {
 		println!("input updated, {method:?}, {time:?}, {spatial:?}, {semantic:?}");
 	}
 
-	async fn input_left(&self, _ctx: gluon::Context, method: InputMethod, _time: Timestamp) {
+	async fn input_left(&self, _ctx: gluon_ipc::Context, method: InputMethod, _time: Timestamp) {
 		self.methods.write().await.remove(&method);
 		println!("input left, {method:?}");
 	}

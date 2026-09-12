@@ -1,17 +1,17 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable as _;
+use gluon_ipc::Convertable as _;
 use tracing::Instrument as _;
-pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
+pub const EXTERNAL_PROTOCOL: gluon_ipc::ExternalProtocol = gluon_ipc::ExternalProtocol {
     protocol_name: "org.stardustxr.Model",
     types: &[
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "MaterialParamError",
-            supported_derives: gluon::Derives::from_bits_truncate(798u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(798u32),
             proxy: None,
         },
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "MaterialParameter",
-            supported_derives: gluon::Derives::from_bits_truncate(10u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(10u32),
             proxy: None,
         },
     ],
@@ -29,11 +29,11 @@ pub enum MaterialParamError {
     Holdout,
     InvalidValue,
 }
-impl gluon::Convertable for MaterialParamError {
+impl gluon_ipc::Convertable for MaterialParamError {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         match self {
             MaterialParamError::ParamNotFound { known_params } => {
                 gluon_data.write_u16(0u16)?;
@@ -52,31 +52,33 @@ impl gluon::Convertable for MaterialParamError {
         };
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => {
-                    let known_params = gluon::Convertable::read(gluon_data)?;
+                    let known_params = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParamError::ParamNotFound {
                         known_params,
                     }
                 }
                 1u16 => {
-                    let valid_type = gluon::Convertable::read(gluon_data)?;
+                    let valid_type = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParamError::IncorrectType {
                         valid_type,
                     }
                 }
                 2u16 => MaterialParamError::Holdout,
                 3u16 => MaterialParamError::InvalidValue,
-                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+                v => return Err(gluon_ipc::ReadError::UnknownEnumVariant(v)),
             },
         )
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         match self {
             MaterialParamError::ParamNotFound { known_params } => {
                 gluon_data.write_u16(0u16)?;
@@ -115,11 +117,11 @@ pub enum MaterialParameter {
         release_point: super::dmatex::DmatexSubmitRelease,
     },
 }
-impl gluon::Convertable for MaterialParameter {
+impl gluon_ipc::Convertable for MaterialParameter {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         match self {
             MaterialParameter::Bool { value } => {
                 gluon_data.write_u16(0u16)?;
@@ -171,28 +173,30 @@ impl gluon::Convertable for MaterialParameter {
         };
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => {
-                    let value = gluon::Convertable::read(gluon_data)?;
+                    let value = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParameter::Bool { value }
                 }
                 1u16 => {
-                    let value = gluon::Convertable::read(gluon_data)?;
+                    let value = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParameter::Int { value }
                 }
                 2u16 => {
-                    let value = gluon::Convertable::read(gluon_data)?;
+                    let value = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParameter::Uint { value }
                 }
                 3u16 => {
-                    let value = gluon::Convertable::read(gluon_data)?;
+                    let value = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParameter::Float { value }
                 }
                 4u16 => {
                     let value: crate::types::Vec2F = {
-                        let __w: super::types::proxied::Vec2F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec2F = gluon_ipc::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -201,7 +205,7 @@ impl gluon::Convertable for MaterialParameter {
                 }
                 5u16 => {
                     let value: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -210,7 +214,7 @@ impl gluon::Convertable for MaterialParameter {
                 }
                 6u16 => {
                     let value: crate::types::Color = {
-                        let __w: super::types::proxied::Color = gluon::Convertable::read(
+                        let __w: super::types::proxied::Color = gluon_ipc::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -218,29 +222,29 @@ impl gluon::Convertable for MaterialParameter {
                     MaterialParameter::Color { value }
                 }
                 7u16 => {
-                    let value = gluon::Convertable::read(gluon_data)?;
+                    let value = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParameter::Texture {
                         value,
                     }
                 }
                 8u16 => {
-                    let dmatex = gluon::Convertable::read(gluon_data)?;
-                    let acquire_point = gluon::Convertable::read(gluon_data)?;
-                    let release_point = gluon::Convertable::read(gluon_data)?;
+                    let dmatex = gluon_ipc::Convertable::read(gluon_data)?;
+                    let acquire_point = gluon_ipc::Convertable::read(gluon_data)?;
+                    let release_point = gluon_ipc::Convertable::read(gluon_data)?;
                     MaterialParameter::Dmatex {
                         dmatex,
                         acquire_point,
                         release_point,
                     }
                 }
-                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+                v => return Err(gluon_ipc::ReadError::UnknownEnumVariant(v)),
             },
         )
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         match self {
             MaterialParameter::Bool { value } => {
                 gluon_data.write_u16(0u16)?;
@@ -295,44 +299,46 @@ impl gluon::Convertable for MaterialParameter {
 }
 #[derive(Debug, Clone)]
 pub struct ModelInterface {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for ModelInterface {
+impl gluon_ipc::Convertable for ModelInterface {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(ModelInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl ModelInterface {
     const ID: &'static str = "org.stardustxr.Model.ModelInterface";
 }
-impl gluon::Interface for ModelInterface {
+impl gluon_ipc::Interface for ModelInterface {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ModelInterfaceHandler> gluon::HandledBy<H> for ModelInterface {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type ModelInterfaceLocal<H> = gluon::LocalRef<ModelInterface, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ModelInterfaceHandler> gluon_ipc::HandledBy<H> for ModelInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type ModelInterfaceLocal<H> = gluon_ipc::LocalRef<ModelInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: ModelInterfaceHandler> From<ModelInterfaceLocal<H>> for ModelInterface {
     fn from(value: ModelInterfaceLocal<H>) -> ModelInterface {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for ModelInterface {
-    fn from_ref(obj: gluon::Ref) -> ModelInterface {
+impl gluon_ipc::RefExt for ModelInterface {
+    fn from_ref(obj: gluon_ipc::Ref) -> ModelInterface {
         ModelInterface { obj }
     }
 }
@@ -342,44 +348,44 @@ impl ModelInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         model: impl Into<super::types::Resource>,
-    ) -> Result<Result<Model, super::types::ResourceLoadError>, gluon::SendError> {
+    ) -> Result<Result<Model, super::types::ResourceLoadError>, gluon_ipc::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let model: super::types::Resource = model.into();
         tracing::trace!(
             interface = "ModelInterface", method = "load_model", ? spatial, ? model,
             "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         model.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_model = gluon::Convertable::read(&mut reader)?;
+        let __ret_model = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelInterface", method = "load_model", ? __ret_model, "←"
         );
         Ok(__ret_model)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> ModelInterface {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> ModelInterface {
         ModelInterface { obj }
     }
 }
-impl From<ModelInterface> for gluon::Ref {
+impl From<ModelInterface> for gluon_ipc::Ref {
     fn from(value: ModelInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for ModelInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for ModelInterface {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for ModelInterface {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for ModelInterface {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for ModelInterface {
@@ -393,11 +399,11 @@ impl PartialEq for ModelInterface {
     }
 }
 impl Eq for ModelInterface {}
-pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
+pub trait ModelInterfaceHandler: gluon_ipc::Handler + Send + Sync + 'static {
     ///Load a GLTF model into a Model
     fn load_model(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         spatial: super::spatial::Spatial,
         model: super::types::Resource,
     ) -> impl Future<
@@ -406,11 +412,11 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::load_model`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `load_model` and sends the result through `reply`. Override this method instead of `load_model` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn load_model_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         spatial: super::spatial::Spatial,
         model: super::types::Resource,
-        reply: gluon::ReplySender<Result<Model, super::types::ResourceLoadError>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Result<Model, super::types::ResourceLoadError>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let model = self.load_model(_ctx, spatial, model).await;
             reply.send(model)
@@ -419,23 +425,23 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_model = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_model = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ModelInterface", method = "load_model", ?
                         param_spatial, ? param_model, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         Result<Model, super::types::ResourceLoadError>,
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |model, gluon_out| {
                             tracing::trace!(
@@ -463,65 +469,67 @@ pub trait ModelInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<ModelInterface, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<ModelInterface, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         ModelInterface::new_node(self)
     }
     fn to_service(
         self,
-    ) -> Result<gluon::LocalRef<ModelInterface, Self>, gluon::NodeError>
+    ) -> Result<gluon_ipc::LocalRef<ModelInterface, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         ModelInterface::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct Model {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for Model {
+impl gluon_ipc::Convertable for Model {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(Model::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl Model {
     const ID: &'static str = "org.stardustxr.Model.Model";
 }
-impl gluon::Interface for Model {
+impl gluon_ipc::Interface for Model {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ModelHandler> gluon::HandledBy<H> for Model {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type ModelLocal<H> = gluon::LocalRef<Model, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ModelHandler> gluon_ipc::HandledBy<H> for Model {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type ModelLocal<H> = gluon_ipc::LocalRef<Model, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: ModelHandler> From<ModelLocal<H>> for Model {
     fn from(value: ModelLocal<H>) -> Model {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for Model {
-    fn from_ref(obj: gluon::Ref) -> Model {
+impl gluon_ipc::RefExt for Model {
+    fn from_ref(obj: gluon_ipc::Ref) -> Model {
         Model { obj }
     }
 }
@@ -529,50 +537,50 @@ impl Model {
     pub async fn get_part(
         &self,
         path: impl Into<String>,
-    ) -> Result<Option<ModelPart>, gluon::SendError> {
+    ) -> Result<Option<ModelPart>, gluon_ipc::SendError> {
         let path: String = path.into();
         tracing::trace!(interface = "Model", method = "get_part", ? path, "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         path.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_part = gluon::Convertable::read(&mut reader)?;
+        let __ret_part = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Model", method = "get_part", ? __ret_part, "←");
         Ok(__ret_part)
     }
-    pub async fn enumerate_parts(&self) -> Result<Vec<ModelPart>, gluon::SendError> {
+    pub async fn enumerate_parts(&self) -> Result<Vec<ModelPart>, gluon_ipc::SendError> {
         tracing::trace!(interface = "Model", method = "enumerate_parts", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_parts = gluon::Convertable::read(&mut reader)?;
+        let __ret_parts = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Model", method = "enumerate_parts", ? __ret_parts, "←"
         );
         Ok(__ret_parts)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Model {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> Model {
         Model { obj }
     }
 }
-impl From<Model> for gluon::Ref {
+impl From<Model> for gluon_ipc::Ref {
     fn from(value: Model) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Model {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for Model {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for Model {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for Model {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Model {
@@ -586,19 +594,19 @@ impl PartialEq for Model {
     }
 }
 impl Eq for Model {}
-pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
+pub trait ModelHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn get_part(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         path: String,
     ) -> impl Future<Output = Option<ModelPart>> + Send + Sync;
     ///Dispatched instead of [`Self::get_part`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_part` and sends the result through `reply`. Override this method instead of `get_part` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn get_part_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         path: String,
-        reply: gluon::ReplySender<Option<ModelPart>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<ModelPart>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let part = self.get_part(_ctx, path).await;
             reply.send(part)
@@ -606,14 +614,14 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn enumerate_parts(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = Vec<ModelPart>> + Send + Sync;
     ///Dispatched instead of [`Self::enumerate_parts`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `enumerate_parts` and sends the result through `reply`. Override this method instead of `enumerate_parts` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn enumerate_parts_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<Vec<ModelPart>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<Vec<ModelPart>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let parts = self.enumerate_parts(_ctx).await;
             reply.send(parts)
@@ -622,20 +630,20 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_path = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_path = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Model", method = "get_part", ? param_path,
                         "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<ModelPart>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Option<ModelPart>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |part, gluon_out| {
                             tracing::trace!(
@@ -660,7 +668,7 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
                         interface = "Model", method = "enumerate_parts", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Vec<ModelPart>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Vec<ModelPart>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |parts, gluon_out| {
                             tracing::trace!(
@@ -687,73 +695,78 @@ pub trait ModelHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Model, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<Model, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Model::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<Model, Self>, gluon::NodeError>
+    fn to_service(self) -> Result<gluon_ipc::LocalRef<Model, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Model::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct ModelPart {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for ModelPart {
+impl gluon_ipc::Convertable for ModelPart {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(ModelPart::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl ModelPart {
     const ID: &'static str = "org.stardustxr.Model.ModelPart";
 }
-impl gluon::Interface for ModelPart {
+impl gluon_ipc::Interface for ModelPart {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: ModelPartHandler> gluon::HandledBy<H> for ModelPart {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type ModelPartLocal<H> = gluon::LocalRef<ModelPart, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: ModelPartHandler> gluon_ipc::HandledBy<H> for ModelPart {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type ModelPartLocal<H> = gluon_ipc::LocalRef<ModelPart, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: ModelPartHandler> From<ModelPartLocal<H>> for ModelPart {
     fn from(value: ModelPartLocal<H>) -> ModelPart {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for ModelPart {
-    fn from_ref(obj: gluon::Ref) -> ModelPart {
+impl gluon_ipc::RefExt for ModelPart {
+    fn from_ref(obj: gluon_ipc::Ref) -> ModelPart {
         ModelPart { obj }
     }
 }
 impl ModelPart {
-    pub async fn get_part_path(&self) -> Result<String, gluon::SendError> {
+    pub async fn get_part_path(&self) -> Result<String, gluon_ipc::SendError> {
         tracing::trace!(interface = "ModelPart", method = "get_part_path", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_path = gluon::Convertable::read(&mut reader)?;
+        let __ret_path = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "get_part_path", ? __ret_path, "←"
         );
@@ -761,14 +774,14 @@ impl ModelPart {
     }
     pub async fn get_spatial(
         &self,
-    ) -> Result<super::spatial::Spatial, gluon::SendError> {
+    ) -> Result<super::spatial::Spatial, gluon_ipc::SendError> {
         tracing::trace!(interface = "ModelPart", method = "get_spatial", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "get_spatial", ? __ret_spatial, "←"
         );
@@ -778,21 +791,21 @@ impl ModelPart {
         &self,
         parameter_name: impl Into<String>,
         value: impl Into<MaterialParameter>,
-    ) -> Result<Option<MaterialParamError>, gluon::SendError> {
+    ) -> Result<Option<MaterialParamError>, gluon_ipc::SendError> {
         let parameter_name: String = parameter_name.into();
         let value: MaterialParameter = value.into();
         tracing::trace!(
             interface = "ModelPart", method = "set_material_parameter", ? parameter_name,
             ? value, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         parameter_name.write(&mut gluon_builder)?;
         value.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_error = gluon::Convertable::read(&mut reader)?;
+        let __ret_error = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "ModelPart", method = "set_material_parameter", ? __ret_error,
             "←"
@@ -800,32 +813,32 @@ impl ModelPart {
         Ok(__ret_error)
     }
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
-    pub fn apply_holdout_material(&self) -> Result<(), gluon::SendError> {
+    pub fn apply_holdout_material(&self) -> Result<(), gluon_ipc::SendError> {
         tracing::trace!(
             interface = "ModelPart", method = "apply_holdout_material", "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        gluon::transact(&self.obj, 11u32, gluon_builder)?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        gluon_ipc::transact(&self.obj, 11u32, gluon_builder)?;
         Ok(())
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> ModelPart {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> ModelPart {
         ModelPart { obj }
     }
 }
-impl From<ModelPart> for gluon::Ref {
+impl From<ModelPart> for gluon_ipc::Ref {
     fn from(value: ModelPart) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for ModelPart {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for ModelPart {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for ModelPart {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for ModelPart {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for ModelPart {
@@ -839,17 +852,17 @@ impl PartialEq for ModelPart {
     }
 }
 impl Eq for ModelPart {}
-pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
+pub trait ModelPartHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn get_part_path(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = String> + Send + Sync;
     ///Dispatched instead of [`Self::get_part_path`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_part_path` and sends the result through `reply`. Override this method instead of `get_part_path` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn get_part_path_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<String>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<String>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let path = self.get_part_path(_ctx).await;
             reply.send(path)
@@ -857,14 +870,14 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn get_spatial(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = super::spatial::Spatial> + Send + Sync;
     ///Dispatched instead of [`Self::get_spatial`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_spatial` and sends the result through `reply`. Override this method instead of `get_spatial` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn get_spatial_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<super::spatial::Spatial>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<super::spatial::Spatial>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let spatial = self.get_spatial(_ctx).await;
             reply.send(spatial)
@@ -872,18 +885,18 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn set_material_parameter(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         parameter_name: String,
         value: MaterialParameter,
     ) -> impl Future<Output = Option<MaterialParamError>> + Send + Sync;
     ///Dispatched instead of [`Self::set_material_parameter`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `set_material_parameter` and sends the result through `reply`. Override this method instead of `set_material_parameter` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn set_material_parameter_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         parameter_name: String,
         value: MaterialParameter,
-        reply: gluon::ReplySender<Option<MaterialParamError>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<MaterialParamError>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let error = self.set_material_parameter(_ctx, parameter_name, value).await;
             reply.send(error)
@@ -892,14 +905,14 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
     ///Set this model part's material to one that cuts a hole in the world. Often used for overlays/passthrough where you want to show the background through an object. This removes the ability to set material parameters and cannot be undone
     fn apply_holdout_material(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
@@ -908,7 +921,7 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         interface = "ModelPart", method = "get_part_path", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<String> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<String> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |path, gluon_out| {
                             tracing::trace!(
@@ -934,7 +947,7 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                         interface = "ModelPart", method = "get_spatial", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<super::spatial::Spatial> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<super::spatial::Spatial> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |spatial, gluon_out| {
                             tracing::trace!(
@@ -956,16 +969,16 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_parameter_name = gluon::Convertable::read(
+                    let param_parameter_name = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_value = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_value = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "ModelPart", method = "set_material_parameter", ?
                         param_parameter_name, ? param_value, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<MaterialParamError>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Option<MaterialParamError>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |error, gluon_out| {
                             tracing::trace!(
@@ -1012,18 +1025,23 @@ pub trait ModelPartHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<ModelPart, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<ModelPart, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         ModelPart::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<ModelPart, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<ModelPart, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         ModelPart::new_service(self)
     }
 }

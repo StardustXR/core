@@ -1,5 +1,5 @@
 use crate::Result;
-use gluon::{Handler, Ref, RefExt};
+use gluon_ipc::{Handler, Ref, RefExt};
 pub use stardust_xr_protocol::tracked::*;
 use stardust_xr_protocol::{dir, spatial::SpatialRef, suis::Chirality, types::ResourceLoadError};
 
@@ -70,7 +70,7 @@ struct TrackedHandlerNoop;
 impl TrackedStateReceiverHandler for TrackedHandlerNoop {
 	fn tracked(
 		&self,
-		_ctx: gluon::Context,
+		_ctx: gluon_ipc::Context,
 		_tracked: bool,
 	) -> impl Future<Output = ()> + Send + Sync {
 		std::future::ready(())

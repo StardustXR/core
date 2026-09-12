@@ -1,8 +1,8 @@
-use gluon_codegen::{Derives, TypeProxy};
+use gluon_ipc_codegen::{Derives, TypeProxy};
 use std::path::Path;
 
 fn main() {
-	gluon_codegen::helpers::gen_multiple_modules(
+	gluon_ipc_codegen::helpers::gen_multiple_modules(
 		&[
 			("types", Path::new("./gluon/org.stardustxr.Types.gluon")),
 			("server", Path::new("./gluon/org.stardustxr.Server.gluon")),

@@ -17,11 +17,11 @@ pub enum Error {
 	ConnectionFailure,
 
 	#[error("Gluon send error: {0}")]
-	GluonSend(#[from] gluon::SendError),
+	GluonSend(#[from] gluon_ipc::SendError),
 	#[error("Gluon read error: {0}")]
-	GluonRead(#[from] gluon::ReadError),
+	GluonRead(#[from] gluon_ipc::ReadError),
 	#[error("Gluon node error: {0}")]
-	GluonNode(#[from] gluon::NodeError),
+	GluonNode(#[from] gluon_ipc::NodeError),
 
 	#[error("Create error: {0}")]
 	Create(#[from] CreateError),

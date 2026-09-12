@@ -1,32 +1,32 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable as _;
+use gluon_ipc::Convertable as _;
 use tracing::Instrument as _;
-pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
+pub const EXTERNAL_PROTOCOL: gluon_ipc::ExternalProtocol = gluon_ipc::ExternalProtocol {
     protocol_name: "org.stardustxr.Field",
     types: &[
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "FieldSample",
-            supported_derives: gluon::Derives::from_bits_truncate(779u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "RayMarchResult",
-            supported_derives: gluon::Derives::from_bits_truncate(779u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "CubicBezierControlPoint",
-            supported_derives: gluon::Derives::from_bits_truncate(779u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(779u32),
             proxy: None,
         },
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "CreatedField",
-            supported_derives: gluon::Derives::from_bits_truncate(30u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(30u32),
             proxy: None,
         },
-        gluon::ExternalGluonType {
+        gluon_ipc::ExternalGluonType {
             name: "Shape",
-            supported_derives: gluon::Derives::from_bits_truncate(778u32),
+            supported_derives: gluon_ipc::Derives::from_bits_truncate(778u32),
             proxy: None,
         },
     ],
@@ -47,11 +47,11 @@ query point is inside or outside.*/
     ///Closest point on the shape boundary, in the same space as the query.
     pub closest_point: crate::types::Vec3F,
 }
-impl gluon::Convertable for FieldSample {
+impl gluon_ipc::Convertable for FieldSample {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.distance.write(gluon_data)?;
         {
             let __w: super::types::proxied::Vec3F = self.gradient.clone().into();
@@ -63,16 +63,18 @@ impl gluon::Convertable for FieldSample {
         }
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let distance = gluon::Convertable::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let distance = gluon_ipc::Convertable::read(gluon_data)?;
         let gradient: crate::types::Vec3F = {
-            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+            let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
         let closest_point: crate::types::Vec3F = {
-            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+            let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                 gluon_data,
             )?;
             __w.into()
@@ -85,8 +87,8 @@ impl gluon::Convertable for FieldSample {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.distance.write_owned(gluon_data)?;
         {
             let __w: super::types::proxied::Vec3F = self.gradient.into();
@@ -112,22 +114,24 @@ pub struct RayMarchResult {
     ///Number of steps taken
     pub ray_steps: u32,
 }
-impl gluon::Convertable for RayMarchResult {
+impl gluon_ipc::Convertable for RayMarchResult {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.min_distance.write(gluon_data)?;
         self.deepest_point_distance.write(gluon_data)?;
         self.ray_length.write(gluon_data)?;
         self.ray_steps.write(gluon_data)?;
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let min_distance = gluon::Convertable::read(gluon_data)?;
-        let deepest_point_distance = gluon::Convertable::read(gluon_data)?;
-        let ray_length = gluon::Convertable::read(gluon_data)?;
-        let ray_steps = gluon::Convertable::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let min_distance = gluon_ipc::Convertable::read(gluon_data)?;
+        let deepest_point_distance = gluon_ipc::Convertable::read(gluon_data)?;
+        let ray_length = gluon_ipc::Convertable::read(gluon_data)?;
+        let ray_steps = gluon_ipc::Convertable::read(gluon_data)?;
         Ok(RayMarchResult {
             min_distance,
             deepest_point_distance,
@@ -137,8 +141,8 @@ impl gluon::Convertable for RayMarchResult {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.min_distance.write_owned(gluon_data)?;
         self.deepest_point_distance.write_owned(gluon_data)?;
         self.ray_length.write_owned(gluon_data)?;
@@ -156,11 +160,11 @@ pub struct CubicBezierControlPoint {
     ///Thickness of the spline tube at the point
     pub thickness: f32,
 }
-impl gluon::Convertable for CubicBezierControlPoint {
+impl gluon_ipc::Convertable for CubicBezierControlPoint {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         {
             let __w: super::types::proxied::Vec3F = self.handle_in.clone().into();
             __w.write_owned(gluon_data)?;
@@ -176,26 +180,28 @@ impl gluon::Convertable for CubicBezierControlPoint {
         self.thickness.write(gluon_data)?;
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
         let handle_in: crate::types::Vec3F = {
-            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+            let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
         let anchor: crate::types::Vec3F = {
-            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+            let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
         let handle_out: crate::types::Vec3F = {
-            let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+            let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                 gluon_data,
             )?;
             __w.into()
         };
-        let thickness = gluon::Convertable::read(gluon_data)?;
+        let thickness = gluon_ipc::Convertable::read(gluon_data)?;
         Ok(CubicBezierControlPoint {
             handle_in,
             anchor,
@@ -205,8 +211,8 @@ impl gluon::Convertable for CubicBezierControlPoint {
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         {
             let __w: super::types::proxied::Vec3F = self.handle_in.into();
             __w.write_owned(gluon_data)?;
@@ -229,24 +235,26 @@ pub struct CreatedField {
     pub field: Field,
     pub field_ref: FieldRef,
 }
-impl gluon::Convertable for CreatedField {
+impl gluon_ipc::Convertable for CreatedField {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.field.write(gluon_data)?;
         self.field_ref.write(gluon_data)?;
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let field = gluon::Convertable::read(gluon_data)?;
-        let field_ref = gluon::Convertable::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let field = gluon_ipc::Convertable::read(gluon_data)?;
+        let field_ref = gluon_ipc::Convertable::read(gluon_data)?;
         Ok(CreatedField { field, field_ref })
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.field.write_owned(gluon_data)?;
         self.field_ref.write_owned(gluon_data)?;
         Ok(())
@@ -284,11 +292,11 @@ pub enum Shape {
 Typical use: `Sweep { surface: Box, sweeper: Sphere }` = rounded box.*/
     Sweep { surface: Box<Shape>, sweeper: Box<Shape> },
 }
-impl gluon::Convertable for Shape {
+impl gluon_ipc::Convertable for Shape {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         match self {
             Shape::Box { size } => {
                 gluon_data.write_u16(0u16)?;
@@ -346,12 +354,14 @@ impl gluon::Convertable for Shape {
         };
         Ok(())
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
         Ok(
             match gluon_data.read_u16()? {
                 0u16 => {
                     let size: crate::types::Vec3F = {
-                        let __w: super::types::proxied::Vec3F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -359,39 +369,39 @@ impl gluon::Convertable for Shape {
                     Shape::Box { size }
                 }
                 1u16 => {
-                    let radius = gluon::Convertable::read(gluon_data)?;
+                    let radius = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::Sphere { radius }
                 }
                 2u16 => {
-                    let length = gluon::Convertable::read(gluon_data)?;
-                    let radius = gluon::Convertable::read(gluon_data)?;
+                    let length = gluon_ipc::Convertable::read(gluon_data)?;
+                    let radius = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::Capsule { length, radius }
                 }
                 3u16 => {
-                    let length = gluon::Convertable::read(gluon_data)?;
-                    let radius = gluon::Convertable::read(gluon_data)?;
+                    let length = gluon_ipc::Convertable::read(gluon_data)?;
+                    let radius = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::Cylinder { length, radius }
                 }
                 4u16 => {
-                    let major_radius = gluon::Convertable::read(gluon_data)?;
-                    let minor_radius = gluon::Convertable::read(gluon_data)?;
+                    let major_radius = gluon_ipc::Convertable::read(gluon_data)?;
+                    let minor_radius = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::Torus {
                         major_radius,
                         minor_radius,
                     }
                 }
                 5u16 => {
-                    let points = gluon::Convertable::read(gluon_data)?;
-                    let cyclic = gluon::Convertable::read(gluon_data)?;
+                    let points = gluon_ipc::Convertable::read(gluon_data)?;
+                    let cyclic = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::CubicBezierSpline {
                         points,
                         cyclic,
                     }
                 }
                 6u16 => {
-                    let shape = gluon::Convertable::read(gluon_data)?;
+                    let shape = gluon_ipc::Convertable::read(gluon_data)?;
                     let transform: crate::types::Mat4F = {
-                        let __w: super::types::proxied::Mat4F = gluon::Convertable::read(
+                        let __w: super::types::proxied::Mat4F = gluon_ipc::Convertable::read(
                             gluon_data,
                         )?;
                         __w.into()
@@ -402,30 +412,30 @@ impl gluon::Convertable for Shape {
                     }
                 }
                 7u16 => {
-                    let shapes = gluon::Convertable::read(gluon_data)?;
+                    let shapes = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::Union { shapes }
                 }
                 8u16 => {
-                    let shapes = gluon::Convertable::read(gluon_data)?;
-                    let smoothing = gluon::Convertable::read(gluon_data)?;
+                    let shapes = gluon_ipc::Convertable::read(gluon_data)?;
+                    let smoothing = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::SmoothUnion {
                         shapes,
                         smoothing,
                     }
                 }
                 9u16 => {
-                    let surface = gluon::Convertable::read(gluon_data)?;
-                    let sweeper = gluon::Convertable::read(gluon_data)?;
+                    let surface = gluon_ipc::Convertable::read(gluon_data)?;
+                    let sweeper = gluon_ipc::Convertable::read(gluon_data)?;
                     Shape::Sweep { surface, sweeper }
                 }
-                v => return Err(gluon::ReadError::UnknownEnumVariant(v)),
+                v => return Err(gluon_ipc::ReadError::UnknownEnumVariant(v)),
             },
         )
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         match self {
             Shape::Box { size } => {
                 gluon_data.write_u16(0u16)?;
@@ -486,66 +496,68 @@ impl gluon::Convertable for Shape {
 }
 #[derive(Debug, Clone)]
 pub struct FieldRef {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for FieldRef {
+impl gluon_ipc::Convertable for FieldRef {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(FieldRef::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl FieldRef {
     const ID: &'static str = "org.stardustxr.Field.FieldRef";
 }
-impl gluon::Interface for FieldRef {
+impl gluon_ipc::Interface for FieldRef {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: FieldRefHandler> gluon::HandledBy<H> for FieldRef {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type FieldRefLocal<H> = gluon::LocalRef<FieldRef, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: FieldRefHandler> gluon_ipc::HandledBy<H> for FieldRef {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type FieldRefLocal<H> = gluon_ipc::LocalRef<FieldRef, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: FieldRefHandler> From<FieldRefLocal<H>> for FieldRef {
     fn from(value: FieldRefLocal<H>) -> FieldRef {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for FieldRef {
-    fn from_ref(obj: gluon::Ref) -> FieldRef {
+impl gluon_ipc::RefExt for FieldRef {
+    fn from_ref(obj: gluon_ipc::Ref) -> FieldRef {
         FieldRef { obj }
     }
 }
 impl FieldRef {
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> FieldRef {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> FieldRef {
         FieldRef { obj }
     }
 }
-impl From<FieldRef> for gluon::Ref {
+impl From<FieldRef> for gluon_ipc::Ref {
     fn from(value: FieldRef) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for FieldRef {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for FieldRef {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for FieldRef {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for FieldRef {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for FieldRef {
@@ -559,13 +571,13 @@ impl PartialEq for FieldRef {
     }
 }
 impl Eq for FieldRef {}
-pub trait FieldRefHandler: gluon::Handler + Send + Sync + 'static {
+pub trait FieldRefHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 _ => {}
@@ -575,73 +587,80 @@ pub trait FieldRefHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<FieldRef, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<FieldRef, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         FieldRef::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<FieldRef, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<FieldRef, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         FieldRef::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct Field {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for Field {
+impl gluon_ipc::Convertable for Field {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(Field::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl Field {
     const ID: &'static str = "org.stardustxr.Field.Field";
 }
-impl gluon::Interface for Field {
+impl gluon_ipc::Interface for Field {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: FieldHandler> gluon::HandledBy<H> for Field {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type FieldLocal<H> = gluon::LocalRef<Field, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: FieldHandler> gluon_ipc::HandledBy<H> for Field {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type FieldLocal<H> = gluon_ipc::LocalRef<Field, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: FieldHandler> From<FieldLocal<H>> for Field {
     fn from(value: FieldLocal<H>) -> Field {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for Field {
-    fn from_ref(obj: gluon::Ref) -> Field {
+impl gluon_ipc::RefExt for Field {
+    fn from_ref(obj: gluon_ipc::Ref) -> Field {
         Field { obj }
     }
 }
 impl Field {
-    pub async fn field_ref(&self) -> Result<FieldRef, gluon::SendError> {
+    pub async fn field_ref(&self) -> Result<FieldRef, gluon_ipc::SendError> {
         tracing::trace!(interface = "Field", method = "field_ref", "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_field = gluon::Convertable::read(&mut reader)?;
+        let __ret_field = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "field_ref", ? __ret_field, "←");
         Ok(__ret_field)
     }
@@ -649,20 +668,20 @@ impl Field {
         &self,
         reference_space: impl Into<super::spatial::SpatialRef>,
         point: crate::types::Vec3F,
-    ) -> Result<FieldSample, gluon::SendError> {
+    ) -> Result<FieldSample, gluon_ipc::SendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
         let point: super::types::proxied::Vec3F = point.into();
         tracing::trace!(
             interface = "Field", method = "sample", ? reference_space, ? point, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        let __ret_result = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(interface = "Field", method = "sample", ? __ret_result, "←");
         Ok(__ret_result)
     }
@@ -671,7 +690,7 @@ impl Field {
         reference_space: impl Into<super::spatial::SpatialRef>,
         ray_origin: crate::types::Vec3F,
         ray_direction: crate::types::Vec3F,
-    ) -> Result<Option<RayMarchResult>, gluon::SendError> {
+    ) -> Result<Option<RayMarchResult>, gluon_ipc::SendError> {
         let reference_space: super::spatial::SpatialRef = reference_space.into();
         let ray_origin: super::types::proxied::Vec3F = ray_origin.into();
         let ray_direction: super::types::proxied::Vec3F = ray_direction.into();
@@ -679,46 +698,49 @@ impl Field {
             interface = "Field", method = "ray_march", ? reference_space, ? ray_origin, ?
             ray_direction, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         reference_space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        let __ret_result = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Field", method = "ray_march", ? __ret_result, "←"
         );
         Ok(__ret_result)
     }
-    pub fn set_shape(&self, shape: impl Into<Shape>) -> Result<(), gluon::SendError> {
+    pub fn set_shape(
+        &self,
+        shape: impl Into<Shape>,
+    ) -> Result<(), gluon_ipc::SendError> {
         let shape: Shape = shape.into();
         tracing::trace!(interface = "Field", method = "set_shape", ? shape, "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
         shape.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 11u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 11u32, gluon_builder)?;
         Ok(())
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Field {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> Field {
         Field { obj }
     }
 }
-impl From<Field> for gluon::Ref {
+impl From<Field> for gluon_ipc::Ref {
     fn from(value: Field) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Field {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for Field {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for Field {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for Field {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Field {
@@ -732,17 +754,17 @@ impl PartialEq for Field {
     }
 }
 impl Eq for Field {}
-pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
+pub trait FieldHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn field_ref(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
     ) -> impl Future<Output = FieldRef> + Send + Sync;
     ///Dispatched instead of [`Self::field_ref`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `field_ref` and sends the result through `reply`. Override this method instead of `field_ref` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn field_ref_oneway(
         &self,
-        _ctx: gluon::Context,
-        reply: gluon::ReplySender<FieldRef>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        _ctx: gluon_ipc::Context,
+        reply: gluon_ipc::ReplySender<FieldRef>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let field = self.field_ref(_ctx).await;
             reply.send(field)
@@ -750,18 +772,18 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn sample(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         reference_space: super::spatial::SpatialRef,
         point: crate::types::Vec3F,
     ) -> impl Future<Output = FieldSample> + Send + Sync;
     ///Dispatched instead of [`Self::sample`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `sample` and sends the result through `reply`. Override this method instead of `sample` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn sample_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         reference_space: super::spatial::SpatialRef,
         point: crate::types::Vec3F,
-        reply: gluon::ReplySender<FieldSample>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<FieldSample>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let result = self.sample(_ctx, reference_space, point).await;
             reply.send(result)
@@ -769,7 +791,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn ray_march(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         reference_space: super::spatial::SpatialRef,
         ray_origin: crate::types::Vec3F,
         ray_direction: crate::types::Vec3F,
@@ -777,12 +799,12 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::ray_march`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `ray_march` and sends the result through `reply`. Override this method instead of `ray_march` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn ray_march_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         reference_space: super::spatial::SpatialRef,
         ray_origin: crate::types::Vec3F,
         ray_direction: crate::types::Vec3F,
-        reply: gluon::ReplySender<Option<RayMarchResult>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<RayMarchResult>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let result = self
                 .ray_march(_ctx, reference_space, ray_origin, ray_direction)
@@ -792,15 +814,15 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn set_shape(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         shape: Shape,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
@@ -809,7 +831,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         interface = "Field", method = "field_ref", "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<FieldRef> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<FieldRef> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |field, gluon_out| {
                             tracing::trace!(
@@ -830,10 +852,10 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_reference_space = gluon::Convertable::read(
+                    let param_reference_space = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let __wire_param_point: super::types::proxied::Vec3F = gluon::Convertable::read(
+                    let __wire_param_point: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
                     tracing::trace!(
@@ -845,7 +867,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         __w.into()
                     };
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<FieldSample> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<FieldSample> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |result, gluon_out| {
                             tracing::trace!(
@@ -866,13 +888,13 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_reference_space = gluon::Convertable::read(
+                    let param_reference_space = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon::Convertable::read(
+                    let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let __wire_param_ray_direction: super::types::proxied::Vec3F = gluon::Convertable::read(
+                    let __wire_param_ray_direction: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
                     tracing::trace!(
@@ -890,7 +912,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         __w.into()
                     };
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<RayMarchResult>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Option<RayMarchResult>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |result, gluon_out| {
                             tracing::trace!(
@@ -916,7 +938,7 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
                         .await?;
                 }
                 11u32 => {
-                    let param_shape = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_shape = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Field", method = "set_shape", ? param_shape,
                         "dispatching"
@@ -938,61 +960,66 @@ pub trait FieldHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Field, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<Field, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Field::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<Field, Self>, gluon::NodeError>
+    fn to_service(self) -> Result<gluon_ipc::LocalRef<Field, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Field::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct FieldInterface {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for FieldInterface {
+impl gluon_ipc::Convertable for FieldInterface {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(FieldInterface::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl FieldInterface {
     const ID: &'static str = "org.stardustxr.Field.FieldInterface";
 }
-impl gluon::Interface for FieldInterface {
+impl gluon_ipc::Interface for FieldInterface {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: FieldInterfaceHandler> gluon::HandledBy<H> for FieldInterface {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type FieldInterfaceLocal<H> = gluon::LocalRef<FieldInterface, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: FieldInterfaceHandler> gluon_ipc::HandledBy<H> for FieldInterface {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type FieldInterfaceLocal<H> = gluon_ipc::LocalRef<FieldInterface, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: FieldInterfaceHandler> From<FieldInterfaceLocal<H>> for FieldInterface {
     fn from(value: FieldInterfaceLocal<H>) -> FieldInterface {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for FieldInterface {
-    fn from_ref(obj: gluon::Ref) -> FieldInterface {
+impl gluon_ipc::RefExt for FieldInterface {
+    fn from_ref(obj: gluon_ipc::Ref) -> FieldInterface {
         FieldInterface { obj }
     }
 }
@@ -1002,7 +1029,7 @@ impl FieldInterface {
         field: impl Into<FieldRef>,
         space: impl Into<super::spatial::SpatialRef>,
         point: crate::types::Vec3F,
-    ) -> Result<FieldSample, gluon::SendError> {
+    ) -> Result<FieldSample, gluon_ipc::SendError> {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
         let point: super::types::proxied::Vec3F = point.into();
@@ -1010,15 +1037,15 @@ impl FieldInterface {
             interface = "FieldInterface", method = "sample", ? field, ? space, ? point,
             "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         field.write(&mut gluon_builder)?;
         space.write(&mut gluon_builder)?;
         point.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        let __ret_result = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "sample", ? __ret_result, "←"
         );
@@ -1030,7 +1057,7 @@ impl FieldInterface {
         space: impl Into<super::spatial::SpatialRef>,
         ray_origin: crate::types::Vec3F,
         ray_direction: crate::types::Vec3F,
-    ) -> Result<Option<RayMarchResult>, gluon::SendError> {
+    ) -> Result<Option<RayMarchResult>, gluon_ipc::SendError> {
         let field: FieldRef = field.into();
         let space: super::spatial::SpatialRef = space.into();
         let ray_origin: super::types::proxied::Vec3F = ray_origin.into();
@@ -1039,16 +1066,16 @@ impl FieldInterface {
             interface = "FieldInterface", method = "ray_march", ? field, ? space, ?
             ray_origin, ? ray_direction, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         field.write(&mut gluon_builder)?;
         space.write(&mut gluon_builder)?;
         ray_origin.write(&mut gluon_builder)?;
         ray_direction.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_result = gluon::Convertable::read(&mut reader)?;
+        let __ret_result = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "ray_march", ? __ret_result, "←"
         );
@@ -1058,44 +1085,44 @@ impl FieldInterface {
         &self,
         spatial: impl Into<super::spatial::Spatial>,
         shape: impl Into<Shape>,
-    ) -> Result<Result<CreatedField, super::types::CreateError>, gluon::SendError> {
+    ) -> Result<Result<CreatedField, super::types::CreateError>, gluon_ipc::SendError> {
         let spatial: super::spatial::Spatial = spatial.into();
         let shape: Shape = shape.into();
         tracing::trace!(
             interface = "FieldInterface", method = "create_field", ? spatial, ? shape,
             "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         spatial.write(&mut gluon_builder)?;
         shape.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 10u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 10u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_field = gluon::Convertable::read(&mut reader)?;
+        let __ret_field = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "FieldInterface", method = "create_field", ? __ret_field, "←"
         );
         Ok(__ret_field)
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> FieldInterface {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> FieldInterface {
         FieldInterface { obj }
     }
 }
-impl From<FieldInterface> for gluon::Ref {
+impl From<FieldInterface> for gluon_ipc::Ref {
     fn from(value: FieldInterface) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for FieldInterface {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for FieldInterface {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for FieldInterface {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for FieldInterface {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for FieldInterface {
@@ -1109,10 +1136,10 @@ impl PartialEq for FieldInterface {
     }
 }
 impl Eq for FieldInterface {}
-pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
+pub trait FieldInterfaceHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn sample(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         field: FieldRef,
         space: super::spatial::SpatialRef,
         point: crate::types::Vec3F,
@@ -1120,12 +1147,12 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::sample`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `sample` and sends the result through `reply`. Override this method instead of `sample` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn sample_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         field: FieldRef,
         space: super::spatial::SpatialRef,
         point: crate::types::Vec3F,
-        reply: gluon::ReplySender<FieldSample>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<FieldSample>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let result = self.sample(_ctx, field, space, point).await;
             reply.send(result)
@@ -1133,7 +1160,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn ray_march(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         field: FieldRef,
         space: super::spatial::SpatialRef,
         ray_origin: crate::types::Vec3F,
@@ -1142,13 +1169,13 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::ray_march`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `ray_march` and sends the result through `reply`. Override this method instead of `ray_march` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn ray_march_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         field: FieldRef,
         space: super::spatial::SpatialRef,
         ray_origin: crate::types::Vec3F,
         ray_direction: crate::types::Vec3F,
-        reply: gluon::ReplySender<Option<RayMarchResult>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Option<RayMarchResult>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let result = self
                 .ray_march(_ctx, field, space, ray_origin, ray_direction)
@@ -1158,7 +1185,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn create_field(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         spatial: super::spatial::Spatial,
         shape: Shape,
     ) -> impl Future<
@@ -1167,11 +1194,11 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::create_field`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `create_field` and sends the result through `reply`. Override this method instead of `create_field` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn create_field_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         spatial: super::spatial::Spatial,
         shape: Shape,
-        reply: gluon::ReplySender<Result<CreatedField, super::types::CreateError>>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<Result<CreatedField, super::types::CreateError>>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let field = self.create_field(_ctx, spatial, shape).await;
             reply.send(field)
@@ -1180,16 +1207,16 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_field = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_space = gluon::Convertable::read(&mut gluon_data)?;
-                    let __wire_param_point: super::types::proxied::Vec3F = gluon::Convertable::read(
+                    let param_field = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_space = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let __wire_param_point: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
                     tracing::trace!(
@@ -1201,7 +1228,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         __w.into()
                     };
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<FieldSample> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<FieldSample> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |result, gluon_out| {
                             tracing::trace!(
@@ -1223,12 +1250,12 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_field = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_space = gluon::Convertable::read(&mut gluon_data)?;
-                    let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon::Convertable::read(
+                    let param_field = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_space = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let __wire_param_ray_origin: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let __wire_param_ray_direction: super::types::proxied::Vec3F = gluon::Convertable::read(
+                    let __wire_param_ray_direction: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
                     tracing::trace!(
@@ -1246,7 +1273,7 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                         __w.into()
                     };
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<Option<RayMarchResult>> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<Option<RayMarchResult>> = gluon_ipc::ReplySender::new(
                         return_callback,
                         |result, gluon_out| {
                             tracing::trace!(
@@ -1275,16 +1302,16 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 10u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_spatial = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_shape = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_spatial = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_shape = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "FieldInterface", method = "create_field", ?
                         param_spatial, ? param_shape, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         Result<CreatedField, super::types::CreateError>,
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |field, gluon_out| {
                             tracing::trace!(
@@ -1312,22 +1339,22 @@ pub trait FieldInterfaceHandler: gluon::Handler + Send + Sync + 'static {
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<FieldInterface, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<FieldInterface, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         FieldInterface::new_node(self)
     }
     fn to_service(
         self,
-    ) -> Result<gluon::LocalRef<FieldInterface, Self>, gluon::NodeError>
+    ) -> Result<gluon_ipc::LocalRef<FieldInterface, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         FieldInterface::new_service(self)
     }
 }

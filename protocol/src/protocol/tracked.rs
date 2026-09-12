@@ -1,7 +1,7 @@
 #![allow(unused, clippy::all, private_bounds, private_interfaces)]
-use gluon::Convertable as _;
+use gluon_ipc::Convertable as _;
 use tracing::Instrument as _;
-pub const EXTERNAL_PROTOCOL: gluon::ExternalProtocol = gluon::ExternalProtocol {
+pub const EXTERNAL_PROTOCOL: gluon_ipc::ExternalProtocol = gluon_ipc::ExternalProtocol {
     protocol_name: "org.stardustxr.Tracked",
     types: &[],
 };
@@ -10,44 +10,46 @@ pub mod proxies {
 }
 #[derive(Debug, Clone)]
 pub struct Tracked {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for Tracked {
+impl gluon_ipc::Convertable for Tracked {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(Tracked::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl Tracked {
     const ID: &'static str = "org.stardustxr.Tracked.Tracked";
 }
-impl gluon::Interface for Tracked {
+impl gluon_ipc::Interface for Tracked {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: TrackedHandler> gluon::HandledBy<H> for Tracked {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type TrackedLocal<H> = gluon::LocalRef<Tracked, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: TrackedHandler> gluon_ipc::HandledBy<H> for Tracked {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type TrackedLocal<H> = gluon_ipc::LocalRef<Tracked, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: TrackedHandler> From<TrackedLocal<H>> for Tracked {
     fn from(value: TrackedLocal<H>) -> Tracked {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for Tracked {
-    fn from_ref(obj: gluon::Ref) -> Tracked {
+impl gluon_ipc::RefExt for Tracked {
+    fn from_ref(obj: gluon_ipc::Ref) -> Tracked {
         Tracked { obj }
     }
 }
@@ -55,18 +57,18 @@ impl Tracked {
     pub async fn get(
         &self,
         handler: impl Into<TrackedStateReceiver>,
-    ) -> Result<(super::spatial::SpatialRef, TrackedGuard, bool), gluon::SendError> {
+    ) -> Result<(super::spatial::SpatialRef, TrackedGuard, bool), gluon_ipc::SendError> {
         let handler: TrackedStateReceiver = handler.into();
         tracing::trace!(interface = "Tracked", method = "get", ? handler, "→");
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         handler.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_spatial = gluon::Convertable::read(&mut reader)?;
-        let __ret_guard = gluon::Convertable::read(&mut reader)?;
-        let __ret_tracked = gluon::Convertable::read(&mut reader)?;
+        let __ret_spatial = gluon_ipc::Convertable::read(&mut reader)?;
+        let __ret_guard = gluon_ipc::Convertable::read(&mut reader)?;
+        let __ret_tracked = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Tracked", method = "get", ? __ret_spatial, ? __ret_guard, ?
             __ret_tracked, "←"
@@ -77,21 +79,21 @@ impl Tracked {
         &self,
         at: impl Into<super::types::Timestamp>,
         relative_to: impl Into<super::spatial::SpatialRef>,
-    ) -> Result<(Option<super::types::Posef>, bool), gluon::SendError> {
+    ) -> Result<(Option<super::types::Posef>, bool), gluon_ipc::SendError> {
         let at: super::types::Timestamp = at.into();
         let relative_to: super::spatial::SpatialRef = relative_to.into();
         tracing::trace!(
             interface = "Tracked", method = "get_pose", ? at, ? relative_to, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
-        let (mut gluon_recv, gluon_ret) = gluon::ReturnReceiver::new()?;
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
+        let (mut gluon_recv, gluon_ret) = gluon_ipc::ReturnReceiver::new()?;
         gluon_builder.write_ref(&gluon_ret)?;
         at.write(&mut gluon_builder)?;
         relative_to.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 9u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 9u32, gluon_builder)?;
         let mut reader = gluon_recv.recv().await.unwrap();
-        let __ret_pose = gluon::Convertable::read(&mut reader)?;
-        let __ret_tracked = gluon::Convertable::read(&mut reader)?;
+        let __ret_pose = gluon_ipc::Convertable::read(&mut reader)?;
+        let __ret_tracked = gluon_ipc::Convertable::read(&mut reader)?;
         tracing::trace!(
             interface = "Tracked", method = "get_pose", ? __ret_pose, ? __ret_tracked,
             "←"
@@ -99,23 +101,23 @@ impl Tracked {
         Ok((__ret_pose, __ret_tracked))
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> Tracked {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> Tracked {
         Tracked { obj }
     }
 }
-impl From<Tracked> for gluon::Ref {
+impl From<Tracked> for gluon_ipc::Ref {
     fn from(value: Tracked) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for Tracked {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for Tracked {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for Tracked {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for Tracked {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for Tracked {
@@ -129,10 +131,10 @@ impl PartialEq for Tracked {
     }
 }
 impl Eq for Tracked {}
-pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
+pub trait TrackedHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn get(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         handler: TrackedStateReceiver,
     ) -> impl Future<
         Output = (super::spatial::SpatialRef, TrackedGuard, bool),
@@ -140,10 +142,10 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
     ///Dispatched instead of [`Self::get`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get` and sends the result through `reply`. Override this method instead of `get` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn get_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         handler: TrackedStateReceiver,
-        reply: gluon::ReplySender<(super::spatial::SpatialRef, TrackedGuard, bool)>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<(super::spatial::SpatialRef, TrackedGuard, bool)>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let (spatial, guard, tracked) = self.get(_ctx, handler).await;
             reply.send((spatial, guard, tracked))
@@ -151,18 +153,18 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn get_pose(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         at: super::types::Timestamp,
         relative_to: super::spatial::SpatialRef,
     ) -> impl Future<Output = (Option<super::types::Posef>, bool)> + Send + Sync;
     ///Dispatched instead of [`Self::get_pose`] so a slow reply doesn't hold up dispatch of the next transaction. The default implementation just awaits `get_pose` and sends the result through `reply`. Override this method instead of `get_pose` to defer the reply: stash `reply` (it's `Send + Sync + 'static`) somewhere else — a channel, a queue, another task — and return as soon as this method's future is done, without waiting for the reply to actually be sent.
     fn get_pose_oneway(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         at: super::types::Timestamp,
         relative_to: super::spatial::SpatialRef,
-        reply: gluon::ReplySender<(Option<super::types::Posef>, bool)>,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        reply: gluon_ipc::ReplySender<(Option<super::types::Posef>, bool)>,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             let (pose, tracked) = self.get_pose(_ctx, at, relative_to).await;
             reply.send((pose, tracked))
@@ -171,22 +173,22 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_handler = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_handler = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "Tracked", method = "get", ? param_handler,
                         "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<
+                    let reply: gluon_ipc::ReplySender<
                         (super::spatial::SpatialRef, TrackedGuard, bool),
-                    > = gluon::ReplySender::new(
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |(spatial, guard, tracked), gluon_out| {
                             tracing::trace!(
@@ -210,14 +212,18 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
                 }
                 9u32 => {
                     let return_callback = gluon_data.read_ref()?;
-                    let param_at = gluon::Convertable::read(&mut gluon_data)?;
-                    let param_relative_to = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_at = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_relative_to = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     tracing::trace!(
                         interface = "Tracked", method = "get_pose", ? param_at, ?
                         param_relative_to, "dispatching"
                     );
                     drop(gluon_data);
-                    let reply: gluon::ReplySender<(Option<super::types::Posef>, bool)> = gluon::ReplySender::new(
+                    let reply: gluon_ipc::ReplySender<
+                        (Option<super::types::Posef>, bool),
+                    > = gluon_ipc::ReplySender::new(
                         return_callback,
                         |(pose, tracked), gluon_out| {
                             tracing::trace!(
@@ -245,83 +251,90 @@ pub trait TrackedHandler: gluon::Handler + Send + Sync + 'static {
     }
     fn to_node(
         self,
-    ) -> Result<(gluon::Node<Self>, gluon::LocalRef<Tracked, Self>), gluon::NodeError>
+    ) -> Result<
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<Tracked, Self>),
+        gluon_ipc::NodeError,
+    >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Tracked::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<Tracked, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<Tracked, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         Tracked::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct TrackedGuard {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for TrackedGuard {
+impl gluon_ipc::Convertable for TrackedGuard {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(TrackedGuard::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl TrackedGuard {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedGuard";
 }
-impl gluon::Interface for TrackedGuard {
+impl gluon_ipc::Interface for TrackedGuard {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: TrackedGuardHandler> gluon::HandledBy<H> for TrackedGuard {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type TrackedGuardLocal<H> = gluon::LocalRef<TrackedGuard, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: TrackedGuardHandler> gluon_ipc::HandledBy<H> for TrackedGuard {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type TrackedGuardLocal<H> = gluon_ipc::LocalRef<TrackedGuard, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: TrackedGuardHandler> From<TrackedGuardLocal<H>> for TrackedGuard {
     fn from(value: TrackedGuardLocal<H>) -> TrackedGuard {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for TrackedGuard {
-    fn from_ref(obj: gluon::Ref) -> TrackedGuard {
+impl gluon_ipc::RefExt for TrackedGuard {
+    fn from_ref(obj: gluon_ipc::Ref) -> TrackedGuard {
         TrackedGuard { obj }
     }
 }
 impl TrackedGuard {
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> TrackedGuard {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> TrackedGuard {
         TrackedGuard { obj }
     }
 }
-impl From<TrackedGuard> for gluon::Ref {
+impl From<TrackedGuard> for gluon_ipc::Ref {
     fn from(value: TrackedGuard) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for TrackedGuard {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for TrackedGuard {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for TrackedGuard {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for TrackedGuard {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for TrackedGuard {
@@ -335,13 +348,13 @@ impl PartialEq for TrackedGuard {
     }
 }
 impl Eq for TrackedGuard {}
-pub trait TrackedGuardHandler: gluon::Handler + Send + Sync + 'static {
+pub trait TrackedGuardHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 _ => {}
@@ -352,96 +365,100 @@ pub trait TrackedGuardHandler: gluon::Handler + Send + Sync + 'static {
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<TrackedGuard, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<TrackedGuard, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         TrackedGuard::new_node(self)
     }
-    fn to_service(self) -> Result<gluon::LocalRef<TrackedGuard, Self>, gluon::NodeError>
+    fn to_service(
+        self,
+    ) -> Result<gluon_ipc::LocalRef<TrackedGuard, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         TrackedGuard::new_service(self)
     }
 }
 #[derive(Debug, Clone)]
 pub struct TrackedStateReceiver {
-    obj: gluon::Ref,
+    obj: gluon_ipc::Ref,
 }
-impl gluon::Convertable for TrackedStateReceiver {
+impl gluon_ipc::Convertable for TrackedStateReceiver {
     fn write(
         &self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write(gluon_data)
     }
-    fn read(gluon_data: &mut gluon::DataReader) -> Result<Self, gluon::ReadError> {
-        let obj = gluon::Ref::read(gluon_data)?;
+    fn read(
+        gluon_data: &mut gluon_ipc::DataReader,
+    ) -> Result<Self, gluon_ipc::ReadError> {
+        let obj = gluon_ipc::Ref::read(gluon_data)?;
         Ok(TrackedStateReceiver::from_ref(obj))
     }
     fn write_owned(
         self,
-        gluon_data: &mut gluon::DataBuilder,
-    ) -> Result<(), gluon::WriteError> {
+        gluon_data: &mut gluon_ipc::DataBuilder,
+    ) -> Result<(), gluon_ipc::WriteError> {
         self.obj.write_owned(gluon_data)
     }
 }
 impl TrackedStateReceiver {
     const ID: &'static str = "org.stardustxr.Tracked.TrackedStateReceiver";
 }
-impl gluon::Interface for TrackedStateReceiver {
+impl gluon_ipc::Interface for TrackedStateReceiver {
     const ID: &'static str = Self::ID;
 }
-///Carries the per-interface bound for [`gluon::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
-impl<H: TrackedStateReceiverHandler> gluon::HandledBy<H> for TrackedStateReceiver {}
-///A proxy this process made, carrying the handler behind it — see [`gluon::LocalRef`]. Handed back by [`gluon::RefExt::new_node`] and [`gluon::RefExt::new_service`].
-pub type TrackedStateReceiverLocal<H> = gluon::LocalRef<TrackedStateReceiver, H>;
-///Drops the handler share and keeps the proxy, so a [`gluon::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
+///Carries the per-interface bound for [`gluon_ipc::RefExt`]'s handler constructors: only a handler implementing this interface's handler trait can be passed to them.
+impl<H: TrackedStateReceiverHandler> gluon_ipc::HandledBy<H> for TrackedStateReceiver {}
+///A proxy this process made, carrying the handler behind it — see [`gluon_ipc::LocalRef`]. Handed back by [`gluon_ipc::RefExt::new_node`] and [`gluon_ipc::RefExt::new_service`].
+pub type TrackedStateReceiverLocal<H> = gluon_ipc::LocalRef<TrackedStateReceiver, H>;
+///Drops the handler share and keeps the proxy, so a [`gluon_ipc::LocalRef`] goes anywhere this proxy does — including the `impl Into<Self>` parameters generated for typed refs.
 impl<H: TrackedStateReceiverHandler> From<TrackedStateReceiverLocal<H>>
 for TrackedStateReceiver {
     fn from(value: TrackedStateReceiverLocal<H>) -> TrackedStateReceiver {
         value.into_proxy()
     }
 }
-impl gluon::RefExt for TrackedStateReceiver {
-    fn from_ref(obj: gluon::Ref) -> TrackedStateReceiver {
+impl gluon_ipc::RefExt for TrackedStateReceiver {
+    fn from_ref(obj: gluon_ipc::Ref) -> TrackedStateReceiver {
         TrackedStateReceiver { obj }
     }
 }
 impl TrackedStateReceiver {
-    pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon::SendError> {
+    pub fn tracked(&self, tracked: impl Into<bool>) -> Result<(), gluon_ipc::SendError> {
         let tracked: bool = tracked.into();
         tracing::trace!(
             interface = "TrackedStateReceiver", method = "tracked", ? tracked, "→"
         );
-        let mut gluon_builder = gluon::DataBuilder::new();
+        let mut gluon_builder = gluon_ipc::DataBuilder::new();
         tracked.write(&mut gluon_builder)?;
-        gluon::transact(&self.obj, 8u32, gluon_builder)?;
+        gluon_ipc::transact(&self.obj, 8u32, gluon_builder)?;
         Ok(())
     }
     ///only use this when you know the ref leads to something implementing this interface, else the consquences are for you to find out
-    pub fn from_ref(obj: gluon::Ref) -> TrackedStateReceiver {
+    pub fn from_ref(obj: gluon_ipc::Ref) -> TrackedStateReceiver {
         TrackedStateReceiver { obj }
     }
 }
-impl From<TrackedStateReceiver> for gluon::Ref {
+impl From<TrackedStateReceiver> for gluon_ipc::Ref {
     fn from(value: TrackedStateReceiver) -> Self {
         value.obj
     }
 }
-impl gluon::ToRef for TrackedStateReceiver {
-    fn to_ref(&self) -> gluon::Ref {
+impl gluon_ipc::ToRef for TrackedStateReceiver {
+    fn to_ref(&self) -> gluon_ipc::Ref {
         self.obj.clone()
     }
 }
-impl gluon::Liveness for TrackedStateReceiver {
-    fn death_notifier(&self) -> gluon::DeathNotifier {
-        gluon::Liveness::death_notifier(&self.obj)
+impl gluon_ipc::Liveness for TrackedStateReceiver {
+    fn death_notifier(&self) -> gluon_ipc::DeathNotifier {
+        gluon_ipc::Liveness::death_notifier(&self.obj)
     }
 }
 impl std::hash::Hash for TrackedStateReceiver {
@@ -455,22 +472,22 @@ impl PartialEq for TrackedStateReceiver {
     }
 }
 impl Eq for TrackedStateReceiver {}
-pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
+pub trait TrackedStateReceiverHandler: gluon_ipc::Handler + Send + Sync + 'static {
     fn tracked(
         &self,
-        _ctx: gluon::Context,
+        _ctx: gluon_ipc::Context,
         tracked: bool,
     ) -> impl Future<Output = ()> + Send + Sync;
     fn dispatch_one_way(
         &self,
         transaction_code: u32,
-        mut gluon_data: gluon::DataReader,
-        ctx: gluon::Context,
-    ) -> impl Future<Output = Result<(), gluon::SendError>> + Send + Sync {
+        mut gluon_data: gluon_ipc::DataReader,
+        ctx: gluon_ipc::Context,
+    ) -> impl Future<Output = Result<(), gluon_ipc::SendError>> + Send + Sync {
         async move {
             match transaction_code {
                 8u32 => {
-                    let param_tracked = gluon::Convertable::read(&mut gluon_data)?;
+                    let param_tracked = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "TrackedStateReceiver", method = "tracked", ?
                         param_tracked, "dispatching"
@@ -493,22 +510,22 @@ pub trait TrackedStateReceiverHandler: gluon::Handler + Send + Sync + 'static {
     fn to_node(
         self,
     ) -> Result<
-        (gluon::Node<Self>, gluon::LocalRef<TrackedStateReceiver, Self>),
-        gluon::NodeError,
+        (gluon_ipc::Node<Self>, gluon_ipc::LocalRef<TrackedStateReceiver, Self>),
+        gluon_ipc::NodeError,
     >
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         TrackedStateReceiver::new_node(self)
     }
     fn to_service(
         self,
-    ) -> Result<gluon::LocalRef<TrackedStateReceiver, Self>, gluon::NodeError>
+    ) -> Result<gluon_ipc::LocalRef<TrackedStateReceiver, Self>, gluon_ipc::NodeError>
     where
         Self: Sized,
     {
-        use gluon::RefExt;
+        use gluon_ipc::RefExt;
         TrackedStateReceiver::new_service(self)
     }
 }

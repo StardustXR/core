@@ -1,6 +1,6 @@
 use std::{ffi::CString, fs::File, io::Write, str::FromStr};
 
-use gluon::Ref;
+use gluon_ipc::Ref;
 use rustix::fs::MemfdFlags;
 pub use stardust_xr_protocol::keymap::*;
 use stardust_xr_protocol::{dir, types::ResourceLoadError};
