@@ -14,7 +14,10 @@ default = []
 serde = ["stardust-xr-protocol/serde"]
 
 [dependencies]
-glam = { version = "0.30.0", features = ["mint"] }
+glam.workspace = true
+tracing.workspace = true
+gluon-ipc.workspace = true
+stardust-xr-protocol.workspace = true
 parking_lot = "0.12.1"
 thiserror = "2.0.16"
 tokio = { version = "1.53.1", features = [
@@ -26,9 +29,6 @@ tokio = { version = "1.53.1", features = [
 	"io-util",
 	"signal",
 ] }
-tracing = "0.1.37"
-stardust-xr-protocol = { version = "0.51.0", path = "../protocol" }
-gluon-ipc = { version = "0.1.0", features = ["tracing"] }
 xdg = "3.0.0"
 rustix = { version = "1.1.4", features = ["fs"] }
 

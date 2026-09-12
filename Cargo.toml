@@ -6,6 +6,12 @@ package.repository = "https://github.com/StardustXR/core/"
 package.homepage = "https://stardustxr.org"
 package.license = "MIT"
 
+[workspace.dependencies]
+glam = { version = "0.33.7", features = ["mint"] }
+tracing = "0.1.44"
+gluon-ipc = { version = "0.1.0", features = ["tracing"] }
+stardust-xr-protocol = { version = "0.52.0", path = "./protocol" }
+
 # [patch."https://github.com/technobaboo/gluon"]
 # gluon.path = "../gluon/wire"
 # gluon-codegen.path = "../gluon/codegen-rust"
