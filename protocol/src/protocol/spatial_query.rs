@@ -720,7 +720,9 @@ pub trait BeamQueryHandleHandler: gluon_ipc::Handler + Send + Sync + 'static {
                     let __wire_param_direction: super::types::proxied::Vec3F = gluon_ipc::Convertable::read(
                         &mut gluon_data,
                     )?;
-                    let param_max_length = gluon_ipc::Convertable::read(&mut gluon_data)?;
+                    let param_max_length = gluon_ipc::Convertable::read(
+                        &mut gluon_data,
+                    )?;
                     let param_margin = gluon_ipc::Convertable::read(&mut gluon_data)?;
                     tracing::trace!(
                         interface = "BeamQueryHandle", method = "update", param_origin =
