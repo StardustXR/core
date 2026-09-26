@@ -215,7 +215,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f675d21faef003c3d18cbf743ef85c82aea2956e88b9eb1472c2d6497966a5ed"
 dependencies = [
  "bitflags",
- "gluon-ipc-derive",
+ "gluon-ipc-derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustix",
+ "strong-ipc",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "gluon-ipc"
+version = "0.1.0"
+source = "git+https://github.com/StardustXR/gluon-ipc#508f261dc3e506e37df97ac63e81dab4b2382d90"
+dependencies = [
+ "bitflags",
+ "gluon-ipc-derive 0.1.0 (git+https://github.com/StardustXR/gluon-ipc)",
  "rustix",
  "strong-ipc",
  "thiserror",
@@ -229,7 +242,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2878da5a9d216cf7dcd2115dac82292dfe8f5831623b32b5e9f6e6ac338b0425"
 dependencies = [
  "convert_case",
- "gluon-ipc",
+ "gluon-ipc 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gluon-ipc-parser",
  "prettyplease",
  "proc-macro2",
@@ -242,6 +255,15 @@ name = "gluon-ipc-derive"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "358b64f3d11ebc2143f3d403f1675f55f11f7cd56ebc341bd017f808c5d822f2"
+dependencies = [
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "gluon-ipc-derive"
+version = "0.1.0"
+source = "git+https://github.com/StardustXR/gluon-ipc#508f261dc3e506e37df97ac63e81dab4b2382d90"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -339,6 +361,12 @@ dependencies = [
  "wasi",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "mutants"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc0287524726960e07b119cebd01678f852f147742ae0d925e6a520dca956126"
 
 [[package]]
 name = "nu-ansi-term"
@@ -467,6 +495,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
+
+[[package]]
 name = "rustix"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -592,7 +626,7 @@ name = "stardust-xr-fusion"
 version = "0.52.1"
 dependencies = [
  "glam",
- "gluon-ipc",
+ "gluon-ipc 0.1.0 (git+https://github.com/StardustXR/gluon-ipc)",
  "parking_lot",
  "rustix",
  "stardust-xr-protocol",
@@ -600,6 +634,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "variadics_please",
  "xdg",
 ]
 
@@ -609,7 +644,7 @@ version = "0.52.1"
 dependencies = [
  "fnv",
  "glam",
- "gluon-ipc",
+ "gluon-ipc 0.1.0 (git+https://github.com/StardustXR/gluon-ipc)",
  "gluon-ipc-codegen",
  "mint",
  "prettyplease",
@@ -799,10 +834,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4c87d22b6e3f4a18d4d40ef354e97c90fcb14dd91d7dc0aa9d8a1172ebf7202"
 
 [[package]]
+name = "unsynn"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "501a7adf1a4bd9951501e5c66621e972ef8874d787628b7f90e64f936ef7ec0a"
+dependencies = [
+ "mutants",
+ "proc-macro2",
+ "rustc-hash",
+]
+
+[[package]]
 name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
+name = "variadics_please"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b53d0f7f2d0182759a549f1f313ce16b07d8f9ba93098157b5fa10ee3e61117f"
+dependencies = [
+ "quote",
+ "unsynn",
+]
 
 [[package]]
 name = "wasi"
