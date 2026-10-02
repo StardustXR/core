@@ -12,6 +12,12 @@ pub trait TrackedExt {
 	fn controller(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
+	fn controller_grip(
+		chirality: Chirality,
+	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
+	fn controller_palm(
+		chirality: Chirality,
+	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
 	fn binding(name: &str) -> impl std::future::Future<Output = Result<Tracked>> + Send;
 }
 impl TrackedExt for Tracked {
@@ -31,6 +37,22 @@ impl TrackedExt for Tracked {
 		get_tracked(match chirality {
 			Chirality::Left => "stardust-controller/left",
 			Chirality::Right => "stardust-controller/right",
+		})
+	}
+	fn controller_grip(
+		chirality: Chirality,
+	) -> impl std::future::Future<Output = Result<Tracked>> + Send {
+		get_tracked(match chirality {
+			Chirality::Left => "stardust-controller/left/grip",
+			Chirality::Right => "stardust-controller/right/grip",
+		})
+	}
+	fn controller_palm(
+		chirality: Chirality,
+	) -> impl std::future::Future<Output = Result<Tracked>> + Send {
+		get_tracked(match chirality {
+			Chirality::Left => "stardust-controller/left/palm",
+			Chirality::Right => "stardust-controller/right/palm",
 		})
 	}
 
