@@ -8,14 +8,15 @@ pub trait TrackedExt {
 	fn hmd_spatial() -> impl std::future::Future<Output = Result<SpatialRef>> + Send;
 	fn stage() -> impl std::future::Future<Output = Result<Tracked>> + Send;
 	fn stage_spatial() -> impl std::future::Future<Output = Result<SpatialRef>> + Send;
-	fn hand(chirality: Chirality) -> impl std::future::Future<Output = Result<Tracked>> + Send;
-	fn controller(
+	fn hand_palm(chirality: Chirality)
+	-> impl std::future::Future<Output = Result<Tracked>> + Send;
+	fn controller_aim(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
 	fn controller_grip(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
-	fn controller_palm(
+	fn controller_grip_surface(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send;
 	fn binding(name: &str) -> impl std::future::Future<Output = Result<Tracked>> + Send;
@@ -27,32 +28,32 @@ impl TrackedExt for Tracked {
 	fn stage() -> impl Future<Output = Result<Tracked>> {
 		get_tracked("stardust-stage")
 	}
-	fn hand(chirality: Chirality) -> impl Future<Output = Result<Tracked>> {
+	fn hand_palm(chirality: Chirality) -> impl Future<Output = Result<Tracked>> {
 		get_tracked(match chirality {
-			Chirality::Left => "stardust-hand/left",
-			Chirality::Right => "stardust-hand/right",
+			Chirality::Left => "stardust-hand/palm/left",
+			Chirality::Right => "stardust-hand/palm/right",
 		})
 	}
-	fn controller(chirality: Chirality) -> impl Future<Output = Result<Tracked>> {
+	fn controller_aim(chirality: Chirality) -> impl Future<Output = Result<Tracked>> {
 		get_tracked(match chirality {
-			Chirality::Left => "stardust-controller/left",
-			Chirality::Right => "stardust-controller/right",
+			Chirality::Left => "stardust-controller/aim/left",
+			Chirality::Right => "stardust-controller/aim/right",
 		})
 	}
 	fn controller_grip(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send {
 		get_tracked(match chirality {
-			Chirality::Left => "stardust-controller/left/grip",
-			Chirality::Right => "stardust-controller/right/grip",
+			Chirality::Left => "stardust-controller/grip/left",
+			Chirality::Right => "stardust-controller/grip/right",
 		})
 	}
-	fn controller_palm(
+	fn controller_grip_surface(
 		chirality: Chirality,
 	) -> impl std::future::Future<Output = Result<Tracked>> + Send {
 		get_tracked(match chirality {
-			Chirality::Left => "stardust-controller/left/palm",
-			Chirality::Right => "stardust-controller/right/palm",
+			Chirality::Left => "stardust-controller/grip_surface/left",
+			Chirality::Right => "stardust-controller/grip_surface/right",
 		})
 	}
 
