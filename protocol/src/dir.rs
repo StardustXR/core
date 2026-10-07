@@ -2,12 +2,6 @@ use std::fs::{self, File};
 use std::os::unix::fs::FileTypeExt;
 use std::path::{Path, PathBuf};
 
-/// Is there a listening socket at this path?
-///
-/// Since gluon, a service's pion path *is* the socket clients connect to, rather than a
-/// regular file with a ref written into it. Checking the type rather than mere existence
-/// is what stops a leftover regular file from an older server being handed back as
-/// something connectable.
 fn is_socket(path: &Path) -> bool {
 	fs::metadata(path).is_ok_and(|meta| meta.file_type().is_socket())
 }

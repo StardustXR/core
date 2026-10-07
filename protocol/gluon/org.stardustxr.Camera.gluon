@@ -2,8 +2,8 @@ import "org.stardustxr.Types" as types
 import "org.stardustxr.Spatial" as spatial
 import "org.stardustxr.Dmatex" as dmatex
 
-// TODO: document pion file path
-/// Entry point for creating cameras. This is exposed through pion directly, for access control.
+/// Entry point for creating cameras. This is exposed through its own fs binding, for access control.
+/// The Ref binding for this is located at $XDG_RUNTIME_DIR/stardust-camera/$STARDUST_INSTANCE
 interface CameraInterface {
 	create_camera(spatial: Ref<spatial::Spatial>) -> (camera: Result<Ref<Camera>, types::CreateError>)
 }

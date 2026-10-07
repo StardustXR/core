@@ -34,6 +34,7 @@ interface Server {
 }
 
 /// The entry point for the stardust server
+/// The Ref binding for this is located at $XDG_RUNTIME_DIR/stardust-server/$STARDUST_INSTANCE
 interface ServerInterface {
 	/// The startup_token should be read from the `STARDUST_STARTUP_TOKEN`environment variable.
 	connect(client: Ref<client::Client>, startup_token: Option<String>, resource_prefixes: Vec<String>) -> (server: Ref<Server>, root: Ref<spatial::SpatialRef>)

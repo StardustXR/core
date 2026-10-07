@@ -1,4 +1,5 @@
 /// A store for keymaps, needed for deduplication
+/// The Ref binding for this is located at $XDG_RUNTIME_DIR/stardust-keymap-store/$STARDUST_INSTANCE
 interface KeymapStore {
 	/// Register a xkbcommon keymap, deduplicates
 	exchange(keymap: XkbcommonKeymapFd) -> (keymap: Result<Ref<Keymap>, KeymapExchangeError>)

@@ -67,7 +67,7 @@ impl<H: ClientHandler> Client<H> {
 		handler_ref: Ref,
 		resource_prefixes: &[&Path],
 	) -> Result<(Client<H>, SpatialRef), Error> {
-		let server_path = find_ref_file("stardust-server").ok_or(Error::NoServerFile)?;
+		let server_path = find_ref_file("stardust-server").ok_or(Error::NoServer)?;
 
 		let paths = resource_prefixes
 			.iter()

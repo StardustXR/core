@@ -12,7 +12,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Error, Debug)]
 pub enum Error {
 	#[error("Could not find the stardust server instance")]
-	NoServerFile,
+	NoServer,
 	#[error("Could not connect to the stardust server")]
 	ConnectionFailure,
 
