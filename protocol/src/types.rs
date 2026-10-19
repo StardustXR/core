@@ -308,7 +308,7 @@ impl Error for ResourceLoadError {}
 impl Display for ResourceLoadError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			ResourceLoadError::NotFound => f.write_str("Model resource not found"),
+			ResourceLoadError::NotFound => f.write_str("Resource not found"),
 			ResourceLoadError::InvalidRef => f.write_str("Invalid Ref used, not owned by callee"),
 		}
 	}
